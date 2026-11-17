@@ -124,3 +124,11 @@ do repositório, que o Railway lê sempre automaticamente (antes era
 e CHANGE_MAP atualizados.
 **Lição:** confirmar sempre nos logs a mensagem de arranque esperada (ver
 `docs/DEPLOY_RAILWAY.md` → Verificar).
+
+### #11 — 2026-11-17 — Server e worker com erro no Railway
+
+**Pedido:** captura do painel: `server` "Crashed", `worker` com "1 Change" por
+aplicar.
+**Diagnóstico:** o worker tem alterações guardadas mas ainda não aplicadas (é
+preciso clicar em Deploy / Apply changes). Para o server, pedidos ao dono os logs
+do deploy mais recente (Build Logs e Deploy Logs) e o commit desse deploy.
