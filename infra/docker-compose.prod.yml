@@ -1,0 +1,76 @@
+# Example production-like stack: everything in containers.
+#   docker compose -f infra/docker-compose.prod.yml up --build
+# Secrets (passwords) must come from your platform's secret store in real deployments.
+name: living-realms-prod
+
+x-app-env: &app-env
+  NODE_ENV: production
+  LOG_LEVEL: info
+  DATABASE_URL: postgres://realms:${POSTGRES_PASSWORD:-realms}@postgres:5432/living_realms
+  REDIS_URL: redis://redis:6379/0
+  WORLD_SLUG: main
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: realms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-realms}
+      POSTGRES_DB: living_realms
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U realms -d living_realms']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: { context: .., dockerfile: infra/Dockerfile }
+    command: ['node', 'migrate.js']
+    environment: *app-env
+    depends_on: { postgres: { condition: service_healthy } }
+
+  server:
+    build: { context: .., dockerfile: infra/Dockerfile }
+    command: ['node', 'server.js']
+    environment:
+      <<: *app-env
+      PORT: '3000'
+      WEB_DIST_DIR: /app/web
+      WEB_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: 'true'
+    ports: ['8080:3000']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 3s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: { context: .., dockerfile: infra/Dockerfile }
+    command: ['node', 'worker.js']
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  redisdata:
