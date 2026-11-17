@@ -164,7 +164,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Deploy / produção (Railway)
 
 - Imagem: `infra/Dockerfile` (um passo novo de build ou um ficheiro novo no runtime têm de ser acrescentados aqui)
-- Configuração por serviço: `infra/railway/server.json`, `infra/railway/worker.json` (comando de arranque, migrações antes do deploy, health check, `watchPatterns`)
-- Pasta nova em `apps/` ou `packages/`: acrescentar aos `watchPatterns` dos dois JSON e um `COPY …/package.json` no Dockerfile
+- Configuração por serviço: `railway.json` (raiz; serviço `server`), `infra/railway/worker.json` (serviço `worker`) (comando de arranque, migrações antes do deploy, health check, `watchPatterns`)
+- Pasta nova em `apps/` ou `packages/`: acrescentar aos `watchPatterns` de `railway.json` e `infra/railway/worker.json` e um `COPY …/package.json` no Dockerfile
 - Guia do dono: `docs/DEPLOY_RAILWAY.md`; arquitetura: `ARCHITECTURE.md` → Deployment; decisão: ADR-018
 - Ligação ao Redis: `packages/server-kit/src/redis.ts` (`family: 0`, necessário para IPv6)

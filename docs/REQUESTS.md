@@ -109,3 +109,18 @@ repositories found".
 **Resultado:** a GitHub App do Railway ainda não tinha acesso ao repositório.
 Passos dados ao dono: Configure GitHub App → dar acesso a
 `the-living-realms` → Save → Refresh. Sem alterações ao código.
+
+### #10 — 2026-11-17 — Servidor a crashar no Railway ("relation worlds does not exist")
+
+**Pedido:** o serviço `server` crashava em ciclo.
+**Causa:** o Railway não aplicou o ficheiro de configuração indicado no painel.
+Detetou o projeto sozinho (Railpack), correu `pnpm start` sem o Dockerfile e
+sem o passo de migrações, por isso as tabelas não existiam. A ligação à base de
+dados funcionava.
+**Correção:** a configuração do servidor passou a ser o `railway.json` na raiz
+do repositório, que o Railway lê sempre automaticamente (antes era
+`infra/railway/server.json`). O worker continua com
+`/infra/railway/worker.json`, que tem de ser indicado no painel. Guia, ARCHITECTURE
+e CHANGE_MAP atualizados.
+**Lição:** confirmar sempre nos logs a mensagem de arranque esperada (ver
+`docs/DEPLOY_RAILWAY.md` → Verificar).

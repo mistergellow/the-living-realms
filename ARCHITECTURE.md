@@ -328,8 +328,9 @@ rolling deploys only cause a short client reconnect.
 The live environment runs on **Railway** (see DECISIONS ADR-018). Four
 services in one project: managed PostgreSQL, managed Redis, `server` and
 `worker`. Both app services build the same `infra/Dockerfile`; their per-service
-settings are versioned in `infra/railway/server.json` and
-`infra/railway/worker.json` (start command, migrations as a pre-deploy step for
+settings are versioned in `railway.json` (repository root, picked up
+automatically by the `server` service) and `infra/railway/worker.json` (set as
+the `worker` service's config file) (start command, migrations as a pre-deploy step for
 the server, `/readyz` health check, restart policy, watch paths). Variables
 reference the managed services (`${{Postgres.DATABASE_URL}}`,
 `${{Redis.REDIS_URL}}`). Pushing to `main` deploys automatically. The
