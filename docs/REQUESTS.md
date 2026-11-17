@@ -251,3 +251,15 @@ atributos de D&D; pede uma recomendação "do género, mas melhor".
 recomendação (4 atributos lineares + crescimento pelo equipamento + fórmulas de
 dano/armadura em percentagem). Sem alterações ao código.
 **A aguardar:** escolha do dono e o que sentiu de errado no equilíbrio.
+
+### #19 — 2026-11-17 — Opção C, mas com mais variedade; dúvida sobre armadura em %
+
+**Pedido:** o dono prefere a opção C (atributos + crescimento pelo equipamento),
+mas quer mais variedade de builds, e não tem a certeza de que a redução em
+percentagem seja a melhor opção.
+**Resultado:** proposta apresentada: 6 atributos sem "atributos inúteis", armas
+que escalam com 2 atributos, armadura com retornos decrescentes
+(armadura/(armadura+K)), Block ativo ao estilo Slay the Spire, estados
+(sangrar, queimar, marcar, atordoar…) e, mais tarde, afixos no equipamento e
+traços. Sem alterações ao código.
+**A aguardar:** aprovação da proposta e respostas sobre o equilíbrio (#18).
