@@ -322,3 +322,15 @@ gracefully on `SIGTERM` (closes sockets with `4004`, clears presence), so
 rolling deploys only cause a short client reconnect.
 
 `infra/docker-compose.prod.yml` is a runnable example of the full stack.
+
+### Hosting: Railway
+
+The live environment runs on **Railway** (see DECISIONS ADR-018). Four
+services in one project: managed PostgreSQL, managed Redis, `server` and
+`worker`. Both app services build the same `infra/Dockerfile`; their per-service
+settings are versioned in `infra/railway/server.json` and
+`infra/railway/worker.json` (start command, migrations as a pre-deploy step for
+the server, `/readyz` health check, restart policy, watch paths). Variables
+reference the managed services (`${{Postgres.DATABASE_URL}}`,
+`${{Redis.REDIS_URL}}`). Pushing to `main` deploys automatically. The
+step-by-step setup is in `docs/DEPLOY_RAILWAY.md`.

@@ -102,5 +102,7 @@ for the full, commented list. Never commit `.env`.
 
 `infra/Dockerfile` builds one image with three entrypoints — `server.js`
 (API + WebSocket + static web client), `worker.js` and `migrate.js`.
-`infra/docker-compose.prod.yml` shows a complete stack. See
+`infra/docker-compose.prod.yml` shows a complete stack.
+
+The live environment runs on **Railway**: see [docs/DEPLOY_RAILWAY.md](docs/DEPLOY_RAILWAY.md) (step-by-step, in Portuguese) and `infra/railway/`. See
 [ARCHITECTURE.md → Deployment](ARCHITECTURE.md#deployment).

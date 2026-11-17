@@ -31,6 +31,7 @@ COPY --from=build /repo/dist/migrate.js ./migrate.js
 COPY --from=build /repo/packages/db/migrations ./migrations
 COPY --from=build /repo/apps/web/dist ./web
 ENV MIGRATIONS_DIR=/app/migrations
+ENV WEB_DIST_DIR=/app/web
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

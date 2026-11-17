@@ -145,6 +145,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - `.env.example` (com comentário) e o `.env` local
 - `infra/docker-compose.prod.yml`, `.github/workflows/ci.yml`, `playwright.config.ts` (se for relevante nesses ambientes)
 - `apps/server/test/helpers.ts` (valores de teste)
+- **Railway (produção):** as variáveis vivem no painel do Railway, não no código. Atualizar a lista em `docs/DEPLOY_RAILWAY.md` e avisar o dono para a acrescentar no serviço certo (`server` e/ou `worker`)
 
 ## Ecrã / rota nova no frontend
 
@@ -159,3 +160,11 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Registar em `apps/server/src/app.ts`
 - Contratos em `packages/shared`, regras em `packages/game-core`
 - Testes em `apps/server/test/<domínio>.test.ts`; `ROADMAP.md`, `DECISIONS.md` se houver decisão
+
+## Deploy / produção (Railway)
+
+- Imagem: `infra/Dockerfile` (um passo novo de build ou um ficheiro novo no runtime têm de ser acrescentados aqui)
+- Configuração por serviço: `infra/railway/server.json`, `infra/railway/worker.json` (comando de arranque, migrações antes do deploy, health check, `watchPatterns`)
+- Pasta nova em `apps/` ou `packages/`: acrescentar aos `watchPatterns` dos dois JSON e um `COPY …/package.json` no Dockerfile
+- Guia do dono: `docs/DEPLOY_RAILWAY.md`; arquitetura: `ARCHITECTURE.md` → Deployment; decisão: ADR-018
+- Ligação ao Redis: `packages/server-kit/src/redis.ts` (`family: 0`, necessário para IPv6)

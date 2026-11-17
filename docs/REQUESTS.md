@@ -29,6 +29,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A6  | Ritmo do relógio do mundo           | 1 tick a cada 5 s                         | `.env` → `WORLD_TICK_MS`                |
 | A7  | Hexágono onde nascem os personagens | (0,0)                                     | `worlds.spawn_q/spawn_r`                |
 | A8  | Língua da documentação técnica      | inglês                                    | —                                       |
+| A9  | Alojamento                          | Railway (aprovado)                        | `infra/railway/*.json`                  |
 
 ---
 
@@ -88,4 +89,15 @@ Sem alterações ao código.
 servidor Node.js com WebSockets nem o worker sem reescrever o backend.
 Recomendação: Railway (frontend + API + worker + PostgreSQL + Redis, deploy
 automático a partir do GitHub), com a Cloudflare opcional mais tarde à frente
-(domínio/DNS/proteção). **A aguardar aprovação do dono.**
+(domínio/DNS/proteção). **Aprovado no pedido #8.**
+
+### #8 — 2026-11-17 — Railway aprovado; o dono já tem conta
+
+**Pedido:** avançar com o Railway.
+**Resultado:** configuração por serviço em `infra/railway/server.json` e
+`infra/railway/worker.json`; a imagem define `WEB_DIST_DIR`; o cliente Redis
+aceita IPv6 (`family: 0`). Guia de cliques em `docs/DEPLOY_RAILWAY.md`. A
+imagem de produção foi simulada sem Docker (migrações numa BD vazia, servidor,
+worker, registo e personagem) e funciona. ADR-018; ARCHITECTURE → Deployment;
+CHANGE_MAP → "Deploy / produção".
+**Pendente:** o dono segue o guia; primeiro deploy real por confirmar.
