@@ -26,9 +26,33 @@ Legend: ✅ done · 🔜 next · ⏳ planned · ❓ needs design decisions
 - [x] Railway deployment configuration (`infra/railway/`, guide in `docs/DEPLOY_RAILWAY.md`) — live on Railway
 - [x] Documentation (README, ARCHITECTURE, DATABASE, DECISIONS, ROADMAP)
 
-## Phase 2 — The world map and movement 🔜 ❓
+## Phase 2 — Character system 🔜 ❓
 
-Bring the hex world to life for exploration.
+Priority set by the project owner: characters and combat come before the world
+map, because combat is the core of the game.
+
+- ❓ What defines a character's power (attributes, skills, equipment, reputation)
+- ❓ Archetypes/classes or a free build; how skills are learned and equipped (loadout)
+- ❓ Combat resources (HP, energy/mana, …)
+- Data-driven definitions (skills, effects) so numbers can be tuned quickly
+- Character sheet screen; persistence of stats and loadout
+
+## Phase 3 — Combat and Rifts 🔜 ❓
+
+Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
+**difficulty does not change** with the number of players.
+
+- ❓ Battlefield (grid or rows), turn order, actions per turn, turn timer
+- ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
+- Combat instances (server state machine, persisted every turn)
+- Lobby system (create, invite/join, ready check, start)
+- Separate combat screen and renderer (`/combat/:id`)
+- Enemy AI; combat log and replay from `game-core`
+- First playable test Rift to tune numbers
+
+## Phase 4 — The world map and movement ⏳ ❓
+
+Bring the hex world to life for exploration (Rifts placed on the map).
 
 - ❓ World size and shape, terrain types, regions, points of interest, starting area
 - ❓ Action Points: pool size, regeneration, AP cost per hex / per terrain
@@ -37,25 +61,13 @@ Bring the hex world to life for exploration.
 - Area-of-interest: clients receive only nearby activity
 - Map rendering: terrain, fog of war (if desired), panning/zoom
 
-## Phase 3 — Social layer ⏳ ❓
+## Phase 5 — Social layer and reputation ⏳ ❓
 
 - Chat (local hex/region, global, private), with moderation basics
 - Player inspection, interaction menu
+- ❓ Reputation model (tracks, sources, decay, effects) in place of levels
 - ❓ How in-game languages affect communication (ties into phase 6)
 - Account security additions: email verification, password reset (needs an email provider)
-
-## Phase 4 — Character identity and reputation ⏳ ❓
-
-- ❓ Reputation model (tracks, sources, decay, effects) in place of levels
-- ❓ Character origin/attributes/skills and the real appearance system
-- Reputation persistence and history, profile pages
-
-## Phase 5 — Turn-based combat ⏳ ❓
-
-- ❓ Combat rules: grid/positions, initiative, actions, outcomes, PvP/PvE rules
-- Combat instances (server state machine, persisted per turn)
-- Separate combat screen and renderer (`/combat/:id`, PixiJS planned)
-- Turn timers in the worker; spectating; combat log and replay from `game-core`
 
 ## Phase 6 — Nations, languages and diplomacy ⏳ ❓
 

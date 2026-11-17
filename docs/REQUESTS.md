@@ -8,14 +8,15 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 
 ## Decisões de game design já tomadas (pelo dono do projeto)
 
-| #   | Decisão                                                                  | Data       | Onde se reflete                                                                                |
-| --- | ------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------- |
-| D1  | Cada jogador pode ter vários personagens, mas só joga com um de cada vez | 2026-11-17 | `apps/server/src/realtime/gateway.ts` (account.replace), `MAX_CHARACTERS_PER_ACCOUNT`, ADR-012 |
-| D2  | Um único mundo, partilhado por todos                                     | 2026-11-17 | `worlds` (slug `main`), `world_id` em tudo, ADR-013                                            |
-| D3  | Criação de personagem na fase 1: só nome + aparência básica              | 2026-11-17 | `packages/shared/src/api.ts`, `CharacterCreatePage.tsx`, ADR-015                               |
-| D4  | Tudo o que é do jogo em inglês (a conversa é em português)               | 2026-11-17 | ADR-014                                                                                        |
-| D5  | Mapa do mundo em hexágonos; a distância entre hexágonos custa X AP       | 2026-11-17 | `packages/game-core/src/hex.ts`, `characters.hex_q/hex_r`, ADR-011                             |
-| D6  | Conta só com email + password, por agora                                 | 2026-11-17 | `modules/auth/*`                                                                               |
+| #   | Decisão                                                                                                                                    | Data       | Onde se reflete                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------- |
+| D1  | Cada jogador pode ter vários personagens, mas só joga com um de cada vez                                                                   | 2026-11-17 | `apps/server/src/realtime/gateway.ts` (account.replace), `MAX_CHARACTERS_PER_ACCOUNT`, ADR-012 |
+| D2  | Um único mundo, partilhado por todos                                                                                                       | 2026-11-17 | `worlds` (slug `main`), `world_id` em tudo, ADR-013                                            |
+| D3  | Criação de personagem na fase 1: só nome + aparência básica                                                                                | 2026-11-17 | `packages/shared/src/api.ts`, `CharacterCreatePage.tsx`, ADR-015                               |
+| D4  | Tudo o que é do jogo em inglês (a conversa é em português)                                                                                 | 2026-11-17 | ADR-014                                                                                        |
+| D5  | Mapa do mundo em hexágonos; a distância entre hexágonos custa X AP                                                                         | 2026-11-17 | `packages/game-core/src/hex.ts`, `characters.hex_q/hex_r`, ADR-011                             |
+| D6  | Conta só com email + password, por agora                                                                                                   | 2026-11-17 | `modules/auth/*`                                                                               |
+| D7  | Prioridade: personagem e combate antes do mapa. Rifts = portais para raids; solo ou em lobby; a dificuldade não muda com o nº de jogadores | 2026-11-17 | `ROADMAP.md` (Fases 2 e 3)                                                                     |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -150,4 +151,15 @@ simultâneo, ambos arrancam sem erros. ADR-019.
 **Pedido:** o jogo está online (o dono vê o mapa); passar à próxima fase.
 **Resultado:** Fase 1 fechada (deploy confirmado). Apresentados o plano da
 Fase 2 (mapa e movimento) e as decisões de design necessárias.
-**A aguardar:** respostas do dono às perguntas da Fase 2 e aprovação do plano.
+**Substituído pelo pedido #14** (mudança de prioridade). As perguntas sobre o mapa ficam guardadas para a Fase 4.
+
+### #14 — 2026-11-17 — Nova prioridade: sistema de personagem e combate (Rifts)
+
+**Pedido:** começar pelo sistema de personagem e testar o combate, por ser o
+mais importante do jogo. Conceito: **Rifts** são portais que levam a **raids**.
+Pode-se entrar **em lobby (grupo) ou sozinho**; **a dificuldade não muda** com o
+número de jogadores.
+**Resultado:** ROADMAP reordenado: Fase 2 = sistema de personagem; Fase 3 =
+combate e Rifts; Fase 4 = mapa e movimento; Fase 5 = social e reputação.
+Perguntas de design enviadas ao dono.
+**A aguardar:** respostas às perguntas sobre personagem, combate e Rifts.
