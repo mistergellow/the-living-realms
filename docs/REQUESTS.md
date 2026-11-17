@@ -29,7 +29,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A6  | Ritmo do relógio do mundo           | 1 tick a cada 5 s                         | `.env` → `WORLD_TICK_MS`                |
 | A7  | Hexágono onde nascem os personagens | (0,0)                                     | `worlds.spawn_q/spawn_r`                |
 | A8  | Língua da documentação técnica      | inglês                                    | —                                       |
-| A9  | Alojamento                          | Railway (aprovado)                        | `infra/railway/*.json`                  |
+| A9  | Alojamento                          | Railway (aprovado, a funcionar)           | `infra/railway/*.json`                  |
 
 ---
 
@@ -144,3 +144,10 @@ arrancar (`migrateWithLock`, com advisory lock do PostgreSQL;
 `MIGRATE_ON_START=true` por defeito). O `preDeployCommand` foi removido do
 `railway.json`. Testado: base de dados vazia, servidor e worker a arrancar em
 simultâneo, ambos arrancam sem erros. ADR-019.
+
+### #13 — 2026-11-17 — Deploy no Railway a funcionar; avançar para a Fase 2
+
+**Pedido:** o jogo está online (o dono vê o mapa); passar à próxima fase.
+**Resultado:** Fase 1 fechada (deploy confirmado). Apresentados o plano da
+Fase 2 (mapa e movimento) e as decisões de design necessárias.
+**A aguardar:** respostas do dono às perguntas da Fase 2 e aprovação do plano.

@@ -23,7 +23,7 @@ Legend: ✅ done · 🔜 next · ⏳ planned · ❓ needs design decisions
 - [x] Security baseline (CSRF/Origin, rate limits, headers, input validation, log redaction)
 - [x] Tests: unit, integration (real DB/Redis), end-to-end (Playwright)
 - [x] CI workflow, Dockerfile, production compose example
-- [x] Railway deployment configuration (`infra/railway/`, guide in `docs/DEPLOY_RAILWAY.md`) — first live deploy pending
+- [x] Railway deployment configuration (`infra/railway/`, guide in `docs/DEPLOY_RAILWAY.md`) — live on Railway
 - [x] Documentation (README, ARCHITECTURE, DATABASE, DECISIONS, ROADMAP)
 
 ## Phase 2 — The world map and movement 🔜 ❓
