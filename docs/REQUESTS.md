@@ -8,15 +8,28 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 
 ## Decisões de game design já tomadas (pelo dono do projeto)
 
-| #   | Decisão                                                                                                                                    | Data       | Onde se reflete                                                                                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------- |
-| D1  | Cada jogador pode ter vários personagens, mas só joga com um de cada vez                                                                   | 2026-11-17 | `apps/server/src/realtime/gateway.ts` (account.replace), `MAX_CHARACTERS_PER_ACCOUNT`, ADR-012 |
-| D2  | Um único mundo, partilhado por todos                                                                                                       | 2026-11-17 | `worlds` (slug `main`), `world_id` em tudo, ADR-013                                            |
-| D3  | Criação de personagem na fase 1: só nome + aparência básica                                                                                | 2026-11-17 | `packages/shared/src/api.ts`, `CharacterCreatePage.tsx`, ADR-015                               |
-| D4  | Tudo o que é do jogo em inglês (a conversa é em português)                                                                                 | 2026-11-17 | ADR-014                                                                                        |
-| D5  | Mapa do mundo em hexágonos; a distância entre hexágonos custa X AP                                                                         | 2026-11-17 | `packages/game-core/src/hex.ts`, `characters.hex_q/hex_r`, ADR-011                             |
-| D6  | Conta só com email + password, por agora                                                                                                   | 2026-11-17 | `modules/auth/*`                                                                               |
-| D7  | Prioridade: personagem e combate antes do mapa. Rifts = portais para raids; solo ou em lobby; a dificuldade não muda com o nº de jogadores | 2026-11-17 | `ROADMAP.md` (Fases 2 e 3)                                                                     |
+| #   | Decisão                                                                                                                                                                 | Data       | Onde se reflete                                                                                |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| D1  | Cada jogador pode ter vários personagens, mas só joga com um de cada vez                                                                                                | 2026-11-17 | `apps/server/src/realtime/gateway.ts` (account.replace), `MAX_CHARACTERS_PER_ACCOUNT`, ADR-012 |
+| D2  | Um único mundo, partilhado por todos                                                                                                                                    | 2026-11-17 | `worlds` (slug `main`), `world_id` em tudo, ADR-013                                            |
+| D3  | Criação de personagem na fase 1: só nome + aparência básica                                                                                                             | 2026-11-17 | `packages/shared/src/api.ts`, `CharacterCreatePage.tsx`, ADR-015                               |
+| D4  | Tudo o que é do jogo em inglês (a conversa é em português)                                                                                                              | 2026-11-17 | ADR-014                                                                                        |
+| D5  | Mapa do mundo em hexágonos; a distância entre hexágonos custa X AP                                                                                                      | 2026-11-17 | `packages/game-core/src/hex.ts`, `characters.hex_q/hex_r`, ADR-011                             |
+| D6  | Conta só com email + password, por agora                                                                                                                                | 2026-11-17 | `modules/auth/*`                                                                               |
+| D7  | Prioridade: personagem e combate antes do mapa. Rifts = portais para raids; solo ou em lobby; a dificuldade não muda com o nº de jogadores                              | 2026-11-17 | `ROADMAP.md` (Fases 2 e 3)                                                                     |
+| D8  | Poder do personagem vem de skills e equipamento. Reputação é uma moeda ganha ao fazer atividades                                                                        | 2026-11-17 | Fase 2                                                                                         |
+| D9  | Sem classes: as armas definem como se ataca                                                                                                                             | 2026-11-17 | Fase 2                                                                                         |
+| D10 | Atributos: os 6 do D&D (STR, DEX, CON, INT, WIS, CHA)                                                                                                                   | 2026-11-17 | Fase 2                                                                                         |
+| D11 | Sem limite de skills ("infinitas")                                                                                                                                      | 2026-11-17 | Fase 2/3 (ver perguntas em aberto)                                                             |
+| D12 | Recursos de combate: HP e Mana, por agora                                                                                                                               | 2026-11-17 | Fase 3                                                                                         |
+| D13 | Combate em filas como Darkest Dungeon: 6 posições por lado em 2 filas; vista lateral ao estilo Darkest Dungeon                                                          | 2026-11-17 | Fase 3                                                                                         |
+| D14 | PvE: primeiro os jogadores, por ordem de iniciativa, depois os inimigos. PvP: todos declaram as ações ao mesmo tempo, depois resolvem por ordem de iniciativa da equipa | 2026-11-17 | Fase 3 (PvP mais tarde)                                                                        |
+| D15 | Energia por turno ao estilo Slay the Spire (sem lhe chamar AP); ações diferentes custam quantidades diferentes                                                          | 2026-11-17 | Fase 3                                                                                         |
+| D16 | 60 segundos por turno                                                                                                                                                   | 2026-11-17 | Fase 3                                                                                         |
+| D17 | Rift = várias salas até ao boss                                                                                                                                         | 2026-11-17 | Fase 3                                                                                         |
+| D18 | Lobby até 6 jogadores; a dificuldade não muda (quem vai sozinho fica em desvantagem)                                                                                    | 2026-11-17 | Fase 3                                                                                         |
+| D19 | Derrota: o equipamento perde qualidade; a 0 parte-se e fica inutilizável                                                                                                | 2026-11-17 | Fases 2/3                                                                                      |
+| D20 | Recompensas: drops e reputação                                                                                                                                          | 2026-11-17 | Fase 3                                                                                         |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -163,3 +176,10 @@ número de jogadores.
 combate e Rifts; Fase 4 = mapa e movimento; Fase 5 = social e reputação.
 Perguntas de design enviadas ao dono.
 **A aguardar:** respostas às perguntas sobre personagem, combate e Rifts.
+
+### #15 — 2026-11-17 — Respostas de design: personagem, combate e Rifts
+
+**Pedido:** respostas às perguntas do pedido #14 (registadas como D8–D20).
+**Resultado:** plano das Fases 2 e 3 apresentado em marcos (M1–M4), com as
+últimas perguntas em aberto.
+**A aguardar:** respostas às perguntas finais e aprovação do plano.
