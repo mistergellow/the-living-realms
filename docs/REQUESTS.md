@@ -71,3 +71,12 @@ para o mapa de impacto.
 **Pedido:** como começar com o editor aberto no computador.
 **Resultado:** guia passo a passo (clonar no VS Code, instalar requisitos,
 arrancar). Sem alterações ao código.
+
+### #6 — 2026-11-17 — Instalação do Docker Desktop falhou (Windows)
+
+**Pedido:** o que é o Docker e para que serve; a instalação falhou porque a
+funcionalidade "Virtual Machine Platform" do Windows não está ativa.
+**Resultado:** explicação e solução (`wsl --install` numa PowerShell de
+administrador, reiniciar, voltar a instalar). Alternativa sem Docker:
+PostgreSQL e Redis na cloud, mudando só `DATABASE_URL` e `REDIS_URL` no `.env`.
+Sem alterações ao código.
