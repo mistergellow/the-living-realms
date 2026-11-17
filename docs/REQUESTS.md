@@ -242,3 +242,12 @@ editar o corpo base; mais tarde, equipamento visível no personagem.
 - Testes: 29 unitários no game-core, 46 de integração no servidor, 6 e2e (incluindo um combate no browser).
 - Docs: CHANGE_MAP (aparência/arte, combate, inimigos, Rifts), DATABASE, ARCHITECTURE §7, ADR-021, ADR-022, ROADMAP.
   **Próximo:** M3 (lobby até 6 jogadores, convites, lista pública, combate em tempo real entre jogadores).
+
+### #18 — 2026-11-17 — Equilíbrio fraco; substituir os atributos de D&D?
+
+**Pedido:** o equilíbrio está um pouco mau e o dono não gosta muito dos
+atributos de D&D; pede uma recomendação "do género, mas melhor".
+**Resultado:** apresentado o diagnóstico e três alternativas, com
+recomendação (4 atributos lineares + crescimento pelo equipamento + fórmulas de
+dano/armadura em percentagem). Sem alterações ao código.
+**A aguardar:** escolha do dono e o que sentiu de errado no equilíbrio.
