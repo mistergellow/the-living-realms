@@ -192,6 +192,57 @@ export const characterSkills = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Rift runs: one combat instance per run. The whole combat state (a JSON
+// document produced by the game-core engine) is saved after every action, so a
+// refresh, reconnect or deploy never loses a fight.
+// ---------------------------------------------------------------------------
+export const riftRuns = pgTable(
+  'rift_runs',
+  {
+    id: id(),
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'restrict' }),
+    /** Rift definition id in game-core content. */
+    riftId: text('rift_id').notNull(),
+    /** 'active' | 'victory' | 'defeat' | 'abandoned' */
+    status: text('status').notNull().default('active'),
+    roomIndex: smallint('room_index').notNull().default(0),
+    state: jsonb('state').notNull(),
+    /** Incremented on every saved action (optimistic concurrency / client sync). */
+    version: integer('version').notNull().default(0),
+    /** When the current player turn times out (60 s, D16). */
+    turnDeadline: timestamp('turn_deadline', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (t) => [index('rift_runs_status_idx').on(t.status)],
+);
+
+export const riftRunParticipants = pgTable(
+  'rift_run_participants',
+  {
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => riftRuns.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    /** Rewards or penalty applied to this character when the run ended. */
+    result: jsonb('result'),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.runId, t.characterId] }),
+    index('rift_run_participants_character_idx').on(t.characterId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // World events: append-only log of meaningful things that happened.
 // Audit trail today; the backbone of world history / world-changing events later.
 // ---------------------------------------------------------------------------
@@ -226,3 +277,5 @@ export type Character = typeof characters.$inferSelect;
 export type WorldEvent = typeof worldEvents.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type CharacterSkill = typeof characterSkills.$inferSelect;
+export type RiftRun = typeof riftRuns.$inferSelect;
+export type RiftRunParticipant = typeof riftRunParticipants.$inferSelect;

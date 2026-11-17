@@ -109,13 +109,16 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - `apps/server/test/helpers.ts` (usa 3 nos testes), `characters.test.ts`
 - Web: `CharacterSelectPage.tsx` (mostra `x / limite`)
 
-## Aparência do personagem
+## Aparência do personagem (corpo base editável) e arte
 
-- Contrato: `packages/shared/src/api.ts` (`APPEARANCE_COLORS`, `APPEARANCE_EMBLEMS`, `characterAppearanceSchema`, `version`)
-- BD: `characters.appearance` (JSONB) — ao mudar a forma, **subir `version`** e prever a conversão dos personagens existentes
-- Web: `CharacterToken.tsx` (desenho dos emblemas, `EMBLEM_PATHS`), `CharacterCreatePage.tsx` (escolha), `HexMap.tsx`, `WorldPage.tsx`, `CharacterSelectPage.tsx`
-- Presença: `packages/shared/src/protocol.ts` (`PresencePlayer.appearance`)
-- Testes: `helpers.ts` (`appearance`), `characters.test.ts`, `server-kit/test/presence.test.ts`, `web/test/world-state.test.ts`, `e2e` (botão "Emblem star")
+- Contrato: `packages/shared/src/api.ts` (`appearanceV1Schema` antigo, `appearanceV2Schema`, `BODY_TYPES`, `SKIN_TONES`, `HAIR_STYLES`, `HAIR_COLORS`, `EYE_COLORS`, `APPEARANCE_COLORS` = roupa, `DEFAULT_APPEARANCE`, `normalizeAppearance`)
+- BD: `characters.appearance` (JSONB com `version`); ao mudar a forma, **criar nova versão** e manter `normalizeAppearance` a converter as antigas
+- Arte (SVG em camadas, provisória): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
+- Inimigos: `apps/web/src/features/avatar/EnemyAvatar.tsx` (um desenho por `enemyDefId`) — **inimigo novo precisa de arte aqui**
+- Usos: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói), `HexMap.tsx` (mapa), `rifts/CombatPage.tsx` (combate)
+- Presença: `PresencePlayer.appearance` (`protocol.ts`)
+- Testes: `helpers.ts` (v1, compatibilidade), `server-kit/test/presence.test.ts`, `web/test/world-state.test.ts`, `e2e` (botões "Hair style …")
+- Futuro (D32): camadas de equipamento por cima do corpo base, no mesmo `CharacterAvatar`
 
 ## Posição no mapa / hexágonos
 
@@ -207,6 +210,35 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Registar em `apps/server/src/app.ts`
 - Contratos em `packages/shared`, regras em `packages/game-core`
 - Testes em `apps/server/test/<domínio>.test.ts`; `ROADMAP.md`, `DECISIONS.md` se houver decisão
+
+## Combate (motor)
+
+- Regras e números: `packages/game-core/src/combat/state.ts` (`COMBAT_RULES`: Focus por turno/máximo, crítico, 60 s, reviver com 1 HP)
+- Motor: `packages/game-core/src/combat/engine.ts` (`createEncounter`, `applyAction`, `validTargets`, IA dos inimigos, `enterNextRoom`, `timeoutTurn`), `rng.ts` (aleatoriedade determinística)
+- Contrato: `packages/shared/src/combat.ts` (`CombatView`, `CombatantView`, `CombatLogEntry`, `combatActionSchema`)
+- Ecrã: `apps/web/src/features/rifts/CombatPage.tsx`, `combat.css`, `useCombatFx.ts` (animações a partir do log), `combat-text.ts` (texto do log)
+- Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `e2e` ("Rift combat")
+- **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `useCombatFx.ts` (se tiver animação)
+- **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
+- Equilíbrio: correr a simulação (ver `docs/REQUESTS.md` A18) depois de mudar números
+
+## Inimigos
+
+- Conteúdo: `packages/game-core/src/content/enemies.ts` + habilidades em `content/abilities.ts` (`source: 'enemy'`)
+- Arte: `apps/web/src/features/avatar/EnemyAvatar.tsx`
+- Uso em Rifts: `content/rifts.ts`
+
+## Rifts e corridas (runs)
+
+- Conteúdo: `packages/game-core/src/content/rifts.ts` (salas, posições dos inimigos, recompensas, loot)
+- BD: `rift_runs` (estado do combate em JSONB, `version`, `turn_deadline`), `rift_run_participants` (resultado por personagem)
+- Servidor: `apps/server/src/modules/rifts/` (`rifts.service.ts`: começar, agir, avançar, abandonar, temporizador, recompensas/penalização; `rifts.routes.ts`; `rifts.repository.ts`)
+- Bloqueios durante um Rift: `assertNotInRift` em `characters/sheet.service.ts` (equipar/desequipar) e `characters.service.ts` (apagar); erro `IN_RIFT`
+- Recompensas/penalização: `finish()` em `rifts.service.ts`; durabilidade em `game-core/equipment.ts` (`qualityAfterDefeat`)
+- Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`
+- Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `CombatPage.tsx`, `api.ts`); link "Rifts" em `WorldPage.tsx`; rotas em `router.tsx`
+- Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts`), `e2e`
+- Futuro: lobby (M3), entrada pelo mapa (Fase 4)
 
 ## Deploy / produção (Railway)
 

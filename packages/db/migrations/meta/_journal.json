@@ -22,6 +22,13 @@
       "when": 1794951688009,
       "tag": "0002_starter_kit_for_existing_characters",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794952527881,
+      "tag": "0003_rift_runs",
+      "breakpoints": true
     }
   ]
 }

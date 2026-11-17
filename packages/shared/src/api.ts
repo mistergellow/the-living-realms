@@ -91,12 +91,81 @@ export const APPEARANCE_EMBLEMS = [
 ] as const;
 export type AppearanceEmblem = (typeof APPEARANCE_EMBLEMS)[number];
 
-export const characterAppearanceSchema = z.object({
+/** v1 (phase 1 placeholder): a colored emblem token. Still accepted for old characters. */
+export const appearanceV1Schema = z.object({
   version: z.literal(1),
   color: z.enum(APPEARANCE_COLORS),
   emblem: z.enum(APPEARANCE_EMBLEMS),
 });
+
+/*
+ * v2: editable base body (decision D32), rendered as a layered illustrated
+ * character. Equipment layers will be drawn on top in a later phase.
+ * Option lists are PROVISIONAL (A21).
+ */
+export const BODY_TYPES = ['sturdy', 'slender'] as const;
+export const SKIN_TONES = [
+  '#f7d9bf',
+  '#ecc19c',
+  '#d49c73',
+  '#b07650',
+  '#8a5636',
+  '#5e3b25',
+] as const;
+export const HAIR_STYLES = ['short', 'long', 'ponytail', 'spiky', 'bun', 'shaved'] as const;
+export const HAIR_COLORS = [
+  '#2b211a',
+  '#5a3a22',
+  '#a3672f',
+  '#dcb56c',
+  '#e9e5dc',
+  '#b8392f',
+  '#3d5a80',
+  '#6b4c9a',
+] as const;
+export const EYE_COLORS = [
+  '#3b2a1a',
+  '#2e86c1',
+  '#27ae60',
+  '#a07a2c',
+  '#7d3c98',
+  '#b8392f',
+] as const;
+
+export const appearanceV2Schema = z.object({
+  version: z.literal(2),
+  body: z.enum(BODY_TYPES),
+  skin: z.enum(SKIN_TONES),
+  hairStyle: z.enum(HAIR_STYLES),
+  hairColor: z.enum(HAIR_COLORS),
+  eyeColor: z.enum(EYE_COLORS),
+  /** Base clothing color. */
+  outfit: z.enum(APPEARANCE_COLORS),
+});
+export type AppearanceV2 = z.infer<typeof appearanceV2Schema>;
+
+export const characterAppearanceSchema = z.discriminatedUnion('version', [
+  appearanceV1Schema,
+  appearanceV2Schema,
+]);
 export type CharacterAppearance = z.infer<typeof characterAppearanceSchema>;
+
+export const DEFAULT_APPEARANCE: AppearanceV2 = {
+  version: 2,
+  body: 'sturdy',
+  skin: SKIN_TONES[1],
+  hairStyle: 'short',
+  hairColor: HAIR_COLORS[1],
+  eyeColor: EYE_COLORS[0],
+  outfit: APPEARANCE_COLORS[5],
+};
+
+/** Any stored appearance as v2 (v1 characters keep their color as outfit). */
+export function normalizeAppearance(a: CharacterAppearance | null | undefined): AppearanceV2 {
+  if (!a) return DEFAULT_APPEARANCE;
+  if (a.version === 2) return a;
+  return { ...DEFAULT_APPEARANCE, outfit: a.color };
+}
 
 // ---- Attributes (the six D&D abilities) ----
 export const ATTRIBUTE_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
@@ -161,7 +230,7 @@ export interface ItemDto {
   defense: number;
 }
 
-export type AbilitySource = 'weapon' | 'skill' | 'universal';
+export type AbilitySource = 'weapon' | 'skill' | 'universal' | 'enemy';
 
 export interface AbilityDto {
   id: string;

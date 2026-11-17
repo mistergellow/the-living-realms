@@ -68,6 +68,9 @@ export function WorldPage() {
             <strong data-testid="self-name">{self.name}</strong>
           </span>
         )}
+        <Link className="btn btn-primary btn-sm" to="/rifts">
+          Rifts
+        </Link>
         {self && (
           <Link className="btn btn-ghost btn-sm" to={`/characters/${self.id}`}>
             Character

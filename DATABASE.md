@@ -125,6 +125,38 @@ before the character system a Training Sword and a Padded Tunic.
 | skill_id     | text                           | ability id in game-core content; PK part                    |
 | learned_at   | timestamptz                    | weapon abilities are not stored (they come from the weapon) |
 
+### `rift_runs`
+
+One row per Rift run (a combat instance). The full combat state produced by the
+game-core engine is saved as JSONB after every action.
+
+| Column                 | Type             | Notes                                                     |
+| ---------------------- | ---------------- | --------------------------------------------------------- |
+| id                     | uuid PK          |                                                           |
+| world_id               | uuid FK → worlds |                                                           |
+| rift_id                | text             | Rift definition id in game-core content                   |
+| status                 | text             | `active` \| `victory` \| `defeat` \| `abandoned`; indexed |
+| room_index             | smallint         | current room                                              |
+| state                  | jsonb            | `CombatState` (combatants, turn order, log, RNG state)    |
+| version                | integer          | incremented on every saved action                         |
+| turn_deadline          | timestamptz null | end of the current 60 s player turn                       |
+| created_at, updated_at | timestamptz      |                                                           |
+| ended_at               | timestamptz null |                                                           |
+
+Rows are locked (`SELECT … FOR UPDATE`) while an action is applied.
+
+### `rift_run_participants`
+
+| Column       | Type                           | Notes                                                  |
+| ------------ | ------------------------------ | ------------------------------------------------------ |
+| run_id       | uuid FK → rift_runs (cascade)  | PK part                                                |
+| character_id | uuid FK → characters (cascade) | PK part; indexed ("is this character in a Rift?")      |
+| account_id   | uuid FK → accounts (cascade)   |                                                        |
+| result       | jsonb null                     | rewards (reputation, items) or penalty (damaged items) |
+| joined_at    | timestamptz                    |                                                        |
+
+A character can be in at most one active run (checked under a row lock on the character).
+
 ### `world_events`
 
 | Column             | Type             | Notes                                                      |

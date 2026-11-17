@@ -17,6 +17,7 @@ import type { AppContext } from '../../context.js';
 import { AppError, errors, isUniqueViolation } from '../../lib/errors.js';
 import { charactersRepository as repo } from './characters.repository.js';
 import { itemsRepository } from './items.repository.js';
+import { assertNotInRift } from './sheet.service.js';
 
 export function toCharacterDto(c: Character): CharacterDto {
   return {
@@ -123,6 +124,7 @@ export class CharactersService {
     await this.db.transaction(async (tx) => {
       const c = await repo.findOwned(tx, accountId, id);
       if (!c) throw errors.notFound('Character');
+      await assertNotInRift(tx, id);
       await repo.softDelete(tx, id);
       await tx.insert(worldEvents).values({
         worldId: c.worldId,

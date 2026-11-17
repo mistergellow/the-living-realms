@@ -57,7 +57,9 @@ describe('world worker', () => {
   });
 
   it('purges expired sessions only', async () => {
-    await h.db.execute(sql`TRUNCATE world_events, characters, sessions, accounts CASCADE`);
+    await h.db.execute(
+      sql`TRUNCATE world_events, rift_run_participants, rift_runs, items, character_skills, characters, sessions, accounts CASCADE`,
+    );
     const [acc] = await h.db
       .insert(accounts)
       .values({ email: 'w@example.com', passwordHash: 'x' })

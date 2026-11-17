@@ -1,7 +1,7 @@
 import { hexCorners, hexDistance, hexesInRange, hexKey, hexToPixel } from '@realms/game-core';
 import type { HexCoord, PresencePlayer } from '@realms/shared';
 import { useMemo } from 'react';
-import { emblemPath } from '../characters/CharacterToken';
+import { CharacterAvatar } from '../avatar/CharacterAvatar';
 
 const SIZE = 34;
 const RADIUS = 5;
@@ -60,8 +60,15 @@ export function HexMap({ center, players, selfId, selected, onSelect }: HexMapPr
             </polygon>
             {shown ? (
               <g pointerEvents="none">
-                <circle r="13" fill="#0b0d12" stroke={shown.appearance.color} strokeWidth="2" />
-                <path d={emblemPath(shown.appearance.emblem)} fill={shown.appearance.color} />
+                <circle r="15" fill="#0b0d12" stroke="var(--accent)" strokeWidth="1.5" />
+                <g transform="translate(-14 -14)">
+                  <CharacterAvatar
+                    appearance={shown.appearance}
+                    portrait
+                    size={28}
+                    animated={false}
+                  />
+                </g>
                 {here.length > 1 && (
                   <g transform="translate(13,-13)">
                     <circle className="badge" r="8" />

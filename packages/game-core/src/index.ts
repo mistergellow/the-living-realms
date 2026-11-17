@@ -12,3 +12,6 @@ export * from './equipment.js';
 export * from './stats.js';
 export * from './content/abilities.js';
 export * from './content/items.js';
+export * from './content/enemies.js';
+export * from './content/rifts.js';
+export * from './combat/index.js';

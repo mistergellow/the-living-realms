@@ -10,12 +10,7 @@ import {
   validateCharacterName,
   validatePointBuy,
 } from '@realms/game-core';
-import {
-  APPEARANCE_COLORS,
-  APPEARANCE_EMBLEMS,
-  type Attributes,
-  type CharacterAppearance,
-} from '@realms/shared';
+import { DEFAULT_APPEARANCE, type AppearanceV2, type Attributes } from '@realms/shared';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { fieldErrors } from '../../lib/api';
@@ -24,7 +19,9 @@ import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from './active-character';
 import { useCreateCharacter } from './api';
 import { AttributePicker } from './AttributePicker';
-import { CharacterToken } from './CharacterToken';
+import { CharacterAvatar } from '../avatar/CharacterAvatar';
+import { weaponArtFor } from '../avatar/weapon-art';
+import { AppearanceEditor } from './AppearanceEditor';
 
 const legend = {
   fontSize: 13,
@@ -36,11 +33,7 @@ const legend = {
 export function CharacterCreatePage() {
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [appearance, setAppearance] = useState<CharacterAppearance>({
-    version: 1,
-    color: APPEARANCE_COLORS[5],
-    emblem: APPEARANCE_EMBLEMS[0],
-  });
+  const [appearance, setAppearance] = useState<AppearanceV2>(DEFAULT_APPEARANCE);
   const [attributes, setAttributes] = useState<Attributes>(BASE_ATTRIBUTES);
   const [weapon, setWeapon] = useState<string>(STARTER_WEAPONS[0]!);
   const create = useCreateCharacter();
@@ -131,39 +124,10 @@ export function CharacterCreatePage() {
             </div>
           </fieldset>
 
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-            <legend style={legend}>Color</legend>
-            <div className="swatches">
-              {APPEARANCE_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className="swatch"
-                  aria-label={`Color ${color}`}
-                  aria-pressed={appearance.color === color}
-                  style={{ background: color }}
-                  onClick={() => setAppearance((a) => ({ ...a, color }))}
-                />
-              ))}
-            </div>
-          </fieldset>
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-            <legend style={legend}>Emblem</legend>
-            <div className="swatches">
-              {APPEARANCE_EMBLEMS.map((emblem) => (
-                <button
-                  key={emblem}
-                  type="button"
-                  className="swatch"
-                  aria-label={`Emblem ${emblem}`}
-                  aria-pressed={appearance.emblem === emblem}
-                  onClick={() => setAppearance((a) => ({ ...a, emblem }))}
-                >
-                  <CharacterToken appearance={{ ...appearance, emblem }} size={30} />
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <section className="panel">
+            <div className="panel-title">Appearance</div>
+            <AppearanceEditor value={appearance} onChange={setAppearance} />
+          </section>
           <div>
             <button className="btn btn-primary" type="submit" disabled={create.isPending}>
               {create.isPending ? 'Creating…' : 'Create and enter the world'}
@@ -171,7 +135,12 @@ export function CharacterCreatePage() {
           </div>
         </div>
         <aside className="panel preview" aria-label="Preview">
-          <CharacterToken appearance={appearance} size={110} />
+          <CharacterAvatar
+            appearance={appearance}
+            weapon={weaponArtFor(weapon)}
+            size={190}
+            title="Preview"
+          />
           <strong>{name.trim() || 'Unnamed'}</strong>
           <span className="muted">{getItemDef(weapon)?.name}</span>
           <dl className="stat-list">
@@ -187,7 +156,7 @@ export function CharacterCreatePage() {
             <dd>{preview.critChance}%</dd>
           </dl>
           <span className="muted" style={{ fontSize: 12 }}>
-            Stats shown without equipment. Appearance is a placeholder.
+            Stats shown without equipment. Placeholder art.
           </span>
         </aside>
       </form>

@@ -21,7 +21,7 @@ async function register(page: Page, email: string) {
 
 async function createCharacter(page: Page, name: string) {
   await page.getByLabel('Name').fill(name);
-  await page.getByRole('button', { name: 'Emblem star' }).click();
+  await page.getByRole('button', { name: 'Hair style spiky' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('self-name')).toHaveText(name);
@@ -123,4 +123,43 @@ test('character system: point-buy, starting weapon, sheet and equipment', async 
   await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
   await page.getByRole('button', { name: 'Equip Hunting Bow' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
+});
+
+test('Rift combat: enter solo, attack, end turn, abandon', async ({ page }) => {
+  await register(page, `e2e-rift-${unique()}@example.com`);
+  await page.getByLabel('Name').fill(randomName('Raider'));
+  for (let i = 0; i < 7; i++) await page.getByRole('button', { name: 'Increase Strength' }).click();
+  for (let i = 0; i < 7; i++)
+    await page.getByRole('button', { name: 'Increase Constitution' }).click();
+  await page.getByRole('button', { name: 'Hair style long' }).click();
+  await page.getByRole('button', { name: 'Create and enter the world' }).click();
+  await expect(page.getByTestId('self-name')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Rifts' }).click();
+  await expect(page.getByTestId('rift-card')).toContainText('Shattered Breach');
+  await page.getByRole('button', { name: 'Enter solo' }).click();
+  await expect(page).toHaveURL(/\/rifts\/runs\//);
+  await expect(page.getByText('Your turn')).toBeVisible();
+  await expect(page.getByTestId('unit-enemies')).toHaveCount(3);
+  await expect(page.getByTestId('my-focus')).toHaveText('3');
+
+  // Slash: choose the ability, then a highlighted target.
+  await page.getByRole('button', { name: /^Slash/ }).click();
+  await page
+    .getByRole('button', { name: /Rift Husk \(target\)/ })
+    .first()
+    .click();
+  await expect(page.getByTestId('my-focus')).toHaveText('2');
+  await expect(page.getByTestId('combat-log')).toContainText('uses Slash on Rift Husk');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: 'test-results/screens/07-combat.png' });
+
+  await page.getByRole('button', { name: 'End turn' }).click();
+  await expect(page.getByTestId('combat-log')).toContainText('Round 2');
+  await expect(page.getByTestId('my-focus')).toHaveText('5'); // 2 carried over + 3
+
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Abandon' }).click();
+  await expect(page.getByTestId('run-result')).toContainText('You fled the Rift');
+  await expect(page.getByTestId('run-result')).toContainText('quality 75');
 });

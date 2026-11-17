@@ -1,0 +1,103 @@
+/* Idle animations for avatars (provisional art, ADR-021). */
+.avatar {
+  overflow: visible;
+  display: block;
+}
+.avatar .av-root,
+.avatar .av-body,
+.avatar .av-head,
+.avatar .av-eyes,
+.avatar .av-weapon,
+.avatar .av-hand {
+  transform-box: fill-box;
+}
+
+.avatar.is-animated .av-root {
+  animation: av-bob 2.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.avatar.is-animated .av-body {
+  animation: av-breathe 2.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.avatar.is-animated .av-head {
+  animation: av-head 2.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+.avatar.is-animated .av-eyes {
+  animation: av-blink 4.2s infinite;
+  transform-origin: 50% 50%;
+}
+.avatar.is-animated .av-weapon {
+  animation: av-sway 2.6s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+.avatar.is-animated .av-glow,
+.avatar.is-animated .av-orb {
+  animation: av-glow 1.8s ease-in-out infinite;
+}
+.avatar.is-enemy.is-animated .av-root {
+  animation-duration: 2.1s;
+}
+
+@keyframes av-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+@keyframes av-breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.025);
+  }
+}
+@keyframes av-head {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-1.5deg);
+  }
+}
+@keyframes av-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes av-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes av-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar.is-animated * {
+    animation: none !important;
+  }
+}

@@ -37,12 +37,12 @@ map, because combat is the core of the game.
 - [x] **M1 done:** six D&D attributes with point-buy; derived stats; items with quality/durability; equipment with 7 slots (two-handed rules, attribute bonuses); weapons grant abilities; learned-skills table; per-character reputation; starter weapon choice + starter kit; character sheet screen
 - [x] Data-driven definitions (items, abilities) so numbers can be tuned quickly
 
-## Phase 3 — Combat and Rifts 🔜 ❓
+## Phase 3 — Combat and Rifts 🔜 (M2 done)
 
 Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 **difficulty does not change** with the number of players.
 
-- ❓ Battlefield (grid or rows), turn order, actions per turn, turn timer
+- [x] **M2 done:** deterministic combat engine (2 rows × 3 slots per side, initiative, Focus with carry-over, row targeting, swap, enemy AI, rooms → boss, revive at 1 HP); Rift runs persisted every action; 60 s turn timer; rewards (reputation + drops) and defeat penalty (−25% quality); side-view combat screen with animations; layered SVG characters with an editable base body
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
 - Lobby system (create, invite/join, ready check, start)

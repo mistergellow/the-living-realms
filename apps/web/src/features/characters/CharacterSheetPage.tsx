@@ -11,6 +11,8 @@ import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { useActiveCharacter } from './active-character';
 import { useCharacterSheet, useEquipment } from './api';
 import { CharacterToken } from './CharacterToken';
+import { CharacterAvatar } from '../avatar/CharacterAvatar';
+import { weaponArtFor } from '../avatar/weapon-art';
 
 const SLOT_LABELS: Record<EquipSlot, string> = {
   mainHand: 'Main hand',
@@ -21,6 +23,39 @@ const SLOT_LABELS: Record<EquipSlot, string> = {
   accessory1: 'Accessory',
   accessory2: 'Accessory',
 };
+
+const LEFT_SLOTS: EquipSlot[] = ['mainHand', 'head', 'accessory1', 'offHand'];
+const RIGHT_SLOTS: EquipSlot[] = ['body', 'legs', 'accessory2'];
+
+function SlotTile(props: {
+  slot: EquipSlot;
+  item: ItemDto | null;
+  busy: boolean;
+  onUnequip: () => void;
+}) {
+  const { slot, item } = props;
+  return (
+    <div className="slot-tile" data-empty={!item} data-broken={item?.broken ?? false}>
+      <span className="slot-label">{SLOT_LABELS[slot]}</span>
+      {item ? (
+        <>
+          <strong className="slot-item">{item.name}</strong>
+          <QualityBar quality={item.quality} />
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={props.busy}
+            onClick={props.onUnequip}
+            aria-label={`Unequip ${item.name}`}
+          >
+            Unequip
+          </button>
+        </>
+      ) : (
+        <span className="muted">Empty</span>
+      )}
+    </div>
+  );
+}
 
 const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
@@ -104,6 +139,61 @@ export function CharacterSheetPage() {
       <FormError error={equip.error ?? unequip.error} />
 
       <div className="sheet-grid">
+        <section className="panel span-2 hero" data-testid="equipment">
+          <div className="hero-slots">
+            {LEFT_SLOTS.map((slot) => (
+              <SlotTile
+                key={slot}
+                slot={slot}
+                item={s.equipment[slot]}
+                busy={busy}
+                onUnequip={() => unequip.mutate({ slot })}
+              />
+            ))}
+          </div>
+          <div className="hero-center">
+            <div className="hero-stage">
+              <CharacterAvatar
+                appearance={s.character.appearance}
+                weapon={weaponArtFor(
+                  s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId,
+                )}
+                size={230}
+                title={s.character.name}
+              />
+            </div>
+            <div className="hero-stats">
+              <div>
+                <span>HP</span>
+                <strong data-testid="stat-hp">{s.stats.maxHp}</strong>
+              </div>
+              <div>
+                <span>Mana</span>
+                <strong>{s.stats.maxMana}</strong>
+              </div>
+              <div>
+                <span>Defense</span>
+                <strong>{s.stats.defense}</strong>
+              </div>
+              <div>
+                <span>Initiative</span>
+                <strong>{fmt(s.stats.initiative)}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="hero-slots">
+            {RIGHT_SLOTS.map((slot) => (
+              <SlotTile
+                key={slot}
+                slot={slot}
+                item={s.equipment[slot]}
+                busy={busy}
+                onUnequip={() => unequip.mutate({ slot })}
+              />
+            ))}
+          </div>
+        </section>
+
         <section className="panel">
           <div className="panel-title">Attributes</div>
           <table className="kv">
@@ -130,7 +220,7 @@ export function CharacterSheetPage() {
             <tbody>
               <tr>
                 <th>HP</th>
-                <td data-testid="stat-hp">{s.stats.maxHp}</td>
+                <td>{s.stats.maxHp}</td>
               </tr>
               <tr>
                 <th>Mana</th>
@@ -170,35 +260,6 @@ export function CharacterSheetPage() {
               </tr>
             </tbody>
           </table>
-        </section>
-
-        <section className="panel span-2">
-          <div className="panel-title">Equipment</div>
-          <ul className="slot-list" data-testid="equipment">
-            {(Object.keys(s.equipment) as EquipSlot[]).map((slot) => {
-              const item = s.equipment[slot];
-              return (
-                <li key={slot}>
-                  <span className="slot-label">{SLOT_LABELS[slot]}</span>
-                  {item ? (
-                    <>
-                      <ItemLine item={item} />
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        disabled={busy}
-                        onClick={() => unequip.mutate({ slot })}
-                        aria-label={`Unequip ${item.name}`}
-                      >
-                        Unequip
-                      </button>
-                    </>
-                  ) : (
-                    <span className="muted">Empty</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
         </section>
 
         <section className="panel span-2">

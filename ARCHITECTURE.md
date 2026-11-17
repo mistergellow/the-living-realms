@@ -225,19 +225,31 @@ How future systems plug in (design intent, not implemented):
 If one tick loop becomes too heavy, the world is **partitioned by region**
 across several workers (one advisory lock per partition).
 
-## 7. Combat instances (future)
+## 7. Combat instances (Rift runs)
 
 Combat is separate from exploration on both sides:
 
-- **Client:** its own route (`/combat/:id`) and renderer (planned: PixiJS
-  canvas) in `apps/web/src/features/combat`. Exploration UI stays DOM/SVG.
-- **Server:** each fight is a _combat instance_ — a state machine whose
-  authoritative state is persisted in PostgreSQL after every turn (so a crash
-  or deploy never loses a fight). Turn resolution is pure logic in
-  `game-core/combat`. Participants subscribe to `bus:combat:<id>`.
-- Because combat is turn-based, a request/response model over the existing
-  WebSocket is enough. A dedicated combat service (or a framework like Colyseus)
-  is only needed if combat later becomes real-time.
+- **Engine (`game-core/combat`):** pure and deterministic, `(state, action) → state`.
+  The RNG state lives inside the combat state, so every fight can be replayed
+  and unit-tested. Rules: two rows of three slots per side; PvE rounds = party
+  members by initiative, then every enemy (simple greedy AI); Focus per turn
+  with carry-over; rooms → boss; HP/mana persist between rooms.
+- **Server (`modules/rifts`):** each Rift run is a row in `rift_runs` holding the
+  whole `CombatState` as JSONB. Every action runs in a transaction that locks
+  the run row, applies the engine, and saves the new state (so a refresh,
+  reconnect or deploy never loses a fight). Rewards (reputation, drops) and
+  penalties (equipment quality) are applied in the same transaction that ends
+  the run.
+- **Turn timer (60 s):** stored as `turn_deadline`. Expired turns are applied
+  lazily whenever the run is read or acted upon (catch-up loop), and the client
+  re-fetches when its countdown hits zero. No background job is needed for solo
+  runs; lobbies (M3) add WebSocket push and a worker sweep.
+- **Transport:** HTTP for actions in M2 (request → updated run). M3 adds a
+  `combat:<runId>` bus channel to push updates to every participant.
+- **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and side-view
+  stage (`features/rifts`). Animations are derived from new combat log entries
+  (`useCombatFx`): the actor lunges, targets flash, numbers float.
+- **Art:** layered SVG characters (`features/avatar`) — provisional, see ADR-021.
 
 ## 8. World map
 

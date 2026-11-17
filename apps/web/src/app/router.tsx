@@ -6,6 +6,8 @@ import { CharacterCreatePage } from '../features/characters/CharacterCreatePage'
 import { CharacterSelectPage } from '../features/characters/CharacterSelectPage';
 import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
 import { WorldPage } from '../features/world/WorldPage';
+import { RiftsPage } from '../features/rifts/RiftsPage';
+import { CombatPage } from '../features/rifts/CombatPage';
 
 /*
  * Route map
@@ -14,7 +16,8 @@ import { WorldPage } from '../features/world/WorldPage';
  *   /characters/new          character creation
  *   /characters/:id          character sheet (attributes, stats, equipment, abilities)
  *   /world                   exploration (requires an active character)
- *   /combat/:id              (future) separate combat screen
+ *   /rifts                   Rift list (enter solo; lobbies in M3)
+ *   /rifts/runs/:runId       combat screen (separate from exploration)
  */
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/characters" replace /> },
@@ -32,6 +35,8 @@ export const router = createBrowserRouter([
       { path: '/characters/new', element: <CharacterCreatePage /> },
       { path: '/characters/:id', element: <CharacterSheetPage /> },
       { path: '/world', element: <WorldPage /> },
+      { path: '/rifts', element: <RiftsPage /> },
+      { path: '/rifts/runs/:runId', element: <CombatPage /> },
     ],
   },
   {

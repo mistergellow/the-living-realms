@@ -15,6 +15,8 @@ import { SessionService } from './modules/auth/session.service.js';
 import { charactersRoutes } from './modules/characters/characters.routes.js';
 import { CharactersService } from './modules/characters/characters.service.js';
 import { CharacterSheetService } from './modules/characters/sheet.service.js';
+import { riftsRoutes } from './modules/rifts/rifts.routes.js';
+import { RiftsService } from './modules/rifts/rifts.service.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { worldRoutes } from './modules/world/world.routes.js';
 import { authPlugin } from './plugins/auth.js';
@@ -45,6 +47,7 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   const ctx: AppContext = { ...deps, world };
   const sessions = new SessionService(deps.db, config.SESSION_TTL_DAYS);
   const characters = new CharactersService(ctx);
+  const sheets = new CharacterSheetService(deps.db);
   const gateway = new RealtimeGateway(ctx, characters, app.log);
 
   app.addHook('onSend', async (request, reply) => {
@@ -67,8 +70,9 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
       await api.register(charactersRoutes, {
         prefix: '/characters',
         service: characters,
-        sheets: new CharacterSheetService(deps.db),
+        sheets,
       });
+      await api.register(riftsRoutes, { prefix: '/rifts', service: new RiftsService(ctx, sheets) });
       await api.register(worldRoutes, { prefix: '/world', ctx });
     },
     { prefix: '/api' },

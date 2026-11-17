@@ -12,6 +12,7 @@ import {
 import {
   ErrorCode,
   type Attributes,
+  type CharacterAppearance,
   type CharacterSheetDto,
   type EquipSlot,
   type ItemDto,
@@ -20,6 +21,13 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { AppError, errors } from '../../lib/errors.js';
 import { toCharacterDto } from './characters.service.js';
 import { itemsRepository } from './items.repository.js';
+import { riftsRepository } from '../rifts/rifts.repository.js';
+
+/** Equipment and character changes are locked while inside a Rift. */
+export async function assertNotInRift(db: DbOrTx, characterId: string): Promise<void> {
+  if (await riftsRepository.activeRunIdFor(db, characterId))
+    throw new AppError(409, ErrorCode.IN_RIFT, 'Not possible while inside a Rift.');
+}
 
 export const baseAttributesOf = (c: Character): Attributes => ({
   str: c.attrStr,
@@ -60,12 +68,13 @@ export class CharacterSheetService {
   constructor(private readonly db: Database) {}
 
   async getSheet(accountId: string, characterId: string): Promise<CharacterSheetDto> {
-    return this.buildSheet(this.db, await this.ownedCharacter(this.db, accountId, characterId));
+    return this.buildSheet(this.db, await this.getOwnedCharacter(this.db, accountId, characterId));
   }
 
   async equip(accountId: string, characterId: string, itemId: string, slot: EquipSlot) {
     return this.db.transaction(async (tx) => {
-      const c = await this.ownedCharacter(tx, accountId, characterId, true);
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
       const owned = (await itemsRepository.listByCharacter(tx, c.id)).map(toOwned);
       const plan = planEquip(owned, itemId, slot);
       if (!plan.ok) throw new AppError(400, ErrorCode.INVALID_EQUIPMENT, plan.reason);
@@ -78,7 +87,8 @@ export class CharacterSheetService {
 
   async unequip(accountId: string, characterId: string, slot: EquipSlot) {
     return this.db.transaction(async (tx) => {
-      const c = await this.ownedCharacter(tx, accountId, characterId, true);
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
       const item = (await itemsRepository.listByCharacter(tx, c.id)).find(
         (i) => i.equippedSlot === slot,
       );
@@ -88,7 +98,7 @@ export class CharacterSheetService {
   }
 
   /** Loads a living character owned by the account; `lock` serialises concurrent changes. */
-  private async ownedCharacter(
+  async getOwnedCharacter(
     db: DbOrTx,
     accountId: string,
     id: string,
@@ -107,6 +117,20 @@ export class CharacterSheetService {
     const [c] = lock ? await q.for('update') : await q;
     if (!c) throw errors.notFound('Character');
     return c;
+  }
+
+  /** What the combat engine needs to know about a character. */
+  async combatProfile(db: DbOrTx, c: Character) {
+    const [rows, skills] = await Promise.all([
+      itemsRepository.listByCharacter(db, c.id),
+      itemsRepository.learnedSkillIds(db, c.id),
+    ]);
+    const owned = rows.map(toOwned);
+    return {
+      appearance: c.appearance as CharacterAppearance,
+      stats: computeStats(baseAttributesOf(c), owned).stats,
+      abilityIds: availableAbilities(owned, skills).map((a) => a.ability.id),
+    };
   }
 
   private async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
