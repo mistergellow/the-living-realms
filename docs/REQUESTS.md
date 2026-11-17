@@ -101,3 +101,11 @@ imagem de produção foi simulada sem Docker (migrações numa BD vazia, servido
 worker, registo e personagem) e funciona. ADR-018; ARCHITECTURE → Deployment;
 CHANGE_MAP → "Deploy / produção".
 **Pendente:** o dono segue o guia; primeiro deploy real por confirmar.
+
+### #9 — 2026-11-17 — Railway não mostra o repositório
+
+**Pedido:** ao criar o serviço a partir do GitHub, o Railway diz "No
+repositories found".
+**Resultado:** a GitHub App do Railway ainda não tinha acesso ao repositório.
+Passos dados ao dono: Configure GitHub App → dar acesso a
+`the-living-realms` → Save → Refresh. Sem alterações ao código.
