@@ -16,7 +16,8 @@ import {
 } from '../src/index.js';
 
 const appearance = { version: 1, color: '#c0392b', emblem: 'circle' } as const;
-const baseStats = computeStats({ str: 14, dex: 12, con: 14, int: 10, wis: 10, cha: 8 }).stats;
+const baseAttributes = { might: 9, agility: 6, precision: 5, vitality: 9, arcana: 5, spirit: 5 };
+const baseStats = computeStats(baseAttributes).stats;
 
 function member(
   id: string,
@@ -29,6 +30,7 @@ function member(
     characterId: id,
     name: id,
     appearance,
+    attributes: baseAttributes,
     stats,
     abilityIds,
     hp: stats.maxHp,
@@ -61,7 +63,7 @@ describe('turn order and Focus', () => {
 
   it('rejects actions out of turn and without enough Focus', () => {
     const s = encounter(
-      [member('a', 0, { initiative: 5 }), member('b', 1)],
+      [member('a', 0, { initiative: 50 }), member('b', 1)],
       room([{ enemy: 'rift_husk', slot: 0 }]),
     );
     const notYours = applyAction(s, 'p:b', { type: 'end_turn' });
@@ -163,14 +165,16 @@ describe('Swap Position', () => {
 describe('rooms, downs and outcomes', () => {
   it('clearing a room revives downed allies with 1 HP and keeps HP between rooms', () => {
     let s = encounter(
-      [member('a', 0, { initiative: 5, physicalPower: 50 }), member('b', 1)],
+      [member('a', 0, { initiative: 50, critChance: 0 }), member('b', 1)],
       room([{ enemy: 'shard_spitter', slot: 0 }]),
     );
     unit(s, 'p:b').hp = 0;
     unit(s, 'p:b').downed = true;
     unit(s, 'p:a').hp = 20;
     unit(s, 'p:a').stats.critChance = 0;
-    s.combatants.find((c) => c.side === 'enemies')!.stats.dodgeChance = 0;
+    const spitter = s.combatants.find((c) => c.side === 'enemies')!;
+    spitter.stats.dodgeChance = 0;
+    spitter.hp = 1;
     s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash' }));
     expect(s.phase).toBe('room_cleared');
     expect(unit(s, 'p:b')).toMatchObject({ downed: false, hp: 1 });
@@ -186,10 +190,11 @@ describe('rooms, downs and outcomes', () => {
 
   it('clearing the last room is a victory; a wiped party is a defeat', () => {
     let s = encounter(
-      [member('a', 0, { physicalPower: 99, critChance: 0 })],
+      [member('a', 0, { critChance: 0 })],
       room([{ enemy: 'rift_husk', slot: 0 }]),
       true,
     );
+    s.combatants.find((c) => c.side === 'enemies')!.hp = 1;
     s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash' }));
     expect(s).toMatchObject({ phase: 'ended', outcome: 'victory' });
 
@@ -225,5 +230,83 @@ describe('rooms, downs and outcomes', () => {
     };
     expect(play(7)).toEqual(play(7));
     expect(JSON.stringify(play(7))).not.toEqual(JSON.stringify(play(8)));
+  });
+});
+
+describe('Combat 2.0: block, statuses, mitigation', () => {
+  const husk = room([{ enemy: 'rift_husk', slot: 0 }]);
+  const enemyOf = (s: CombatState) => s.combatants.find((c) => c.side === 'enemies')!;
+
+  it('Block absorbs damage and expires at the start of your next turn', () => {
+    let s = encounter([member('a', 0, { dodgeChance: 0 }, ['raise_shield'])], husk);
+    s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'raise_shield' }));
+    const gained = unit(s, 'p:a').block;
+    expect(gained).toBeGreaterThan(0);
+    s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
+    const hits = s.log.filter((l) => l.t === 'damage' && l.targetId === 'p:a');
+    expect(hits.some((h) => h.t === 'damage' && h.blocked > 0)).toBe(true);
+    expect(unit(s, 'p:a').block).toBe(0); // new turn started
+  });
+
+  it('bleed ticks at the start of the target turn and counts down', () => {
+    let s = encounter([member('a', 0, { critChance: 0 }, ['rend'])], husk);
+    const e = enemyOf(s);
+    e.stats.dodgeChance = 0;
+    e.hp = 200;
+    s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'rend' }));
+    expect(enemyOf(s).statuses).toEqual([expect.objectContaining({ id: 'bleed', turns: 2 })]);
+    s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
+    expect(s.log.some((l) => l.t === 'tick' && l.status === 'bleed')).toBe(true);
+    expect(enemyOf(s).statuses[0]!.turns).toBe(1);
+  });
+
+  it('a stunned unit loses its next turn', () => {
+    let s = encounter([member('a', 0), member('b', 1, { initiative: -9 })], husk);
+    unit(s, 'p:b').statuses.push({ id: 'stun', turns: 1, value: 0 });
+    s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
+    expect(s.log.some((l) => l.t === 'stunned' && l.targetId === 'p:b')).toBe(true);
+    expect(s.activeId).not.toBe('p:b');
+  });
+
+  it('marked targets take more damage; armor reduces physical damage', () => {
+    const hit = (marked: boolean, armor: number) => {
+      const s = encounter([member('a', 0, { critChance: 0 }, ['slash'])], husk, false, 99);
+      const e = enemyOf(s);
+      Object.assign(e, { hp: 500 });
+      e.stats.dodgeChance = 0;
+      e.stats.armor = armor;
+      if (marked) e.statuses.push({ id: 'mark', turns: 2, value: 0 });
+      const r = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash' }));
+      return r.log.find((l) => l.t === 'damage')!;
+    };
+    const plain = hit(false, 0) as { amount: number };
+    const marked = hit(true, 0) as { amount: number };
+    const armored = hit(false, 50) as { amount: number };
+    expect(marked.amount).toBeGreaterThan(plain.amount);
+    expect(armored.amount).toBe(Math.max(1, Math.round(plain.amount * 0.5)));
+  });
+});
+
+describe('enemy intents (Slay-the-Spire style)', () => {
+  it('enemies show what they will do before the party acts, then do it', () => {
+    let s = encounter([member('a', 0, { maxHp: 500 })], room([{ enemy: 'rift_husk', slot: 0 }]));
+    const husk = s.combatants.find((c) => c.side === 'enemies')!;
+    expect(husk.intents.length).toBeGreaterThan(0);
+    expect(husk.intents[0]).toEqual({ abilityId: 'husk_claw', targetIds: ['p:a'] });
+    const planned = husk.intents.length;
+    s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
+    const used = s.log.filter((l) => l.t === 'ability' && l.actorId === husk.id);
+    expect(used).toHaveLength(planned);
+    // A new round: new intents are already planned.
+    expect(s.combatants.find((c) => c.id === husk.id)!.intents.length).toBeGreaterThan(0);
+  });
+
+  it('stunned enemies plan nothing', () => {
+    const s = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]));
+    const t = structuredClone(s);
+    const husk = t.combatants.find((c) => c.side === 'enemies')!;
+    husk.statuses.push({ id: 'stun', turns: 1, value: 0 });
+    const next = ok(applyAction(t, 'p:a', { type: 'end_turn' }));
+    expect(next.log.some((l) => l.t === 'stunned' && l.targetId === husk.id)).toBe(true);
   });
 });

@@ -1,4 +1,11 @@
-import { getAbility, validTargets, type CombatState } from '@realms/game-core';
+import {
+  describeEffects,
+  getAbility,
+  STATUS_DESCRIPTIONS,
+  STATUS_NAMES,
+  validTargets,
+  type CombatState,
+} from '@realms/game-core';
 import type { CombatantView, RunDto } from '@realms/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
@@ -6,7 +13,7 @@ import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { EnemyAvatar } from '../avatar/EnemyAvatar';
-import { weaponArtFromAbilities } from '../avatar/weapon-art';
+import { artFromAbilities } from '../avatar/weapon-art';
 import { useActiveCharacter } from '../characters/active-character';
 import { useRun, useRunAction } from './api';
 import { describeLog } from './combat-text';
@@ -36,7 +43,72 @@ function Bar({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'm
   );
 }
 
+function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: string) => string }) {
+  if (unit.downed || unit.intents.length === 0) return null;
+  // Group repeated actions (e.g. three claws at the same target → "×3").
+  const groups: Array<{ abilityId: string; targetIds: string[]; count: number }> = [];
+  for (const it of unit.intents) {
+    const last = groups[groups.length - 1];
+    if (last && last.abilityId === it.abilityId && last.targetIds.join() === it.targetIds.join())
+      last.count++;
+    else groups.push({ ...it, count: 1 });
+  }
+  return (
+    <div className="intents" data-testid="intent">
+      {groups.map((it, i) => {
+        const a = getAbility(it.abilityId);
+        if (!a) return null;
+        const dmg = a.effects.find((e) => e.kind === 'damage');
+        const value =
+          dmg && dmg.kind === 'damage'
+            ? `${Math.round(dmg.min * unit.power)}–${Math.round(dmg.max * unit.power)}`
+            : (describeEffects(a)[0] ?? '');
+        const targets =
+          a.targeting.area === 'all'
+            ? 'everyone'
+            : it.targetIds.map(nameOf).join(', ') + (a.targeting.area === 'row' ? ' (row)' : '');
+        const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
+        return (
+          <span
+            key={i}
+            className="intent"
+            title={`${a.name}${it.count > 1 ? ` ×${it.count}` : ''}: ${describeEffects(a).join(', ')} → ${targets}`}
+          >
+            <i>{dmg ? '⚔' : '✦'}</i>
+            {value}
+            {it.count > 1 ? ` ×${it.count}` : ''}
+            {extra} <em>→ {targets}</em>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function StatusChips({ unit }: { unit: CombatantView }) {
+  if (unit.downed || (unit.statuses.length === 0 && unit.block === 0)) return null;
+  return (
+    <span className="statuses">
+      {unit.block > 0 && (
+        <span
+          className="status status-block"
+          title="Block: absorbs damage until this unit's next turn"
+        >
+          ⛨ {unit.block}
+        </span>
+      )}
+      {unit.statuses.map((st) => (
+        <span key={st.id} className={`status status-${st.id}`} title={STATUS_DESCRIPTIONS[st.id]}>
+          {STATUS_NAMES[st.id]}
+          {st.value ? ` ${st.value}` : ''} · {st.turns}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function Unit(props: {
+  nameOf: (id: string) => string;
   unit: CombatantView;
   active: boolean;
   targetable: boolean;
@@ -71,11 +143,12 @@ function Unit(props: {
           </span>
         ))}
       </div>
+      {unit.kind === 'enemy' && <IntentChips unit={unit} nameOf={props.nameOf} />}
       <div className="unit-art">
         {unit.kind === 'player' ? (
           <CharacterAvatar
             appearance={unit.appearance}
-            weapon={weaponArtFromAbilities(unit.abilityIds)}
+            {...artFromAbilities(unit.abilityIds)}
             size={size}
           />
         ) : (
@@ -85,6 +158,7 @@ function Unit(props: {
       <div className="unit-info">
         <span className="unit-name">{unit.name}</span>
         <Bar value={unit.hp} max={unit.maxHp} kind="hp" />
+        <StatusChips unit={unit} />
         {unit.kind === 'player' && unit.maxMana > 0 && (
           <Bar value={unit.mana} max={unit.maxMana} kind="mana" />
         )}
@@ -101,6 +175,7 @@ function Unit(props: {
 }
 
 function Formation(props: {
+  nameOf: (id: string) => string;
   side: 'party' | 'enemies';
   units: CombatantView[];
   activeId: string | null;
@@ -132,6 +207,7 @@ function Formation(props: {
               <div className={`cell cell-${slot % 3}`} key={slot} data-slot={slot}>
                 {unit ? (
                   <Unit
+                    nameOf={props.nameOf}
                     unit={unit}
                     active={unit.id === props.activeId}
                     targetable={props.targetIds.has(unit.id) || swappable}
@@ -253,7 +329,8 @@ export function CombatPage() {
     const a = getAbility(abilityId)!;
     if (!me) return;
     // Abilities with nothing to choose fire immediately.
-    if (a.targeting.area === 'all') return send({ type: 'ability', abilityId });
+    if (a.targeting.area === 'all' || a.targeting.side === 'self')
+      return send({ type: 'ability', abilityId });
     if (!a.effects.some((e) => e.kind === 'swap')) {
       const t = validTargets(combat as unknown as CombatState, me, a);
       if (
@@ -309,6 +386,7 @@ export function CombatPage() {
 
       <section className="stage" data-boss={room?.isBoss ?? false}>
         <Formation
+          nameOf={byName}
           side="party"
           units={combat.combatants.filter((c) => c.side === 'party')}
           activeId={combat.activeId}
@@ -324,6 +402,7 @@ export function CombatPage() {
         />
         <div className="stage-gap" aria-hidden />
         <Formation
+          nameOf={byName}
           side="enemies"
           units={combat.combatants.filter((c) => c.side === 'enemies')}
           activeId={combat.activeId}
@@ -384,9 +463,10 @@ export function CombatPage() {
                       aria-pressed={selected === id}
                       disabled={!affordable || action.isPending}
                       onClick={() => pick(id)}
-                      title={a.description}
+                      title={`${a.description}\n${describeEffects(a).join(' · ')}`}
                     >
                       <strong>{a.name}</strong>
+                      <small className="ability-effects">{describeEffects(a).join(' · ')}</small>
                       <span>
                         <i className="cost">{a.focusCost} Focus</i>
                         {a.manaCost > 0 && <i className="cost mana">{a.manaCost} Mana</i>}

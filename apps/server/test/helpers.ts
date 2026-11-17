@@ -81,12 +81,23 @@ export async function registerUser(app: FastifyInstance, email = `user${++counte
 }
 
 const appearance = { version: 1, color: '#2e86c1', emblem: 'star' } as const;
-export const VALID_ATTRIBUTES = { str: 15, dex: 14, con: 13, int: 10, wis: 10, cha: 8 } as const; // 27 points
+export const VALID_ATTRIBUTES = {
+  might: 10,
+  agility: 8,
+  precision: 5,
+  vitality: 9,
+  arcana: 5,
+  spirit: 5,
+} as const; // 12 points
 export async function createCharacter(
   app: FastifyInstance,
   cookie: string,
   name: string,
-  extra: { attributes?: Record<string, number>; startingWeapon?: string } = {},
+  extra: {
+    attributes?: Record<string, number>;
+    startingWeapon?: string;
+    startingOffhand?: string;
+  } = {},
 ) {
   return app.inject({
     method: 'POST',
@@ -97,6 +108,7 @@ export async function createCharacter(
       appearance,
       attributes: extra.attributes ?? VALID_ATTRIBUTES,
       startingWeapon: extra.startingWeapon ?? 'training_sword',
+      ...(extra.startingOffhand ? { startingOffhand: extra.startingOffhand } : {}),
     },
   });
 }

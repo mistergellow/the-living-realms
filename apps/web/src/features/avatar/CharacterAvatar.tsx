@@ -11,11 +11,13 @@ import './avatar.css';
  * viewBox 0 0 120 160 — feet at y≈150, head centre (60, 60).
  */
 
-export type WeaponArt = 'sword' | 'bow' | 'staff' | null;
+export type WeaponArt = 'sword' | 'axe' | 'dagger' | 'bow' | 'staff' | 'tome' | null;
+export type OffhandArt = 'shield' | 'talisman' | 'dagger' | null;
 
 export interface CharacterAvatarProps {
   appearance: CharacterAppearance | null | undefined;
   weapon?: WeaponArt;
+  offhand?: OffhandArt;
   /** Height in px (width is 3/4). */
   size?: number;
   /** Idle animation (breathing, blinking). */
@@ -130,6 +132,38 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
           <line x1="98" y1="60" x2="98" y2="136" stroke="#e8e2d0" strokeWidth="1.2" />
         </g>
       );
+    case 'axe':
+      return (
+        <g className="av-weapon">
+          <rect x="95" y="60" width="5" height="70" rx="2" fill="#7a5530" />
+          <path d="M100 62 C116 60 118 82 100 84 Z" fill="#b8c2cf" stroke="#6f7a88" />
+        </g>
+      );
+    case 'dagger':
+      return (
+        <g className="av-weapon">
+          <path d="M96 86 L99 86 L100 108 L95 108 Z" fill="#cfd6e0" stroke="#7d8896" />
+          <rect x="92" y="107" width="11" height="4" rx="1.5" fill="#8a6a3a" />
+          <rect x="95.5" y="111" width="4" height="9" rx="1.5" fill="#5a4026" />
+        </g>
+      );
+    case 'tome':
+      return (
+        <g className="av-weapon">
+          <rect x="90" y="104" width="20" height="24" rx="2" fill="#5b3a7a" stroke="#2e1d40" />
+          <rect
+            x="93"
+            y="107"
+            width="14"
+            height="18"
+            rx="1"
+            fill="none"
+            stroke="#d4a64a"
+            strokeWidth="1.2"
+          />
+          <circle cx="100" cy="116" r="3" fill="#b28df0" className="av-orb" />
+        </g>
+      );
     case 'staff':
       return (
         <g className="av-weapon">
@@ -143,9 +177,44 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
   }
 }
 
+function Offhand({ offhand }: { offhand: OffhandArt }) {
+  switch (offhand) {
+    case 'shield':
+      return (
+        <g className="av-offhand">
+          <path
+            d="M8 96 L32 92 L32 116 C32 128 20 134 20 134 C20 134 8 128 8 116 Z"
+            fill="#8a5a2e"
+            stroke="#4a3018"
+            strokeWidth="2"
+          />
+          <circle cx="20" cy="112" r="4" fill="#c9a24a" />
+        </g>
+      );
+    case 'talisman':
+      return (
+        <g className="av-offhand">
+          <line x1="22" y1="112" x2="18" y2="128" stroke="#cdbb92" strokeWidth="1.5" />
+          <path d="M12 128 L24 128 L18 140 Z" fill="#e8e0c8" stroke="#8c7a52" />
+          <circle cx="18" cy="132" r="2" fill="#7fd3ff" className="av-orb" />
+        </g>
+      );
+    case 'dagger':
+      return (
+        <g className="av-offhand">
+          <path d="M21 86 L24 86 L25 108 L20 108 Z" fill="#cfd6e0" stroke="#7d8896" />
+          <rect x="17" y="107" width="11" height="4" rx="1.5" fill="#8a6a3a" />
+        </g>
+      );
+    default:
+      return null;
+  }
+}
+
 export function CharacterAvatar({
   appearance,
   weapon = null,
+  offhand = null,
   size = 160,
   animated = true,
   flip = false,
@@ -214,6 +283,7 @@ export function CharacterAvatar({
             />
           </g>
           <Weapon weapon={weapon} />
+          <Offhand offhand={offhand} />
           <circle cx={60 + 24.5 * wide} cy="120" r="5.5" fill={a.skin} className="av-hand" />
           {/* head */}
           <g className="av-head">

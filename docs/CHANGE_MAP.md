@@ -48,40 +48,43 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `apps/server/test/characters.test.ts`, `helpers.ts` (`createCharacter`), `game-core/test/character.test.ts`, `apps/web/test/world-state.test.ts` (fixture `self`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → characters, `DECISIONS.md` ADR-015
 
-## Atributos (STR, DEX, CON, INT, WIS, CHA) e point-buy
+## Atributos (Might, Agility, Precision, Vitality, Arcana, Spirit)
 
-- Contrato: `packages/shared/src/api.ts` (`ATTRIBUTE_KEYS`, `attributesSchema`, `createCharacterRequestSchema.attributes`)
-- Regras: `packages/game-core/src/attributes.ts` (`POINT_BUY`, `validatePointBuy`, `attributeModifier`, nomes e resumos)
-- BD: `characters.attr_str … attr_cha` + migração
-- Servidor: `characters.service.ts` (validação e gravação), `sheet.service.ts` (`baseAttributesOf`)
-- Web: `AttributePicker.tsx`, `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx`
-- Testes: `game-core/test/character-system.test.ts`, `apps/server/test/character-sheet.test.ts`, `helpers.ts` (`VALID_ATTRIBUTES`), `e2e/foundation.spec.ts` (botões "Increase …")
+- Contrato: `packages/shared/src/api.ts` (`ATTRIBUTE_KEYS`, `attributesSchema`, `createCharacterRequestSchema.attributes`, `allocateAttributesRequestSchema`, `CharacterSheetDto.attributePoints`)
+- Regras: `packages/game-core/src/attributes.ts` (`ATTRIBUTE_RULES`: base 5, 12 pontos, máx. 10; `validateCreationAttributes`, `validateAllocation`, nomes e resumos)
+- BD: `characters.attr_might … attr_spirit`, `characters.attribute_points` + migrações 0004–0006
+- Servidor: `characters.service.ts` (criação, pontos por gastar), `sheet.service.ts` (`baseAttributesOf`, `allocate`), rota `POST /api/characters/:id/attributes`
+- Web: `AttributePicker.tsx` (criação e distribuição posterior), `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (`AllocatePanel`)
+- Combate: `CombatantView.attributes` → `scalingMultiplier` no motor
+- Testes: `game-core/test/character-system.test.ts`, `apps/server/test/character-sheet.test.ts`, `helpers.ts` (`VALID_ATTRIBUTES`), `e2e` (botões "Increase …")
+- **Atributo novo/renomeado:** todos os ficheiros acima + `scaling` das habilidades em `content/abilities.ts` + `describeScaling` + migração de dados
 
 ## Estatísticas derivadas (HP, Mana, defesa, iniciativa, esquiva, crítico, poderes)
 
-- Fórmulas (provisórias, num só sítio): `packages/game-core/src/stats.ts` (`STAT_RULES`, `computeStats`)
+- Fórmulas (provisórias, num só sítio): `packages/game-core/src/stats.ts` (`STAT_RULES`, `computeStats`, `deriveStats`, `reductionFromRating` = curva de armadura/resistência, `scalingMultiplier`)
 - Contrato: `DerivedStatsDto` em `packages/shared/src/api.ts`
-- Web: `CharacterSheetPage.tsx` (tabela "Combat stats"), `CharacterCreatePage.tsx` (pré-visualização)
+- Web: `CharacterSheetPage.tsx` (tabela "Combat stats" e números do herói), `CharacterCreatePage.tsx` (pré-visualização)
+- Inimigos: `enemyStats()` em `combat/state.ts` (têm de preencher todos os campos de `DerivedStatsDto`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts` (valores de HP/defesa), `e2e` (`stat-hp`)
 - Futuro: o motor de combate (M2) usa `computeStats`
 
 ## Itens, equipamento e qualidade/durabilidade
 
-- Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `STARTER_WEAPONS`, `STARTER_ARMOR`)
+- Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `WeaponType`, `STARTER_WEAPONS`, `STARTER_OFFHANDS`, `STARTER_ARMOR`; `armor`/`magicResist` são ratings)
 - Regras: `packages/game-core/src/equipment.ts` (`planEquip`, duas mãos, `isBroken`, `qualityAfterDefeat`, `DEFEAT_QUALITY_LOSS`)
 - Contrato: `EQUIP_SLOTS`, `ItemDto`, `equipRequestSchema`, `unequipRequestSchema` (`api.ts`); erro `INVALID_EQUIPMENT` (`errors.ts`)
 - BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade); migração de dados `0002_starter_kit_for_existing_characters.sql`
 - Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
 - Web: `CharacterSheetPage.tsx` (Equipment, Inventory, `QualityBar`), `api.ts` (`useEquipment`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
-- **Item novo:** acrescentar em `content/items.ts`; se for arma, ligar as habilidades em `content/abilities.ts`; se for de kit inicial, rever a migração de dados para personagens antigos
+- **Item novo:** acrescentar em `content/items.ts`; se for arma, ligar as habilidades em `content/abilities.ts` e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts`; se for de kit inicial, rever a migração de dados para personagens antigos; se puder cair de Rifts, `content/rifts.ts` (`loot`)
 - **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS` (`CharacterSheetPage.tsx`), itens que o usam
 
 ## Habilidades (armas, skills aprendidas, universais)
 
-- Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES`, `UNIVERSAL_ABILITIES`, `UNARMED_ABILITIES`, `describeTargeting`)
+- Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
 - Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + aprendidas + universais)
-- Contrato: `AbilityDto` (`api.ts`)
+- Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto)
 - BD: `character_skills` (skills aprendidas por drops; as de arma não se guardam)
 - Servidor: `sheet.service.ts` (`abilities`)
 - Web: `CharacterSheetPage.tsx` (lista), `CharacterCreatePage.tsx` (habilidades de cada arma inicial)
@@ -220,7 +223,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `e2e` ("Rift combat")
 - **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `useCombatFx.ts` (se tiver animação)
 - **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
-- Equilíbrio: correr a simulação (ver `docs/REQUESTS.md` A18) depois de mudar números
+- Equilíbrio: correr a simulação depois de mudar números (metas em `docs/REQUESTS.md` A23; o script de simulação deve ser recriado/guardado em `scripts/` se for preciso com frequência)
+
+## Estados, Block e intenções (Slay the Spire + Darkest Dungeon)
+
+- Contrato: `STATUS_IDS`, `StatusView`, `IntentView`, `CombatantView.block/statuses/intents`, entradas de log `block`/`status`/`tick`/`stunned` (`shared/src/combat.ts`)
+- Motor: `combat/engine.ts` (`beginTurn`: Block expira, dano contínuo, contagem; `applyEffect`; `planEnemyIntents` no início da ronda; `runEnemyPhase` executa as intenções), `COMBAT_RULES.markMultiplier/weakenMultiplier`
+- Web: `CombatPage.tsx` (`IntentChips`, `StatusChips`), `combat.css`, `useCombatFx.ts`, `combat-text.ts`
+- Testes: `game-core/test/combat.test.ts` ("Combat 2.0", "enemy intents"), `e2e`
+- **Estado novo:** `STATUS_IDS` (shared) → efeito no motor → nome/descrição em `content/abilities.ts` → cor em `combat.css` → texto/animação
 
 ## Inimigos
 

@@ -725,3 +725,10 @@ a {
   border-color: var(--accent);
   color: var(--accent-strong);
 }
+.allocate {
+  margin-bottom: var(--space-3);
+  border-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

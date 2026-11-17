@@ -2,7 +2,10 @@ import { characters, type Character, type Database, type DbOrTx, type Item } fro
 import {
   availableAbilities,
   computeStats,
+  describeEffects,
+  describeScaling,
   describeTargeting,
+  validateAllocation,
   emptyEquipment,
   getItemDef,
   isBroken,
@@ -30,12 +33,12 @@ export async function assertNotInRift(db: DbOrTx, characterId: string): Promise<
 }
 
 export const baseAttributesOf = (c: Character): Attributes => ({
-  str: c.attrStr,
-  dex: c.attrDex,
-  con: c.attrCon,
-  int: c.attrInt,
-  wis: c.attrWis,
-  cha: c.attrCha,
+  might: c.attrMight,
+  agility: c.attrAgility,
+  precision: c.attrPrecision,
+  vitality: c.attrVitality,
+  arcana: c.attrArcana,
+  spirit: c.attrSpirit,
 });
 
 const toOwned = (i: Item): OwnedItem => ({
@@ -59,7 +62,8 @@ function toItemDto(i: Item): ItemDto {
     slots: def?.slots ?? [],
     twoHanded: def?.twoHanded ?? false,
     bonuses: def?.bonuses ?? {},
-    defense: def?.defense ?? 0,
+    armor: def?.armor ?? 0,
+    magicResist: def?.magicResist ?? 0,
   };
 }
 
@@ -82,6 +86,31 @@ export class CharacterSheetService {
       await itemsRepository.unequip(tx, plan.unequip);
       await itemsRepository.setSlot(tx, itemId, slot);
       return this.buildSheet(tx, c);
+    });
+  }
+
+  /** Spend unspent attribute points (same per-attribute cap as creation). */
+  async allocate(accountId: string, characterId: string, add: Partial<Attributes>) {
+    return this.db.transaction(async (tx) => {
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
+      const res = validateAllocation(baseAttributesOf(c), add, c.attributePoints);
+      if (!res.ok) throw errors.validation(res.reason, [{ path: 'add', message: res.reason }]);
+      const r = res.result;
+      const [updated] = await tx
+        .update(characters)
+        .set({
+          attrMight: r.might,
+          attrAgility: r.agility,
+          attrPrecision: r.precision,
+          attrVitality: r.vitality,
+          attrArcana: r.arcana,
+          attrSpirit: r.spirit,
+          attributePoints: c.attributePoints - res.used,
+        })
+        .where(eq(characters.id, c.id))
+        .returning();
+      return this.buildSheet(tx, updated!);
     });
   }
 
@@ -128,7 +157,7 @@ export class CharacterSheetService {
     const owned = rows.map(toOwned);
     return {
       appearance: c.appearance as CharacterAppearance,
-      stats: computeStats(baseAttributesOf(c), owned).stats,
+      ...computeStats(baseAttributesOf(c), owned),
       abilityIds: availableAbilities(owned, skills).map((a) => a.ability.id),
     };
   }
@@ -166,8 +195,11 @@ export class CharacterSheetService {
         focusCost: ability.focusCost,
         manaCost: ability.manaCost,
         targeting: describeTargeting(ability.targeting),
+        effects: describeEffects(ability),
+        scaling: describeScaling(ability.scaling),
       })),
       reputation: c.reputation,
+      attributePoints: c.attributePoints,
     };
   }
 }

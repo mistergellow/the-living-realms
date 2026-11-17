@@ -1,18 +1,22 @@
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
+  type AttributeKey,
+  type Attributes,
   type CharacterSheetDto,
   type EquipSlot,
   type ItemDto,
 } from '@realms/shared';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { AttributePicker } from './AttributePicker';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { useActiveCharacter } from './active-character';
-import { useCharacterSheet, useEquipment } from './api';
+import { useAllocateAttributes, useCharacterSheet, useEquipment } from './api';
 import { CharacterToken } from './CharacterToken';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { weaponArtFor } from '../avatar/weapon-art';
+import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
 
 const SLOT_LABELS: Record<EquipSlot, string> = {
   mainHand: 'Main hand',
@@ -23,6 +27,36 @@ const SLOT_LABELS: Record<EquipSlot, string> = {
   accessory1: 'Accessory',
   accessory2: 'Accessory',
 };
+
+function AllocatePanel(props: {
+  base: Attributes;
+  points: number;
+  busy: boolean;
+  onSave: (add: Partial<Attributes>) => void;
+}) {
+  const [value, setValue] = useState<Attributes>(props.base);
+  const add = Object.fromEntries(
+    ATTRIBUTE_KEYS.map((k) => [k, value[k] - props.base[k]]).filter(([, n]) => n !== 0),
+  );
+  return (
+    <div className="allocate panel" data-testid="allocate">
+      <AttributePicker
+        value={value}
+        onChange={setValue}
+        floor={props.base}
+        points={props.points}
+        title="Unspent points"
+      />
+      <button
+        className="btn btn-primary btn-sm"
+        disabled={props.busy || Object.keys(add).length === 0}
+        onClick={() => props.onSave(add)}
+      >
+        Confirm attributes
+      </button>
+    </div>
+  );
+}
 
 const LEFT_SLOTS: EquipSlot[] = ['mainHand', 'head', 'accessory1', 'offHand'];
 const RIGHT_SLOTS: EquipSlot[] = ['body', 'legs', 'accessory2'];
@@ -75,8 +109,11 @@ function QualityBar({ quality }: { quality: number }) {
 
 function ItemLine({ item }: { item: ItemDto }) {
   const extras = [
-    item.defense ? `Defense ${fmt(item.defense)}` : null,
-    ...Object.entries(item.bonuses).map(([k, v]) => `${k.toUpperCase()} ${fmt(v ?? 0)}`),
+    item.armor ? `Armor +${item.armor}` : null,
+    item.magicResist ? `Resist +${item.magicResist}` : null,
+    ...Object.entries(item.bonuses).map(
+      ([k, v]) => `${ATTRIBUTE_NAMES[k as AttributeKey]} ${fmt(v ?? 0)}`,
+    ),
     item.twoHanded ? 'Two-handed' : null,
   ].filter(Boolean);
   return (
@@ -103,6 +140,7 @@ export function CharacterSheetPage() {
   const { id = '' } = useParams();
   const sheet = useCharacterSheet(id);
   const { equip, unequip } = useEquipment(id);
+  const allocate = useAllocateAttributes(id);
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
 
@@ -136,7 +174,7 @@ export function CharacterSheetPage() {
         </button>
       </header>
 
-      <FormError error={equip.error ?? unequip.error} />
+      <FormError error={equip.error ?? unequip.error ?? allocate.error} />
 
       <div className="sheet-grid">
         <section className="panel span-2 hero" data-testid="equipment">
@@ -158,6 +196,9 @@ export function CharacterSheetPage() {
                 weapon={weaponArtFor(
                   s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId,
                 )}
+                offhand={offhandArtFor(
+                  s.equipment.offHand?.broken ? null : s.equipment.offHand?.defId,
+                )}
                 size={230}
                 title={s.character.name}
               />
@@ -172,8 +213,8 @@ export function CharacterSheetPage() {
                 <strong>{s.stats.maxMana}</strong>
               </div>
               <div>
-                <span>Defense</span>
-                <strong>{s.stats.defense}</strong>
+                <span>Armor</span>
+                <strong>−{s.stats.physicalReduction}%</strong>
               </div>
               <div>
                 <span>Initiative</span>
@@ -196,6 +237,15 @@ export function CharacterSheetPage() {
 
         <section className="panel">
           <div className="panel-title">Attributes</div>
+          {s.attributePoints > 0 && (
+            <AllocatePanel
+              key={s.attributePoints}
+              base={s.baseAttributes}
+              points={s.attributePoints}
+              busy={allocate.isPending}
+              onSave={(add) => allocate.mutate({ add })}
+            />
+          )}
           <table className="kv">
             <tbody>
               {ATTRIBUTE_KEYS.map((k) => {
@@ -227,36 +277,44 @@ export function CharacterSheetPage() {
                 <td>{s.stats.maxMana}</td>
               </tr>
               <tr>
-                <th>Defense</th>
-                <td>{s.stats.defense}</td>
+                <th>Armor</th>
+                <td>{`${s.stats.armor} (−${s.stats.physicalReduction}%)`}</td>
+              </tr>
+              <tr>
+                <th>Magic resist</th>
+                <td>{`${s.stats.magicResist} (−${s.stats.magicReduction}%)`}</td>
               </tr>
               <tr>
                 <th>Initiative</th>
-                <td>{fmt(s.stats.initiative)}</td>
+                <td>{s.stats.initiative}</td>
               </tr>
               <tr>
                 <th>Dodge</th>
-                <td>{s.stats.dodgeChance}%</td>
+                <td>{`${s.stats.dodgeChance}%`}</td>
               </tr>
               <tr>
-                <th>Critical</th>
-                <td>{s.stats.critChance}%</td>
+                <th>Critical chance</th>
+                <td>{`${s.stats.critChance}%`}</td>
               </tr>
               <tr>
-                <th>Physical power</th>
-                <td>{fmt(s.stats.physicalPower)}</td>
+                <th>Critical damage</th>
+                <td>{`${s.stats.critDamage}%`}</td>
               </tr>
               <tr>
-                <th>Ranged power</th>
-                <td>{fmt(s.stats.rangedPower)}</td>
+                <th>Healing done</th>
+                <td>{`+${s.stats.healingPower}%`}</td>
               </tr>
               <tr>
-                <th>Spell power</th>
-                <td>{fmt(s.stats.spellPower)}</td>
+                <th>Healing received</th>
+                <td>{`+${s.stats.healingReceived}%`}</td>
               </tr>
               <tr>
-                <th>Healing power</th>
-                <td>{fmt(s.stats.healingPower)}</td>
+                <th>Mana per turn</th>
+                <td>{s.stats.manaRegen}</td>
+              </tr>
+              <tr>
+                <th>Status potency</th>
+                <td>{`+${s.stats.effectPotency}%`}</td>
               </tr>
             </tbody>
           </table>
@@ -305,8 +363,10 @@ export function CharacterSheetPage() {
                   </span>
                 </div>
                 <div className="field-hint">
-                  {a.targeting} — {a.description}
+                  {[a.targeting, ...a.effects].join(' · ')}
+                  {a.scaling && <> · scales with {a.scaling}</>}
                 </div>
+                <div className="field-hint">{a.description}</div>
               </li>
             ))}
           </ul>

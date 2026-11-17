@@ -1,27 +1,28 @@
 import type {
+  Attributes,
   CharacterAppearance,
   CombatantView,
   CombatLogEntry,
   CombatView,
   DerivedStatsDto,
 } from '@realms/shared';
-import { getEnemy } from '../content/enemies.js';
+import { getEnemy, type EnemyDef } from '../content/enemies.js';
 import type { RiftRoomDef } from '../content/rifts.js';
+import { reductionFromRating } from '../stats.js';
 
 /*
- * Combat rules (decisions D13–D16, D24, D27–D29). PROVISIONAL NUMBERS.
+ * Combat rules (decisions D13–D16, D24, D27–D29, D33–D35). PROVISIONAL NUMBERS.
  */
 export const COMBAT_RULES = {
-  /** Focus gained at the start of each of a unit's turns. */
   focusPerTurn: 3,
-  /** Unspent Focus carries over (D24) up to this cap (provisional, A16). */
+  /** Unspent Focus carries over (D24) up to this cap (A16). */
   focusMax: 6,
-  critMultiplier: 1.5,
-  /** Seconds per player turn (D16). */
   turnSeconds: 60,
-  /** HP a downed character gets back when the room is cleared (D28). */
   reviveHp: 1,
-  maxLog: 200,
+  /** Mark: target takes +25% damage. Weaken: attacker deals −25%. */
+  markMultiplier: 1.25,
+  weakenMultiplier: 0.75,
+  maxLog: 250,
 } as const;
 
 export type Combatant = CombatantView;
@@ -30,7 +31,6 @@ export interface CombatState extends Omit<CombatView, 'log'> {
   rng: number;
   logSeq: number;
   log: CombatView['log'];
-  /** Tie-breaker rolled once per combatant. */
   tiebreak: Record<string, number>;
   isLastRoom: boolean;
 }
@@ -39,9 +39,9 @@ export interface PartyMemberInput {
   characterId: string;
   name: string;
   appearance: CharacterAppearance;
+  attributes: Attributes;
   stats: DerivedStatsDto;
   abilityIds: string[];
-  /** Current HP/mana (they persist between rooms, D29). */
   hp: number;
   mana: number;
   slot: number;
@@ -50,21 +50,24 @@ export interface PartyMemberInput {
 export const rowOfSlot = (slot: number) => (slot < 3 ? 'front' : 'back');
 export const partyId = (characterId: string) => `p:${characterId}`;
 
-const ENEMY_STATS = (e: NonNullable<ReturnType<typeof getEnemy>>): DerivedStatsDto => ({
-  maxHp: e.maxHp,
-  maxMana: 0,
-  defense: e.defense,
-  initiative: e.initiative,
-  dodgeChance: e.dodgeChance,
-  critChance: e.critChance,
-  physicalPower: e.physicalPower,
-  rangedPower: e.rangedPower,
-  spellPower: e.spellPower,
-  healingPower: 0,
-  resistance: e.resistance,
-  manaRegen: 0,
-  influence: 0,
-});
+function enemyStats(e: EnemyDef): DerivedStatsDto {
+  return {
+    maxHp: e.maxHp,
+    maxMana: 0,
+    armor: e.armor,
+    magicResist: e.magicResist,
+    physicalReduction: Math.round(reductionFromRating(e.armor) * 100),
+    magicReduction: Math.round(reductionFromRating(e.magicResist) * 100),
+    initiative: e.initiative,
+    dodgeChance: e.dodgeChance,
+    critChance: e.critChance,
+    critDamage: 150,
+    healingPower: 0,
+    healingReceived: 0,
+    manaRegen: 0,
+    effectPotency: 0,
+  };
+}
 
 export function partyCombatant(p: PartyMemberInput): Combatant {
   return {
@@ -81,6 +84,11 @@ export function partyCombatant(p: PartyMemberInput): Combatant {
     mana: Math.min(p.mana, p.stats.maxMana),
     maxMana: p.stats.maxMana,
     focus: 0,
+    block: 0,
+    statuses: [],
+    attributes: p.attributes,
+    power: 1,
+    intents: [],
     downed: p.hp <= 0,
     isBoss: false,
     abilityIds: p.abilityIds,
@@ -105,10 +113,15 @@ export function enemyCombatants(room: RiftRoomDef, roomIndex: number): Combatant
       mana: 0,
       maxMana: 0,
       focus: 0,
+      block: 0,
+      statuses: [],
+      attributes: null,
+      power: def.power,
+      intents: [],
       downed: false,
       isBoss: !!def.isBoss,
       abilityIds: def.abilities,
-      stats: ENEMY_STATS(def),
+      stats: enemyStats(def),
     };
   });
 }
@@ -119,7 +132,6 @@ export function pushLog(state: CombatState, entry: CombatLogEntry): void {
     state.log.splice(0, state.log.length - COMBAT_RULES.maxLog);
 }
 
-/** Public view: everything except the RNG internals. */
 export function toCombatView(state: CombatState): CombatView {
   return {
     round: state.round,

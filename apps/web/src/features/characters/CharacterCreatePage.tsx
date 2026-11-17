@@ -1,14 +1,18 @@
 import {
+  ATTRIBUTE_RULES,
   BASE_ATTRIBUTES,
   CHARACTER_NAME_MAX,
   CHARACTER_NAME_MIN,
   computeStats,
-  describeTargeting,
+  describeEffects,
+  describeScaling,
   getAbility,
   getItemDef,
+  STARTER_OFFHANDS,
   STARTER_WEAPONS,
   validateCharacterName,
-  validatePointBuy,
+  validateCreationAttributes,
+  type OwnedItem,
 } from '@realms/game-core';
 import { DEFAULT_APPEARANCE, type AppearanceV2, type Attributes } from '@realms/shared';
 import { useState, type FormEvent } from 'react';
@@ -20,7 +24,7 @@ import { useActiveCharacter } from './active-character';
 import { useCreateCharacter } from './api';
 import { AttributePicker } from './AttributePicker';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { weaponArtFor } from '../avatar/weapon-art';
+import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
 import { AppearanceEditor } from './AppearanceEditor';
 
 const legend = {
@@ -36,22 +40,38 @@ export function CharacterCreatePage() {
   const [appearance, setAppearance] = useState<AppearanceV2>(DEFAULT_APPEARANCE);
   const [attributes, setAttributes] = useState<Attributes>(BASE_ATTRIBUTES);
   const [weapon, setWeapon] = useState<string>(STARTER_WEAPONS[0]!);
+  const [offhand, setOffhand] = useState<string | null>(null);
+  const twoHanded = !!getItemDef(weapon)?.twoHanded;
+  const chosenOffhand = twoHanded ? null : offhand;
   const create = useCreateCharacter();
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
 
-  // Live preview using the same rules as the server.
-  const preview = computeStats(attributes).stats;
+  // Live preview using the same rules as the server (starter kit equipped).
+  const kit: OwnedItem[] = [
+    { id: 'w', defId: weapon, quality: 100, equippedSlot: 'mainHand' },
+    { id: 't', defId: 'padded_tunic', quality: 100, equippedSlot: 'body' },
+    ...(chosenOffhand
+      ? [{ id: 'o', defId: chosenOffhand, quality: 100, equippedSlot: 'offHand' as const }]
+      : []),
+  ];
+  const preview = computeStats(attributes, kit).stats;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     const v = validateCharacterName(name);
-    const pb = validatePointBuy(attributes);
+    const pb = validateCreationAttributes(attributes);
     const next = { name: v.ok ? undefined : v.reason, attributes: pb.ok ? undefined : pb.reason };
     setErrors(next);
     if (!v.ok || !pb.ok) return;
     create.mutate(
-      { name: v.name, appearance, attributes, startingWeapon: weapon },
+      {
+        name: v.name,
+        appearance,
+        attributes,
+        startingWeapon: weapon,
+        ...(chosenOffhand ? { startingOffhand: chosenOffhand } : {}),
+      },
       {
         onSuccess: (c) => {
           select(c.id);
@@ -85,7 +105,12 @@ export function CharacterCreatePage() {
           />
 
           <section className="panel">
-            <AttributePicker value={attributes} onChange={setAttributes} />
+            <AttributePicker
+              value={attributes}
+              onChange={setAttributes}
+              floor={BASE_ATTRIBUTES}
+              points={ATTRIBUTE_RULES.creationPoints}
+            />
             {errors.attributes && <p className="field-error">{errors.attributes}</p>}
           </section>
 
@@ -104,6 +129,9 @@ export function CharacterCreatePage() {
                   >
                     <strong>{def.name}</strong>
                     <span className="field-hint">{def.description}</span>
+                    <span className="field-hint">
+                      Scales with {describeScaling(getAbility(def.abilities![0]!)!.scaling)}
+                    </span>
                     <ul className="ability-mini">
                       {def.abilities?.map((aid) => {
                         const a = getAbility(aid)!;
@@ -112,12 +140,47 @@ export function CharacterCreatePage() {
                             {a.name}{' '}
                             <span className="muted">
                               · {a.focusCost} Focus{a.manaCost ? ` + ${a.manaCost} Mana` : ''} ·{' '}
-                              {describeTargeting(a.targeting)}
+                              {describeEffects(a).join(', ')}
                             </span>
                           </li>
                         );
                       })}
                     </ul>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend style={legend}>
+              Off-hand {twoHanded ? '— not available with a two-handed weapon' : '(optional)'}
+            </legend>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                data-active={!chosenOffhand}
+                aria-pressed={!chosenOffhand}
+                disabled={twoHanded}
+                onClick={() => setOffhand(null)}
+              >
+                None
+              </button>
+              {STARTER_OFFHANDS.map((id) => {
+                const def = getItemDef(id)!;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className="btn btn-sm"
+                    data-active={chosenOffhand === id}
+                    aria-pressed={chosenOffhand === id}
+                    disabled={twoHanded}
+                    title={def.description}
+                    onClick={() => setOffhand(id)}
+                  >
+                    {def.name}
                   </button>
                 );
               })}
@@ -138,25 +201,33 @@ export function CharacterCreatePage() {
           <CharacterAvatar
             appearance={appearance}
             weapon={weaponArtFor(weapon)}
+            offhand={offhandArtFor(chosenOffhand)}
             size={190}
             title="Preview"
           />
           <strong>{name.trim() || 'Unnamed'}</strong>
-          <span className="muted">{getItemDef(weapon)?.name}</span>
+          <span className="muted">
+            {getItemDef(weapon)?.name}
+            {chosenOffhand ? ` + ${getItemDef(chosenOffhand)?.name}` : ''}
+          </span>
           <dl className="stat-list">
             <dt>HP</dt>
-            <dd>{preview.maxHp}</dd>
+            <dd data-testid="preview-hp">{preview.maxHp}</dd>
             <dt>Mana</dt>
             <dd>{preview.maxMana}</dd>
+            <dt>Armor</dt>
+            <dd>−{preview.physicalReduction}%</dd>
             <dt>Initiative</dt>
             <dd>{preview.initiative}</dd>
             <dt>Dodge</dt>
             <dd>{preview.dodgeChance}%</dd>
             <dt>Crit</dt>
-            <dd>{preview.critChance}%</dd>
+            <dd>
+              {preview.critChance}% ×{preview.critDamage}%
+            </dd>
           </dl>
           <span className="muted" style={{ fontSize: 12 }}>
-            Stats shown without equipment. Placeholder art.
+            Includes your starter kit. Placeholder art.
           </span>
         </aside>
       </form>

@@ -85,19 +85,20 @@ Expired rows are purged by the worker.
 
 ### `characters`
 
-| Column                 | Type                         | Notes                                                                                                                            |
-| ---------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| id                     | uuid PK                      |                                                                                                                                  |
-| account_id             | uuid FK → accounts (cascade) | partial index on living characters                                                                                               |
-| world_id               | uuid FK → worlds (restrict)  |                                                                                                                                  |
-| name                   | text                         | unique per world, **case-insensitive**, among non-deleted characters (`unique (world_id, lower(name)) where deleted_at is null`) |
-| appearance             | jsonb                        | `{ version: 1, color, emblem }`, a placeholder for this phase                                                                    |
-| attr_str … attr_cha    | smallint, default 10         | base attributes from point-buy (8–15 at creation); equipment bonuses are computed, not stored                                    |
-| reputation             | bigint, default 0            | per-character currency earned through activities                                                                                 |
-| hex_q, hex_r           | integer                      | axial hex position; indexed with `world_id` for "who is on this hex / in this area"                                              |
-| last_played_at         | timestamptz null             |                                                                                                                                  |
-| deleted_at             | timestamptz null             | soft delete; frees the name                                                                                                      |
-| created_at, updated_at | timestamptz                  |                                                                                                                                  |
+| Column                   | Type                         | Notes                                                                                                                            |
+| ------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| id                       | uuid PK                      |                                                                                                                                  |
+| account_id               | uuid FK → accounts (cascade) | partial index on living characters                                                                                               |
+| world_id                 | uuid FK → worlds (restrict)  |                                                                                                                                  |
+| name                     | text                         | unique per world, **case-insensitive**, among non-deleted characters (`unique (world_id, lower(name)) where deleted_at is null`) |
+| appearance               | jsonb                        | `{ version: 1, color, emblem }`, a placeholder for this phase                                                                    |
+| attr_might … attr_spirit | smallint, default 5          | base attributes (D33): 5 + creation points (max 10); equipment bonuses are computed, not stored                                  |
+| attribute_points         | smallint, default 0          | attribute points not yet distributed                                                                                             |
+| reputation               | bigint, default 0            | per-character currency earned through activities                                                                                 |
+| hex_q, hex_r             | integer                      | axial hex position; indexed with `world_id` for "who is on this hex / in this area"                                              |
+| last_played_at           | timestamptz null             |                                                                                                                                  |
+| deleted_at               | timestamptz null             | soft delete; frees the name                                                                                                      |
+| created_at, updated_at   | timestamptz                  |                                                                                                                                  |
 
 ### `items`
 
@@ -116,6 +117,9 @@ Items owned by a character. What an item _is_ lives in code
 
 Migration `0002_starter_kit_for_existing_characters` gave characters created
 before the character system a Training Sword and a Padded Tunic.
+
+Migrations `0004`–`0006` replaced the D&D attributes with the six attributes of
+D33; existing characters restarted at 5 in each with 12 points to spend.
 
 ### `character_skills`
 

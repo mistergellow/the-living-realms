@@ -2,9 +2,10 @@ import { accounts, worldEvents, type Character, type Database } from '@realms/db
 import {
   getItemDef,
   STARTER_ARMOR,
+  STARTER_OFFHANDS,
   STARTER_WEAPONS,
   validateCharacterName,
-  validatePointBuy,
+  validateCreationAttributes,
 } from '@realms/game-core';
 import {
   ErrorCode,
@@ -54,13 +55,22 @@ export class CharactersService {
     const name = validateCharacterName(input.name);
     if (!name.ok) throw errors.validation(name.reason, [{ path: 'name', message: name.reason }]);
 
-    const attrs = validatePointBuy(input.attributes);
+    const attrs = validateCreationAttributes(input.attributes);
     if (!attrs.ok)
       throw errors.validation(attrs.reason, [{ path: 'attributes', message: attrs.reason }]);
     if (!(STARTER_WEAPONS as string[]).includes(input.startingWeapon))
       throw errors.validation('Choose one of the starting weapons.', [
         { path: 'startingWeapon', message: 'Choose one of the starting weapons.' },
       ]);
+    if (input.startingOffhand) {
+      const offhandOk =
+        (STARTER_OFFHANDS as string[]).includes(input.startingOffhand) &&
+        !getItemDef(input.startingWeapon)!.twoHanded;
+      if (!offhandOk)
+        throw errors.validation('That off-hand cannot be used with this weapon.', [
+          { path: 'startingOffhand', message: 'That off-hand cannot be used with this weapon.' },
+        ]);
+    }
 
     const { world } = this.ctx;
     const a = input.attributes;
@@ -86,21 +96,26 @@ export class CharactersService {
           appearance: input.appearance,
           hexQ: world.spawnQ,
           hexR: world.spawnR,
-          attrStr: a.str,
-          attrDex: a.dex,
-          attrCon: a.con,
-          attrInt: a.int,
-          attrWis: a.wis,
-          attrCha: a.cha,
+          attrMight: a.might,
+          attrAgility: a.agility,
+          attrPrecision: a.precision,
+          attrVitality: a.vitality,
+          attrArcana: a.arcana,
+          attrSpirit: a.spirit,
+          attributePoints: attrs.unspent,
         });
         // Starter kit: the chosen weapon + basic armor, equipped.
-        const kit = [input.startingWeapon, ...STARTER_ARMOR];
+        const kit: Array<{ defId: string; slot: string }> = [
+          { defId: input.startingWeapon, slot: 'mainHand' },
+          ...(input.startingOffhand ? [{ defId: input.startingOffhand, slot: 'offHand' }] : []),
+          ...STARTER_ARMOR.map((defId) => ({ defId, slot: getItemDef(defId)!.slots[0]! })),
+        ];
         await itemsRepository.insertMany(
           tx,
-          kit.map((defId) => ({
+          kit.map(({ defId, slot }) => ({
             characterId: character.id,
             itemDefId: defId,
-            equippedSlot: getItemDef(defId)!.slots[0]!,
+            equippedSlot: slot,
             source: 'starter',
           })),
         );
@@ -109,7 +124,11 @@ export class CharactersService {
           type: 'character.created',
           actorAccountId: accountId,
           actorCharacterId: character.id,
-          payload: { name: character.name, startingWeapon: input.startingWeapon },
+          payload: {
+            name: character.name,
+            startingWeapon: input.startingWeapon,
+            startingOffhand: input.startingOffhand ?? null,
+          },
         });
         return character;
       });

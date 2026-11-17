@@ -3,6 +3,7 @@ import type {
   CharacterListResponse,
   CharacterSheetDto,
   CreateCharacterRequest,
+  AllocateAttributesRequest,
   EquipRequest,
   UnequipRequest,
 } from '@realms/shared';
@@ -60,4 +61,13 @@ export function useEquipment(id: string) {
       onSuccess,
     }),
   };
+}
+
+export function useAllocateAttributes(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AllocateAttributesRequest) =>
+      api<CharacterSheetDto>('POST', `/characters/${id}/attributes`, input),
+    onSuccess: (sheet) => qc.setQueryData(sheetQueryKey(id), sheet),
+  });
 }

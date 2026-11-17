@@ -357,3 +357,39 @@ scheduler for solo play.
 **Revisit when.** Lobbies (M3): push updates over the WebSocket bus and add a
 worker sweep for expired turns, so the other participants see a timeout
 without having to act.
+
+---
+
+## ADR-023 — Six linear attributes and diminishing-returns mitigation (replaces D&D attributes)
+
+**Status:** accepted (supersedes the D&D attribute part of M1)
+
+**Context.** The owner found the D&D abilities a poor fit and the balance
+swingy: D&D modifiers make most points meaningless, CHA/WIS were near-dead
+stats, there are no levels to recover from a bad build, and flat armor made
+small hits worthless and large hits barely affected.
+
+**Decision.** Six attributes with linear effects (Might, Agility, Precision,
+Vitality, Arcana, Spirit); base 5, 12 creation points, max 10 from points;
+equipment adds more. Each weapon scales with two attributes; main and off-hand
+abilities combine. Mitigation uses `reduction = rating / (rating + 50)` (each
+point adds the same effective HP; never 100%), plus active Block. Damage uses
+ranges. Existing characters were reset to 5s with 12 unspent points.
+
+**Consequences.** Build variety comes from attribute × weapon × off-hand ×
+status synergies rather than from attributes alone; balance is tuned against
+simulation targets (A23). Formulas live in `STAT_RULES`.
+
+---
+
+## ADR-024 — Enemy intents planned at round start
+
+**Status:** accepted (D36)
+
+**Decision.** At the start of each round, each enemy plans its whole turn
+(abilities and targets) with the Focus it will have; the plan is part of the
+combat state and shown to players. During the enemy phase the plan is executed;
+if a planned target is gone the enemy re-targets with its usual rule.
+
+**Why.** Telegraphed enemy actions are what make "Slay the Spire" decisions
+tactical (block now, kill the biggest threat, weaken the attacker).

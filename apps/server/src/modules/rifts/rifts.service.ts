@@ -56,7 +56,7 @@ export const toRiftDto = (r: RiftDef): RiftDto => ({
 
 /** Ranged and caster weapons start in the back row; everything else in front (A20). */
 function startingSlot(abilityIds: string[]): number {
-  const backline = ['aimed_shot', 'arcane_bolt'].some((a) => abilityIds.includes(a));
+  const backline = ['aimed_shot', 'arcane_bolt', 'spark'].some((a) => abilityIds.includes(a));
   return backline ? 4 : 1;
 }
 
@@ -93,6 +93,7 @@ export class RiftsService {
         characterId: c.id,
         name: c.name,
         appearance: profile.appearance,
+        attributes: profile.attributes,
         stats: profile.stats,
         abilityIds: profile.abilityIds,
         hp: profile.stats.maxHp,

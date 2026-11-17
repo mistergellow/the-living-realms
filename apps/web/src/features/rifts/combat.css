@@ -493,3 +493,93 @@
   color: var(--danger);
   font-weight: 700;
 }
+
+/* Combat 2.0: intents, block, statuses */
+.intents {
+  position: absolute;
+  top: -26px;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  z-index: 2;
+  max-width: 210px;
+}
+.intent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgb(184 57 47 / 0.92);
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  white-space: nowrap;
+}
+.intent i {
+  font-style: normal;
+}
+.intent em {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.85;
+}
+.statuses {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  max-width: 120px;
+}
+.unit-enemies .statuses {
+  justify-content: flex-end;
+}
+.status {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: #3a3f52;
+  color: #fff;
+  white-space: nowrap;
+}
+.status-block {
+  background: #2e5fb8;
+}
+.status-bleed {
+  background: #9b2335;
+}
+.status-burn {
+  background: #c8601b;
+}
+.status-mark {
+  background: #8a6d1c;
+}
+.status-weaken {
+  background: #5b4b8a;
+}
+.status-stun {
+  background: #6b7280;
+}
+.float-block {
+  color: #8fb0f5;
+  font-size: 15px;
+}
+.float-status {
+  color: #f2d27a;
+  font-size: 14px;
+}
+.float-tick {
+  color: #ff9f6b;
+}
+.ability-effects {
+  font-size: 11px;
+  color: var(--text-muted);
+  max-width: 190px;
+  text-align: left;
+}
+.ability-btn {
+  max-width: 230px;
+}

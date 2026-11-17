@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 export interface FloatText {
   key: number;
   text: string;
-  kind: 'damage' | 'crit' | 'heal' | 'dodge';
+  kind: 'damage' | 'crit' | 'heal' | 'dodge' | 'block' | 'status' | 'tick';
 }
 
 export interface CombatFx {
@@ -49,9 +49,19 @@ export function useCombatFx(log: CombatView['log'] | undefined): CombatFx {
       };
       if (e.t === 'damage') {
         cur.hitIds.add(e.targetId);
-        push(e.targetId, { text: `-${e.amount}`, kind: e.crit ? 'crit' : 'damage' });
+        if (e.amount > 0)
+          push(e.targetId, { text: `-${e.amount}`, kind: e.crit ? 'crit' : 'damage' });
+        if (e.blocked > 0) push(e.targetId, { text: `${e.blocked} blocked`, kind: 'block' });
       } else if (e.t === 'heal') push(e.targetId, { text: `+${e.amount}`, kind: 'heal' });
       else if (e.t === 'dodge') push(e.targetId, { text: 'Dodge', kind: 'dodge' });
+      else if (e.t === 'block') push(e.targetId, { text: `+${e.amount} Block`, kind: 'block' });
+      else if (e.t === 'status')
+        push(e.targetId, { text: e.status[0]!.toUpperCase() + e.status.slice(1), kind: 'status' });
+      else if (e.t === 'stunned') push(e.targetId, { text: 'Stunned', kind: 'status' });
+      else if (e.t === 'tick') {
+        cur.hitIds.add(e.targetId);
+        push(e.targetId, { text: `-${e.amount}`, kind: 'tick' });
+      }
     }
     timers.current.forEach(clearTimeout);
     timers.current = steps.map((s, i) => window.setTimeout(() => setFx(s), i * STEP_MS));

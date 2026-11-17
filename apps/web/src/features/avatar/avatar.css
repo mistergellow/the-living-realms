@@ -101,3 +101,10 @@
     animation: none !important;
   }
 }
+.avatar .av-offhand {
+  transform-box: fill-box;
+}
+.avatar.is-animated .av-offhand {
+  animation: av-sway 2.6s ease-in-out infinite reverse;
+  transform-origin: 50% 20%;
+}
