@@ -65,3 +65,9 @@ impacto por conceito).
 ramo `main` do GitHub. A partir daqui, cada sessão nova começa por clonar este
 repositório. O `CLAUDE.md` é lido automaticamente e aponta para este registo e
 para o mapa de impacto.
+
+### #5 — 2026-11-17 — Abrir o projeto no Visual Studio Code
+
+**Pedido:** como começar com o editor aberto no computador.
+**Resultado:** guia passo a passo (clonar no VS Code, instalar requisitos,
+arrancar). Sem alterações ao código.
