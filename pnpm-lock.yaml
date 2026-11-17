@@ -105,6 +105,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/alegreya-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/cinzel':
+        specifier: 5.3.0
+        version: 5.3.0
       '@realms/game-core':
         specifier: workspace:*
         version: link:../../packages/game-core
@@ -854,6 +860,12 @@ packages:
 
   '@fastify/websocket@11.3.7':
     resolution: {integrity: sha512-fkkS87CkAOY/MzvJrB94S729RxvIbLHXv2LNGkPifli4/q4IdeicpcFoxgJ3oVmIRVNSi4W6FZai5AmRhzhhTw==}
+
+  '@fontsource/alegreya-sans@5.3.0':
+    resolution: {integrity: sha512-Uf0RbuwzhSS3NQrBFcRzEUm7TxDQW3qdAbQ6JIOhsIW6V+YN2dqlR99lhfEE38R3GHgMCMJBzqSp7aJxhNXSOw==}
+
+  '@fontsource/cinzel@5.3.0':
+    resolution: {integrity: sha512-KEOYTsrRppW0uRIPWBDPrQgunCS6f8u4nzZxYRBfo9SCknKojLYjK7B0ZoVmJhyVLefz271ZQRF9EOpHZlfhRw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2863,6 +2875,10 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@fontsource/alegreya-sans@5.3.0': {}
+
+  '@fontsource/cinzel@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

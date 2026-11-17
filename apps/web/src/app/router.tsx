@@ -8,6 +8,7 @@ import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
 import { CombatPage } from '../features/rifts/CombatPage';
+import { Screen } from '../shared/ui/Screen';
 
 /*
  * Route map
@@ -42,13 +43,21 @@ export const router = createBrowserRouter([
   {
     path: '*',
     element: (
-      <main className="centered">
-        <div className="stack" style={{ textAlign: 'center' }}>
-          <h1>Lost in the mists</h1>
-          <p className="muted">This place does not exist.</p>
-          <Link to="/">Return</Link>
-        </div>
-      </main>
+      <Screen>
+        <main className="centered">
+          <div className="panel stack" style={{ textAlign: 'center', alignItems: 'center' }}>
+            <h1 className="logo" style={{ fontSize: '2rem' }}>
+              Lost in the mists
+            </h1>
+            <p className="muted" style={{ margin: 0 }}>
+              This place does not exist.
+            </p>
+            <Link className="btn btn-primary" to="/">
+              Return
+            </Link>
+          </div>
+        </main>
+      </Screen>
     ),
   },
 ]);

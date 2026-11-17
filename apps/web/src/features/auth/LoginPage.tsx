@@ -23,7 +23,7 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <form className="stack" onSubmit={onSubmit} noValidate>
-        <h2>Log in</h2>
+        <h2 className="form-title">Log in</h2>
         <FormError error={login.error} />
         <Field
           label="Email"

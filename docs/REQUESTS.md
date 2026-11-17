@@ -263,3 +263,10 @@ que escalam com 2 atributos, armadura com retornos decrescentes
 (sangrar, queimar, marcar, atordoar…) e, mais tarde, afixos no equipamento e
 traços. Sem alterações ao código.
 **A aguardar:** aprovação da proposta e respostas sobre o equilíbrio (#18).
+
+### #20 — 2026-11-17 — Aspeto mais "jogo" e compatível com todos os monitores
+
+**Pedido:** a interface tem de parecer mais um jogo e menos um site, e funcionar em qualquer tamanho de ecrã.
+**Resultado (parado a meio, a pedido do dono):** tema de jogo (painéis ornamentados, fontes Cinzel/Alegreya Sans, cenário animado), escala fluida da UI (`tokens.css`), ecrãs em ecrã inteiro (seleção de herói, criação em 3 colunas, mundo em HUD, ficha, Rifts, combate) e teste e2e "screens fit every screen size" (telemóvel → 4K). 7/7 e2e a passar; docs (CHANGE_MAP/ADR) não atualizados.
+**Decisão do dono:** parar — o cliente vai mudar para PixiJS. Este commit fica como referência (escala fluida, teste de tamanhos, menus HTML).
+**A aguardar:** o que passa para o canvas PixiJS (mapa/combate ou tudo).

@@ -16,8 +16,13 @@ export type WeaponArt = 'sword' | 'bow' | 'staff' | null;
 export interface CharacterAvatarProps {
   appearance: CharacterAppearance | null | undefined;
   weapon?: WeaponArt;
-  /** Height in px (width is 3/4). */
+  /**
+   * Height in reference px at a 16px root font size (width is 3/4). Rendered in
+   * rem, so avatars scale with the fluid UI (tokens.css).
+   */
   size?: number;
+  /** Drawn inside another SVG (the map): use user units instead of rem. */
+  inSvg?: boolean;
   /** Idle animation (breathing, blinking). */
   animated?: boolean;
   /** Mirror horizontally. */
@@ -152,6 +157,7 @@ export function CharacterAvatar({
   portrait = false,
   title,
   className,
+  inSvg = false,
 }: CharacterAvatarProps) {
   const a = normalizeAppearance(appearance);
   const uid = useId().replace(/:/g, '');
@@ -167,6 +173,7 @@ export function CharacterAvatar({
       className={['avatar', animated ? 'is-animated' : '', className].filter(Boolean).join(' ')}
       width={width}
       height={size}
+      style={inSvg ? undefined : { width: `${width / 16}rem`, height: `${size / 16}rem` }}
       viewBox={viewBox}
       role="img"
       aria-label={title ?? 'Character'}

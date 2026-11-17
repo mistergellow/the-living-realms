@@ -42,6 +42,12 @@ export function HexMap({ center, players, selfId, selected, onSelect }: HexMapPr
       preserveAspectRatio="xMidYMid meet"
       aria-label="World map"
     >
+      <defs>
+        <radialGradient id="hex-fill" cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor="#262232" />
+          <stop offset="100%" stopColor="#15131c" />
+        </radialGradient>
+      </defs>
       {hexes.map((h) => {
         const { x, y } = hexToPixel(h, SIZE);
         const k = hexKey(h);
@@ -49,24 +55,29 @@ export function HexMap({ center, players, selfId, selected, onSelect }: HexMapPr
         const isSelf = here.some((p) => p.characterId === selfId);
         const isSelected = selected ? hexKey(selected) === k : false;
         const shown = here.find((p) => p.characterId === selfId) ?? here[0];
+        // Edge hexes fade into the dark (visual only: no fog-of-war rules yet).
+        const fade = 1 - Math.max(0, hexDistance(center, h) - (RADIUS - 2)) * 0.28;
         return (
           <g
             key={k}
             transform={`translate(${x.toFixed(2)},${y.toFixed(2)})`}
             onClick={() => onSelect(h)}
+            opacity={fade}
           >
             <polygon className="hex" points={CORNERS} data-self={isSelf} data-selected={isSelected}>
               <title>{`(${h.q}, ${h.r}) · ${hexDistance(center, h)} from you${here.length ? ` · ${here.map((p) => p.name).join(', ')}` : ''}`}</title>
             </polygon>
             {shown ? (
               <g pointerEvents="none">
-                <circle r="15" fill="#0b0d12" stroke="var(--accent)" strokeWidth="1.5" />
+                {isSelf && <circle className="self-ring" r="22" />}
+                <circle r="15" fill="#0b0a10" stroke="var(--accent-strong)" strokeWidth="1.5" />
                 <g transform="translate(-14 -14)">
                   <CharacterAvatar
                     appearance={shown.appearance}
                     portrait
                     size={28}
                     animated={false}
+                    inSvg
                   />
                 </g>
                 {here.length > 1 && (

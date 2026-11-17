@@ -171,7 +171,7 @@ function EndOverlay({ run }: { run: RunDto }) {
               Reputation <strong>+{run.rewards.reputation}</strong>
             </p>
             {run.rewards.items.map((i) => (
-              <p key={i.id} style={{ margin: '4px 0 0' }}>
+              <p key={i.id} style={{ margin: '0.25rem 0 0' }}>
                 Loot: <strong>{i.name}</strong>
               </p>
             ))}
@@ -185,7 +185,7 @@ function EndOverlay({ run }: { run: RunDto }) {
             {run.penalty.damaged.map((d) => (
               <p
                 key={d.id}
-                style={{ margin: '4px 0 0', color: d.broken ? 'var(--danger)' : undefined }}
+                style={{ margin: '0.25rem 0 0', color: d.broken ? 'var(--danger)' : undefined }}
               >
                 {d.name}: quality {d.quality}
                 {d.broken ? ' — broken!' : ''}
@@ -241,7 +241,7 @@ export function CombatPage() {
   if (!characterId) return <Navigate to="/characters" replace />;
   if (run.isPending) return <FullPageMessage>Opening the Rift…</FullPageMessage>;
   if (run.isError || !run.data || !combat)
-    return <FullPageMessage>Rift run not found.</FullPageMessage>;
+    return <FullPageMessage spinner={false}>Rift run not found.</FullPageMessage>;
   const data = run.data;
 
   const send = (a: Parameters<typeof action.mutate>[0]) => {
@@ -360,8 +360,8 @@ export function CombatPage() {
           <FormError error={action.error} />
           {myTurn && me ? (
             <>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                <strong>Your turn</strong>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <strong className="your-turn">Your turn</strong>
                 <span className="muted">
                   Focus <strong data-testid="my-focus">{me.focus}</strong> · Mana {me.mana}
                 </span>

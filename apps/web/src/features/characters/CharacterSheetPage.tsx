@@ -8,6 +8,8 @@ import {
 import { Link, useNavigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
+import { Icon } from '../../shared/ui/Icon';
+import { Screen } from '../../shared/ui/Screen';
 import { useActiveCharacter } from './active-character';
 import { useCharacterSheet, useEquipment } from './api';
 import { CharacterToken } from './CharacterToken';
@@ -81,7 +83,7 @@ function ItemLine({ item }: { item: ItemDto }) {
   ].filter(Boolean);
   return (
     <div className="item-line">
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row" style={{ gap: '0.5rem' }}>
         <strong
           style={
             item.broken ? { color: 'var(--danger)', textDecoration: 'line-through' } : undefined
@@ -91,7 +93,7 @@ function ItemLine({ item }: { item: ItemDto }) {
         </strong>
         {item.broken && <span className="field-error">Broken</span>}
       </div>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row" style={{ gap: '0.5rem' }}>
         <QualityBar quality={item.quality} />
         <span className="field-hint">{extras.join(' · ') || item.description}</span>
       </div>
@@ -107,26 +109,29 @@ export function CharacterSheetPage() {
   const navigate = useNavigate();
 
   if (sheet.isPending) return <FullPageMessage>Loading character…</FullPageMessage>;
-  if (sheet.isError) return <FullPageMessage>Character not found.</FullPageMessage>;
+  if (sheet.isError) return <FullPageMessage spinner={false}>Character not found.</FullPageMessage>;
   const s = sheet.data;
   const busy = equip.isPending || unequip.isPending;
 
   return (
-    <main className="page sheet">
-      <header className="page-header">
-        <CharacterToken appearance={s.character.appearance} size={56} />
-        <div>
-          <h1 data-testid="sheet-name">{s.character.name}</h1>
-          <span className="muted">
-            Reputation <strong data-testid="reputation">{s.reputation}</strong>
-          </span>
-        </div>
-        <span className="spacer" />
+    <Screen>
+      <header className="topbar">
         <Link className="btn btn-ghost btn-sm" to="/characters">
+          <Icon name="back" />
           Characters
         </Link>
+        <div className="sheet-header">
+          <CharacterToken appearance={s.character.appearance} size={52} />
+          <div>
+            <h1 data-testid="sheet-name">{s.character.name}</h1>
+            <span className="rep-badge">
+              Reputation <strong data-testid="reputation">{s.reputation}</strong>
+            </span>
+          </div>
+        </div>
+        <span className="spacer" />
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary"
           onClick={() => {
             select(s.character.id);
             navigate('/world');
@@ -136,182 +141,194 @@ export function CharacterSheetPage() {
         </button>
       </header>
 
-      <FormError error={equip.error ?? unequip.error} />
+      <main className="screen-body">
+        <div className="contain stack">
+          <FormError error={equip.error ?? unequip.error} />
 
-      <div className="sheet-grid">
-        <section className="panel span-2 hero" data-testid="equipment">
-          <div className="hero-slots">
-            {LEFT_SLOTS.map((slot) => (
-              <SlotTile
-                key={slot}
-                slot={slot}
-                item={s.equipment[slot]}
-                busy={busy}
-                onUnequip={() => unequip.mutate({ slot })}
-              />
-            ))}
-          </div>
-          <div className="hero-center">
-            <div className="hero-stage">
-              <CharacterAvatar
-                appearance={s.character.appearance}
-                weapon={weaponArtFor(
-                  s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId,
-                )}
-                size={230}
-                title={s.character.name}
-              />
-            </div>
-            <div className="hero-stats">
-              <div>
-                <span>HP</span>
-                <strong data-testid="stat-hp">{s.stats.maxHp}</strong>
+          <div className="sheet-grid">
+            <section className="panel area-hero hero" data-testid="equipment">
+              <div className="hero-slots">
+                {LEFT_SLOTS.map((slot) => (
+                  <SlotTile
+                    key={slot}
+                    slot={slot}
+                    item={s.equipment[slot]}
+                    busy={busy}
+                    onUnequip={() => unequip.mutate({ slot })}
+                  />
+                ))}
               </div>
-              <div>
-                <span>Mana</span>
-                <strong>{s.stats.maxMana}</strong>
+              <div className="hero-center">
+                <div className="hero-stage">
+                  <CharacterAvatar
+                    appearance={s.character.appearance}
+                    weapon={weaponArtFor(
+                      s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId,
+                    )}
+                    size={260}
+                    title={s.character.name}
+                  />
+                </div>
+                <div className="hero-stats">
+                  <div>
+                    <span>HP</span>
+                    <strong data-testid="stat-hp">{s.stats.maxHp}</strong>
+                  </div>
+                  <div>
+                    <span>Mana</span>
+                    <strong>{s.stats.maxMana}</strong>
+                  </div>
+                  <div>
+                    <span>Defense</span>
+                    <strong>{s.stats.defense}</strong>
+                  </div>
+                  <div>
+                    <span>Initiative</span>
+                    <strong>{fmt(s.stats.initiative)}</strong>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span>Defense</span>
-                <strong>{s.stats.defense}</strong>
+              <div className="hero-slots">
+                {RIGHT_SLOTS.map((slot) => (
+                  <SlotTile
+                    key={slot}
+                    slot={slot}
+                    item={s.equipment[slot]}
+                    busy={busy}
+                    onUnequip={() => unequip.mutate({ slot })}
+                  />
+                ))}
               </div>
-              <div>
-                <span>Initiative</span>
-                <strong>{fmt(s.stats.initiative)}</strong>
-              </div>
-            </div>
-          </div>
-          <div className="hero-slots">
-            {RIGHT_SLOTS.map((slot) => (
-              <SlotTile
-                key={slot}
-                slot={slot}
-                item={s.equipment[slot]}
-                busy={busy}
-                onUnequip={() => unequip.mutate({ slot })}
-              />
-            ))}
-          </div>
-        </section>
+            </section>
 
-        <section className="panel">
-          <div className="panel-title">Attributes</div>
-          <table className="kv">
-            <tbody>
-              {ATTRIBUTE_KEYS.map((k) => {
-                const bonus = s.attributes[k] - s.baseAttributes[k];
-                return (
-                  <tr key={k}>
-                    <th>{ATTRIBUTE_NAMES[k]}</th>
-                    <td data-testid={`sheet-attr-${k}`}>
-                      {s.attributes[k]}
-                      {bonus !== 0 && <span className="bonus"> ({fmt(bonus)})</span>}
-                    </td>
+            <section className="panel area-attrs">
+              <div className="panel-title">
+                <span>Attributes</span>
+              </div>
+              <table className="kv">
+                <tbody>
+                  {ATTRIBUTE_KEYS.map((k) => {
+                    const bonus = s.attributes[k] - s.baseAttributes[k];
+                    return (
+                      <tr key={k}>
+                        <th>{ATTRIBUTE_NAMES[k]}</th>
+                        <td data-testid={`sheet-attr-${k}`}>
+                          {s.attributes[k]}
+                          {bonus !== 0 && <span className="bonus"> ({fmt(bonus)})</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="panel area-stats">
+              <div className="panel-title">
+                <span>Combat stats</span>
+              </div>
+              <table className="kv">
+                <tbody>
+                  <tr>
+                    <th>HP</th>
+                    <td>{s.stats.maxHp}</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
+                  <tr>
+                    <th>Mana</th>
+                    <td>{s.stats.maxMana}</td>
+                  </tr>
+                  <tr>
+                    <th>Defense</th>
+                    <td>{s.stats.defense}</td>
+                  </tr>
+                  <tr>
+                    <th>Initiative</th>
+                    <td>{fmt(s.stats.initiative)}</td>
+                  </tr>
+                  <tr>
+                    <th>Dodge</th>
+                    <td>{s.stats.dodgeChance}%</td>
+                  </tr>
+                  <tr>
+                    <th>Critical</th>
+                    <td>{s.stats.critChance}%</td>
+                  </tr>
+                  <tr>
+                    <th>Physical power</th>
+                    <td>{fmt(s.stats.physicalPower)}</td>
+                  </tr>
+                  <tr>
+                    <th>Ranged power</th>
+                    <td>{fmt(s.stats.rangedPower)}</td>
+                  </tr>
+                  <tr>
+                    <th>Spell power</th>
+                    <td>{fmt(s.stats.spellPower)}</td>
+                  </tr>
+                  <tr>
+                    <th>Healing power</th>
+                    <td>{fmt(s.stats.healingPower)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
 
-        <section className="panel">
-          <div className="panel-title">Combat stats</div>
-          <table className="kv">
-            <tbody>
-              <tr>
-                <th>HP</th>
-                <td>{s.stats.maxHp}</td>
-              </tr>
-              <tr>
-                <th>Mana</th>
-                <td>{s.stats.maxMana}</td>
-              </tr>
-              <tr>
-                <th>Defense</th>
-                <td>{s.stats.defense}</td>
-              </tr>
-              <tr>
-                <th>Initiative</th>
-                <td>{fmt(s.stats.initiative)}</td>
-              </tr>
-              <tr>
-                <th>Dodge</th>
-                <td>{s.stats.dodgeChance}%</td>
-              </tr>
-              <tr>
-                <th>Critical</th>
-                <td>{s.stats.critChance}%</td>
-              </tr>
-              <tr>
-                <th>Physical power</th>
-                <td>{fmt(s.stats.physicalPower)}</td>
-              </tr>
-              <tr>
-                <th>Ranged power</th>
-                <td>{fmt(s.stats.rangedPower)}</td>
-              </tr>
-              <tr>
-                <th>Spell power</th>
-                <td>{fmt(s.stats.spellPower)}</td>
-              </tr>
-              <tr>
-                <th>Healing power</th>
-                <td>{fmt(s.stats.healingPower)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+            <section className="panel area-inv">
+              <div className="panel-title">
+                <span>Inventory ({s.inventory.length})</span>
+              </div>
+              {s.inventory.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  No unequipped items. Rifts will drop loot.
+                </p>
+              ) : (
+                <ul className="slot-list" data-testid="inventory">
+                  {s.inventory.map((item) => {
+                    const slot = targetSlot(item, s);
+                    return (
+                      <li key={item.id}>
+                        <ItemLine item={item} />
+                        <button
+                          className="btn btn-sm"
+                          disabled={busy || item.broken || !slot}
+                          onClick={() => slot && equip.mutate({ itemId: item.id, slot })}
+                          aria-label={`Equip ${item.name}`}
+                        >
+                          Equip
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
 
-        <section className="panel span-2">
-          <div className="panel-title">Inventory ({s.inventory.length})</div>
-          {s.inventory.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>
-              No unequipped items. Rifts will drop loot.
-            </p>
-          ) : (
-            <ul className="slot-list" data-testid="inventory">
-              {s.inventory.map((item) => {
-                const slot = targetSlot(item, s);
-                return (
-                  <li key={item.id}>
-                    <ItemLine item={item} />
-                    <button
-                      className="btn btn-sm"
-                      disabled={busy || item.broken || !slot}
-                      onClick={() => slot && equip.mutate({ itemId: item.id, slot })}
-                      aria-label={`Equip ${item.name}`}
-                    >
-                      Equip
-                    </button>
+            <section className="panel area-abil">
+              <div className="panel-title">
+                <span>Abilities in combat</span>
+              </div>
+              <ul className="ability-list" data-testid="abilities">
+                {s.abilities.map((a) => (
+                  <li key={a.id}>
+                    <div className="row" style={{ gap: '0.5rem' }}>
+                      <strong>{a.name}</strong>
+                      <span className="cost">{a.focusCost} Focus</span>
+                      {a.manaCost > 0 && <span className="cost mana">{a.manaCost} Mana</span>}
+                      <span className="spacer" />
+                      <span className="field-hint">
+                        {a.grantedBy ?? (a.source === 'universal' ? 'Always available' : 'Learned')}
+                      </span>
+                    </div>
+                    <div className="field-hint">
+                      {a.targeting} — {a.description}
+                    </div>
                   </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="panel span-2">
-          <div className="panel-title">Abilities in combat</div>
-          <ul className="ability-list" data-testid="abilities">
-            {s.abilities.map((a) => (
-              <li key={a.id}>
-                <div className="row" style={{ gap: 8 }}>
-                  <strong>{a.name}</strong>
-                  <span className="cost">{a.focusCost} Focus</span>
-                  {a.manaCost > 0 && <span className="cost mana">{a.manaCost} Mana</span>}
-                  <span className="spacer" />
-                  <span className="field-hint">
-                    {a.grantedBy ?? (a.source === 'universal' ? 'Always available' : 'Learned')}
-                  </span>
-                </div>
-                <div className="field-hint">
-                  {a.targeting} — {a.description}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </main>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </div>
+      </main>
+    </Screen>
   );
 }

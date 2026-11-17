@@ -23,11 +23,14 @@ export function AttributePicker({
     (POINT_BUY.cost[score + 1] ?? Infinity) - (POINT_BUY.cost[score] ?? 0);
 
   return (
-    <div className="stack" style={{ gap: 8 }}>
+    <div className="stack" style={{ gap: '0.5rem' }}>
       <div className="row">
         <span className="field-label">Attributes</span>
         <span className="spacer" />
-        <span className={remaining < 0 ? 'field-error' : 'muted'} data-testid="points-remaining">
+        <span
+          className={remaining < 0 ? 'points-gem field-error' : 'points-gem'}
+          data-testid="points-remaining"
+        >
           {remaining} / {POINT_BUY.budget} points left
         </span>
       </div>

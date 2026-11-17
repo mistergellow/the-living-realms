@@ -12,7 +12,7 @@ export function CharacterToken({
   title?: string;
 }) {
   return (
-    <span className="token" style={{ width: size, height: size }}>
+    <span className="token" style={{ width: `${size / 16}rem`, height: `${size / 16}rem` }}>
       <CharacterAvatar
         appearance={appearance}
         portrait
