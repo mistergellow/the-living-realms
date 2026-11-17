@@ -1,4 +1,4 @@
-import { createDb, ensureWorld, loadEnv } from '@realms/db';
+import { createDb, ensureWorld, loadEnv, migrateWithLock } from '@realms/db';
 import { createLogger, createRedis, PresenceStore } from '@realms/server-kit';
 import { loadWorkerConfig } from './config.js';
 import { LeaderLock } from './leader.js';
@@ -11,6 +11,11 @@ const log = createLogger({
   level: config.LOG_LEVEL,
   pretty: config.NODE_ENV === 'development',
 });
+
+if (config.MIGRATE_ON_START) {
+  await migrateWithLock(config.DATABASE_URL);
+  log.info('database migrations up to date');
+}
 
 const dbHandle = createDb(config.DATABASE_URL, { max: 3, appName: 'living-realms-worker' });
 const redis = createRedis(config.REDIS_URL, 'worker');

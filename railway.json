@@ -7,7 +7,6 @@
   },
   "deploy": {
     "startCommand": "node server.js",
-    "preDeployCommand": ["node migrate.js"],
     "healthcheckPath": "/readyz",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",

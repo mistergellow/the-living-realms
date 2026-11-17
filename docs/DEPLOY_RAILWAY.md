@@ -49,8 +49,8 @@ variáveis abaixo usam-nos.
 
 4. Guarda e clica em **Deploy** (ou **Apply changes**).
 
-O primeiro build demora uns 3–5 minutos. Antes de arrancar, o serviço corre as
-migrações da base de dados sozinho.
+O primeiro build demora uns 3–5 minutos. Ao arrancar, o serviço cria e atualiza
+sozinho as tabelas da base de dados.
 
 ## 3. Criar o serviço `worker`
 

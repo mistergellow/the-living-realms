@@ -39,3 +39,27 @@ export async function runMigrations(url: string, migrationsFolder = MIGRATIONS_D
 
 export type Sql = postgres.Sql;
 export type ReservedSql = postgres.ReservedSql;
+
+/**
+ * Applies pending migrations while holding a PostgreSQL advisory lock, so that
+ * several processes starting at once (server replicas, worker) never run them
+ * concurrently: the first one migrates, the others wait and then find nothing
+ * to do. Safe to call on every boot (already-applied migrations are skipped).
+ */
+export async function migrateWithLock(
+  url: string,
+  migrationsFolder = MIGRATIONS_DIR,
+): Promise<void> {
+  // max: 1 → every query below runs on the same session, which owns the lock.
+  const handle = createDb(url, { max: 1, appName: 'living-realms-migrate' });
+  try {
+    await handle.sql`select pg_advisory_lock(hashtext('realms:migrations'))`;
+    try {
+      await migrate(handle.db, { migrationsFolder });
+    } finally {
+      await handle.sql`select pg_advisory_unlock(hashtext('realms:migrations'))`;
+    }
+  } finally {
+    await handle.close();
+  }
+}

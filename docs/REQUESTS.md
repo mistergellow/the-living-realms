@@ -132,3 +132,15 @@ aplicar.
 **Diagnóstico:** o worker tem alterações guardadas mas ainda não aplicadas (é
 preciso clicar em Deploy / Apply changes). Para o server, pedidos ao dono os logs
 do deploy mais recente (Build Logs e Deploy Logs) e o commit desse deploy.
+
+### #12 — 2026-11-17 — Continua "relation worlds does not exist"
+
+**Pedido:** logs do novo deploy (já com `/app/server.js`, ou seja, com o
+Dockerfile).
+**Causa:** o Railway não executou o `preDeployCommand` (migrações), por isso as
+tabelas continuavam por criar.
+**Correção:** o servidor e o worker passam a aplicar as migrações sozinhos ao
+arrancar (`migrateWithLock`, com advisory lock do PostgreSQL;
+`MIGRATE_ON_START=true` por defeito). O `preDeployCommand` foi removido do
+`railway.json`. Testado: base de dados vazia, servidor e worker a arrancar em
+simultâneo, ambos arrancam sem erros. ADR-019.

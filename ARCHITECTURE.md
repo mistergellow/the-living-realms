@@ -330,8 +330,10 @@ services in one project: managed PostgreSQL, managed Redis, `server` and
 `worker`. Both app services build the same `infra/Dockerfile`; their per-service
 settings are versioned in `railway.json` (repository root, picked up
 automatically by the `server` service) and `infra/railway/worker.json` (set as
-the `worker` service's config file) (start command, migrations as a pre-deploy step for
-the server, `/readyz` health check, restart policy, watch paths). Variables
+the `worker` service's config file) (start command, `/readyz` health check, restart policy, watch paths).
+Migrations are applied by the processes themselves at startup
+(`MIGRATE_ON_START`, default `true`), under a PostgreSQL advisory lock so
+concurrent starts never race; `migrate.js` remains available for manual runs. Variables
 reference the managed services (`${{Postgres.DATABASE_URL}}`,
 `${{Redis.REDIS_URL}}`). Pushing to `main` deploys automatically. The
 step-by-step setup is in `docs/DEPLOY_RAILWAY.md`.

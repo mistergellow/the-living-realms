@@ -79,11 +79,9 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
     if (webDist && request.method === 'GET' && !request.url.startsWith('/api/')) {
       return reply.sendFile('index.html');
     }
-    return reply
-      .status(404)
-      .send({
-        error: { code: ErrorCode.NOT_FOUND, message: 'Route not found.', requestId: request.id },
-      });
+    return reply.status(404).send({
+      error: { code: ErrorCode.NOT_FOUND, message: 'Route not found.', requestId: request.id },
+    });
   });
 
   app.addHook('onClose', async () => gateway.stop());

@@ -128,10 +128,12 @@ they describe.
    PostgreSQL and checkpointed after each meaningful step (e.g. after each
    combat turn).
 4. **Migrations** are generated from the schema (`pnpm db:generate`), reviewed
-   and committed, and applied by `migrate.js` before a release. Prefer
-   additive, backward-compatible migrations (add column → deploy → backfill →
-   tighten), so old and new server versions can run side by side during a
-   rolling deploy.
+   and committed. They are applied automatically when the server or the worker
+   starts (`MIGRATE_ON_START=true`, under a PostgreSQL advisory lock, so only one
+   process migrates at a time); `migrate.js` / `pnpm db:migrate` run them
+   manually. Prefer additive, backward-compatible migrations (add column →
+   deploy → backfill → tighten), so old and new server versions can run side
+   by side during a rolling deploy.
 
 ## Planned entities (not implemented; for orientation)
 

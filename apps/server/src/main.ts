@@ -1,4 +1,4 @@
-import { createDb, loadEnv } from '@realms/db';
+import { createDb, loadEnv, migrateWithLock } from '@realms/db';
 import { createRedis, PresenceStore } from '@realms/server-kit';
 import { randomUUID } from 'node:crypto';
 import { buildApp } from './app.js';
@@ -7,6 +7,13 @@ import { loadConfig } from './config.js';
 loadEnv();
 const config = loadConfig();
 const instanceId = `server-${randomUUID().slice(0, 8)}`;
+
+if (config.MIGRATE_ON_START) {
+  await migrateWithLock(config.DATABASE_URL);
+  console.log(
+    JSON.stringify({ level: 30, service: 'server', msg: 'database migrations up to date' }),
+  );
+}
 
 const dbHandle = createDb(config.DATABASE_URL, { appName: instanceId });
 const redis = createRedis(config.REDIS_URL, instanceId);

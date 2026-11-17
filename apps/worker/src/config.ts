@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
+const bool = z.enum(['true', 'false', '1', '0']).transform((v) => v === 'true' || v === '1');
+
 export const workerConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
+  MIGRATE_ON_START: bool.default(true),
   WORLD_SLUG: z.string().min(1).default('main'),
   WORLD_TICK_MS: z.coerce.number().int().min(250).default(5000),
 });

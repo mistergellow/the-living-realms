@@ -23,6 +23,8 @@ export const configSchema = z.object({
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   TRUST_PROXY: bool.default(false),
   WEB_DIST_DIR: z.string().optional(),
+  /** Apply pending DB migrations at startup (advisory-locked; safe with many instances). */
+  MIGRATE_ON_START: bool.default(true),
   WORLD_SLUG: z.string().min(1).default('main'),
   MAX_CHARACTERS_PER_ACCOUNT: z.coerce.number().int().min(1).max(50).default(5),
   /** Max auth attempts (login/register) per IP per minute. */
