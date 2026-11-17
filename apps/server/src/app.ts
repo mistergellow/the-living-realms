@@ -14,6 +14,7 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { SessionService } from './modules/auth/session.service.js';
 import { charactersRoutes } from './modules/characters/characters.routes.js';
 import { CharactersService } from './modules/characters/characters.service.js';
+import { CharacterSheetService } from './modules/characters/sheet.service.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { worldRoutes } from './modules/world/world.routes.js';
 import { authPlugin } from './plugins/auth.js';
@@ -63,7 +64,11 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   await app.register(
     async (api) => {
       await api.register(authRoutes, { prefix: '/auth', ctx, sessions });
-      await api.register(charactersRoutes, { prefix: '/characters', service: characters });
+      await api.register(charactersRoutes, {
+        prefix: '/characters',
+        service: characters,
+        sheets: new CharacterSheetService(deps.db),
+      });
       await api.register(worldRoutes, { prefix: '/world', ctx });
     },
     { prefix: '/api' },

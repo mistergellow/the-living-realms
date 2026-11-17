@@ -93,6 +93,17 @@ Future domains (`combat`, `reputation`, `nations`, `economy`, `npcs`, `events`)
 follow the same shape. A module that later needs its own process can be lifted
 out along this boundary.
 
+### Game content as data
+
+Item and ability definitions live as typed data in
+`packages/game-core/src/content/` (`items.ts`, `abilities.ts`). The database
+stores only instances (an owned item references an `item_def_id`; learned skills
+reference an ability id). Server and client import the same definitions, so the
+client can preview (e.g. a weapon's abilities at character creation) while the
+server stays authoritative. Derived statistics are computed by
+`game-core/stats.ts` from base attributes and equipped, non-broken items; they
+are never stored. See ADR-020.
+
 ## 4. Request lifecycle and server authority
 
 **The client never decides outcomes.** It sends _intents_; the server validates

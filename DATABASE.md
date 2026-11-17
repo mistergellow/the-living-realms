@@ -92,10 +92,38 @@ Expired rows are purged by the worker.
 | world_id               | uuid FK → worlds (restrict)  |                                                                                                                                  |
 | name                   | text                         | unique per world, **case-insensitive**, among non-deleted characters (`unique (world_id, lower(name)) where deleted_at is null`) |
 | appearance             | jsonb                        | `{ version: 1, color, emblem }`, a placeholder for this phase                                                                    |
+| attr_str … attr_cha    | smallint, default 10         | base attributes from point-buy (8–15 at creation); equipment bonuses are computed, not stored                                    |
+| reputation             | bigint, default 0            | per-character currency earned through activities                                                                                 |
 | hex_q, hex_r           | integer                      | axial hex position; indexed with `world_id` for "who is on this hex / in this area"                                              |
 | last_played_at         | timestamptz null             |                                                                                                                                  |
 | deleted_at             | timestamptz null             | soft delete; frees the name                                                                                                      |
 | created_at, updated_at | timestamptz                  |                                                                                                                                  |
+
+### `items`
+
+Items owned by a character. What an item _is_ lives in code
+(`packages/game-core/src/content/items.ts`); the row stores the instance.
+
+| Column                 | Type                           | Notes                                                                               |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| id                     | uuid PK                        |                                                                                     |
+| character_id           | uuid FK → characters (cascade) | indexed                                                                             |
+| item_def_id            | text                           | id of the item definition in game-core content                                      |
+| quality                | smallint 0–100                 | durability; `CHECK` 0–100; 0 = broken and unusable; −25 per Rift defeat             |
+| equipped_slot          | text null                      | `EquipSlot` when equipped; unique per character (`where equipped_slot is not null`) |
+| source                 | text                           | `starter`, `drop`, …                                                                |
+| created_at, updated_at | timestamptz                    |                                                                                     |
+
+Migration `0002_starter_kit_for_existing_characters` gave characters created
+before the character system a Training Sword and a Padded Tunic.
+
+### `character_skills`
+
+| Column       | Type                           | Notes                                                       |
+| ------------ | ------------------------------ | ----------------------------------------------------------- |
+| character_id | uuid FK → characters (cascade) | PK part                                                     |
+| skill_id     | text                           | ability id in game-core content; PK part                    |
+| learned_at   | timestamptz                    | weapon abilities are not stored (they come from the weapon) |
 
 ### `world_events`
 
@@ -140,15 +168,14 @@ they describe.
 These show how future systems attach to the current model. Names and fields
 are provisional and depend on game-design decisions.
 
-| Area                | Tables (sketch)                                                                                                                       | Notes                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Map                 | `map_regions`, `map_hexes (world_id, q, r, region_id, terrain, …)`                                                                    | PK `(world_id, q, r)`; regions are the unit of NPC simulation and real-time channels                       |
-| Reputation          | `reputation_tracks`, `character_reputation (character_id, track_id, value)`                                                           | progression without levels; history in `world_events`                                                      |
-| Nations & languages | `nations`, `nation_memberships`, `diplomatic_relations (nation_a, nation_b, state)`, `languages`, `character_languages (proficiency)` | in-game languages are separate from UI language                                                            |
-| Items & economy     | `item_definitions`, `items (owner_type, owner_id, quantity)`, `wallets`, `ledger_entries` (double-entry), `market_orders`, `trades`   | every transfer is a transaction with row locks plus an idempotency key; ledger makes the economy auditable |
-| NPCs                | `npcs (world_id, region_id, state jsonb, …)`, `npc_schedules`                                                                         | simulated by the worker per region                                                                         |
-| Combat              | `combats`, `combat_participants`, `combat_turns`                                                                                      | state checkpointed every turn                                                                              |
-| World events        | `scheduled_events`, `world_state_flags`                                                                                               | the worker executes; results are logged in `world_events`                                                  |
+| Area                | Tables (sketch)                                                                                                                                               | Notes                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Map                 | `map_regions`, `map_hexes (world_id, q, r, region_id, terrain, …)`                                                                                            | PK `(world_id, q, r)`; regions are the unit of NPC simulation and real-time channels                       |
+| Nations & languages | `nations`, `nation_memberships`, `diplomatic_relations (nation_a, nation_b, state)`, `languages`, `character_languages (proficiency)`                         | in-game languages are separate from UI language                                                            |
+| Items & economy     | `item_definitions`, `items` (exists; may gain stack quantity and non-character owners), `wallets`, `ledger_entries` (double-entry), `market_orders`, `trades` | every transfer is a transaction with row locks plus an idempotency key; ledger makes the economy auditable |
+| NPCs                | `npcs (world_id, region_id, state jsonb, …)`, `npc_schedules`                                                                                                 | simulated by the worker per region                                                                         |
+| Combat              | `combats`, `combat_participants`, `combat_turns`                                                                                                              | state checkpointed every turn                                                                              |
+| World events        | `scheduled_events`, `world_state_flags`                                                                                                                       | the worker executes; results are logged in `world_events`                                                  |
 
 ## Growth path
 

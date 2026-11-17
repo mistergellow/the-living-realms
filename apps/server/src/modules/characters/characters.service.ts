@@ -1,5 +1,11 @@
 import { accounts, worldEvents, type Character, type Database } from '@realms/db';
-import { validateCharacterName } from '@realms/game-core';
+import {
+  getItemDef,
+  STARTER_ARMOR,
+  STARTER_WEAPONS,
+  validateCharacterName,
+  validatePointBuy,
+} from '@realms/game-core';
 import {
   ErrorCode,
   type CharacterAppearance,
@@ -10,6 +16,7 @@ import { eq } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { AppError, errors, isUniqueViolation } from '../../lib/errors.js';
 import { charactersRepository as repo } from './characters.repository.js';
+import { itemsRepository } from './items.repository.js';
 
 export function toCharacterDto(c: Character): CharacterDto {
   return {
@@ -46,7 +53,16 @@ export class CharactersService {
     const name = validateCharacterName(input.name);
     if (!name.ok) throw errors.validation(name.reason, [{ path: 'name', message: name.reason }]);
 
+    const attrs = validatePointBuy(input.attributes);
+    if (!attrs.ok)
+      throw errors.validation(attrs.reason, [{ path: 'attributes', message: attrs.reason }]);
+    if (!(STARTER_WEAPONS as string[]).includes(input.startingWeapon))
+      throw errors.validation('Choose one of the starting weapons.', [
+        { path: 'startingWeapon', message: 'Choose one of the starting weapons.' },
+      ]);
+
     const { world } = this.ctx;
+    const a = input.attributes;
     try {
       return await this.db.transaction(async (tx) => {
         // Lock the account row: serializes concurrent creations so the limit can't be raced.
@@ -69,13 +85,30 @@ export class CharactersService {
           appearance: input.appearance,
           hexQ: world.spawnQ,
           hexR: world.spawnR,
+          attrStr: a.str,
+          attrDex: a.dex,
+          attrCon: a.con,
+          attrInt: a.int,
+          attrWis: a.wis,
+          attrCha: a.cha,
         });
+        // Starter kit: the chosen weapon + basic armor, equipped.
+        const kit = [input.startingWeapon, ...STARTER_ARMOR];
+        await itemsRepository.insertMany(
+          tx,
+          kit.map((defId) => ({
+            characterId: character.id,
+            itemDefId: defId,
+            equippedSlot: getItemDef(defId)!.slots[0]!,
+            source: 'starter',
+          })),
+        );
         await tx.insert(worldEvents).values({
           worldId: world.id,
           type: 'character.created',
           actorAccountId: accountId,
           actorCharacterId: character.id,
-          payload: { name: character.name },
+          payload: { name: character.name, startingWeapon: input.startingWeapon },
         });
         return character;
       });

@@ -26,7 +26,7 @@ Legend: ✅ done · 🔜 next · ⏳ planned · ❓ needs design decisions
 - [x] Railway deployment configuration (`infra/railway/`, guide in `docs/DEPLOY_RAILWAY.md`) — live on Railway
 - [x] Documentation (README, ARCHITECTURE, DATABASE, DECISIONS, ROADMAP)
 
-## Phase 2 — Character system 🔜 ❓
+## Phase 2 — Character system ✅ (M1)
 
 Priority set by the project owner: characters and combat come before the world
 map, because combat is the core of the game.
@@ -34,8 +34,8 @@ map, because combat is the core of the game.
 - ❓ What defines a character's power (attributes, skills, equipment, reputation)
 - ❓ Archetypes/classes or a free build; how skills are learned and equipped (loadout)
 - ❓ Combat resources (HP, energy/mana, …)
-- Data-driven definitions (skills, effects) so numbers can be tuned quickly
-- Character sheet screen; persistence of stats and loadout
+- [x] **M1 done:** six D&D attributes with point-buy; derived stats; items with quality/durability; equipment with 7 slots (two-handed rules, attribute bonuses); weapons grant abilities; learned-skills table; per-character reputation; starter weapon choice + starter kit; character sheet screen
+- [x] Data-driven definitions (items, abilities) so numbers can be tuned quickly
 
 ## Phase 3 — Combat and Rifts 🔜 ❓
 

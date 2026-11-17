@@ -7,3 +7,8 @@
  */
 export * from './hex.js';
 export * from './character.js';
+export * from './attributes.js';
+export * from './equipment.js';
+export * from './stats.js';
+export * from './content/abilities.js';
+export * from './content/items.js';

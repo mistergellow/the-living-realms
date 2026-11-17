@@ -98,9 +98,30 @@ export const characterAppearanceSchema = z.object({
 });
 export type CharacterAppearance = z.infer<typeof characterAppearanceSchema>;
 
+// ---- Attributes (the six D&D abilities) ----
+export const ATTRIBUTE_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+export type Attributes = Record<AttributeKey, number>;
+
+const attributeScore = z.number().int().min(1).max(30);
+export const attributesSchema = z
+  .object({
+    str: attributeScore,
+    dex: attributeScore,
+    con: attributeScore,
+    int: attributeScore,
+    wis: attributeScore,
+    cha: attributeScore,
+  })
+  .strict();
+
 export const createCharacterRequestSchema = z.object({
   name: z.string(),
   appearance: characterAppearanceSchema,
+  /** Point-buy scores; validated by @realms/game-core rules on the server. */
+  attributes: attributesSchema,
+  /** Item definition id of the chosen starter weapon. */
+  startingWeapon: z.string().max(64),
 });
 export type CreateCharacterRequest = z.infer<typeof createCharacterRequestSchema>;
 
@@ -108,3 +129,85 @@ export interface CharacterListResponse {
   characters: CharacterDto[];
   limit: number;
 }
+
+// ---- Character sheet: equipment, items, abilities, derived stats ----
+export const EQUIP_SLOTS = [
+  'mainHand',
+  'offHand',
+  'head',
+  'body',
+  'legs',
+  'accessory1',
+  'accessory2',
+] as const;
+export type EquipSlot = (typeof EQUIP_SLOTS)[number];
+
+export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory';
+
+export interface ItemDto {
+  id: string;
+  defId: string;
+  name: string;
+  kind: ItemKind;
+  description: string;
+  /** Item quality/durability, 0–100. At 0 the item is broken and unusable. */
+  quality: number;
+  broken: boolean;
+  equippedSlot: EquipSlot | null;
+  /** Slots this item can be equipped in. */
+  slots: EquipSlot[];
+  twoHanded: boolean;
+  bonuses: Partial<Attributes>;
+  defense: number;
+}
+
+export type AbilitySource = 'weapon' | 'skill' | 'universal';
+
+export interface AbilityDto {
+  id: string;
+  name: string;
+  description: string;
+  source: AbilitySource;
+  /** Name of the item granting it (weapon abilities). */
+  grantedBy: string | null;
+  focusCost: number;
+  manaCost: number;
+  /** Human-readable targeting summary, e.g. "One enemy · front row". */
+  targeting: string;
+}
+
+export interface DerivedStatsDto {
+  maxHp: number;
+  maxMana: number;
+  defense: number;
+  initiative: number;
+  /** Percentages, 0–100. */
+  dodgeChance: number;
+  critChance: number;
+  physicalPower: number;
+  rangedPower: number;
+  spellPower: number;
+  healingPower: number;
+  resistance: number;
+  manaRegen: number;
+  influence: number;
+}
+
+export interface CharacterSheetDto {
+  character: CharacterDto;
+  baseAttributes: Attributes;
+  /** Base + equipment bonuses. */
+  attributes: Attributes;
+  stats: DerivedStatsDto;
+  equipment: Record<EquipSlot, ItemDto | null>;
+  /** Unequipped items. */
+  inventory: ItemDto[];
+  abilities: AbilityDto[];
+  /** Reputation is a per-character currency earned through activities. */
+  reputation: number;
+}
+
+export const equipRequestSchema = z.object({ itemId: z.uuid(), slot: z.enum(EQUIP_SLOTS) });
+export type EquipRequest = z.infer<typeof equipRequestSchema>;
+export const unequipRequestSchema = z.object({ slot: z.enum(EQUIP_SLOTS) });
+export type UnequipRequest = z.infer<typeof unequipRequestSchema>;

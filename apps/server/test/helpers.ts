@@ -79,12 +79,23 @@ export async function registerUser(app: FastifyInstance, email = `user${++counte
 }
 
 const appearance = { version: 1, color: '#2e86c1', emblem: 'star' } as const;
-export async function createCharacter(app: FastifyInstance, cookie: string, name: string) {
+export const VALID_ATTRIBUTES = { str: 15, dex: 14, con: 13, int: 10, wis: 10, cha: 8 } as const; // 27 points
+export async function createCharacter(
+  app: FastifyInstance,
+  cookie: string,
+  name: string,
+  extra: { attributes?: Record<string, number>; startingWeapon?: string } = {},
+) {
   return app.inject({
     method: 'POST',
     url: '/api/characters',
     headers: { cookie },
-    payload: { name, appearance },
+    payload: {
+      name,
+      appearance,
+      attributes: extra.attributes ?? VALID_ATTRIBUTES,
+      startingWeapon: extra.startingWeapon ?? 'training_sword',
+    },
   });
 }
 

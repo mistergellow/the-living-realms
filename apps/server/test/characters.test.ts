@@ -4,6 +4,7 @@ import {
   createTestApp,
   registerUser,
   resetState,
+  VALID_ATTRIBUTES,
   type TestApp,
 } from './helpers.js';
 
@@ -52,7 +53,12 @@ describe('characters', () => {
       method: 'POST',
       url: '/api/characters',
       headers: { cookie },
-      payload: { name: 'Valid', appearance: { version: 1, color: 'pink', emblem: 'star' } },
+      payload: {
+        name: 'Valid',
+        appearance: { version: 1, color: 'pink', emblem: 'star' },
+        attributes: VALID_ATTRIBUTES,
+        startingWeapon: 'training_sword',
+      },
     });
     expect(badLook.statusCode).toBe(400);
   });

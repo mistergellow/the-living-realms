@@ -1,15 +1,21 @@
-import { createCharacterRequestSchema, type CharacterListResponse } from '@realms/shared';
+import {
+  createCharacterRequestSchema,
+  equipRequestSchema,
+  unequipRequestSchema,
+  type CharacterListResponse,
+} from '@realms/shared';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { parse } from '../../lib/errors.js';
 import { requireAuth } from '../../plugins/auth.js';
 import { toCharacterDto, type CharactersService } from './characters.service.js';
+import type { CharacterSheetService } from './sheet.service.js';
 
 const idParams = z.object({ id: z.uuid() });
 
 export async function charactersRoutes(
   app: FastifyInstance,
-  { service }: { service: CharactersService },
+  { service, sheets }: { service: CharactersService; sheets: CharacterSheetService },
 ) {
   app.addHook('preHandler', requireAuth);
 
@@ -23,6 +29,23 @@ export async function charactersRoutes(
     const character = await service.create(request.auth!.account.id, input);
     request.log.info({ characterId: character.id }, 'character created');
     return reply.status(201).send({ character: toCharacterDto(character) });
+  });
+
+  app.get('/:id', async (request) => {
+    const { id } = parse(idParams, request.params);
+    return sheets.getSheet(request.auth!.account.id, id);
+  });
+
+  app.post('/:id/equip', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { itemId, slot } = parse(equipRequestSchema, request.body);
+    return sheets.equip(request.auth!.account.id, id, itemId, slot);
+  });
+
+  app.post('/:id/unequip', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { slot } = parse(unequipRequestSchema, request.body);
+    return sheets.unequip(request.auth!.account.id, id, slot);
   });
 
   app.delete('/:id', async (request, reply) => {

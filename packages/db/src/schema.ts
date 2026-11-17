@@ -1,10 +1,13 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  check,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -114,6 +117,15 @@ export const characters = pgTable(
     name: text('name').notNull(),
     /** Versioned JSON, see CharacterAppearance in @realms/shared. */
     appearance: jsonb('appearance').notNull(),
+    /** Base attributes (D&D abilities, point-buy at creation; equipment adds bonuses on top). */
+    attrStr: smallint('attr_str').notNull().default(10),
+    attrDex: smallint('attr_dex').notNull().default(10),
+    attrCon: smallint('attr_con').notNull().default(10),
+    attrInt: smallint('attr_int').notNull().default(10),
+    attrWis: smallint('attr_wis').notNull().default(10),
+    attrCha: smallint('attr_cha').notNull().default(10),
+    /** Per-character currency earned through activities. */
+    reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
     /** Axial hex coordinates of the character on the world map. */
     hexQ: integer('hex_q').notNull(),
     hexR: integer('hex_r').notNull(),
@@ -133,6 +145,50 @@ export const characters = pgTable(
       .where(sql`${t.deletedAt} is null`),
     index('characters_world_hex_idx').on(t.worldId, t.hexQ, t.hexR),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Items owned by characters. `item_def_id` points to a definition in
+// @realms/game-core content. `quality` is durability (0 = broken).
+// ---------------------------------------------------------------------------
+export const items = pgTable(
+  'items',
+  {
+    id: id(),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    itemDefId: text('item_def_id').notNull(),
+    quality: smallint('quality').notNull().default(100),
+    /** EquipSlot when equipped, null when in the inventory. */
+    equippedSlot: text('equipped_slot'),
+    /** Where it came from: 'starter', 'drop', … */
+    source: text('source').notNull().default('starter'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('items_character_idx').on(t.characterId),
+    // At most one item per slot per character.
+    uniqueIndex('items_character_slot_uq')
+      .on(t.characterId, t.equippedSlot)
+      .where(sql`${t.equippedSlot} is not null`),
+    check('items_quality_range', sql`${t.quality} between 0 and 100`),
+  ],
+);
+
+// Skills learned by a character (from drops). Weapon abilities are not stored:
+// they come from the equipped weapon.
+export const characterSkills = pgTable(
+  'character_skills',
+  {
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    skillId: text('skill_id').notNull(),
+    learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.characterId, t.skillId] })],
 );
 
 // ---------------------------------------------------------------------------
@@ -168,3 +224,5 @@ export type Session = typeof sessions.$inferSelect;
 export type World = typeof worlds.$inferSelect;
 export type Character = typeof characters.$inferSelect;
 export type WorldEvent = typeof worldEvents.$inferSelect;
+export type Item = typeof items.$inferSelect;
+export type CharacterSkill = typeof characterSkills.$inferSelect;

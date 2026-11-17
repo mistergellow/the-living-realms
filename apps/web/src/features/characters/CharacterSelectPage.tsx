@@ -65,6 +65,9 @@ export function CharacterSelectPage() {
                   <button className="btn btn-primary btn-sm" onClick={() => play(c.id)}>
                     Play
                   </button>
+                  <Link className="btn btn-sm" to={`/characters/${c.id}`}>
+                    Sheet
+                  </Link>
                   <button
                     className="btn btn-ghost btn-sm btn-danger"
                     disabled={del.isPending}

@@ -39,14 +39,61 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Personagem (character) — campos, criação, listagem, apagar
 
-- Contrato: `packages/shared/src/api.ts` (`CharacterDto`, `createCharacterRequestSchema`, `CharacterListResponse`)
+- Contrato: `packages/shared/src/api.ts` (`CharacterDto`, `createCharacterRequestSchema`, `CharacterListResponse`, `CharacterSheetDto`)
 - Regras: `packages/game-core/src/character.ts` (validação e normalização do nome)
 - BD: `schema.ts` → `characters` (índice único `characters_world_name_uq`) + migração
 - Servidor: `apps/server/src/modules/characters/characters.repository.ts`, `characters.service.ts` (`toCharacterDto`, limite, eventos), `characters.routes.ts`
 - Tempo real: `gateway.ts` → `enterWorld` (constrói `PresencePlayer` a partir do personagem)
-- Web: `apps/web/src/features/characters/api.ts`, `CharacterSelectPage.tsx`, `CharacterCreatePage.tsx`, `active-character.ts`
+- Web: `apps/web/src/features/characters/api.ts`, `CharacterSelectPage.tsx`, `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (rota `/characters/:id`), `active-character.ts`
 - Testes: `apps/server/test/characters.test.ts`, `helpers.ts` (`createCharacter`), `game-core/test/character.test.ts`, `apps/web/test/world-state.test.ts` (fixture `self`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → characters, `DECISIONS.md` ADR-015
+
+## Atributos (STR, DEX, CON, INT, WIS, CHA) e point-buy
+
+- Contrato: `packages/shared/src/api.ts` (`ATTRIBUTE_KEYS`, `attributesSchema`, `createCharacterRequestSchema.attributes`)
+- Regras: `packages/game-core/src/attributes.ts` (`POINT_BUY`, `validatePointBuy`, `attributeModifier`, nomes e resumos)
+- BD: `characters.attr_str … attr_cha` + migração
+- Servidor: `characters.service.ts` (validação e gravação), `sheet.service.ts` (`baseAttributesOf`)
+- Web: `AttributePicker.tsx`, `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx`
+- Testes: `game-core/test/character-system.test.ts`, `apps/server/test/character-sheet.test.ts`, `helpers.ts` (`VALID_ATTRIBUTES`), `e2e/foundation.spec.ts` (botões "Increase …")
+
+## Estatísticas derivadas (HP, Mana, defesa, iniciativa, esquiva, crítico, poderes)
+
+- Fórmulas (provisórias, num só sítio): `packages/game-core/src/stats.ts` (`STAT_RULES`, `computeStats`)
+- Contrato: `DerivedStatsDto` em `packages/shared/src/api.ts`
+- Web: `CharacterSheetPage.tsx` (tabela "Combat stats"), `CharacterCreatePage.tsx` (pré-visualização)
+- Testes: `character-system.test.ts`, `character-sheet.test.ts` (valores de HP/defesa), `e2e` (`stat-hp`)
+- Futuro: o motor de combate (M2) usa `computeStats`
+
+## Itens, equipamento e qualidade/durabilidade
+
+- Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `STARTER_WEAPONS`, `STARTER_ARMOR`)
+- Regras: `packages/game-core/src/equipment.ts` (`planEquip`, duas mãos, `isBroken`, `qualityAfterDefeat`, `DEFEAT_QUALITY_LOSS`)
+- Contrato: `EQUIP_SLOTS`, `ItemDto`, `equipRequestSchema`, `unequipRequestSchema` (`api.ts`); erro `INVALID_EQUIPMENT` (`errors.ts`)
+- BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade); migração de dados `0002_starter_kit_for_existing_characters.sql`
+- Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
+- Web: `CharacterSheetPage.tsx` (Equipment, Inventory, `QualityBar`), `api.ts` (`useEquipment`)
+- Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
+- **Item novo:** acrescentar em `content/items.ts`; se for arma, ligar as habilidades em `content/abilities.ts`; se for de kit inicial, rever a migração de dados para personagens antigos
+- **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS` (`CharacterSheetPage.tsx`), itens que o usam
+
+## Habilidades (armas, skills aprendidas, universais)
+
+- Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES`, `UNIVERSAL_ABILITIES`, `UNARMED_ABILITIES`, `describeTargeting`)
+- Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + aprendidas + universais)
+- Contrato: `AbilityDto` (`api.ts`)
+- BD: `character_skills` (skills aprendidas por drops; as de arma não se guardam)
+- Servidor: `sheet.service.ts` (`abilities`)
+- Web: `CharacterSheetPage.tsx` (lista), `CharacterCreatePage.tsx` (habilidades de cada arma inicial)
+- Testes: `character-system.test.ts`, `character-sheet.test.ts`
+- Futuro: execução em combate no motor M2
+
+## Reputação (moeda por personagem)
+
+- BD: `characters.reputation`
+- Contrato: `CharacterSheetDto.reputation`
+- Servidor: `sheet.service.ts`; (M2) atribuída no fim dos Rifts
+- Web: `CharacterSheetPage.tsx` (`data-testid="reputation"`)
 
 ## Nome do personagem (regras)
 

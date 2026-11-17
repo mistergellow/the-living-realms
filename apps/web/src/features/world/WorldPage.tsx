@@ -68,6 +68,11 @@ export function WorldPage() {
             <strong data-testid="self-name">{self.name}</strong>
           </span>
         )}
+        {self && (
+          <Link className="btn btn-ghost btn-sm" to={`/characters/${self.id}`}>
+            Character
+          </Link>
+        )}
         <button className="btn btn-ghost btn-sm" onClick={leave}>
           Switch character
         </button>

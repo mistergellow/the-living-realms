@@ -1,4 +1,11 @@
-import type { CharacterDto, CharacterListResponse, CreateCharacterRequest } from '@realms/shared';
+import type {
+  CharacterDto,
+  CharacterListResponse,
+  CharacterSheetDto,
+  CreateCharacterRequest,
+  EquipRequest,
+  UnequipRequest,
+} from '@realms/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
@@ -26,4 +33,31 @@ export function useDeleteCharacter() {
     mutationFn: (id: string) => api<void>('DELETE', `/characters/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: charactersQueryKey }),
   });
+}
+
+export const sheetQueryKey = (id: string) => ['characters', id, 'sheet'] as const;
+
+export function useCharacterSheet(id: string) {
+  return useQuery({
+    queryKey: sheetQueryKey(id),
+    queryFn: () => api<CharacterSheetDto>('GET', `/characters/${id}`),
+  });
+}
+
+/** Equip / unequip; the server returns the updated sheet, which replaces the cached one. */
+export function useEquipment(id: string) {
+  const qc = useQueryClient();
+  const onSuccess = (sheet: CharacterSheetDto) => qc.setQueryData(sheetQueryKey(id), sheet);
+  return {
+    equip: useMutation({
+      mutationFn: (input: EquipRequest) =>
+        api<CharacterSheetDto>('POST', `/characters/${id}/equip`, input),
+      onSuccess,
+    }),
+    unequip: useMutation({
+      mutationFn: (input: UnequipRequest) =>
+        api<CharacterSheetDto>('POST', `/characters/${id}/unequip`, input),
+      onSuccess,
+    }),
+  };
 }
