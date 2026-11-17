@@ -56,3 +56,12 @@ atualize rapidamente tudo o que está ligado.
 **Resultado:** `CLAUDE.md` (lido automaticamente em cada sessão, com as regras
 de trabalho), `docs/REQUESTS.md` (este ficheiro), `docs/CHANGE_MAP.md` (mapa de
 impacto por conceito).
+
+### #4 — 2026-11-17 — Guardar o código no GitHub
+
+**Pedido:** onde colocar o código; o dono criou o repositório
+`mistergellow/the-living-realms`.
+**Resultado:** primeiro commit ("Phase 1: technical foundation") enviado para o
+ramo `main` do GitHub. A partir daqui, cada sessão nova começa por clonar este
+repositório. O `CLAUDE.md` é lido automaticamente e aponta para este registo e
+para o mapa de impacto.
