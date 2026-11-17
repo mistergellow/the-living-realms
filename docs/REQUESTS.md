@@ -80,3 +80,12 @@ funcionalidade "Virtual Machine Platform" do Windows não está ativa.
 administrador, reiniciar, voltar a instalar). Alternativa sem Docker:
 PostgreSQL e Redis na cloud, mudando só `DATABASE_URL` e `REDIS_URL` no `.env`.
 Sem alterações ao código.
+
+### #7 — 2026-11-17 — Publicar online em vez de usar o Docker localmente
+
+**Pedido:** em vez do Docker, pôr o jogo já num serviço como a Cloudflare.
+**Resultado:** análise apresentada. A Cloudflare (Workers/Pages) não corre o
+servidor Node.js com WebSockets nem o worker sem reescrever o backend.
+Recomendação: Railway (frontend + API + worker + PostgreSQL + Redis, deploy
+automático a partir do GitHub), com a Cloudflare opcional mais tarde à frente
+(domínio/DNS/proteção). **A aguardar aprovação do dono.**
