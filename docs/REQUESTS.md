@@ -287,3 +287,11 @@ de equilíbrio, usada a dificuldade média).
 - Testes: 37 unitários no game-core, 48 de integração no servidor, 6 e2e.
 - Docs: CHANGE_MAP (atributos, estatísticas, itens, estados/Block/intenções), DATABASE, ARCHITECTURE §7, ADR-023, ADR-024, ROADMAP.
   **Próximo:** M3 (lobby até 6 jogadores) — perguntas pendentes no pedido #17.
+
+### #21 — 2026-11-18 — "O que fazer agora?"
+
+**Pedido:** orientação sobre o próximo passo.
+**Resultado:** recomendado: (1) testar a versão online com uma lista de
+verificação e dar feedback sobre a sensação do combate e o equilíbrio;
+(2) responder às 3 perguntas do lobby para avançar com o M3. Alternativas
+apresentadas: mais conteúdo (Rifts/inimigos), direção de arte, mapa (Fase 4).
