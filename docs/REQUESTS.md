@@ -363,3 +363,22 @@ conforme a dificuldade do Rift.
 **Pedido:** garantir que tudo está commitado para testar.
 **Resultado:** confirmado: sem alterações pendentes; `main` no GitHub = commit
 `7d8fa39` (ataques por coluna) com CI verde. O Railway publica a partir do `main`.
+
+### #26 — 2026-11-18 — Servidor a crashar no Railway ("Can't find meta/_journal.json")
+
+**Pedido:** logs do Railway com o servidor a reiniciar em ciclo.
+**Causa:** o mesmo do #10. O Railway não usou o Dockerfile: construiu o
+projeto sozinho e correu `pnpm start` (`node apps/server/dist/main.js`). Nesse
+modo, o código procurava as migrações em `apps/server/migrations`, que não
+existe.
+**Correção (rede de segurança no código):** `findMigrationsDir`
+(`packages/db/src/client.ts`) procura as migrações nos sítios possíveis (variável
+`MIGRATIONS_DIR` da imagem Docker, ao lado do código, `packages/db/migrations`
+do repositório) e, se não as encontrar, diz onde procurou. Em produção, o
+servidor também encontra sozinho o site (`apps/web/dist`) quando não há
+`WEB_DIST_DIR` (`findWebDist` em `apps/server/src/app.ts`). Testado a imitar o
+Railway: base de dados vazia, `pnpm start` e `pnpm start:worker` arrancam,
+aplicam as migrações e servem o jogo.
+**Para o dono:** confirmar no Railway que o serviço `server` usa o Dockerfile
+(Settings → Build → Builder = Dockerfile; Railway Config File vazio ou
+`/railway.json`). Ver `docs/DEPLOY_RAILWAY.md`.
