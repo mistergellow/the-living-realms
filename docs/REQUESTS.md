@@ -383,3 +383,49 @@ aplicam as migrações e servem o jogo.
 **Para o dono:** confirmar no Railway que o serviço `server` usa o Dockerfile
 (Settings → Build → Builder = Dockerfile; Railway Config File vazio ou
 `/railway.json`). Ver `docs/DEPLOY_RAILWAY.md`.
+
+### #27 — 2026-11-18 — Usar Phaser? → PixiJS para o combate e o mapa
+
+**Pedido:** o ChatGPT tinha sugerido fazer parte do jogo em Phaser; o jogo
+"parece quase browser". Depois de explicada a situação (tudo era React +
+DOM/SVG; o ADR-002 já previa PixiJS para o combate), o dono aprovou a
+recomendação: **PixiJS para o combate e para o mapa do mundo**, React para os
+menus e painéis.
+**Decisões técnicas:** ADR-029 (PixiJS em vez de Phaser; arte SVG
+rasterizada em texturas; botões DOM por cima do canvas). Valor provisório A34.
+**Resultado:**
+
+- Infraestrutura Pixi partilhada em `apps/web/src/features/render/` (arranque
+  preguiçoso — o Pixi só é descarregado no mapa e no combate —, SVG → textura,
+  hook React, compatível com a CSP sem `unsafe-eval`).
+- Combate (`rifts/combat-scene.ts`): cenário animado (céu, montanhas, o Rift a
+  pulsar, partículas), personagens em camadas (corpo, arma, cabeça) a respirar
+  e a piscar os olhos, investidas corpo a corpo, setas/estilhaços/orbes,
+  faíscas, tremor de ecrã nos críticos, números a flutuar, quedas e reviver,
+  barras de vida animadas. A fase dos inimigos joga-se ataque a ataque; o
+  registo de texto, os controlos e os ecrãs de resultado esperam pela animação.
+  Cliques e teclado continuam em botões reais por cima do canvas
+  (`CombatStage.tsx`); sem WebGL, mostra a arte SVG antiga.
+- Mapa (`world/map-scene.ts`): hexágonos desenhados em canvas, arrastar para
+  mover, roda/pinça/botões/teclas para zoom, centrar em mim, token animado do
+  jogador, névoa; a legenda mostra o hexágono por baixo do rato.
+- `game-core`: `pixelToHex` / `hexRound` (clicar num hexágono).
+- Testes: unitários do layout, da timeline e da câmara; e2e atualizado (o turno
+  dos inimigos agora demora a jogar-se; fecho de páginas abertas entre testes).
+- Docs: CHANGE_MAP (renderer canvas, aparência, mapa, combate), ADR-029,
+  ADR-002/021 (notas), ARCHITECTURE §7–§9, ROADMAP.
+- Integrado com o Combate 2.0 (#20): Block, estados, dano por estado e
+  atordoado têm animação própria; as intenções dos inimigos e os chips de
+  Block/estados ficam em HTML por cima do canvas; armas novas e mão
+  secundária (escudo, talismã, adaga) como camadas animadas.
+
+### #28 — 2026-11-18 — "Faz o update total"
+
+**Pedido:** o jogo online ainda mostrava o mapa antigo (o PR do Pixi não
+estava no `main`); pôr tudo atualizado.
+**Resultado:** o ramo do Pixi recebeu o `main` mais recente (lobbies e amigos,
+formação 3 × 2 do D38, ataques por coluna do D41) e a correção do Railway
+(#26). O combate em Pixi segue a nova formação: frente, meio e trás a partir
+do centro, com a linha de cima recuada para se poder clicar nas duas unidades
+de cada coluna. Nos ataques por coluna, o rato sobre uma unidade destaca a
+coluna inteira. O ADR do Pixi passou a ADR-029 e o pedido a #27.

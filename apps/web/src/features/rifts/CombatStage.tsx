@@ -155,7 +155,8 @@ export function CombatStage({
                 disabled={!targetable}
                 data-testid={`unit-${unit.side}`}
                 data-downed={unit.downed}
-                aria-label={`${unit.name}${targetable ? ' (target)' : ''}`}
+                data-left={unit.left}
+                aria-label={`${unit.name}${unit.left ? ' (left)' : ''}${targetable ? ' (target)' : ''}`}
                 title={`${unit.name} — ${unit.hp}/${unit.maxHp} HP`}
                 onClick={() => (swappable ? onSlot(unit.slot) : onTarget(unit))}
                 onPointerEnter={() => setHoverId(unit.id)}
@@ -163,7 +164,15 @@ export function CombatStage({
                 onFocus={() => setHoverId(unit.id)}
                 onBlur={() => setHoverId((h) => (h === unit.id ? null : h))}
               >
-                {failed && <FallbackUnit unit={unit} height={r.height} />}
+                {failed ? (
+                  <FallbackUnit unit={unit} height={r.height} />
+                ) : (
+                  // The canvas draws the name; this copy is for find-in-page and tests.
+                  <span className="sr-only">
+                    {unit.name}
+                    {unit.left ? ' (left)' : ''}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -215,7 +224,8 @@ function FallbackUnit({ unit, height }: { unit: CombatantView; height: number })
   return (
     <span className="fallback-unit" data-downed={unit.downed}>
       <span className="fallback-name">
-        {unit.name} · {unit.hp}/{unit.maxHp}
+        {unit.name}
+        {unit.left ? ' (left)' : ''} · {unit.hp}/{unit.maxHp}
       </span>
       {unit.kind === 'player' ? (
         <CharacterAvatar

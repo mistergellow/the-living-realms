@@ -242,7 +242,10 @@ export function CombatPage() {
             </div>
           </div>
         )}
-        {!replay.pending && data.status !== 'active' && <EndOverlay run={data} />}
+        {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
+        {(!replay.pending || data.status === 'abandoned') && data.status !== 'active' && (
+          <EndOverlay run={data} />
+        )}
       </CombatStage>
 
       <footer className="combat-bottom">

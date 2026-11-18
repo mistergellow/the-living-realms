@@ -269,7 +269,8 @@ class UnitView {
     this.y = lerp(this.y, this.homeY, follow);
     this.root.position.set(this.x, this.y);
     this.root.zIndex = Math.round(this.homeY * 10) + (this.isBoss ? 1 : 0);
-    this.root.alpha = this.alpha;
+    // Players who left a group run stay on the field, faded.
+    this.root.alpha = this.alpha * (this.view.left ? 0.45 : 1);
 
     const hoverTarget = this.hovered && this.targetable ? 1 : 0;
     this.hover = lerp(this.hover, hoverTarget, 1 - Math.exp(-dt / 70));
@@ -396,7 +397,8 @@ class UnitView {
     }
     this.hpText.position.set(0, y + 4);
     this.nameText.position.set(0, y - 2);
-    if (this.nameText.text !== v.name) this.nameText.text = v.name;
+    const name = v.left ? `${v.name} (left)` : v.name;
+    if (this.nameText.text !== name) this.nameText.text = name;
 
     // Bouncing chevron over valid targets.
     this.marker.clear();

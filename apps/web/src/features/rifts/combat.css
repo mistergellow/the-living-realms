@@ -275,13 +275,14 @@
   width: max-content;
 }
 .unit-chips-intents {
-  transform: translate(-50%, -100%);
+  /* Enemy intents grow away from the centre, so they do not cover the Rift. */
+  transform: translate(-25%, -100%);
 }
 .intents {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   max-width: 220px;
 }
 .intent {
