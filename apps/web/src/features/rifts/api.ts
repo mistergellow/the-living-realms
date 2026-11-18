@@ -37,6 +37,15 @@ export function useRun(runId: string, characterId: string | null) {
     enabled: !!characterId,
     queryFn: () => api<RunDto>('GET', `/rifts/runs/${runId}?characterId=${characterId}`),
     staleTime: Infinity,
+    // Group runs (A29): poll so other players' actions, the enemies' turn and
+    // expired timers show up here.
+    refetchInterval: (q) => {
+      const run = q.state.data;
+      if (!run || run.status !== 'active') return false;
+      const mine = run.combat.phase === 'party' && run.combat.activeId === `p:${characterId}`;
+      // During your own turn, refresh less often (others may leave or swap with you).
+      return mine ? 4_000 : 1_500;
+    },
   });
 }
 

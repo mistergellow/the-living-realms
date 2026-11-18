@@ -10,6 +10,7 @@ import {
   timeoutTurn,
   validTargets,
   getAbility,
+  leaveParty,
   type CombatState,
   type PartyMemberInput,
   type RiftRoomDef,
@@ -95,40 +96,73 @@ describe('turn order and Focus', () => {
   });
 });
 
-describe('targeting by rows', () => {
-  const twoRows = room([
-    { enemy: 'rift_husk', slot: 1 },
-    { enemy: 'shard_spitter', slot: 4 },
+describe('targeting by columns (front, mid, back × 2 lines)', () => {
+  const threeColumns = room([
+    { enemy: 'rift_husk', slot: 1 }, // front
+    { enemy: 'hollow_hound', slot: 2 }, // mid
+    { enemy: 'shard_spitter', slot: 4 }, // back
   ]);
+  const ids = (s: CombatState, ability: string) =>
+    validTargets(s, unit(s, 'p:a'), getAbility(ability)!).map((c) => c.enemyDefId);
 
-  it('"front" abilities hit the first occupied row', () => {
-    const s = encounter([member('a', 0)], twoRows);
-    const actor = unit(s, 'p:a');
-    expect(validTargets(s, actor, getAbility('slash')!).map((c) => c.enemyDefId)).toEqual([
-      'rift_husk',
-    ]);
-    // Once the front row is empty, the back row is exposed.
+  it('melee hits the first occupied column: front, then mid, then back', () => {
+    const s = encounter([member('a', 0)], threeColumns);
+    expect(ids(s, 'slash')).toEqual(['rift_husk']);
     const noFront = structuredClone(s);
     noFront.combatants.find((c) => c.enemyDefId === 'rift_husk')!.downed = true;
-    expect(
-      validTargets(noFront, unit(noFront, 'p:a'), getAbility('slash')!).map((c) => c.enemyDefId),
-    ).toEqual(['shard_spitter']);
+    expect(ids(noFront, 'slash')).toEqual(['hollow_hound']);
+    noFront.combatants.find((c) => c.enemyDefId === 'hollow_hound')!.downed = true;
+    expect(ids(noFront, 'slash')).toEqual(['shard_spitter']);
   });
 
-  it('back-row and any-row abilities', () => {
-    const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], twoRows);
-    const actor = unit(s, 'p:a');
-    expect(validTargets(s, actor, getAbility('volley')!).map((c) => c.enemyDefId)).toEqual([
-      'shard_spitter',
-    ]);
-    expect(validTargets(s, actor, getAbility('aimed_shot')!)).toHaveLength(2);
+  it('back-column and any-position abilities', () => {
+    const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], threeColumns);
+    // Volley hits every enemy (D40).
+    expect(ids(s, 'volley')).toHaveLength(3);
+    expect(ids(s, 'aimed_shot')).toHaveLength(3);
   });
 
-  it('rejects targets outside the allowed rows', () => {
-    const s = encounter([member('a', 0)], twoRows);
-    const spitter = s.combatants.find((c) => c.enemyDefId === 'shard_spitter')!;
-    const r = applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash', targetId: spitter.id });
+  it('column abilities hit both lines of that column', () => {
+    let s = encounter(
+      [member('a', 0, { critChance: 0 }, ['cleave'])],
+      room([
+        { enemy: 'rift_husk', slot: 0 },
+        { enemy: 'rift_husk', slot: 1 },
+        { enemy: 'shard_spitter', slot: 2 },
+      ]),
+    );
+    for (const c of s.combatants) if (c.side === 'enemies') c.stats.dodgeChance = 0;
+    s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'cleave' }));
+    const hit = s.log
+      .filter((l) => l.t === 'damage')
+      .map((l) => (l as { targetId: string }).targetId);
+    expect(hit).toEqual(['e:0:0', 'e:0:1']);
+  });
+
+  it('rejects columns out of reach', () => {
+    const s = encounter([member('a', 0)], threeColumns);
+    const r = applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash', targetColumn: 'back' });
     expect(r).toMatchObject({ ok: false, code: 'INVALID_ACTION' });
+  });
+
+  it('attacks pick a column and hit both units in it (D41)', () => {
+    let s = encounter(
+      [member('a', 0, { critChance: 0 }, ['aimed_shot'])],
+      room([
+        { enemy: 'rift_husk', slot: 0 },
+        { enemy: 'shard_spitter', slot: 4 },
+        { enemy: 'shard_spitter', slot: 5 },
+      ]),
+    );
+    for (const c of s.combatants)
+      if (c.side === 'enemies') Object.assign(c.stats, { dodgeChance: 0 });
+    s = ok(
+      applyAction(s, 'p:a', { type: 'ability', abilityId: 'aimed_shot', targetColumn: 'back' }),
+    );
+    const hit = s.log
+      .filter((l) => l.t === 'damage')
+      .map((l) => (l as { targetId: string }).targetId);
+    expect(hit).toEqual(['e:0:1', 'e:0:2']);
   });
 });
 
@@ -292,7 +326,11 @@ describe('enemy intents (Slay-the-Spire style)', () => {
     let s = encounter([member('a', 0, { maxHp: 500 })], room([{ enemy: 'rift_husk', slot: 0 }]));
     const husk = s.combatants.find((c) => c.side === 'enemies')!;
     expect(husk.intents.length).toBeGreaterThan(0);
-    expect(husk.intents[0]).toEqual({ abilityId: 'husk_claw', targetIds: ['p:a'] });
+    expect(husk.intents[0]).toEqual({
+      abilityId: 'husk_claw',
+      targetIds: ['p:a'],
+      column: 'front',
+    });
     const planned = husk.intents.length;
     s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
     const used = s.log.filter((l) => l.t === 'ability' && l.actorId === husk.id);
@@ -308,5 +346,45 @@ describe('enemy intents (Slay-the-Spire style)', () => {
     husk.statuses.push({ id: 'stun', turns: 1, value: 0 });
     const next = ok(applyAction(t, 'p:a', { type: 'end_turn' }));
     expect(next.log.some((l) => l.t === 'stunned' && l.targetId === husk.id)).toBe(true);
+  });
+});
+
+describe('group runs', () => {
+  it('a leaving player is out for good; the run continues for the others', () => {
+    let s = encounter(
+      [member('a', 0, { initiative: 50 }), member('b', 1, { initiative: 0 })],
+      room([{ enemy: 'rift_warden', slot: 0 }]),
+    );
+    expect(s.activeId).toBe('p:a');
+    s = leaveParty(s, 'p:a');
+    expect(unit(s, 'p:a')).toMatchObject({ left: true, downed: true });
+    expect(s.activeId).toBe('p:b');
+    expect(s.phase).toBe('party');
+  });
+
+  it('the last player leaving ends the run in defeat', () => {
+    const s = leaveParty(
+      encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }])),
+      'p:a',
+    );
+    expect(s).toMatchObject({ phase: 'ended', outcome: 'defeat' });
+  });
+});
+
+describe('enemies play the formation (D42)', () => {
+  it('a Bulwark sharing a column with an attacker shields the column, the other attacks', () => {
+    const s = encounter(
+      [member('a', 0), member('b', 1)],
+      room([
+        { enemy: 'rift_bulwark', slot: 0 },
+        { enemy: 'rift_husk', slot: 1 },
+      ]),
+    );
+    const bulwark = s.combatants.find((c) => c.enemyDefId === 'rift_bulwark')!;
+    const husk = s.combatants.find((c) => c.enemyDefId === 'rift_husk')!;
+    expect(bulwark.intents[0]).toMatchObject({ abilityId: 'bulwark_wall', column: 'front' });
+    expect(husk.intents.every((i) => i.abilityId === 'husk_claw')).toBe(true);
+    // Enemy attacks hit both party members in the front column.
+    expect(husk.intents[0]!.targetIds.sort()).toEqual(['p:a', 'p:b']);
   });
 });

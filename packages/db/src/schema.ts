@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   check,
   index,
   integer,
@@ -234,13 +235,112 @@ export const riftRunParticipants = pgTable(
     accountId: uuid('account_id')
       .notNull()
       .references(() => accounts.id, { onDelete: 'cascade' }),
-    /** Rewards or penalty applied to this character when the run ended. */
+    /** Rewards or penalty applied to this character when the run ended (or when they left). */
     result: jsonb('result'),
+    /** Set when the character left a group run early (A28). */
+    leftAt: timestamp('left_at', { withTimezone: true }),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     primaryKey({ columns: [t.runId, t.characterId] }),
     index('rift_run_participants_character_idx').on(t.characterId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Friendships between characters (A25). One row per pair, ids ordered
+// (character_a < character_b) so a pair can only exist once.
+// ---------------------------------------------------------------------------
+export const friendships = pgTable(
+  'friendships',
+  {
+    characterA: uuid('character_a')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    characterB: uuid('character_b')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    /** 'pending' | 'accepted' */
+    status: text('status').notNull().default('pending'),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.characterA, t.characterB] }),
+    index('friendships_b_idx').on(t.characterB),
+    check('friendships_ordered', sql`${t.characterA} < ${t.characterB}`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Rift lobbies: groups of up to 6 forming before a run.
+// ---------------------------------------------------------------------------
+export const riftLobbies = pgTable(
+  'rift_lobbies',
+  {
+    id: id(),
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'restrict' }),
+    riftId: text('rift_id').notNull(),
+    leaderCharacterId: uuid('leader_character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    /** 'public' (anyone can join) | 'private' (invite only) */
+    visibility: text('visibility').notNull().default('public'),
+    /** 'open' | 'started' | 'closed' */
+    status: text('status').notNull().default('open'),
+    runId: uuid('run_id').references(() => riftRuns.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('rift_lobbies_status_idx').on(t.status, t.visibility)],
+);
+
+export const riftLobbyMembers = pgTable(
+  'rift_lobby_members',
+  {
+    lobbyId: uuid('lobby_id')
+      .notNull()
+      .references(() => riftLobbies.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    /** Formation slot 0–5 (0–2 front row, 3–5 back row). */
+    slot: smallint('slot').notNull(),
+    ready: boolean('ready').notNull().default(false),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.lobbyId, t.characterId] }),
+    uniqueIndex('rift_lobby_members_slot_uq').on(t.lobbyId, t.slot),
+    index('rift_lobby_members_character_idx').on(t.characterId),
+  ],
+);
+
+export const riftLobbyInvites = pgTable(
+  'rift_lobby_invites',
+  {
+    lobbyId: uuid('lobby_id')
+      .notNull()
+      .references(() => riftLobbies.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    invitedBy: uuid('invited_by')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.lobbyId, t.characterId] }),
+    index('rift_lobby_invites_character_idx').on(t.characterId),
   ],
 );
 
@@ -281,3 +381,6 @@ export type Item = typeof items.$inferSelect;
 export type CharacterSkill = typeof characterSkills.$inferSelect;
 export type RiftRun = typeof riftRuns.$inferSelect;
 export type RiftRunParticipant = typeof riftRunParticipants.$inferSelect;
+export type Friendship = typeof friendships.$inferSelect;
+export type RiftLobby = typeof riftLobbies.$inferSelect;
+export type RiftLobbyMember = typeof riftLobbyMembers.$inferSelect;

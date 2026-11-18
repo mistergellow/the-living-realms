@@ -23,7 +23,7 @@ import { BOSS_HEIGHT, plateScale, UNIT_HEIGHT, type CombatLayout } from './comba
 import { buildTimeline, type FxEvent, type FxStep } from './combat-timeline';
 
 /*
- * Combat screen renderer (PixiJS, ADR-025). Draws the battlefield and plays
+ * Combat screen renderer (PixiJS, ADR-029). Draws the battlefield and plays
  * the combat log as animations. It never decides anything: the server's
  * CombatView is the truth, and input goes through the DOM overlay in
  * CombatStage.tsx (accessible buttons on top of the canvas).
@@ -36,7 +36,8 @@ export interface CombatSceneInput {
   targetIds: ReadonlySet<string>;
   /** Party slots the player may move to (Swap Position), or null. */
   swapSlots: ReadonlySet<number> | null;
-  hoverId: string | null;
+  /** Units under the pointer (a whole column for column attacks). */
+  hoverIds: ReadonlySet<string>;
 }
 
 const COLORS = {
@@ -698,7 +699,7 @@ export class CombatScene implements PixiScene {
       u.active = combat.activeId === c.id && combat.phase === 'party';
       const swappable = c.side === 'party' && (input.swapSlots?.has(c.slot) ?? false);
       u.targetable = input.targetIds.has(c.id) || swappable;
-      u.hovered = input.hoverId === c.id;
+      u.hovered = input.hoverIds.has(c.id);
     }
     if (!this.busy) this.syncShown();
     this.drawSlotMarks();

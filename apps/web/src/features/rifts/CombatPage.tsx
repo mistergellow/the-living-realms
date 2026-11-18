@@ -1,5 +1,5 @@
 import { describeEffects, getAbility, validTargets, type CombatState } from '@realms/game-core';
-import type { CombatView, RunDto } from '@realms/shared';
+import { columnOfSlot, type CombatantView, type CombatView, type RunDto } from '@realms/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -152,14 +152,21 @@ export function CombatPage() {
     if (!a.effects.some((e) => e.kind === 'swap')) {
       const t = validTargets(combat as unknown as CombatState, me, a);
       if (
-        a.targeting.area === 'row' &&
+        a.targeting.area === 'column' &&
         t.length > 0 &&
-        new Set(t.map((u) => u.slot < 3)).size === 1
+        new Set(t.map((u) => Math.floor(u.slot / 2))).size === 1
       )
         return send({ type: 'ability', abilityId, targetId: t[0]!.id });
     }
     setSelected(selected === abilityId ? null : abilityId);
   };
+
+  // D41: attacks aim at a column (both units in it); support picks one ally.
+  const columnMode = ability?.targeting.area === 'column';
+  const targetAction = (abilityId: string, u: CombatantView) =>
+    getAbility(abilityId)?.targeting.area === 'column'
+      ? ({ type: 'ability', abilityId, targetColumn: columnOfSlot(u.slot) } as const)
+      : ({ type: 'ability', abilityId, targetId: u.id } as const);
 
   const room = data.rooms[data.roomIndex];
   const byName = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
@@ -167,7 +174,7 @@ export function CombatPage() {
     .filter((e) => e.seq <= replay.logUpTo)
     .map((e) => ({ seq: e.seq, text: describeLog(e, combat) }))
     .filter((l): l is { seq: number; text: string } => !!l.text)
-    .slice(-14)
+    .slice(-40)
     .reverse();
 
   return (
@@ -193,7 +200,9 @@ export function CombatPage() {
             className="btn btn-ghost btn-sm btn-danger"
             onClick={() => {
               if (
-                confirm('Leave the Rift? It counts as a defeat: your equipped items lose quality.')
+                confirm(
+                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps fighting.',
+                )
               )
                 send({ type: 'abandon' });
             }}
@@ -210,7 +219,8 @@ export function CombatPage() {
         boss={room?.isBoss ?? false}
         targetIds={targetIds}
         swapSlots={swapSlots}
-        onTarget={(u) => selected && send({ type: 'ability', abilityId: selected, targetId: u.id })}
+        columnMode={columnMode}
+        onTarget={(u) => selected && send(targetAction(selected, u))}
         onSlot={(slot) =>
           selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
         }
@@ -251,7 +261,11 @@ export function CombatPage() {
                   </span>
                 )}
                 <span className="spacer" />
-                {selected && <span className="muted">Choose a target…</span>}
+                {selected && (
+                  <span className="muted">
+                    {columnMode ? 'Choose a column…' : 'Choose a target…'}
+                  </span>
+                )}
               </div>
               <div className="abilities">
                 {me.abilityIds.map((id) => {
@@ -285,12 +299,16 @@ export function CombatPage() {
               </div>
             </>
           ) : (
-            <span className="muted">
-              {combat.phase === 'enemies' || replay.enemiesActing
-                ? 'The enemies are acting…'
-                : data.status === 'active'
-                  ? 'Waiting…'
-                  : ''}
+            <span className="muted" data-testid="waiting">
+              {data.status !== 'active'
+                ? ''
+                : combat.phase === 'enemies' || replay.enemiesActing
+                  ? 'The enemies are acting…'
+                  : combat.phase === 'room_cleared'
+                    ? 'Room cleared.'
+                    : combat.activeId
+                      ? `Waiting for ${byName(combat.activeId)}…`
+                      : 'Waiting…'}
             </span>
           )}
         </div>

@@ -215,6 +215,17 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contratos em `packages/shared`, regras em `packages/game-core`
 - Testes em `apps/server/test/<domínio>.test.ts`; `ROADMAP.md`, `DECISIONS.md` se houver decisão
 
+## Formação / posições (3 colunas × 2 linhas, D38)
+
+- Fonte única: `columnOfSlot`, `lineOfSlot`, `COMBAT_COLUMNS` em `packages/shared/src/combat.ts` (0–1 front, 2–3 mid, 4–5 back)
+- Alcance das habilidades: `reach` (`first`/`any`/colunas) e `area` (`single`/`column`/`all`) em `content/abilities.ts`; `validTargets`/`resolveTargets`/`targetColumns`/`intentTargets` no motor
+- **Ataques escolhem a coluna (D41):** ação com `targetColumn` (`combatActionSchema`); só o apoio a aliados usa `targetId`; ecrã: `targetAction` + destaque da coluna (`col-mode` em `combat.css`)
+- IA por formação (D42): `bestMove`/`expectedValue`/`planEnemyIntents` no motor (Block vale mais com a coluna partilhada); intenções com `column` (`IntentView`)
+- Posições dos inimigos: `content/rifts.ts`; posições iniciais dos jogadores: `startingSlot` (`rifts.service.ts`) e `preferredSlot` (`lobbies.service.ts`)
+- Ecrãs: `Formation` em `CombatPage.tsx` + `combat.css` (bloco "D38"), `COLUMNS` em `LobbyPage.tsx`
+- Testes: `game-core/test/combat.test.ts` ("targeting by columns"), `lobbies.test.ts`, `rifts.test.ts` (posições iniciais)
+- Simulação de equilíbrio: posições do grupo no script
+
 ## Combate (motor)
 
 - Regras e números: `packages/game-core/src/combat/state.ts` (`COMBAT_RULES`: Focus por turno/máximo, crítico, 60 s, reviver com 1 HP)
@@ -224,8 +235,8 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `apps/web/test/combat-render.test.ts`, `e2e` ("Rift combat")
 - **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `combat-timeline.ts` (`FxEvent`, `buildTimeline`, `applyStep`) → `combat-scene.ts` (`applyEvents`) se tiver animação
 - **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
-- **Posições 2×3 (D13) mudarem:** `combat-layout.ts` (`place`) e o teste `combat-render.test.ts`
-- Equilíbrio: correr a simulação depois de mudar números (metas em `docs/REQUESTS.md` A23; o script de simulação deve ser recriado/guardado em `scripts/` se for preciso com frequência)
+- **Posições da formação (D38, 3 colunas × 2 linhas) mudarem:** `combat-layout.ts` (`place`) e o teste `combat-render.test.ts`
+- Equilíbrio: `pnpm sim` (`scripts/simulate-balance.ts`) depois de mudar números; metas em `docs/REQUESTS.md` (A23)
 
 ## Estados, Block e intenções (Slay the Spire + Darkest Dungeon)
 
@@ -251,8 +262,33 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Recompensas/penalização: `finish()` em `rifts.service.ts`; durabilidade em `game-core/equipment.ts` (`qualityAfterDefeat`)
 - Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`
 - Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `CombatPage.tsx`, `api.ts`); link "Rifts" em `WorldPage.tsx`; rotas em `router.tsx`
-- Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts`), `e2e`
+- Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts` — **tabela nova = acrescentar lá**), `e2e`
 - Futuro: lobby (M3), entrada pelo mapa (Fase 4)
+
+## Amigos (por personagem)
+
+- Contrato: `packages/shared/src/social.ts` (`CharacterRefDto`, `FriendsDto`, `friendRequestSchema`, `characterScopedSchema`); erro `ALREADY_FRIENDS`
+- BD: `friendships` (um registo por par, ids ordenados `character_a < character_b`; `pending`/`accepted`)
+- Servidor: `apps/server/src/modules/social/` (`friends.service.ts`, `social.routes.ts` em `/api/social`, `presence-status.ts` = quem está online: no mundo, num lobby aberto ou num Rift)
+- Web: `apps/web/src/features/social/` (`api.ts`, `FriendsPage.tsx` em `/friends`); contador de pedidos no link "Friends" de `WorldPage.tsx`
+- Testes: `apps/server/test/social.test.ts`, `e2e` ("friends + private lobby")
+
+## Lobbies de Rift (até 6)
+
+- Contrato: `packages/shared/src/social.ts` (`LobbyDto`, `LobbyOverviewDto`, `LOBBY_MAX_MEMBERS`, schemas de criar/convidar/posição/pronto/expulsar); erros `IN_LOBBY`, `LOBBY_FULL`, `NOT_LEADER`, `NOT_READY`
+- BD: `rift_lobbies`, `rift_lobby_members` (posição única por lobby), `rift_lobby_invites`
+- Servidor: `apps/server/src/modules/rifts/lobbies.service.ts` + `lobbies.routes.ts` (em `/api/rifts/lobbies`, registadas **antes** das rotas `/api/rifts/:riftId` em `app.ts`); `assertFreeForRift` em `rifts.service.ts` (um Rift e um lobby de cada vez)
+- Início em grupo: `LobbiesService.start` → `RiftsService.createRun` (bloqueia as personagens por ordem de id)
+- Web: `apps/web/src/features/rifts/lobby-api.ts`, `LobbyPage.tsx` (`/rifts/lobbies/:id`), `RiftsPage.tsx` (criar, públicos, convites)
+- Atualização: polling (A29) — intervalos em `lobby-api.ts` e `api.ts` (`useRun`)
+- Testes: `apps/server/test/lobbies.test.ts`, `e2e`
+
+## Combate em grupo
+
+- Sair a meio: `leaveParty` (motor) + `penalise(…, left=true)` e `rift_run_participants.left_at` (servidor); `activeRunIdFor` ignora quem saiu; entrada de log `left`
+- Recompensas/penalização no fim ignoram quem saiu (`finish`)
+- Web: texto "Waiting for X…" e confirmação de saída em `CombatPage.tsx`; polling em `useRun`
+- Testes: `game-core/test/combat.test.ts` ("group runs"), `apps/server/test/lobbies.test.ts` ("group combat"), `e2e`
 
 ## Deploy / produção (Railway)
 
@@ -265,7 +301,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Renderer canvas (PixiJS) — combate e mapa
 
-- Decisão: `DECISIONS.md` ADR-025; dependência `pixi.js` em `apps/web/package.json`
+- Decisão: `DECISIONS.md` ADR-029; dependência `pixi.js` em `apps/web/package.json`
 - Arranque: `apps/web/src/features/render/pixi-app.ts` (imports de `pixi.js/*` que registam o que desenhamos — **um tipo de objeto novo do Pixi pode precisar de mais um import aqui**; `unsafe-eval` por causa da CSP)
 - Ciclo de vida React: `render/usePixiScene.ts` (`PixiScene`: `resize`, `destroy`; recurso sem WebGL → `failed`)
 - Texturas: `render/svg-texture.ts` (SVG → textura por `data:` URL, brilho, vinheta, gradientes), `render/avatar-textures.tsx` (arte dos personagens e inimigos)

@@ -17,6 +17,10 @@ import { CharactersService } from './modules/characters/characters.service.js';
 import { CharacterSheetService } from './modules/characters/sheet.service.js';
 import { riftsRoutes } from './modules/rifts/rifts.routes.js';
 import { RiftsService } from './modules/rifts/rifts.service.js';
+import { lobbiesRoutes } from './modules/rifts/lobbies.routes.js';
+import { LobbiesService } from './modules/rifts/lobbies.service.js';
+import { FriendsService } from './modules/social/friends.service.js';
+import { socialRoutes } from './modules/social/social.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { worldRoutes } from './modules/world/world.routes.js';
 import { authPlugin } from './plugins/auth.js';
@@ -72,7 +76,15 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
         service: characters,
         sheets,
       });
-      await api.register(riftsRoutes, { prefix: '/rifts', service: new RiftsService(ctx, sheets) });
+      const rifts = new RiftsService(ctx, sheets);
+      const friends = new FriendsService(ctx, sheets);
+      // Lobby routes first: '/rifts/lobbies' must not be captured by '/rifts/:riftId'.
+      await api.register(lobbiesRoutes, {
+        prefix: '/rifts/lobbies',
+        lobbies: new LobbiesService(ctx, sheets, rifts, friends),
+      });
+      await api.register(riftsRoutes, { prefix: '/rifts', service: rifts });
+      await api.register(socialRoutes, { prefix: '/social', friends });
       await api.register(worldRoutes, { prefix: '/world', ctx });
     },
     { prefix: '/api' },

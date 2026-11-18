@@ -1,5 +1,5 @@
 import { describeEffects, getAbility, STATUS_DESCRIPTIONS, STATUS_NAMES } from '@realms/game-core';
-import type { CombatantView } from '@realms/shared';
+import type { CombatantView, IntentView } from '@realms/shared';
 
 /*
  * Per-unit chips shown over the combat canvas (DOM, so they keep tooltips):
@@ -15,12 +15,13 @@ export function IntentChips({
   nameOf: (id: string) => string;
 }) {
   if (unit.downed || unit.intents.length === 0) return null;
-  // Group repeated actions (e.g. three claws at the same target → "×3").
-  const groups: Array<{ abilityId: string; targetIds: string[]; count: number }> = [];
+  // Group identical actions (same ability and targets), e.g. three claws → "×3".
+  const groups: Array<IntentView & { count: number }> = [];
   for (const it of unit.intents) {
-    const last = groups[groups.length - 1];
-    if (last && last.abilityId === it.abilityId && last.targetIds.join() === it.targetIds.join())
-      last.count++;
+    const same = groups.find(
+      (g) => g.abilityId === it.abilityId && g.targetIds.join() === it.targetIds.join(),
+    );
+    if (same) same.count++;
     else groups.push({ ...it, count: 1 });
   }
   return (
@@ -33,10 +34,13 @@ export function IntentChips({
           dmg && dmg.kind === 'damage'
             ? `${Math.round(dmg.min * unit.power)}–${Math.round(dmg.max * unit.power)}`
             : (describeEffects(a)[0] ?? '');
+        const names = it.targetIds.map(nameOf).join(', ');
         const targets =
           a.targeting.area === 'all'
             ? 'everyone'
-            : it.targetIds.map(nameOf).join(', ') + (a.targeting.area === 'row' ? ' (row)' : '');
+            : a.targeting.area === 'column'
+              ? `${it.column ?? ''} column (${names})`
+              : names;
         const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
         return (
           <span

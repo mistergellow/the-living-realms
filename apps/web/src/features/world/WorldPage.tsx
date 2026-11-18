@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { useLogout } from '../auth/api';
+import { useFriends } from '../social/api';
 import { useActiveCharacter } from '../characters/active-character';
 import { CharacterToken } from '../characters/CharacterToken';
 import { HexMap } from './HexMap';
@@ -27,6 +28,8 @@ export function WorldPage() {
   const logout = useLogout();
   const [selected, setSelected] = useState<HexCoord | null>(null);
   const [hovered, setHovered] = useState<HexCoord | null>(null);
+  const friends = useFriends(characterId);
+  const pending = friends.data?.incoming.length ?? 0;
   useWorldConnection(characterId);
 
   const { status, world, self, tick, log, lastError } = useWorldStore(
@@ -72,6 +75,9 @@ export function WorldPage() {
         )}
         <Link className="btn btn-primary btn-sm" to="/rifts">
           Rifts
+        </Link>
+        <Link className="btn btn-ghost btn-sm" to="/friends" data-testid="friends-link">
+          Friends{pending > 0 ? ` (${pending})` : ''}
         </Link>
         {self && (
           <Link className="btn btn-ghost btn-sm" to={`/characters/${self.id}`}>

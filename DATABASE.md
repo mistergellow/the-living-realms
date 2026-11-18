@@ -160,6 +160,24 @@ Rows are locked (`SELECT … FOR UPDATE`) while an action is applied.
 | joined_at    | timestamptz                    |                                                        |
 
 A character can be in at most one active run (checked under a row lock on the character).
+`left_at` marks a player who left a group run early (they were penalised then;
+the run continues for the others).
+
+### `friendships`
+
+| Column                   | Type                           | Notes                                                     |
+| ------------------------ | ------------------------------ | --------------------------------------------------------- |
+| character_a, character_b | uuid FK → characters (cascade) | PK; `CHECK (character_a < character_b)`: one row per pair |
+| status                   | text                           | `pending` \| `accepted`                                   |
+| requested_by             | uuid FK → characters           | who sent the request                                      |
+| created_at, accepted_at  | timestamptz                    |                                                           |
+
+### `rift_lobbies`, `rift_lobby_members`, `rift_lobby_invites`
+
+A lobby (`rift_id`, leader, `visibility` public/private, `status`
+open/started/closed, `run_id` once started) has up to 6 members (slot 0–5,
+unique per lobby; `ready`) and pending invitations (lobby + invited character +
+who invited). Rows are locked (`FOR UPDATE`) on every change.
 
 ### `world_events`
 

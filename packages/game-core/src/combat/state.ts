@@ -47,7 +47,7 @@ export interface PartyMemberInput {
   slot: number;
 }
 
-export const rowOfSlot = (slot: number) => (slot < 3 ? 'front' : 'back');
+export { columnOfSlot } from '@realms/shared';
 export const partyId = (characterId: string) => `p:${characterId}`;
 
 function enemyStats(e: EnemyDef): DerivedStatsDto {
@@ -84,6 +84,7 @@ export function partyCombatant(p: PartyMemberInput): Combatant {
     mana: Math.min(p.mana, p.stats.maxMana),
     maxMana: p.stats.maxMana,
     focus: 0,
+    left: false,
     block: 0,
     statuses: [],
     attributes: p.attributes,
@@ -113,6 +114,7 @@ export function enemyCombatants(room: RiftRoomDef, roomIndex: number): Combatant
       mana: 0,
       maxMana: 0,
       focus: 0,
+      left: false,
       block: 0,
       statuses: [],
       attributes: null,

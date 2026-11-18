@@ -17,14 +17,29 @@ describe('combat layout', () => {
     }
   });
 
-  it('keeps the front row nearer the centre than the back row', () => {
-    expect(l.place('party', 0).x).toBeGreaterThan(l.place('party', 3).x);
-    expect(l.place('enemies', 0).x).toBeLessThan(l.place('enemies', 3).x);
+  it('orders the columns front, mid, back from the centre outwards', () => {
+    for (const line of [0, 1]) {
+      const [front, mid, back] = [0, 2, 4].map((c) => l.place('party', c + line).x);
+      expect(front).toBeGreaterThan(mid!);
+      expect(mid).toBeGreaterThan(back!);
+      const [ef, , eb] = [0, 2, 4].map((c) => l.place('enemies', c + line).x);
+      expect(ef).toBeLessThan(eb!);
+    }
   });
 
-  it('draws nearer slots lower and larger', () => {
+  it('keeps the two units of a column apart enough to click either', () => {
+    for (const col of [0, 2, 4]) {
+      const top = unitRect(l, 'enemies', col, false);
+      const bottom = unitRect(l, 'enemies', col + 1, false);
+      // The centre of the top unit's box is not covered by the bottom unit's box.
+      const cx = top.left + top.width / 2;
+      expect(cx < bottom.left || cx > bottom.left + bottom.width).toBe(true);
+    }
+  });
+
+  it('draws the bottom line lower and larger', () => {
     const far = l.place('party', 0);
-    const near = l.place('party', 2);
+    const near = l.place('party', 1);
     expect(near.y).toBeGreaterThan(far.y);
     expect(near.scale).toBeGreaterThan(far.scale);
   });

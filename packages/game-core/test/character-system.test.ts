@@ -95,12 +95,12 @@ describe('equipment and abilities', () => {
   it('main hand + off hand abilities combine', () => {
     expect(
       ids([owned('s', 'training_sword', 'mainHand'), owned('sh', 'wooden_shield', 'offHand')]),
-    ).toEqual(['slash', 'cleave', 'rend', 'raise_shield', 'guard_ally', 'swap_position']);
+    ).toEqual(['slash', 'cleave', 'rend', 'raise_shield', 'shield_wall', 'swap_position']);
   });
   it('an off-hand alone still leaves you unarmed for attacks', () => {
     expect(ids([owned('sh', 'wooden_shield', 'offHand')])).toEqual([
       'raise_shield',
-      'guard_ally',
+      'shield_wall',
       'unarmed_strike',
       'swap_position',
     ]);

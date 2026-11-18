@@ -1,4 +1,4 @@
-import type { CombatAction, StatusId } from '@realms/shared';
+import type { CombatAction, CombatColumn, IntentView, StatusId } from '@realms/shared';
 import { getAbility, type AbilityDef, type AbilityEffect } from '../content/abilities.js';
 import type { RiftRoomDef } from '../content/rifts.js';
 import { reductionFromRating, scalingMultiplier } from '../stats.js';
@@ -8,7 +8,7 @@ import {
   enemyCombatants,
   partyCombatant,
   pushLog,
-  rowOfSlot,
+  columnOfSlot,
   type Combatant,
   type CombatState,
   type PartyMemberInput,
@@ -168,7 +168,7 @@ function advanceToNextPartyTurn(state: CombatState): void {
 // ---------------------------------------------------------------------------
 // Targeting
 // ---------------------------------------------------------------------------
-/** Units an ability may target. "front" = the first occupied row (A14). */
+/** Units an ability may target. 'first' = the first occupied column (A30). */
 export function validTargets(
   state: CombatState,
   actor: Combatant,
@@ -178,11 +178,16 @@ export function validTargets(
   if (t.side === 'self') return [actor];
   const side = t.side === 'enemy' ? opposite(actor.side) : actor.side;
   const units = on(state, side).filter(alive);
-  if (t.side === 'ally') return units.filter((u) => t.rows.includes(rowOfSlot(u.slot)));
-  if (t.rows.length === 2) return units;
-  if (t.rows[0] === 'back') return units.filter((u) => rowOfSlot(u.slot) === 'back');
-  const front = units.filter((u) => rowOfSlot(u.slot) === 'front');
-  return front.length ? front : units.filter((u) => rowOfSlot(u.slot) === 'back');
+  if (t.reach === 'any') return units;
+  if (t.reach === 'first') {
+    for (const col of ['front', 'mid', 'back'] as const) {
+      const inCol = units.filter((u) => columnOfSlot(u.slot) === col);
+      if (inCol.length) return inCol;
+    }
+    return [];
+  }
+  const cols = t.reach;
+  return units.filter((u) => cols.includes(columnOfSlot(u.slot)));
 }
 
 function resolveTargets(
@@ -190,19 +195,43 @@ function resolveTargets(
   actor: Combatant,
   ability: AbilityDef,
   targetId: string | undefined,
+  targetColumn?: CombatColumn,
 ): Combatant[] | string {
   const candidates = validTargets(state, actor, ability);
   if (candidates.length === 0) return 'No valid targets.';
   const area = ability.targeting.area;
   if (area === 'all') return candidates;
+  if (area === 'column') {
+    // D41: attacks pick a column, not a unit.
+    const columns = [...new Set(candidates.map((c) => columnOfSlot(c.slot)))];
+    const fromId = targetId ? candidates.find((c) => c.id === targetId) : undefined;
+    const column =
+      targetColumn ??
+      (fromId ? columnOfSlot(fromId.slot) : columns.length === 1 ? columns[0] : undefined);
+    if (!column) return 'Choose a column.';
+    const hit = candidates.filter((c) => columnOfSlot(c.slot) === column);
+    return hit.length ? hit : 'That column is out of reach.';
+  }
   const chosen = targetId
     ? candidates.find((c) => c.id === targetId)
-    : candidates.length === 1 || area === 'row'
+    : candidates.length === 1
       ? candidates[0]
       : undefined;
-  if (!chosen) return 'Choose a valid target.';
-  if (area === 'single') return [chosen];
-  return candidates.filter((c) => rowOfSlot(c.slot) === rowOfSlot(chosen.slot));
+  return chosen ? [chosen] : 'Choose a valid target.';
+}
+
+/** Columns an ability can be aimed at, with the units it would hit. */
+export function targetColumns(
+  state: CombatState,
+  actor: Combatant,
+  ability: AbilityDef,
+): Array<{ column: CombatColumn; units: Combatant[] }> {
+  const out = new Map<CombatColumn, Combatant[]>();
+  for (const u of validTargets(state, actor, ability)) {
+    const col = columnOfSlot(u.slot);
+    out.set(col, [...(out.get(col) ?? []), u]);
+  }
+  return [...out].map(([column, units]) => ({ column, units }));
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +337,7 @@ function applyAbility(
 function checkEnd(state: CombatState): boolean {
   if (on(state, 'enemies').every((e) => e.downed)) {
     for (const p of on(state, 'party')) {
-      if (p.downed) {
+      if (p.downed && !p.left) {
         p.downed = false;
         p.hp = COMBAT_RULES.reviveHp;
         pushLog(state, { t: 'revived', targetId: p.id, hp: p.hp });
@@ -339,13 +368,56 @@ function checkEnd(state: CombatState): boolean {
 // Enemy AI (simple, deterministic): best expected value per Focus; single
 // targets: lowest HP (ties random).
 // ---------------------------------------------------------------------------
-function expectedValue(a: AbilityDef, targets: number): number {
+/** Rough value of an ability against a set of targets (enemy AI). */
+function expectedValue(a: AbilityDef, targets: Combatant[]): number {
   let v = 0;
   for (const e of a.effects) {
-    if (e.kind === 'damage') v += ((e.min + e.max) / 2) * targets;
-    if (e.kind === 'status') v += (e.value ?? 3) * e.turns * 0.6 * targets;
+    const avg = 'min' in e ? (e.min + e.max) / 2 : 0;
+    for (const t of targets) {
+      if (e.kind === 'damage') v += avg * (hasStatus(t, 'mark') ? 1.25 : 1);
+      if (e.kind === 'status' && !hasStatus(t, e.status)) v += (e.value ?? 3) * e.turns * 0.6;
+      // Blocking pays off more when the column is shared (D42: one blocks, one attacks).
+      if (e.kind === 'block' && t.block === 0) v += avg * (targets.length > 1 ? 0.8 : 0.3);
+      if (e.kind === 'heal' && t.hp < t.maxHp * 0.6) v += avg;
+    }
   }
   return v;
+}
+
+interface Plan {
+  ability: AbilityDef;
+  targets: Combatant[];
+  column: CombatColumn | null;
+}
+
+/** Best affordable move for an enemy: highest value per Focus over every target choice. */
+function bestMove(state: CombatState, enemy: Combatant, focus: number, rng: Rng): Plan | null {
+  let best: { plan: Plan; score: number } | null = null;
+  for (const id of enemy.abilityIds) {
+    const a = getAbility(id);
+    if (!a || a.focusCost > focus || a.manaCost > enemy.mana) continue;
+    const choices: Plan[] = [];
+    if (a.targeting.area === 'all')
+      choices.push({ ability: a, targets: validTargets(state, enemy, a), column: null });
+    else if (a.targeting.area === 'column')
+      for (const c of targetColumns(state, enemy, a))
+        choices.push({ ability: a, targets: c.units, column: c.column });
+    else {
+      const ts = validTargets(state, enemy, a);
+      if (ts.length) {
+        const minHp = Math.min(...ts.map((t) => t.hp));
+        const weakest = ts.filter((t) => t.hp === minHp);
+        choices.push({ ability: a, targets: [weakest[rng.int(weakest.length)]!], column: null });
+      }
+    }
+    for (const plan of choices) {
+      if (plan.targets.length === 0) continue;
+      // Small random tie-breaker keeps enemies from being perfectly predictable.
+      const score = expectedValue(a, plan.targets) / Math.max(1, a.focusCost) + rng.next() * 0.01;
+      if (score > 0 && (!best || score > best.score)) best = { plan, score };
+    }
+  }
+  return best?.plan ?? null;
 }
 
 /**
@@ -359,47 +431,39 @@ function planEnemyIntents(state: CombatState): void {
     if (enemy.downed || hasStatus(enemy, 'stun')) continue;
     let focus = Math.min(COMBAT_RULES.focusMax, enemy.focus + COMBAT_RULES.focusPerTurn);
     for (let guard = 0; guard < 6; guard++) {
-      const options = enemy.abilityIds
-        .map((id) => getAbility(id)!)
-        .filter((a) => a && a.focusCost <= focus)
-        .map((a) => ({ a, targets: validTargets(state, enemy, a) }))
-        .filter((o) => o.targets.length > 0);
-      if (options.length === 0) break;
-      const score = (o: (typeof options)[number]) =>
-        expectedValue(o.a, o.a.targeting.area === 'single' ? 1 : o.targets.length) /
-        Math.max(1, o.a.focusCost);
-      options.sort((x, y) => score(y) - score(x));
-      const best = options[0]!;
-      let targets = best.targets;
-      if (best.a.targeting.area === 'single') {
-        const minHp = Math.min(...targets.map((t) => t.hp));
-        const weakest = targets.filter((t) => t.hp === minHp);
-        targets = [weakest[rng.int(weakest.length)]!];
-      }
-      enemy.intents.push({ abilityId: best.a.id, targetIds: targets.map((t) => t.id) });
-      focus -= best.a.focusCost;
+      const plan = bestMove(state, enemy, focus, rng);
+      if (!plan) break;
+      enemy.intents.push({
+        abilityId: plan.ability.id,
+        targetIds: plan.targets.map((t) => t.id),
+        column: plan.column,
+      });
+      focus -= plan.ability.focusCost;
     }
   }
   state.rng = rng.state;
 }
 
-/** Targets for a planned intent now; re-target if the planned ones are gone. */
+/** Targets for a planned intent now; re-aim if the planned ones are gone. */
 function intentTargets(
   state: CombatState,
   enemy: Combatant,
   a: AbilityDef,
-  planned: string[],
+  intent: IntentView,
   rng: Rng,
 ): Combatant[] {
-  const candidates = validTargets(state, enemy, a);
-  if (candidates.length === 0) return [];
-  if (a.targeting.area === 'all') return candidates;
-  const still = candidates.filter((c) => planned.includes(c.id));
-  if (a.targeting.area === 'row') {
-    const anchor = still[0] ?? candidates[0]!;
-    return candidates.filter((c) => rowOfSlot(c.slot) === rowOfSlot(anchor.slot));
+  if (a.targeting.area === 'all') return validTargets(state, enemy, a);
+  if (a.targeting.area === 'column') {
+    const cols = targetColumns(state, enemy, a);
+    const planned = cols.find((c) => c.column === intent.column);
+    if (planned) return planned.units;
+    // The planned column is empty now: aim at the most crowded reachable column.
+    return [...cols].sort((x, y) => y.units.length - x.units.length)[0]?.units ?? [];
   }
-  if (still[0]) return [still[0]];
+  const candidates = validTargets(state, enemy, a);
+  const still = candidates.find((c) => intent.targetIds.includes(c.id));
+  if (still) return [still];
+  if (!candidates.length) return [];
   const minHp = Math.min(...candidates.map((t) => t.hp));
   const weakest = candidates.filter((t) => t.hp === minHp);
   return [weakest[rng.int(weakest.length)]!];
@@ -422,7 +486,7 @@ function runEnemyPhase(state: CombatState): void {
     for (const intent of intents) {
       const a = getAbility(intent.abilityId);
       if (!a || a.focusCost > enemy.focus || enemy.downed) continue;
-      const targets = intentTargets(state, enemy, a, intent.targetIds, rng);
+      const targets = intentTargets(state, enemy, a, intent, rng);
       if (targets.length === 0) continue;
       applyAbility(state, rng, enemy, a, targets);
       if (checkEnd(state)) {
@@ -466,7 +530,7 @@ export function applyAction(
     const res = swap(state, actor, ability, action.targetSlot);
     if (typeof res === 'string') return fail('INVALID_ACTION', res);
   } else {
-    const targets = resolveTargets(state, actor, ability, action.targetId);
+    const targets = resolveTargets(state, actor, ability, action.targetId, action.targetColumn);
     if (typeof targets === 'string') return fail('INVALID_ACTION', targets);
     applyAbility(state, rng, actor, ability, targets);
   }
@@ -507,5 +571,24 @@ export function timeoutTurn(prev: CombatState): CombatState {
   const state: CombatState = structuredClone(prev);
   pushLog(state, { t: 'timeout', actorId: state.activeId! });
   advanceToNextPartyTurn(state);
+  return state;
+}
+
+/**
+ * A player leaves a group run (A28). They count as down for the rest of the
+ * run (never revived); if it was their turn, play moves on.
+ */
+export function leaveParty(prev: CombatState, actorId: string): CombatState {
+  const state: CombatState = structuredClone(prev);
+  const unit = get(state, actorId);
+  if (!unit || unit.left) return prev;
+  unit.left = true;
+  unit.downed = true;
+  unit.hp = 0;
+  unit.block = 0;
+  unit.statuses = [];
+  pushLog(state, { t: 'left', actorId });
+  if (checkEnd(state)) return state;
+  if (state.phase === 'party' && state.activeId === actorId) advanceToNextPartyTurn(state);
   return state;
 }

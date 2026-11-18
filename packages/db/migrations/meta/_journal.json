@@ -50,6 +50,13 @@
       "when": 1794954116022,
       "tag": "0006_drop_dnd_attributes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794998717477,
+      "tag": "0007_friends_and_lobbies",
+      "breakpoints": true
     }
   ]
 }

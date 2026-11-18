@@ -4,13 +4,20 @@ import type { Attributes, CharacterAppearance, DerivedStatsDto } from './api.js'
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
  *
- * Battlefield (decision D13): each side has 6 slots in 2 rows of 3.
- * Slots 0–2 = front row, 3–5 = back row.
+ * Battlefield (decision D38): each side has 3 columns (front, mid, back) of
+ * 2 lines each = 6 slots. Slots 0–1 = front, 2–3 = mid, 4–5 = back
+ * (even slot = top line, odd slot = bottom line).
  * ------------------------------------------------------------------------- */
 
 export const SLOTS_PER_SIDE = 6;
 export type CombatSide = 'party' | 'enemies';
-export type CombatRow = 'front' | 'back';
+export const COMBAT_COLUMNS = ['front', 'mid', 'back'] as const;
+export type CombatColumn = (typeof COMBAT_COLUMNS)[number];
+/** Column of a slot (0–1 front, 2–3 mid, 4–5 back). */
+export const columnOfSlot = (slot: number): CombatColumn =>
+  COMBAT_COLUMNS[Math.floor(slot / 2)] ?? 'back';
+/** Line of a slot: 0 = top, 1 = bottom. */
+export const lineOfSlot = (slot: number) => slot % 2;
 
 export const STATUS_IDS = ['bleed', 'burn', 'mark', 'weaken', 'stun'] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
@@ -27,6 +34,8 @@ export interface StatusView {
 export interface IntentView {
   abilityId: string;
   targetIds: string[];
+  /** Column targeted by column attacks (D41). */
+  column: CombatColumn | null;
 }
 
 export interface CombatantView {
@@ -45,6 +54,8 @@ export interface CombatantView {
   mana: number;
   maxMana: number;
   focus: number;
+  /** Player left the run early (group runs, A28). */
+  left: boolean;
   /** Absorbs damage until the unit's next turn (Slay-the-Spire style). */
   block: number;
   statuses: StatusView[];
@@ -69,6 +80,7 @@ export type CombatLogEntry =
   | { t: 'status'; targetId: string; status: StatusId; turns: number }
   | { t: 'tick'; targetId: string; status: StatusId; amount: number }
   | { t: 'stunned'; targetId: string }
+  | { t: 'left'; actorId: string }
   | { t: 'dodge'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'swap'; actorId: string; fromSlot: number; toSlot: number; withId: string | null }
@@ -138,8 +150,10 @@ export const combatActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('ability'),
     abilityId: z.string().max(64),
-    /** Target unit (single / row abilities). */
+    /** Target ally (single-target support abilities). */
     targetId: z.string().max(64).optional(),
+    /** Target column (attacks hit both units of a column, D41). */
+    targetColumn: z.enum(['front', 'mid', 'back']).optional(),
     /** Destination slot (Swap Position). */
     targetSlot: z
       .number()

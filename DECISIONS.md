@@ -33,7 +33,7 @@ map, lists, chat). SEO and first-paint SSR do not matter behind a login.
 
 **Decision.** React 19 + Vite + React Router 7. Exploration is DOM/SVG. Combat
 will get its own canvas renderer (planned: PixiJS) on its own route.
-_(Update: the combat screen and the world map now render with PixiJS — ADR-025.)_
+_(Update: the combat screen and the world map now render with PixiJS — ADR-029.)_
 
 **Alternatives.** Next.js (SSR and server components: complexity without
 benefit here). Phaser for everything (a poor fit for a UI-heavy interface; may
@@ -340,7 +340,7 @@ each layer behind the same component. Equipment will be added as extra layers
 on the same anchors. Appearance v1 (emblem) characters are converted with
 `normalizeAppearance`.
 
-_Update (ADR-025):_ in the combat screen and on the map the same SVG layers
+_Update (ADR-029):_ in the combat screen and on the map the same SVG layers
 are rasterised into PixiJS textures and animated there; the CSS animations
 remain for the DOM uses (sheet, lists, editor).
 
@@ -401,7 +401,68 @@ tactical (block now, kill the biggest threat, weaken the attacker).
 
 ---
 
-## ADR-025 — PixiJS for the combat screen and the world map
+## ADR-025 — Lobbies and group combat refresh by polling (for now)
+
+**Status:** accepted (provisional, A29)
+
+**Context.** Lobbies and group runs need other players' changes to appear
+quickly. The WebSocket gateway exists but is tied to the world screen.
+
+**Decision.** Clients poll the lobby (1.5 s while open) and the run (1.5 s while
+waiting, 4 s during their own turn). Reads apply expired turn timers, so
+timeouts happen without a background job.
+
+**Why.** Simple, stateless and robust to reconnects; at up to 6 players per
+group the load is negligible. **Revisit when** player counts grow or latency
+matters more: push `lobby.updated` / `run.updated` notifications over the
+existing Redis bus and WebSocket, keeping the same HTTP API.
+
+---
+
+## ADR-026 — Friends between characters
+
+**Status:** accepted (provisional, A25)
+
+**Decision.** Friendships link characters (added by character name), stored
+once per pair with ordered ids. Online = in the world, in an open lobby or in
+an active Rift.
+
+---
+
+## ADR-027 — Formation: 3 columns × 2 lines per side
+
+**Status:** accepted (D38; corrects the earlier "2 rows of 3" reading of D13)
+
+**Decision.** Each side has three depth columns — front, mid, back — with two
+lines each. Slots: 0–1 front, 2–3 mid, 4–5 back (even = top line). Abilities
+declare a reach: `first` (the first occupied column; melee), `any`, or specific
+columns; and an area: one target, a whole column (both lines) or everyone.
+`columnOfSlot` in `@realms/shared` is the single source of truth.
+
+**Consequences.** Column attacks hit at most 2 units; positioning across three
+depths matters (mid is safe from melee while the front holds). Existing lobby
+slots and active runs keep their numbers but are read with the new meaning.
+
+---
+
+## ADR-028 — Attacks target columns; enemies play the formation
+
+**Status:** accepted (D41, D42)
+
+**Decision.** Every attack picks a column (front, mid or back within its reach)
+and hits both units in it; abilities that hit everything remain. Support
+abilities on allies still pick one ally. Enemy AI scores each reachable column
+and values Block more when it shares a column with a partner, so tanks such as
+the Rift Bulwark shield their column while the other enemy attacks. Formations
+are authored per Rift room, so harder Rifts can field smarter formations.
+
+**Consequences.** Positioning both sides matters (stacking two units in a
+column doubles exposure but enables column Block). Damage values were
+rebalanced: melee hits harder than ranged/magic, which can reach any column.
+
+---
+
+## ADR-029 — PixiJS for the combat screen and the world map
 
 **Status:** accepted
 

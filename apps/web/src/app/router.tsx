@@ -8,6 +8,8 @@ import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
 import { CombatPage } from '../features/rifts/CombatPage';
+import { LobbyPage } from '../features/rifts/LobbyPage';
+import { FriendsPage } from '../features/social/FriendsPage';
 
 /*
  * Route map
@@ -18,6 +20,8 @@ import { CombatPage } from '../features/rifts/CombatPage';
  *   /world                   exploration (requires an active character)
  *   /rifts                   Rift list (enter solo; lobbies in M3)
  *   /rifts/runs/:runId       combat screen (separate from exploration)
+ *   /rifts/lobbies/:lobbyId  group lobby (up to 6)
+ *   /friends                 friends list and requests
  */
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/characters" replace /> },
@@ -37,6 +41,8 @@ export const router = createBrowserRouter([
       { path: '/world', element: <WorldPage /> },
       { path: '/rifts', element: <RiftsPage /> },
       { path: '/rifts/runs/:runId', element: <CombatPage /> },
+      { path: '/rifts/lobbies/:lobbyId', element: <LobbyPage /> },
+      { path: '/friends', element: <FriendsPage /> },
     ],
   },
   {

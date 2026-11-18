@@ -5,10 +5,11 @@ import type { CombatSide } from '@realms/shared';
  * Shared by the canvas scene (drawing) and the DOM overlay (click targets),
  * so both always agree.
  *
- * Side view: party on the left, enemies mirrored on the right. Slots 0–2 are
- * the front row (near the centre), 3–5 the back row. Within a row, slot % 3 is
- * the depth: 0 = far (higher up, smaller), 2 = near (lower, larger); the
- * middle depth is stepped back so the three units of a row overlap less.
+ * Side view: party on the left, enemies mirrored on the right. Each side has
+ * 3 columns (D38): slots 0–1 front (nearest the centre), 2–3 mid, 4–5 back.
+ * Within a column, the even slot is the top line (farther away: higher up,
+ * smaller, stepped back) and the odd slot the bottom line (nearer: lower,
+ * larger), so the two units of a column overlap as little as possible.
  */
 
 export interface SlotPlace {
@@ -17,6 +18,7 @@ export interface SlotPlace {
   y: number;
   /** Size multiplier (screen size × depth). */
   scale: number;
+  /** 0 = top line (far), 1 = bottom line (near). */
   depth: number;
 }
 
@@ -52,13 +54,12 @@ export function combatLayout(width: number, height: number): CombatLayout {
     horizon: height * 0.46,
     riftX: cx,
     place(side, slot) {
-      const depth = slot % 3;
-      const front = slot < 3;
-      // Zig-zag: the middle depth steps back so units overlap less.
-      const off = width * (front ? 0.12 : 0.28) + (depth === 1 ? width * 0.055 : 0);
+      const column = Math.min(2, Math.floor(slot / 2));
+      const line = slot % 2;
+      const off = width * (0.11 + 0.105 * column) + (line === 0 ? width * 0.045 : 0);
       const x = side === 'party' ? cx - off : cx + off;
-      const y = height * (0.62 + 0.135 * depth);
-      return { x, y, scale: base * (0.86 + 0.08 * depth), depth };
+      const y = height * (0.66 + 0.15 * line);
+      return { x, y, scale: base * (0.9 + 0.08 * line), depth: line };
     },
   };
 }

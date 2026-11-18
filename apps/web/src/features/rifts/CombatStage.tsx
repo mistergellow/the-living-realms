@@ -1,4 +1,4 @@
-import type { CombatantView, CombatView } from '@realms/shared';
+import { columnOfSlot, lineOfSlot, type CombatantView, type CombatView } from '@realms/shared';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { EnemyAvatar } from '../avatar/EnemyAvatar';
@@ -20,6 +20,8 @@ interface CombatStageProps {
   onProgress?: (seq: number) => void;
   /** Every log entry up to `seq` has finished playing (or needs no animation). */
   onCaughtUp?: (seq: number) => void;
+  /** The selected ability hits a whole column: hovering a unit highlights its column. */
+  columnMode?: boolean;
   /** Overlays drawn above the battlefield (room cleared, results). */
   children?: ReactNode;
 }
@@ -43,6 +45,7 @@ export function CombatStage({
   onSlot,
   onProgress,
   onCaughtUp,
+  columnMode = false,
   children,
 }: CombatStageProps) {
   const cbRef = useRef({ onProgress, onCaughtUp });
@@ -68,6 +71,16 @@ export function CombatStage({
   });
   const layout = useMemo(() => combatLayout(size.width, size.height), [size]);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const hoverIds = useMemo(() => {
+    const h = combat.combatants.find((c) => c.id === hoverId);
+    if (!h) return new Set<string>();
+    if (!columnMode) return new Set([h.id]);
+    return new Set(
+      combat.combatants
+        .filter((c) => c.side === h.side && columnOfSlot(c.slot) === columnOfSlot(h.slot))
+        .map((c) => c.id),
+    );
+  }, [combat, hoverId, columnMode]);
 
   useEffect(() => {
     cbRef.current = { onProgress, onCaughtUp };
@@ -109,8 +122,8 @@ export function CombatStage({
 
   useEffect(() => {
     if (scene && size.width > 0)
-      scene.update({ combat, layout, boss, targetIds, swapSlots, hoverId });
-  }, [scene, combat, layout, boss, targetIds, swapSlots, hoverId, size.width]);
+      scene.update({ combat, layout, boss, targetIds, swapSlots, hoverIds });
+  }, [scene, combat, layout, boss, targetIds, swapSlots, hoverIds, size.width]);
 
   const party = combat.combatants.filter((c) => c.side === 'party');
   const emptySwapSlots = swapSlots
@@ -137,7 +150,7 @@ export function CombatStage({
                   width: r.width,
                   height: r.height,
                   // Nearer units are drawn on top; their buttons are too.
-                  zIndex: 1 + (unit.slot % 3),
+                  zIndex: 1 + lineOfSlot(unit.slot),
                 }}
                 disabled={!targetable}
                 data-testid={`unit-${unit.side}`}
@@ -163,7 +176,7 @@ export function CombatStage({
                 {unit.kind === 'enemy' && (
                   <div
                     className="unit-chips unit-chips-intents"
-                    style={{ left: p.x, top: r.top - 4, zIndex: 8 + (unit.slot % 3) }}
+                    style={{ left: p.x, top: r.top - 4, zIndex: 8 + lineOfSlot(unit.slot) }}
                   >
                     <IntentChips unit={unit} nameOf={nameOf} />
                   </div>
