@@ -11,6 +11,8 @@ import { CombatPage } from '../features/rifts/CombatPage';
 import { LobbyPage } from '../features/rifts/LobbyPage';
 import { FriendsPage } from '../features/social/FriendsPage';
 import { Screen } from '../shared/ui/Screen';
+import { GameShell } from '../features/game/GameShell';
+import { HomePage } from '../features/game/HomePage';
 
 /*
  * Route map
@@ -18,11 +20,12 @@ import { Screen } from '../shared/ui/Screen';
  *   /characters              account area: pick a character
  *   /characters/new          character creation
  *   /characters/:id          character sheet (attributes, stats, equipment, abilities)
- *   /world                   exploration (requires an active character)
- *   /rifts                   Rift list (enter solo; lobbies in M3)
+ *   /home                    hub (requires an active character; in GameShell)
+ *   /world                   exploration map (in GameShell)
+ *   /rifts                   Rift list, lobbies (in GameShell)
  *   /rifts/runs/:runId       combat screen (separate from exploration)
  *   /rifts/lobbies/:lobbyId  group lobby (up to 6)
- *   /friends                 friends list and requests
+ *   /friends                 friends list and requests (in GameShell)
  */
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/characters" replace /> },
@@ -39,11 +42,18 @@ export const router = createBrowserRouter([
       { path: '/characters', element: <CharacterSelectPage /> },
       { path: '/characters/new', element: <CharacterCreatePage /> },
       { path: '/characters/:id', element: <CharacterSheetPage /> },
-      { path: '/world', element: <WorldPage /> },
-      { path: '/rifts', element: <RiftsPage /> },
+      {
+        // In-game frame: world connection, top bar, bottom navigation.
+        element: <GameShell />,
+        children: [
+          { path: '/home', element: <HomePage /> },
+          { path: '/world', element: <WorldPage /> },
+          { path: '/rifts', element: <RiftsPage /> },
+          { path: '/friends', element: <FriendsPage /> },
+        ],
+      },
       { path: '/rifts/runs/:runId', element: <CombatPage /> },
       { path: '/rifts/lobbies/:lobbyId', element: <LobbyPage /> },
-      { path: '/friends', element: <FriendsPage /> },
     ],
   },
   {

@@ -19,20 +19,24 @@
   --border: #2e2a3a;
   --border-strong: #463f55;
 
-  /* ornate frame (gold leaf) */
-  --frame: #6e5a33;
-  --frame-hi: #c9a25a;
-  --frame-glow: rgb(232 189 95 / 0.35);
+  /* frames: thin light borders on dark glass (mobile-RPG style, request #30) */
+  --frame: rgb(255 255 255 / 0.2);
+  --frame-hi: rgb(255 255 255 / 0.5);
+  --frame-glow: rgb(255 176 64 / 0.35);
+  --glass: rgb(18 19 26 / 0.72);
+  --glass-strong: rgb(14 15 21 / 0.9);
+  --glass-border: rgb(255 255 255 / 0.22);
+  --glass-border-hi: rgb(255 255 255 / 0.55);
 
   /* text */
-  --text: #ece4d0;
-  --text-muted: #a69f8f;
-  --text-faint: #6f6a60;
+  --text: #f3f1ec;
+  --text-muted: #b7b4ad;
+  --text-faint: #7d7a74;
 
   /* accents */
-  --accent: #d4a64a;
-  --accent-strong: #f0c76a;
-  --accent-ink: #1f1505;
+  --accent: #f5a524;
+  --accent-strong: #ffc25a;
+  --accent-ink: #2a1600;
   --danger: #e2604c;
   --success: #6cc08b;
   --warning: #e0b35a;

@@ -172,61 +172,6 @@
   flex-wrap: wrap;
   align-items: stretch;
 }
-.ability-btn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: flex-start;
-  min-width: 8.5rem;
-  padding: 0.55rem 0.8rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--frame);
-  background:
-    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.08), transparent 70%),
-    linear-gradient(180deg, #2c2839, #16141e);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    inset 0 -2px 0 rgb(0 0 0 / 0.4),
-    0 2px 4px rgb(0 0 0 / 0.5);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.08s;
-}
-.ability-btn strong {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-}
-.ability-btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-.ability-btn span {
-  display: flex;
-  gap: 0.25rem;
-}
-.ability-btn i {
-  font-style: normal;
-}
-.ability-btn:hover:not(:disabled) {
-  border-color: var(--frame-hi);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.1),
-    0 0 0.8rem var(--frame-glow);
-}
-.ability-btn[aria-pressed='true'] {
-  border-color: var(--accent-strong);
-  background:
-    radial-gradient(ellipse at 50% 0%, rgb(240 199 106 / 0.3), transparent 70%),
-    linear-gradient(180deg, #4a3a1c, #1d170e);
-  box-shadow: 0 0 1rem var(--frame-glow);
-}
-.ability-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
 .end-turn {
   margin-left: auto;
 }
@@ -434,15 +379,6 @@
 .status-stun {
   background: #6b7280;
 }
-.ability-effects {
-  font-size: 11px;
-  color: var(--text-muted);
-  max-width: 190px;
-  text-align: left;
-}
-.ability-btn {
-  max-width: 230px;
-}
 
 /* ---------- D38: each side = 3 columns (back, mid, front) × 2 lines ---------- */
 .formation {
@@ -541,4 +477,234 @@
   .intent em {
     display: none;
   }
+}
+
+/* ---------- MMO-style action bar (AbilityBar.tsx, request #30) ---------- */
+.action-slots {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.slot-wrap {
+  position: relative;
+}
+.ability-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 4.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.slot-frame {
+  position: relative;
+  display: block;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 0.4rem;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.7),
+    0 3px 8px rgb(0 0 0 / 0.5);
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s,
+    transform 0.08s;
+}
+.ability-slot:hover:not(:disabled) .slot-frame {
+  border-color: rgb(255 255 255 / 0.8);
+  transform: translateY(-1px);
+}
+.ability-slot:active:not(:disabled) .slot-frame {
+  transform: translateY(1px);
+}
+.ability-slot[aria-pressed='true'] .slot-frame {
+  border-color: var(--accent-strong);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.7),
+    0 0 0.9rem rgb(245 165 36 / 0.8);
+}
+.ability-slot:disabled {
+  cursor: not-allowed;
+}
+.ability-slot:disabled .slot-frame {
+  filter: grayscale(0.85) brightness(0.55);
+}
+.ability-slot:disabled .slot-name {
+  color: var(--text-faint);
+}
+.ability-slot:focus-visible {
+  outline: none;
+}
+.ability-slot:focus-visible .slot-frame {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.ability-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.3rem;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, var(--c1), var(--c2) 75%);
+}
+.ability-icon svg {
+  width: 62%;
+  height: 62%;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.7));
+}
+.school-physical {
+  --c1: #d0664a;
+  --c2: #4d1810;
+}
+.school-ranged {
+  --c1: #6fae4c;
+  --c2: #1d3a15;
+}
+.school-magic {
+  --c1: #8c6cf0;
+  --c2: #261650;
+}
+.school-heal {
+  --c1: #4cc28d;
+  --c2: #11402b;
+}
+.school-block {
+  --c1: #5a8ee6;
+  --c2: #142a55;
+}
+.school-status {
+  --c1: #c9a043;
+  --c2: #3d2c0c;
+}
+.school-utility {
+  --c1: #8b93a3;
+  --c2: #262a33;
+}
+.slot-key {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow:
+    0 0 2px #000,
+    0 0 2px #000;
+}
+.slot-focus,
+.slot-mana {
+  position: absolute;
+  bottom: -0.35rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.2rem;
+  border-radius: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.7);
+}
+.slot-focus {
+  left: -0.3rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.slot-mana {
+  right: -0.3rem;
+  background: var(--mana);
+  color: #fff;
+}
+.slot-name {
+  max-width: 100%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+}
+.ability-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.6rem);
+  z-index: 20;
+  width: max-content;
+  max-width: 18rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--glass-border-hi);
+  border-radius: var(--radius-sm);
+  background: rgb(10 10 14 / 0.96);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.6);
+  font-size: 0.85rem;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0.3rem);
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+}
+.slot-wrap:hover .ability-tooltip,
+.slot-wrap:has(:focus-visible) .ability-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.slot-wrap:first-child .ability-tooltip {
+  left: 0;
+  transform: translate(0, 0.3rem);
+}
+.slot-wrap:first-child:hover .ability-tooltip,
+.slot-wrap:first-child:has(:focus-visible) .ability-tooltip {
+  transform: translate(0, 0);
+}
+.tip-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--c1);
+  filter: brightness(1.35);
+}
+.tip-cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.15rem 0 0.4rem;
+  font-size: 0.78rem;
+}
+.tip-focus {
+  color: var(--accent-strong);
+}
+.tip-mana {
+  color: #8fb0f5;
+}
+.tip-target {
+  color: var(--text-muted);
+}
+.tip-effects {
+  margin: 0;
+  padding-left: 1rem;
+  color: #fff;
+}
+.tip-desc {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.tip-scaling {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #c7d8a8;
+}
+.tip-warn {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--danger);
 }

@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { Landscape } from './Landscape';
 
 /** Fixed pseudo-random spread so embers look natural but render identically every time. */
 const EMBERS = Array.from({ length: 16 }, (_, i) => ({
@@ -8,10 +9,16 @@ const EMBERS = Array.from({ length: 16 }, (_, i) => ({
   scale: 0.6 + ((i * 7) % 5) / 6,
 }));
 
-/** Atmospheric backdrop: gradient sky, drifting mist, rising embers, vignette. */
-export function SceneBackground({ embers = true }: { embers?: boolean }) {
+/**
+ * Backdrop of every screen: the painted landscape (placeholder art), darkened
+ * by `dim` (0 = as painted, for the hub; ~0.6 for menus with a lot of text),
+ * optional rising embers and a vignette.
+ */
+export function SceneBackground({ embers = false, dim = 0.6 }: { embers?: boolean; dim?: number }) {
   return (
     <div className="scene-bg" aria-hidden>
+      <Landscape />
+      <div className="scene-dim" style={{ opacity: dim }} />
       {embers && (
         <div className="embers">
           {EMBERS.map((e, i) => (
@@ -41,15 +48,17 @@ export function SceneBackground({ embers = true }: { embers?: boolean }) {
 export function Screen({
   children,
   className,
-  embers = true,
+  embers = false,
+  dim,
 }: {
   children: ReactNode;
   className?: string;
   embers?: boolean;
+  dim?: number;
 }) {
   return (
     <div className={['screen', className].filter(Boolean).join(' ')}>
-      <SceneBackground embers={embers} />
+      <SceneBackground embers={embers} dim={dim} />
       {children}
     </div>
   );
