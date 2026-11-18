@@ -297,6 +297,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Pasta nova em `apps/` ou `packages/`: acrescentar aos `watchPatterns` de `railway.json` e `infra/railway/worker.json` e um `COPY …/package.json` no Dockerfile
 - Guia do dono: `docs/DEPLOY_RAILWAY.md`; arquitetura: `ARCHITECTURE.md` → Deployment; decisão: ADR-018
 - Migrações no arranque: `packages/db/src/client.ts` (`migrateWithLock`), `apps/server/src/main.ts`, `apps/worker/src/main.ts`, variável `MIGRATE_ON_START` (ADR-019)
+- Onde estão as migrações e o site em produção: `findMigrationsDir` (`packages/db/src/client.ts`) e `findWebDist` (`apps/server/src/app.ts`). Funcionam com o Dockerfile (`MIGRATIONS_DIR`, `WEB_DIST_DIR`) e também se o Railway construir sozinho e correr `pnpm start` (pedido #26). **Mudar a estrutura de pastas** → rever as listas de caminhos nestas duas funções
 - Ligação ao Redis: `packages/server-kit/src/redis.ts` (`family: 0`, necessário para IPv6)
 
 ## Renderer canvas (PixiJS) — combate e mapa
