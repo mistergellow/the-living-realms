@@ -21,7 +21,7 @@ export function CharacterSelectPage() {
 
   const play = (id: string) => {
     select(id);
-    navigate('/world');
+    navigate('/home');
   };
 
   const list = characters.data?.characters ?? [];

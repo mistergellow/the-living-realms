@@ -1,4 +1,4 @@
-import { describeEffects, getAbility, validTargets, type CombatState } from '@realms/game-core';
+import { getAbility, validTargets, type CombatState } from '@realms/game-core';
 import { columnOfSlot, type CombatantView, type CombatView, type RunDto } from '@realms/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
@@ -8,6 +8,7 @@ import { useActiveCharacter } from '../characters/active-character';
 import { useRun, useRunAction } from './api';
 import { describeLog } from './combat-text';
 import './combat.css';
+import { AbilityBar } from './AbilityBar';
 import { CombatStage } from './CombatStage';
 
 /** Seconds left on the current turn, refreshed every 250 ms. */
@@ -61,8 +62,8 @@ function EndOverlay({ run }: { run: RunDto }) {
           <Link className="btn" to="/rifts">
             Back to Rifts
           </Link>
-          <Link className="btn btn-primary" to="/world">
-            Return to the world
+          <Link className="btn btn-primary" to="/home">
+            Return home
           </Link>
         </div>
       </div>
@@ -271,27 +272,15 @@ export function CombatPage() {
                 )}
               </div>
               <div className="abilities">
-                {me.abilityIds.map((id) => {
-                  const a = getAbility(id)!;
-                  const affordable = a.focusCost <= me.focus && a.manaCost <= me.mana;
-                  return (
-                    <button
-                      key={id}
-                      className="ability-btn"
-                      aria-pressed={selected === id}
-                      disabled={!affordable || action.isPending}
-                      onClick={() => pick(id)}
-                      title={`${a.description}\n${describeEffects(a).join(' · ')}`}
-                    >
-                      <strong>{a.name}</strong>
-                      <small className="ability-effects">{describeEffects(a).join(' · ')}</small>
-                      <span>
-                        <i className="cost">{a.focusCost} Focus</i>
-                        {a.manaCost > 0 && <i className="cost mana">{a.manaCost} Mana</i>}
-                      </span>
-                    </button>
-                  );
-                })}
+                <AbilityBar
+                  abilityIds={me.abilityIds}
+                  focus={me.focus}
+                  mana={me.mana}
+                  selected={selected}
+                  disabled={action.isPending}
+                  onPick={pick}
+                  onCancel={() => setSelected(null)}
+                />
                 <button
                   className="btn btn-primary end-turn"
                   onClick={() => send({ type: 'end_turn' })}

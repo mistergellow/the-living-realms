@@ -204,6 +204,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Ecrã / rota nova no frontend
 
 - `apps/web/src/app/router.tsx` (+ comentário com o mapa de rotas)
+- Ecrã de jogo (com barra de topo/navegação e ligação ao mundo): pôr a rota dentro do `GameShell` no router e renderizar só o conteúdo (`<div className="screen-body">` ou posição absoluta em `.game-main`); acrescentar à `BottomNav` (`features/game/GameShell.tsx`) se for um destino principal
 - Pasta `apps/web/src/features/<feature>/`
 - Estilos: `apps/web/src/styles/global.css` (tokens em `tokens.css`)
 - e2e em `e2e/`; Docs: `ARCHITECTURE.md` §9
@@ -322,3 +323,19 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Avatares em `rem` no DOM; no canvas usar `inSvg` (píxeis exatos) — ver `render/avatar-textures.tsx`
 - Teste: `e2e/foundation.spec.ts` → "screens fit every screen size" (a página nunca faz scroll)
 - Decisão: ADR-030
+
+## Hub, barra de topo e navegação (GameShell)
+
+- Layout: `apps/web/src/features/game/GameShell.tsx` (ligação ao mundo `useWorldConnection`, avisos "Playing elsewhere"/"Entering the world", `TopBar`, `BottomNav`), estilos em `features/game/game.css`
+- Hub: `features/game/HomePage.tsx` (cartão de atividade, menus laterais, losangos, faixa da Crónica)
+- Rotas dentro do layout: `/home`, `/world`, `/rifts`, `/friends` (`app/router.tsx`); entrar no jogo vai para `/home` (`CharacterCreatePage`, `CharacterSelectPage`, `CharacterSheetPage`)
+- Cenário: `shared/ui/Landscape.tsx` (placeholder) via `Screen`/`SceneBackground` (`dim` por ecrã em `DIM` no `GameShell`)
+- Ícones de interface: `shared/ui/Icon.tsx`
+- Testes: `e2e/foundation.spec.ts` (Hub, navegação "World"/"Rifts" com `exact: true`)
+- Decisão: ADR-031; valores provisórios A35
+
+## Barra de habilidades (combate)
+
+- `apps/web/src/features/rifts/AbilityBar.tsx` (slots, teclas 1–9, Esc, tooltip), `AbilityIcon.tsx` (ícones placeholder: `GLYPH_BY_ABILITY` e cor por tipo `abilitySchool`), estilos no fim de `combat.css`
+- **Habilidade nova:** acrescentar o ícone em `GLYPH_BY_ABILITY` (senão usa o ícone do tipo); o texto da tooltip vem de `describeEffects`/`describeTargeting`/`describeScaling` (`game-core/content/abilities.ts`)
+- Usada em `CombatPage.tsx`; e2e procura os botões pelo nome ("Slash", "Raise Shield")

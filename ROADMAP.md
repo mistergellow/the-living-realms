@@ -57,6 +57,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 
 Bring the hex world to life for exploration (Rifts placed on the map).
 
+- [x] Hub (home screen) with the in-game shell (top bar, bottom navigation); MMO-style ability bar with tooltips (request #30)
 - ❓ World size and shape, terrain types, regions, points of interest, starting area
 - ❓ Action Points: pool size, regeneration, AP cost per hex / per terrain
 - `map_regions` / `map_hexes` tables, a map seeding/import tool

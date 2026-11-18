@@ -23,7 +23,7 @@ async function createCharacter(page: Page, name: string) {
   await page.getByLabel('Name').fill(name);
   await page.getByRole('button', { name: 'Hair style spiky' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
-  await expect(page).toHaveURL(/\/world$/);
+  await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByTestId('self-name')).toHaveText(name);
 }
 
@@ -35,7 +35,12 @@ test('register → create character → enter the world → log out → log in',
   await page.screenshot({ path: 'test-results/screens/01-create.png' });
   await createCharacter(page, name);
 
+  // The hub: you are online, and its main buttons lead to the world map.
   await expect(page.getByTestId('connection-status')).toContainText('Online');
+  await expect(page.getByTestId('activity')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/02-home.png' });
+  await page.getByRole('link', { name: 'Explore the world' }).click();
+  await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/02-world.png' });
@@ -70,6 +75,8 @@ test('players see each other in real time', async ({ browser }) => {
   await createCharacter(a, nameA);
   await register(b, `e2e-b-${unique()}@example.com`);
   await createCharacter(b, nameB);
+  await a.getByRole('link', { name: 'World', exact: true }).click();
+  await b.getByRole('link', { name: 'World', exact: true }).click();
 
   await expect(a.getByTestId('player-list')).toContainText(nameB);
   await expect(b.getByTestId('player-list')).toContainText(nameA);
@@ -114,7 +121,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page.getByTestId('self-name')).toHaveText(name);
 
-  await page.getByRole('link', { name: 'Character' }).click();
+  await page.getByRole('link', { name: 'Character', exact: true }).click();
   await expect(page.getByTestId('sheet-name')).toHaveText(name);
   await expect(page.getByTestId('sheet-attr-agility')).toHaveText('10');
   await expect(page.getByTestId('stat-hp')).toHaveText(String(40 + 6 * 9));
@@ -145,7 +152,7 @@ test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) 
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page.getByTestId('self-name')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Rifts' }).click();
+  await page.getByRole('link', { name: 'Rifts', exact: true }).click();
   await expect(page.getByTestId('rift-card')).toContainText('Shattered Breach');
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
@@ -263,14 +270,17 @@ async function expectFitsViewport(page: Page) {
 }
 
 test('screens fit every screen size', async ({ page }) => {
-  test.setTimeout(300_000); // 36 screenshots up to 4K, canvas rendered in software on CI
+  test.setTimeout(300_000); // 42 screenshots up to 4K, canvas rendered in software on CI
   await register(page, `e2e-sizes-${unique()}@example.com`);
   const name = randomName('Vista');
   await createCharacter(page, name);
   await expect(page.getByTestId('connection-status')).toContainText('Online');
-  const characterUrl = await page.getByRole('link', { name: 'Character' }).getAttribute('href');
+  const characterUrl = await page
+    .getByRole('link', { name: 'Character', exact: true })
+    .getAttribute('href');
 
   const screens: Array<[string, () => Promise<unknown>]> = [
+    ['home', () => expect(page.getByTestId('self-name')).toHaveText(name)],
     ['world', () => expect(page.getByTestId('self-name')).toHaveText(name)],
     ['select', () => expect(page.getByTestId('character-card')).toContainText(name)],
     ['create', () => expect(page.getByLabel('Name')).toBeVisible()],
@@ -278,6 +288,7 @@ test('screens fit every screen size', async ({ page }) => {
     ['rifts', () => expect(page.getByTestId('rift-card').first()).toBeVisible()],
   ];
   const paths: Record<string, string> = {
+    home: '/home',
     world: '/world',
     select: '/characters',
     create: '/characters/new',

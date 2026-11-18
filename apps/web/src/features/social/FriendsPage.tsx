@@ -1,8 +1,7 @@
 import type { CharacterRefDto } from '@realms/shared';
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router';
+import { Navigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
-import { Screen } from '../../shared/ui/Screen';
 import { useActiveCharacter } from '../characters/active-character';
 import { CharacterToken } from '../characters/CharacterToken';
 import { useLobbyActions, useLobbyOverview } from '../rifts/lobby-api';
@@ -42,125 +41,114 @@ export function FriendsPage() {
   };
 
   return (
-    <Screen>
-      <header className="topbar">
-        <h1>Friends</h1>
-        <span className="spacer" />
-        <Link className="btn btn-ghost btn-sm" to="/rifts">
-          Rifts
-        </Link>
-        <Link className="btn btn-ghost btn-sm" to="/world">
-          Back to the world
-        </Link>
-      </header>
-      <main className="screen-body">
-        <div className="contain stack" style={{ maxWidth: '56rem' }}>
-          <FormError
-            error={request.error ?? accept.error ?? remove.error ?? lobbyActions.invite.error}
-          />
+    <div className="screen-body">
+      <div className="contain stack" style={{ maxWidth: '56rem' }}>
+        <h1 className="page-title">Friends</h1>
+        <FormError
+          error={request.error ?? accept.error ?? remove.error ?? lobbyActions.invite.error}
+        />
 
-          <form className="panel row" onSubmit={onAdd} style={{ marginBottom: 16 }}>
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="friend-name">Add a friend by character name</label>
-              <input
-                id="friend-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="off"
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={request.isPending}
-              style={{ alignSelf: 'flex-end' }}
-            >
-              Send request
-            </button>
-          </form>
+        <form className="panel row" onSubmit={onAdd} style={{ marginBottom: 16 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="friend-name">Add a friend by character name</label>
+            <input
+              id="friend-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={request.isPending}
+            style={{ alignSelf: 'flex-end' }}
+          >
+            Send request
+          </button>
+        </form>
 
-          {!!data?.incoming.length && (
-            <section className="panel" style={{ marginBottom: 16 }}>
-              <div className="panel-title">Requests for you</div>
-              <ul className="friend-list">
-                {data.incoming.map((f) => (
-                  <Row key={f.characterId} who={f}>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => accept.mutate(f.characterId)}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => remove.mutate(f.characterId)}
-                    >
-                      Decline
-                    </button>
-                  </Row>
-                ))}
-              </ul>
-            </section>
-          )}
-
+        {!!data?.incoming.length && (
           <section className="panel" style={{ marginBottom: 16 }}>
-            <div className="panel-title">Friends ({data?.friends.length ?? 0})</div>
-            {data?.friends.length ? (
-              <ul className="friend-list" data-testid="friends">
-                {data.friends.map((f) => (
-                  <Row key={f.characterId} who={f}>
-                    {myLobby && !myLobby.members.some((m) => m.characterId === f.characterId) && (
-                      <button
-                        className="btn btn-sm"
-                        disabled={lobbyActions.invite.isPending}
-                        onClick={() =>
-                          lobbyActions.invite.mutate({
-                            lobbyId: myLobby.id,
-                            friendCharacterId: f.characterId,
-                          })
-                        }
-                      >
-                        Invite to lobby
-                      </button>
-                    )}
-                    <button
-                      className="btn btn-ghost btn-sm btn-danger"
-                      onClick={() => {
-                        if (confirm(`Remove ${f.name} from your friends?`))
-                          remove.mutate(f.characterId);
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </Row>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted" style={{ margin: 0 }}>
-                No friends yet. Add someone by the name of their character.
-              </p>
-            )}
+            <div className="panel-title">Requests for you</div>
+            <ul className="friend-list">
+              {data.incoming.map((f) => (
+                <Row key={f.characterId} who={f}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => accept.mutate(f.characterId)}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => remove.mutate(f.characterId)}
+                  >
+                    Decline
+                  </button>
+                </Row>
+              ))}
+            </ul>
           </section>
+        )}
 
-          {!!data?.outgoing.length && (
-            <section className="panel">
-              <div className="panel-title">Sent requests</div>
-              <ul className="friend-list">
-                {data.outgoing.map((f) => (
-                  <Row key={f.characterId} who={f}>
+        <section className="panel" style={{ marginBottom: 16 }}>
+          <div className="panel-title">Friends ({data?.friends.length ?? 0})</div>
+          {data?.friends.length ? (
+            <ul className="friend-list" data-testid="friends">
+              {data.friends.map((f) => (
+                <Row key={f.characterId} who={f}>
+                  {myLobby && !myLobby.members.some((m) => m.characterId === f.characterId) && (
                     <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => remove.mutate(f.characterId)}
+                      className="btn btn-sm"
+                      disabled={lobbyActions.invite.isPending}
+                      onClick={() =>
+                        lobbyActions.invite.mutate({
+                          lobbyId: myLobby.id,
+                          friendCharacterId: f.characterId,
+                        })
+                      }
                     >
-                      Cancel
+                      Invite to lobby
                     </button>
-                  </Row>
-                ))}
-              </ul>
-            </section>
+                  )}
+                  <button
+                    className="btn btn-ghost btn-sm btn-danger"
+                    onClick={() => {
+                      if (confirm(`Remove ${f.name} from your friends?`))
+                        remove.mutate(f.characterId);
+                    }}
+                  >
+                    Remove
+                  </button>
+                </Row>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted" style={{ margin: 0 }}>
+              No friends yet. Add someone by the name of their character.
+            </p>
           )}
-        </div>
-      </main>
-    </Screen>
+        </section>
+
+        {!!data?.outgoing.length && (
+          <section className="panel">
+            <div className="panel-title">Sent requests</div>
+            <ul className="friend-list">
+              {data.outgoing.map((f) => (
+                <Row key={f.characterId} who={f}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => remove.mutate(f.characterId)}
+                  >
+                    Cancel
+                  </button>
+                </Row>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }

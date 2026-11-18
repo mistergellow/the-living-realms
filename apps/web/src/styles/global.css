@@ -129,6 +129,30 @@ input {
   animation-direction: alternate-reverse;
   transform: scaleX(-1);
 }
+/* painted backdrop (shared/ui/Landscape.tsx, placeholder art) */
+.landscape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.landscape .ls-clouds {
+  animation: clouds 60s ease-in-out infinite alternate;
+}
+@keyframes clouds {
+  from {
+    transform: translateX(-30px);
+  }
+  to {
+    transform: translateX(30px);
+  }
+}
+.scene-dim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(8 8 14 / 0.85), rgb(8 8 14 / 0.7) 50%, rgb(8 8 14 / 0.9));
+  transition: opacity 0.4s;
+}
 .vignette {
   position: absolute;
   inset: 0;
@@ -222,8 +246,8 @@ input {
 .panel {
   position: relative;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.025), transparent 40%),
-    linear-gradient(180deg, rgb(28 26 38 / 0.94), rgb(14 13 20 / 0.96));
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 40%),
+    linear-gradient(180deg, rgb(22 23 31 / 0.84), rgb(13 14 20 / 0.9));
   border: 1px solid var(--frame);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
@@ -330,8 +354,8 @@ input {
   filter: grayscale(0.5);
 }
 .btn-primary {
-  border-color: #f3d58a;
-  background: linear-gradient(180deg, #f6d17c 0%, #d4a64a 45%, #a3772b 100%);
+  border-color: #ffd58a;
+  background: linear-gradient(180deg, #ffc65c 0%, #f5a524 50%, #d9860f 100%);
   color: var(--accent-ink);
   text-shadow: 0 1px 0 rgb(255 240 200 / 0.5);
   box-shadow:
@@ -949,6 +973,8 @@ fieldset.field {
 
 /* ---------- world (HUD over a full-bleed map) ---------- */
 .world {
+  position: absolute;
+  inset: 0;
   background: #07060a;
 }
 .world-map {
@@ -1496,7 +1522,8 @@ fieldset.field {
   .scene-bg::before,
   .scene-bg::after,
   .embers i,
-  .rune-spinner {
+  .rune-spinner,
+  .landscape .ls-clouds {
     animation: none !important;
   }
   .embers {

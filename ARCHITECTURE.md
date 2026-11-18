@@ -293,8 +293,9 @@ DATABASE.md).
 
 - **React + Vite SPA.** No SSR (a game client behind login gains nothing from it).
 - **Routing:** `/login`, `/register` (guests) → `/characters`, `/characters/new`
-  (account area) → `/world` (requires an active character) → `/combat/:id`
-  (future).
+  (account area) → the in-game shell (`GameShell`, ADR-031): `/home` (hub),
+  `/world` (map), `/rifts`, `/friends` → `/rifts/lobbies/:id`, `/rifts/runs/:id`
+  (combat, own screen).
 - **State:**
   - _Server state_ (REST): TanStack Query (`features/*/api.ts`).
   - _Real-time state:_ a Zustand store fed by the WebSocket through a **pure

@@ -70,7 +70,7 @@ export function CharacterCreatePage() {
       {
         onSuccess: (c) => {
           select(c.id);
-          navigate('/world');
+          navigate('/home');
         },
         onError: (err) => setErrors(fieldErrors(err)),
       },

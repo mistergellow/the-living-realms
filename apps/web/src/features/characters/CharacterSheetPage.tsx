@@ -172,7 +172,7 @@ export function CharacterSheetPage() {
           className="btn btn-primary"
           onClick={() => {
             select(s.character.id);
-            navigate('/world');
+            navigate('/home');
           }}
         >
           Play
@@ -331,7 +331,7 @@ export function CharacterSheetPage() {
               </table>
             </section>
 
-            <section className="panel area-inv">
+            <section className="panel area-inv" id="inventory">
               <div className="panel-title">
                 <span>Inventory ({s.inventory.length})</span>
               </div>
