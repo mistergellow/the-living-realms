@@ -105,11 +105,14 @@ export function EnemyAvatar({
   title,
   className,
   shadow = true,
+  inSvg = false,
 }: {
   enemyDefId: string | null;
+  /** Height in reference px; rendered in rem (see CharacterAvatar). */
   size?: number;
   /** Ground shadow (the canvas renderer draws its own). */
   shadow?: boolean;
+  inSvg?: boolean;
   title?: string;
   className?: string;
 }) {
@@ -119,6 +122,7 @@ export function EnemyAvatar({
       className={['avatar', 'is-animated', 'is-enemy', className].filter(Boolean).join(' ')}
       width={(size * 3) / 4}
       height={size}
+      style={inSvg ? undefined : { width: `${(size * 3) / 4 / 16}rem`, height: `${size / 16}rem` }}
       viewBox="0 0 120 160"
       role="img"
       aria-label={title ?? 'Enemy'}

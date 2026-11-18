@@ -15,6 +15,7 @@ import { svgTexture } from './svg-texture';
  * components stay the single source of the art: the DOM uses them directly
  * (lists, sheet, editor) and the canvas scenes rasterise them here.
  *
+ * `inSvg` keeps exact pixel sizes (the DOM uses rem for the fluid UI).
  * Every layer keeps the avatar viewBox (120×160, feet at y≈150), drawn at
  * TEX_SCALE× so it stays sharp when scaled up on large or high-DPI screens.
  */
@@ -56,6 +57,7 @@ function part(
       eyesClosed={eyesClosed}
       size={H}
       animated={false}
+      inSvg
     />,
   );
   return svgTexture(key, markup, W, H);
@@ -77,7 +79,7 @@ export async function characterTextures(
 
 export function enemyTexture(enemyDefId: string | null): Promise<Texture> {
   const markup = renderToStaticMarkup(
-    <EnemyAvatar enemyDefId={enemyDefId} size={H} shadow={false} />,
+    <EnemyAvatar enemyDefId={enemyDefId} size={H} shadow={false} inSvg />,
   );
   return svgTexture(`enemy:${enemyDefId}`, markup, W, H);
 }
@@ -88,7 +90,7 @@ export function portraitTexture(
   appearance: CharacterAppearance | null | undefined,
 ): Promise<Texture> {
   const markup = renderToStaticMarkup(
-    <CharacterAvatar appearance={appearance} portrait size={PORTRAIT_PX} animated={false} />,
+    <CharacterAvatar appearance={appearance} portrait size={PORTRAIT_PX} animated={false} inSvg />,
   );
   return svgTexture(`portrait:${appearanceKey(appearance)}`, markup, PORTRAIT_PX, PORTRAIT_PX);
 }

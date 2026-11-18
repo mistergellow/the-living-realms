@@ -429,3 +429,23 @@ formação 3 × 2 do D38, ataques por coluna do D41) e a correção do Railway
 do centro, com a linha de cima recuada para se poder clicar nas duas unidades
 de cada coluna. Nos ataques por coluna, o rato sobre uma unidade destaca a
 coluna inteira. O ADR do Pixi passou a ADR-029 e o pedido a #27.
+
+### #29 — 2026-11-18 — "Faz merge a tudo; quero as versões melhores online"
+
+**Pedido:** juntar tudo e pôr online: o Pixi (#27/#28) e a aparência de jogo da
+outra sessão ("Aparência gamificada e responsiva", que tinha ficado parada no
+ramo `claude/gracious-mendel-l2buie`, antes do Combate 2.0 e dos lobbies).
+**Resultado:**
+
+- Tema de jogo aplicado por cima da versão atual: fontes Cinzel/Alegreya Sans
+  (instaladas no projeto), painéis ornamentados, cenário com brasas, escala
+  fluida da UI em `rem` (`tokens.css`), ecrãs que ocupam a janela inteira sem
+  scroll da página (`Screen`, `topbar`, `screen-body`).
+- Ecrãs refeitos com o layout do tema e a lógica atual: criação (3 colunas,
+  com mão secundária e as estatísticas novas), ficha (pontos por gastar),
+  Rifts (lobbies, convites), mundo em HUD sobre o mapa Pixi (com Amigos),
+  lobby e amigos.
+- Combate: a cena Pixi mantém-se; o tema dá a barra de cima e os botões.
+  No telemóvel, as intenções mostram só ícone e valor.
+- Teste e2e novo do tema: "screens fit every screen size" (telemóvel → 4K).
+- Docs: CHANGE_MAP ("Tema visual"), ADR-030.

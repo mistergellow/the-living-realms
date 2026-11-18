@@ -33,7 +33,7 @@ export function RegisterPage() {
   return (
     <AuthLayout>
       <form className="stack" onSubmit={onSubmit} noValidate>
-        <h2>Create your account</h2>
+        <h2 className="form-title">Create your account</h2>
         <FormError error={register.error} />
         <Field
           label="Email"

@@ -19,11 +19,14 @@ export function AttributePicker(props: {
   const remaining = points - used;
 
   return (
-    <div className="stack" style={{ gap: 8 }}>
+    <div className="stack" style={{ gap: '0.5rem' }}>
       <div className="row">
         <span className="field-label">{props.title ?? 'Attributes'}</span>
         <span className="spacer" />
-        <span className={remaining < 0 ? 'field-error' : 'muted'} data-testid="points-remaining">
+        <span
+          className={remaining < 0 ? 'points-gem field-error' : 'points-gem'}
+          data-testid="points-remaining"
+        >
           {remaining} / {points} points left
         </span>
       </div>

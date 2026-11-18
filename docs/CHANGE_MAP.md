@@ -311,3 +311,14 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Dev server: `apps/web/vite.config.ts` → `optimizeDeps.include` (acrescentar aqui qualquer novo import `pixi.js/*`)
 - Testes e2e: fechar as páginas/contextos abertos (um mapa aberto continua a desenhar)
 - Docs: `ARCHITECTURE.md` §7–§9
+
+## Tema visual (aspeto de jogo) e tamanhos de ecrã
+
+- Cores, espaçamentos e escala fluida: `apps/web/src/styles/tokens.css` (tudo em `rem`; `--hud-gap`)
+- Estilos: `apps/web/src/styles/global.css` (painéis, botões, `screen`, `topbar`, HUD do mundo, criação, ficha), `features/rifts/combat.css`
+- Fontes: `@fontsource/cinzel` e `@fontsource/alegreya-sans` importadas em `apps/web/src/main.tsx`
+- Moldura de ecrã: `apps/web/src/shared/ui/Screen.tsx` (cenário, brasas, vinheta); ícones: `shared/ui/Icon.tsx`
+- **Ecrã novo:** envolver em `<Screen>` com `<header className="topbar">` e `<main className="screen-body">`
+- Avatares em `rem` no DOM; no canvas usar `inSvg` (píxeis exatos) — ver `render/avatar-textures.tsx`
+- Teste: `e2e/foundation.spec.ts` → "screens fit every screen size" (a página nunca faz scroll)
+- Decisão: ADR-030

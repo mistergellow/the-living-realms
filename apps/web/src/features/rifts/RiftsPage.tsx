@@ -2,6 +2,8 @@ import type { LobbyVisibility } from '@realms/shared';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
+import { Icon } from '../../shared/ui/Icon';
+import { Screen } from '../../shared/ui/Screen';
 import { useActiveCharacter } from '../characters/active-character';
 import { useActiveRun, useRifts, useStartRun } from './api';
 import { useLobbyActions, useLobbyOverview } from './lobby-api';
@@ -24,164 +26,175 @@ export function RiftsPage() {
   const goLobby = (id: string) => navigate(`/rifts/lobbies/${id}`);
 
   return (
-    <main className="page">
-      <header className="page-header">
+    <Screen>
+      <header className="topbar">
+        <Link className="btn btn-ghost btn-sm" to="/world">
+          <Icon name="back" />
+          Back to the world
+        </Link>
         <h1>Rifts</h1>
         <span className="spacer" />
         <Link className="btn btn-ghost btn-sm" to="/friends">
+          <Icon name="friends" />
           Friends
         </Link>
-        <Link className="btn btn-ghost btn-sm" to="/world">
-          Back to the world
-        </Link>
+        <span className="logo">The Living Realms</span>
       </header>
-      <p className="muted" style={{ marginTop: -12 }}>
-        Rifts are portals to raids: several rooms and a boss. Go alone or in a group of up to 6 —
-        difficulty does not change with the number of players.
-      </p>
-      <FormError error={start.error ?? rifts.error ?? lobby.create.error ?? lobby.join.error} />
+      <main className="screen-body">
+        <div className="contain stack" style={{ maxWidth: '64rem' }}>
+          <p className="muted" style={{ margin: 0, fontSize: '1.05rem', fontStyle: 'italic' }}>
+            Rifts are portals to raids: several rooms and a boss. Go alone or in a group of up to 6
+            — difficulty does not change with the number of players.
+          </p>
+          <FormError error={start.error ?? rifts.error ?? lobby.create.error ?? lobby.join.error} />
 
-      {active.data && (
-        <div className="panel row banner">
-          <div>
-            <strong>You are inside {active.data.riftName}</strong>
-            <div className="muted">
-              Room {active.data.roomIndex + 1} of {active.data.rooms.length}
+          {active.data && (
+            <div className="panel row banner">
+              <div>
+                <strong>You are inside {active.data.riftName}</strong>
+                <div className="muted">
+                  Room {active.data.roomIndex + 1} of {active.data.rooms.length}
+                </div>
+              </div>
+              <span className="spacer" />
+              <Link className="btn btn-primary" to={`/rifts/runs/${active.data.id}`}>
+                Resume
+              </Link>
             </div>
-          </div>
-          <span className="spacer" />
-          <Link className="btn btn-primary" to={`/rifts/runs/${active.data.id}`}>
-            Resume
-          </Link>
-        </div>
-      )}
-      {mine && (
-        <div className="panel row banner" data-testid="my-lobby">
-          <div>
-            <strong>Your lobby: {mine.riftName}</strong>
-            <div className="muted">
-              {mine.members.length}/{mine.maxMembers} players · {mine.visibility}
+          )}
+          {mine && (
+            <div className="panel row banner" data-testid="my-lobby">
+              <div>
+                <strong>Your lobby: {mine.riftName}</strong>
+                <div className="muted">
+                  {mine.members.length}/{mine.maxMembers} players · {mine.visibility}
+                </div>
+              </div>
+              <span className="spacer" />
+              <Link className="btn btn-primary" to={`/rifts/lobbies/${mine.id}`}>
+                Open lobby
+              </Link>
             </div>
-          </div>
-          <span className="spacer" />
-          <Link className="btn btn-primary" to={`/rifts/lobbies/${mine.id}`}>
-            Open lobby
-          </Link>
-        </div>
-      )}
+          )}
 
-      {!!overview.data?.invites.length && (
-        <section className="panel" style={{ marginBottom: 16 }}>
-          <div className="panel-title">Invitations</div>
-          <ul className="friend-list" data-testid="invites">
-            {overview.data.invites.map((i) => (
-              <li key={i.lobbyId} className="friend-row">
-                <span style={{ flex: 1 }}>
-                  <strong>{i.from}</strong> invited you to <strong>{i.riftName}</strong>{' '}
-                  <span className="muted">({i.memberCount} players)</span>
-                </span>
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={busy || lobby.join.isPending}
-                  onClick={() => lobby.join.mutate(i.lobbyId, { onSuccess: (l) => goLobby(l.id) })}
-                >
-                  Join
-                </button>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => lobby.leave.mutate(i.lobbyId)}
-                >
-                  Decline
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <div className="stack">
-        {rifts.data?.map((r) => (
-          <article key={r.id} className="panel rift-card" data-testid="rift-card">
-            <div className="rift-portal" aria-hidden />
-            <div className="stack" style={{ gap: 6, flex: 1 }}>
-              <h2 style={{ fontSize: 20 }}>{r.name}</h2>
-              <span className="muted">{r.description}</span>
-              <ol className="rift-rooms">
-                {r.rooms.map((room, i) => (
-                  <li key={i} data-boss={room.isBoss}>
-                    {room.isBoss ? '☠ ' : ''}
-                    {room.name}
+          {!!overview.data?.invites.length && (
+            <section className="panel" style={{ marginBottom: 16 }}>
+              <div className="panel-title">Invitations</div>
+              <ul className="friend-list" data-testid="invites">
+                {overview.data.invites.map((i) => (
+                  <li key={i.lobbyId} className="friend-row">
+                    <span style={{ flex: 1 }}>
+                      <strong>{i.from}</strong> invited you to <strong>{i.riftName}</strong>{' '}
+                      <span className="muted">({i.memberCount} players)</span>
+                    </span>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={busy || lobby.join.isPending}
+                      onClick={() =>
+                        lobby.join.mutate(i.lobbyId, { onSuccess: (l) => goLobby(l.id) })
+                      }
+                    >
+                      Join
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => lobby.leave.mutate(i.lobbyId)}
+                    >
+                      Decline
+                    </button>
                   </li>
                 ))}
-              </ol>
-              <div className="row" style={{ flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
-                  disabled={start.isPending || busy}
-                  onClick={() =>
-                    start.mutate(
-                      { riftId: r.id, characterId },
-                      { onSuccess: (run) => navigate(`/rifts/runs/${run.id}`) },
-                    )
-                  }
-                >
-                  Enter solo
-                </button>
-                <button
-                  className="btn"
-                  disabled={lobby.create.isPending || busy}
-                  onClick={() =>
-                    lobby.create.mutate(
-                      { riftId: r.id, visibility },
-                      { onSuccess: (l) => goLobby(l.id) },
-                    )
-                  }
-                >
-                  Create lobby
-                </button>
-                <label className="row muted" style={{ gap: 6, fontSize: 13 }}>
-                  <input
-                    type="checkbox"
-                    checked={visibility === 'private'}
-                    onChange={(e) => setVisibility(e.target.checked ? 'private' : 'public')}
-                  />
-                  Private (invite only)
-                </label>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
+              </ul>
+            </section>
+          )}
 
-      <section className="panel" style={{ marginTop: 16 }}>
-        <div className="panel-title">Public lobbies</div>
-        {overview.data?.publicLobbies.length ? (
-          <ul className="friend-list" data-testid="public-lobbies">
-            {overview.data.publicLobbies.map((l) => (
-              <li key={l.id} className="friend-row">
-                <span style={{ flex: 1 }}>
-                  <strong>{l.riftName}</strong>{' '}
-                  <span className="muted">· led by {l.leaderName}</span>
-                </span>
-                <span className="muted">
-                  {l.memberCount}/{l.maxMembers}
-                </span>
-                <button
-                  className="btn btn-sm"
-                  disabled={busy || lobby.join.isPending}
-                  onClick={() => lobby.join.mutate(l.id, { onSuccess: (x) => goLobby(x.id) })}
-                >
-                  Join
-                </button>
-              </li>
+          <div className="stack">
+            {rifts.data?.map((r) => (
+              <article key={r.id} className="panel rift-card" data-testid="rift-card">
+                <div className="rift-portal" aria-hidden />
+                <div className="stack" style={{ gap: 6, flex: 1 }}>
+                  <h2 className="logo" style={{ fontSize: '1.6rem' }}>
+                    {r.name}
+                  </h2>
+                  <span className="muted">{r.description}</span>
+                  <ol className="rift-rooms">
+                    {r.rooms.map((room, i) => (
+                      <li key={i} data-boss={room.isBoss}>
+                        {room.isBoss ? '☠ ' : ''}
+                        {room.name}
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="row" style={{ flexWrap: 'wrap' }}>
+                    <button
+                      className="btn btn-primary"
+                      disabled={start.isPending || busy}
+                      onClick={() =>
+                        start.mutate(
+                          { riftId: r.id, characterId },
+                          { onSuccess: (run) => navigate(`/rifts/runs/${run.id}`) },
+                        )
+                      }
+                    >
+                      Enter solo
+                    </button>
+                    <button
+                      className="btn"
+                      disabled={lobby.create.isPending || busy}
+                      onClick={() =>
+                        lobby.create.mutate(
+                          { riftId: r.id, visibility },
+                          { onSuccess: (l) => goLobby(l.id) },
+                        )
+                      }
+                    >
+                      Create lobby
+                    </button>
+                    <label className="row muted" style={{ gap: 6, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={visibility === 'private'}
+                        onChange={(e) => setVisibility(e.target.checked ? 'private' : 'public')}
+                      />
+                      Private (invite only)
+                    </label>
+                  </div>
+                </div>
+              </article>
             ))}
-          </ul>
-        ) : (
-          <p className="muted" style={{ margin: 0 }}>
-            No open lobbies right now. Create one, or invite friends.
-          </p>
-        )}
-      </section>
-    </main>
+          </div>
+
+          <section className="panel" style={{ marginTop: 16 }}>
+            <div className="panel-title">Public lobbies</div>
+            {overview.data?.publicLobbies.length ? (
+              <ul className="friend-list" data-testid="public-lobbies">
+                {overview.data.publicLobbies.map((l) => (
+                  <li key={l.id} className="friend-row">
+                    <span style={{ flex: 1 }}>
+                      <strong>{l.riftName}</strong>{' '}
+                      <span className="muted">· led by {l.leaderName}</span>
+                    </span>
+                    <span className="muted">
+                      {l.memberCount}/{l.maxMembers}
+                    </span>
+                    <button
+                      className="btn btn-sm"
+                      disabled={busy || lobby.join.isPending}
+                      onClick={() => lobby.join.mutate(l.id, { onSuccess: (x) => goLobby(x.id) })}
+                    >
+                      Join
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted" style={{ margin: 0 }}>
+                No open lobbies right now. Create one, or invite friends.
+              </p>
+            )}
+          </section>
+        </div>
+      </main>
+    </Screen>
   );
 }
