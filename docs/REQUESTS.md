@@ -46,6 +46,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D34 | Defesa passiva com retornos decrescentes (redução = rating ÷ (rating + 50)) + Block ativo que expira no início do próprio turno (estilo Slay the Spire)                                                                                                          | 2026-11-17 | Combate 2.0                                                                                    |
 | D35 | Estados: Bleed, Burn, Mark (+25% dano recebido), Weaken (−25% dano), Stun (perde o turno); sinergias entre habilidades                                                                                                                                           | 2026-11-17 | Combate 2.0                                                                                    |
 | D36 | O combate é "Slay the Spire sem cartas + Darkest Dungeon": inclui **intenções dos inimigos** visíveis antes do turno dos jogadores                                                                                                                               | 2026-11-17 | Combate 2.0                                                                                    |
+| D37 | Sistema de amigos (adicionar amigo) e Rifts com lobby                                                                                                                                                                                                            | 2026-11-18 | M3                                                                                             |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -75,6 +76,11 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A22 | Arte                                                            | desenhada em código (SVG em camadas) como base provisória; arte profissional substitui as camadas mais tarde                                                   | ADR-021                                          |
 | A23 | Meta de dificuldade a solo                                      | média: ~40–50% de vitórias; grupos de 2–3 ~100% (simulação: espada+escudo 52%, machado 32%, adagas 68%, arco 56%, cajado 60%, tomo+talismã 26%; média 49%)     | conteúdo em `game-core/src/content`              |
 | A24 | Armas iniciais                                                  | espada, machado, adaga, arco, cajado, tomo; mão secundária opcional: escudo, talismã ou adaga                                                                  | `STARTER_WEAPONS`, `STARTER_OFFHANDS`            |
+| A25 | Amigos                                                          | por personagem (adiciona-se pelo nome do personagem); pedido → aceitar/recusar                                                                                 | `modules/social`                                 |
+| A26 | Lobby público                                                   | entra quem quiser até 6; o líder pode expulsar; também há lobbies privados (só por convite)                                                                    | `lobbies.service.ts`                             |
+| A27 | Jogador desligado a meio do combate                             | o turno passa aos 60 s (sem controlo automático)                                                                                                               | `COMBAT_RULES.turnSeconds`                       |
+| A28 | Sair de um Rift em grupo                                        | só quem sai sofre a penalização (−25% qualidade); o grupo continua; se for o último, é derrota                                                                 | `rifts.service.ts`                               |
+| A29 | Atualização em tempo real no lobby/combate                      | o browser pergunta ao servidor a cada ~1,5 s (simples e robusto a esta escala; push por WebSocket fica para mais tarde)                                        | `features/rifts/api.ts`                          |
 
 ---
 
@@ -295,3 +301,17 @@ de equilíbrio, usada a dificuldade média).
 verificação e dar feedback sobre a sensação do combate e o equilíbrio;
 (2) responder às 3 perguntas do lobby para avançar com o M3. Alternativas
 apresentadas: mais conteúdo (Rifts/inimigos), direção de arte, mapa (Fase 4).
+
+### #22 — 2026-11-18 — Amigos e lobby de Rifts (M3)
+
+**Pedido:** "faz já a cena de adicionar amigo e fazer o Rift dar para fazer lobby".
+**Decisões:** D37; valores provisórios A25–A29 (perguntas do lobby sem resposta
+explícita).
+**Resultado (M3 concluído):**
+
+- Amigos: pedir pelo nome do personagem, aceitar/recusar/cancelar/remover, estado online, contador de pedidos no ecrã do mundo (`/friends`).
+- Lobbies até 6: público ou privado, convidar amigos, convites na página de Rifts, escolher/trocar posição na formação, "pronto", expulsar, a liderança passa se o líder sair, o líder inicia o Rift para todos.
+- Combate em grupo: iniciativa entre todos os jogadores, "Waiting for X…", sair a meio só penaliza quem sai e o grupo continua.
+- Problema encontrado pelo teste com 2 browsers e corrigido: durante o próprio turno o ecrã não se atualizava (não se via um colega sair).
+- Testes: 39 unitários no game-core, 58 de integração no servidor, 7 e2e (incluindo 2 jogadores em simultâneo).
+- Docs: CHANGE_MAP (amigos, lobbies, combate em grupo), DATABASE, ARCHITECTURE §7, ADR-025, ADR-026, ROADMAP.

@@ -10,6 +10,7 @@ import {
   timeoutTurn,
   validTargets,
   getAbility,
+  leaveParty,
   type CombatState,
   type PartyMemberInput,
   type RiftRoomDef,
@@ -308,5 +309,27 @@ describe('enemy intents (Slay-the-Spire style)', () => {
     husk.statuses.push({ id: 'stun', turns: 1, value: 0 });
     const next = ok(applyAction(t, 'p:a', { type: 'end_turn' }));
     expect(next.log.some((l) => l.t === 'stunned' && l.targetId === husk.id)).toBe(true);
+  });
+});
+
+describe('group runs', () => {
+  it('a leaving player is out for good; the run continues for the others', () => {
+    let s = encounter(
+      [member('a', 0, { initiative: 50 }), member('b', 1, { initiative: 0 })],
+      room([{ enemy: 'rift_warden', slot: 0 }]),
+    );
+    expect(s.activeId).toBe('p:a');
+    s = leaveParty(s, 'p:a');
+    expect(unit(s, 'p:a')).toMatchObject({ left: true, downed: true });
+    expect(s.activeId).toBe('p:b');
+    expect(s.phase).toBe('party');
+  });
+
+  it('the last player leaving ends the run in defeat', () => {
+    const s = leaveParty(
+      encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }])),
+      'p:a',
+    );
+    expect(s).toMatchObject({ phase: 'ended', outcome: 'defeat' });
   });
 });

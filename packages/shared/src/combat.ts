@@ -45,6 +45,8 @@ export interface CombatantView {
   mana: number;
   maxMana: number;
   focus: number;
+  /** Player left the run early (group runs, A28). */
+  left: boolean;
   /** Absorbs damage until the unit's next turn (Slay-the-Spire style). */
   block: number;
   statuses: StatusView[];
@@ -69,6 +71,7 @@ export type CombatLogEntry =
   | { t: 'status'; targetId: string; status: StatusId; turns: number }
   | { t: 'tick'; targetId: string; status: StatusId; amount: number }
   | { t: 'stunned'; targetId: string }
+  | { t: 'left'; actorId: string }
   | { t: 'dodge'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'swap'; actorId: string; fromSlot: number; toSlot: number; withId: string | null }

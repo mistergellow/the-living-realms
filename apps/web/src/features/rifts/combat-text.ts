@@ -22,6 +22,8 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
       return `${name(e.targetId)} is ${STATUS_NAMES[e.status].toLowerCase()} for ${e.turns} turn${e.turns > 1 ? 's' : ''}.`;
     case 'tick':
       return `${name(e.targetId)} suffers ${e.amount} from ${STATUS_NAMES[e.status].toLowerCase()}.`;
+    case 'left':
+      return `${name(e.actorId)} left the Rift.`;
     case 'stunned':
       return `${name(e.targetId)} is stunned and loses the turn.`;
     case 'dodge':

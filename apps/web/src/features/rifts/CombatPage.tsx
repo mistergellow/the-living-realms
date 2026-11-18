@@ -374,7 +374,9 @@ export function CombatPage() {
             className="btn btn-ghost btn-sm btn-danger"
             onClick={() => {
               if (
-                confirm('Leave the Rift? It counts as a defeat: your equipped items lose quality.')
+                confirm(
+                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps fighting.',
+                )
               )
                 send({ type: 'abandon' });
             }}
@@ -484,12 +486,16 @@ export function CombatPage() {
               </div>
             </>
           ) : (
-            <span className="muted">
-              {combat.phase === 'enemies'
-                ? 'The enemies are acting…'
-                : data.status === 'active'
-                  ? 'Waiting…'
-                  : ''}
+            <span className="muted" data-testid="waiting">
+              {data.status !== 'active'
+                ? ''
+                : combat.phase === 'enemies'
+                  ? 'The enemies are acting…'
+                  : combat.phase === 'room_cleared'
+                    ? 'Room cleared.'
+                    : combat.activeId
+                      ? `Waiting for ${byName(combat.activeId)}…`
+                      : 'Waiting…'}
             </span>
           )}
         </div>

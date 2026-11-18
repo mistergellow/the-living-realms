@@ -57,7 +57,7 @@ export async function createTestApp(
 
 export async function resetState(t: TestApp): Promise<void> {
   await t.dbHandle.db.execute(
-    sql`TRUNCATE world_events, rift_run_participants, rift_runs, items, character_skills, characters, sessions, accounts CASCADE`,
+    sql`TRUNCATE world_events, rift_lobby_invites, rift_lobby_members, rift_lobbies, friendships, rift_run_participants, rift_runs, items, character_skills, characters, sessions, accounts CASCADE`,
   );
   await t.redis.flushdb();
 }

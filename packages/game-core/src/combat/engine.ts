@@ -308,7 +308,7 @@ function applyAbility(
 function checkEnd(state: CombatState): boolean {
   if (on(state, 'enemies').every((e) => e.downed)) {
     for (const p of on(state, 'party')) {
-      if (p.downed) {
+      if (p.downed && !p.left) {
         p.downed = false;
         p.hp = COMBAT_RULES.reviveHp;
         pushLog(state, { t: 'revived', targetId: p.id, hp: p.hp });
@@ -507,5 +507,24 @@ export function timeoutTurn(prev: CombatState): CombatState {
   const state: CombatState = structuredClone(prev);
   pushLog(state, { t: 'timeout', actorId: state.activeId! });
   advanceToNextPartyTurn(state);
+  return state;
+}
+
+/**
+ * A player leaves a group run (A28). They count as down for the rest of the
+ * run (never revived); if it was their turn, play moves on.
+ */
+export function leaveParty(prev: CombatState, actorId: string): CombatState {
+  const state: CombatState = structuredClone(prev);
+  const unit = get(state, actorId);
+  if (!unit || unit.left) return prev;
+  unit.left = true;
+  unit.downed = true;
+  unit.hp = 0;
+  unit.block = 0;
+  unit.statuses = [];
+  pushLog(state, { t: 'left', actorId });
+  if (checkEnd(state)) return state;
+  if (state.phase === 'party' && state.activeId === actorId) advanceToNextPartyTurn(state);
   return state;
 }

@@ -37,7 +37,7 @@ map, because combat is the core of the game.
 - [x] **M1 done:** six D&D attributes with point-buy; derived stats; items with quality/durability; equipment with 7 slots (two-handed rules, attribute bonuses); weapons grant abilities; learned-skills table; per-character reputation; starter weapon choice + starter kit; character sheet screen
 - [x] Data-driven definitions (items, abilities) so numbers can be tuned quickly
 
-## Phase 3 — Combat and Rifts 🔜 (M2 done)
+## Phase 3 — Combat and Rifts 🔜 (M2 + Combat 2.0 + M3 done)
 
 Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 **difficulty does not change** with the number of players.
@@ -46,7 +46,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
 - [x] **Combat 2.0:** six linear attributes (12 creation points, unspent points can be spent later), weapons scaling with two attributes, main + off-hand combinations (6 starter weapons, 3 off-hands), diminishing-returns armor/resistance, Block, statuses (Bleed, Burn, Mark, Weaken, Stun), damage ranges, visible enemy intents; rebalanced by simulation
-- Lobby system (create, invite/join, ready check, start)
+- [x] **M3 done:** friends (requests by character name, online status); lobbies up to 6 (public or invite-only, invites to friends, formation slots, ready check, kick, leader hand-over, leader starts for everyone); group combat (initiative across players, leaving penalises only the leaver); live refresh by polling
 - Separate combat screen and renderer (`/combat/:id`)
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers

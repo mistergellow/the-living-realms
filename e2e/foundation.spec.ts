@@ -174,3 +174,62 @@ test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) 
   await expect(page.getByTestId('run-result')).toContainText('You fled the Rift');
   await expect(page.getByTestId('run-result')).toContainText('Wooden Shield');
 });
+
+test('friends + private lobby + group Rift with two players', async ({ browser }) => {
+  const a = await (await browser.newContext()).newPage();
+  const b = await (await browser.newContext()).newPage();
+  const nameA = randomName('Lead');
+  const nameB = randomName('Mate');
+  await register(a, `e2e-la-${unique()}@example.com`);
+  await createCharacter(a, nameA);
+  await register(b, `e2e-lb-${unique()}@example.com`);
+  await createCharacter(b, nameB);
+
+  // A sends a friend request; B accepts.
+  await a.getByTestId('friends-link').click();
+  await a.getByLabel('Add a friend by character name').fill(nameB);
+  await a.getByRole('button', { name: 'Send request' }).click();
+  await expect(a.getByText('Sent requests')).toBeVisible();
+  await b.goto('/friends');
+  await b.getByRole('button', { name: 'Accept' }).click();
+  await expect(b.getByTestId('friends')).toContainText(nameA);
+
+  // A creates a private lobby and invites B.
+  await a.goto('/rifts');
+  await a.getByLabel('Private (invite only)').check();
+  await a.getByRole('button', { name: 'Create lobby' }).click();
+  await expect(a).toHaveURL(/\/rifts\/lobbies\//);
+  await a.getByRole('button', { name: 'Invite' }).click();
+
+  // B accepts the invitation, then gets ready.
+  await b.goto('/rifts');
+  await expect(b.getByTestId('invites')).toContainText(nameA);
+  await b.getByTestId('invites').getByRole('button', { name: 'Join' }).click();
+  await expect(b).toHaveURL(/\/rifts\/lobbies\//);
+  await expect(a.getByTestId('lobby-member')).toHaveCount(2);
+  await b.getByRole('button', { name: "I'm ready" }).click();
+  await a.screenshot({ path: 'test-results/screens/08-lobby.png', fullPage: true });
+
+  // A starts: both land in the same fight.
+  await a.getByRole('button', { name: 'Enter the Rift' }).click();
+  await expect(a).toHaveURL(/\/rifts\/runs\//);
+  await expect(b).toHaveURL(/\/rifts\/runs\//);
+  await expect(a.getByTestId('unit-party')).toHaveCount(2);
+  await expect(b.getByTestId('unit-party')).toHaveCount(2);
+
+  // Whoever acts first ends the turn; the other sees it's now their turn.
+  const aFirst = await a.getByText('Your turn').isVisible();
+  const [first, second] = aFirst ? [a, b] : [b, a];
+  await expect(second.getByTestId('waiting')).toContainText('Waiting for');
+  await first.getByRole('button', { name: 'End turn' }).click();
+  await expect(second.getByText('Your turn')).toBeVisible({ timeout: 10_000 });
+  await second.screenshot({ path: 'test-results/screens/09-group-combat.png' });
+
+  // B leaves; A keeps fighting and sees it in the log.
+  b.once('dialog', (d) => d.accept());
+  await b.getByRole('button', { name: 'Abandon' }).click();
+  await expect(b.getByTestId('run-result')).toContainText('You fled the Rift');
+  await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`, {
+    timeout: 10_000,
+  });
+});

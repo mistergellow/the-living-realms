@@ -248,8 +248,33 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Recompensas/penalização: `finish()` em `rifts.service.ts`; durabilidade em `game-core/equipment.ts` (`qualityAfterDefeat`)
 - Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`
 - Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `CombatPage.tsx`, `api.ts`); link "Rifts" em `WorldPage.tsx`; rotas em `router.tsx`
-- Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts`), `e2e`
+- Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts` — **tabela nova = acrescentar lá**), `e2e`
 - Futuro: lobby (M3), entrada pelo mapa (Fase 4)
+
+## Amigos (por personagem)
+
+- Contrato: `packages/shared/src/social.ts` (`CharacterRefDto`, `FriendsDto`, `friendRequestSchema`, `characterScopedSchema`); erro `ALREADY_FRIENDS`
+- BD: `friendships` (um registo por par, ids ordenados `character_a < character_b`; `pending`/`accepted`)
+- Servidor: `apps/server/src/modules/social/` (`friends.service.ts`, `social.routes.ts` em `/api/social`, `presence-status.ts` = quem está online: no mundo, num lobby aberto ou num Rift)
+- Web: `apps/web/src/features/social/` (`api.ts`, `FriendsPage.tsx` em `/friends`); contador de pedidos no link "Friends" de `WorldPage.tsx`
+- Testes: `apps/server/test/social.test.ts`, `e2e` ("friends + private lobby")
+
+## Lobbies de Rift (até 6)
+
+- Contrato: `packages/shared/src/social.ts` (`LobbyDto`, `LobbyOverviewDto`, `LOBBY_MAX_MEMBERS`, schemas de criar/convidar/posição/pronto/expulsar); erros `IN_LOBBY`, `LOBBY_FULL`, `NOT_LEADER`, `NOT_READY`
+- BD: `rift_lobbies`, `rift_lobby_members` (posição única por lobby), `rift_lobby_invites`
+- Servidor: `apps/server/src/modules/rifts/lobbies.service.ts` + `lobbies.routes.ts` (em `/api/rifts/lobbies`, registadas **antes** das rotas `/api/rifts/:riftId` em `app.ts`); `assertFreeForRift` em `rifts.service.ts` (um Rift e um lobby de cada vez)
+- Início em grupo: `LobbiesService.start` → `RiftsService.createRun` (bloqueia as personagens por ordem de id)
+- Web: `apps/web/src/features/rifts/lobby-api.ts`, `LobbyPage.tsx` (`/rifts/lobbies/:id`), `RiftsPage.tsx` (criar, públicos, convites)
+- Atualização: polling (A29) — intervalos em `lobby-api.ts` e `api.ts` (`useRun`)
+- Testes: `apps/server/test/lobbies.test.ts`, `e2e`
+
+## Combate em grupo
+
+- Sair a meio: `leaveParty` (motor) + `penalise(…, left=true)` e `rift_run_participants.left_at` (servidor); `activeRunIdFor` ignora quem saiu; entrada de log `left`
+- Recompensas/penalização no fim ignoram quem saiu (`finish`)
+- Web: texto "Waiting for X…" e confirmação de saída em `CombatPage.tsx`; polling em `useRun`
+- Testes: `game-core/test/combat.test.ts` ("group runs"), `apps/server/test/lobbies.test.ts` ("group combat"), `e2e`
 
 ## Deploy / produção (Railway)
 

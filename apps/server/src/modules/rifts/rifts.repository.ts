@@ -1,5 +1,5 @@
 import { riftRunParticipants, riftRuns, type DbOrTx, type RiftRun } from '@realms/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 export const riftsRepository = {
   /** The active run a character is in, if any. */
@@ -8,7 +8,13 @@ export const riftsRepository = {
       .select({ id: riftRuns.id })
       .from(riftRunParticipants)
       .innerJoin(riftRuns, eq(riftRuns.id, riftRunParticipants.runId))
-      .where(and(eq(riftRunParticipants.characterId, characterId), eq(riftRuns.status, 'active')));
+      .where(
+        and(
+          eq(riftRunParticipants.characterId, characterId),
+          eq(riftRuns.status, 'active'),
+          isNull(riftRunParticipants.leftAt),
+        ),
+      );
     return row?.id ?? null;
   },
 

@@ -252,8 +252,14 @@ Combat is separate from exploration on both sides:
   lazily whenever the run is read or acted upon (catch-up loop), and the client
   re-fetches when its countdown hits zero. No background job is needed for solo
   runs; lobbies (M3) add WebSocket push and a worker sweep.
-- **Transport:** HTTP for actions in M2 (request → updated run). M3 adds a
-  `combat:<runId>` bus channel to push updates to every participant.
+- **Transport:** HTTP for actions. Group runs and lobbies (M3) refresh by
+  polling (~1.5 s while waiting, ~4 s during your own turn); every read also
+  applies expired turn timers, so a player who disconnects simply times out.
+  A WebSocket push can replace polling later without API changes (ADR-025).
+- **Lobbies and friends:** `modules/rifts/lobbies.service.ts` (up to 6 members,
+  public or invite-only, formation slots, ready check, leader starts the run for
+  everyone) and `modules/social` (friend requests between characters, online
+  status). Leaving a group run penalises only the leaver; the others continue.
 - **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and side-view
   stage (`features/rifts`). Animations are derived from new combat log entries
   (`useCombatFx`): the actor lunges, targets flash, numbers float.
