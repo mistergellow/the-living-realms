@@ -8,7 +8,11 @@ export function RequireAuth() {
   const location = useLocation();
   if (me.isPending) return <FullPageMessage>Loading…</FullPageMessage>;
   if (me.isError)
-    return <FullPageMessage>Cannot reach the server. Please try again shortly.</FullPageMessage>;
+    return (
+      <FullPageMessage spinner={false}>
+        Cannot reach the server. Please try again shortly.
+      </FullPageMessage>
+    );
   if (!me.data) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <Outlet />;
 }

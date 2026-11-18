@@ -1,24 +1,14 @@
-import {
-  describeEffects,
-  getAbility,
-  STATUS_DESCRIPTIONS,
-  STATUS_NAMES,
-  validTargets,
-  type CombatState,
-} from '@realms/game-core';
-import { columnOfSlot, type CombatantView, type IntentView, type RunDto } from '@realms/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { describeEffects, getAbility, validTargets, type CombatState } from '@realms/game-core';
+import { columnOfSlot, type CombatantView, type CombatView, type RunDto } from '@realms/shared';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
-import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { EnemyAvatar } from '../avatar/EnemyAvatar';
-import { artFromAbilities } from '../avatar/weapon-art';
 import { useActiveCharacter } from '../characters/active-character';
 import { useRun, useRunAction } from './api';
 import { describeLog } from './combat-text';
 import './combat.css';
-import { useCombatFx, type CombatFx } from './useCombatFx';
+import { CombatStage } from './CombatStage';
 
 /** Seconds left on the current turn, refreshed every 250 ms. */
 function useCountdown(deadline: string | null): number | null {
@@ -29,223 +19,6 @@ function useCountdown(deadline: string | null): number | null {
     return () => clearInterval(id);
   }, [deadline]);
   return deadline ? Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000)) : null;
-}
-
-function Bar({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'mana' }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div className={`bar bar-${kind}`} title={`${value} / ${max}`}>
-      <span style={{ width: `${pct}%` }} />
-      <em>
-        {value}/{max}
-      </em>
-    </div>
-  );
-}
-
-function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: string) => string }) {
-  if (unit.downed || unit.intents.length === 0) return null;
-  // Group identical actions (same ability and targets), e.g. three claws → "×3".
-  const groups: Array<IntentView & { count: number }> = [];
-  for (const it of unit.intents) {
-    const same = groups.find(
-      (g) => g.abilityId === it.abilityId && g.targetIds.join() === it.targetIds.join(),
-    );
-    if (same) same.count++;
-    else groups.push({ ...it, count: 1 });
-  }
-  return (
-    <div className="intents" data-testid="intent">
-      {groups.map((it, i) => {
-        const a = getAbility(it.abilityId);
-        if (!a) return null;
-        const dmg = a.effects.find((e) => e.kind === 'damage');
-        const value =
-          dmg && dmg.kind === 'damage'
-            ? `${Math.round(dmg.min * unit.power)}–${Math.round(dmg.max * unit.power)}`
-            : (describeEffects(a)[0] ?? '');
-        const names = it.targetIds.map(nameOf).join(', ');
-        const targets =
-          a.targeting.area === 'all'
-            ? 'everyone'
-            : a.targeting.area === 'column'
-              ? `${it.column ?? ''} column (${names})`
-              : names;
-        const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
-        return (
-          <span
-            key={i}
-            className="intent"
-            title={`${a.name}${it.count > 1 ? ` ×${it.count}` : ''}: ${describeEffects(a).join(', ')} → ${targets}`}
-          >
-            <i>{dmg ? '⚔' : '✦'}</i>
-            {value}
-            {it.count > 1 ? ` ×${it.count}` : ''}
-            {extra} <em>→ {targets}</em>
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function StatusChips({ unit }: { unit: CombatantView }) {
-  if (unit.downed || (unit.statuses.length === 0 && unit.block === 0)) return null;
-  return (
-    <span className="statuses">
-      {unit.block > 0 && (
-        <span
-          className="status status-block"
-          title="Block: absorbs damage until this unit's next turn"
-        >
-          ⛨ {unit.block}
-        </span>
-      )}
-      {unit.statuses.map((st) => (
-        <span key={st.id} className={`status status-${st.id}`} title={STATUS_DESCRIPTIONS[st.id]}>
-          {STATUS_NAMES[st.id]}
-          {st.value ? ` ${st.value}` : ''} · {st.turns}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function Unit(props: {
-  nameOf: (id: string) => string;
-  unit: CombatantView;
-  active: boolean;
-  targetable: boolean;
-  fx: CombatFx;
-  onClick?: () => void;
-}) {
-  const { unit, fx } = props;
-  const cls = [
-    'unit',
-    `unit-${unit.side}`,
-    unit.downed ? 'is-downed' : '',
-    props.active ? 'is-active' : '',
-    props.targetable ? 'is-targetable' : '',
-    fx.actingId === unit.id ? 'is-acting' : '',
-    fx.hitIds.has(unit.id) ? 'is-hit' : '',
-    unit.isBoss ? 'is-boss' : '',
-  ].join(' ');
-  const size = unit.isBoss ? 150 : 118;
-  return (
-    <button
-      type="button"
-      className={cls}
-      disabled={!props.targetable}
-      onClick={props.onClick}
-      data-testid={`unit-${unit.side}`}
-      aria-label={`${unit.name}${props.targetable ? ' (target)' : ''}`}
-    >
-      <div className="unit-floats">
-        {(fx.floats[unit.id] ?? []).map((f) => (
-          <span key={f.key} className={`float float-${f.kind}`}>
-            {f.text}
-          </span>
-        ))}
-      </div>
-      {unit.kind === 'enemy' && <IntentChips unit={unit} nameOf={props.nameOf} />}
-      <div className="unit-art">
-        {unit.kind === 'player' ? (
-          <CharacterAvatar
-            appearance={unit.appearance}
-            {...artFromAbilities(unit.abilityIds)}
-            size={size}
-          />
-        ) : (
-          <EnemyAvatar enemyDefId={unit.enemyDefId} size={size} />
-        )}
-      </div>
-      <div className="unit-info">
-        <span className="unit-name">
-          {unit.name}
-          {unit.left && <em className="left-tag"> (left)</em>}
-        </span>
-        <Bar value={unit.hp} max={unit.maxHp} kind="hp" />
-        <StatusChips unit={unit} />
-        {unit.kind === 'player' && unit.maxMana > 0 && (
-          <Bar value={unit.mana} max={unit.maxMana} kind="mana" />
-        )}
-        {unit.kind === 'player' && (
-          <span className="focus-pips" aria-label={`${unit.focus} Focus`}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <i key={i} data-on={i < unit.focus} />
-            ))}
-          </span>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function Formation(props: {
-  columnMode: boolean;
-  nameOf: (id: string) => string;
-  side: 'party' | 'enemies';
-  units: CombatantView[];
-  activeId: string | null;
-  targetIds: Set<string>;
-  swapSlots: Set<number> | null;
-  fx: CombatFx;
-  onTarget: (u: CombatantView) => void;
-  onSlot: (slot: number) => void;
-}) {
-  // D38: 3 columns × 2 lines per side. Party: back column far left, front
-  // column near the centre; enemies mirrored.
-  const rows =
-    props.side === 'party'
-      ? [
-          [4, 5],
-          [2, 3],
-          [0, 1],
-        ]
-      : [
-          [0, 1],
-          [2, 3],
-          [4, 5],
-        ];
-  return (
-    <div className={`formation formation-${props.side}${props.columnMode ? ' col-mode' : ''}`}>
-      {rows.map((slots, ri) => (
-        <div
-          className="formation-column"
-          key={ri}
-          data-column={['front', 'mid', 'back'][Math.floor(slots[0]! / 2)]}
-        >
-          {slots.map((slot) => {
-            const unit = props.units.find((u) => u.slot === slot);
-            const swappable = props.swapSlots?.has(slot) ?? false;
-            return (
-              <div className={`cell cell-line-${slot % 2}`} key={slot} data-slot={slot}>
-                {unit ? (
-                  <Unit
-                    nameOf={props.nameOf}
-                    unit={unit}
-                    active={unit.id === props.activeId}
-                    targetable={props.targetIds.has(unit.id) || swappable}
-                    fx={props.fx}
-                    onClick={() => (swappable ? props.onSlot(slot) : props.onTarget(unit))}
-                  />
-                ) : swappable ? (
-                  <button
-                    type="button"
-                    className="empty-slot"
-                    onClick={() => props.onSlot(slot)}
-                    aria-label={`Move to slot ${slot + 1}`}
-                  >
-                    Move here
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function EndOverlay({ run }: { run: RunDto }) {
@@ -262,7 +35,7 @@ function EndOverlay({ run }: { run: RunDto }) {
               Reputation <strong>+{run.rewards.reputation}</strong>
             </p>
             {run.rewards.items.map((i) => (
-              <p key={i.id} style={{ margin: '4px 0 0' }}>
+              <p key={i.id} style={{ margin: '0.25rem 0 0' }}>
                 Loot: <strong>{i.name}</strong>
               </p>
             ))}
@@ -276,7 +49,7 @@ function EndOverlay({ run }: { run: RunDto }) {
             {run.penalty.damaged.map((d) => (
               <p
                 key={d.id}
-                style={{ margin: '4px 0 0', color: d.broken ? 'var(--danger)' : undefined }}
+                style={{ margin: '0.25rem 0 0', color: d.broken ? 'var(--danger)' : undefined }}
               >
                 {d.name}: quality {d.quality}
                 {d.broken ? ' — broken!' : ''}
@@ -297,13 +70,43 @@ function EndOverlay({ run }: { run: RunDto }) {
   );
 }
 
+/**
+ * Keeps the screen in step with the canvas replay. Computed during render
+ * (not in an effect), so new results never flash up before they are played:
+ * - `pending`: some log entries have not finished playing yet;
+ * - `logUpTo`: the text log shows entries up to this seq;
+ * - `enemiesActing`: the replay includes enemy actions (controls wait).
+ */
+function useReplayState(combat: CombatView | undefined) {
+  const [played, setPlayed] = useState<number | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const onProgress = useCallback((seq: number) => setProgress(seq), []);
+  const onCaughtUp = useCallback((seq: number) => {
+    setPlayed((p) => (p === null ? seq : Math.max(p, seq)));
+  }, []);
+
+  const log = combat?.log ?? [];
+  const maxSeq = log.length ? log[log.length - 1]!.seq : 0;
+  const pending = played !== null && maxSeq > played;
+  const logUpTo = pending ? Math.max(played, progress ?? played) : Infinity;
+  let enemiesActing = false;
+  if (pending && combat) {
+    const enemyIds = new Set(
+      combat.combatants.filter((c) => c.side === 'enemies').map((c) => c.id),
+    );
+    enemiesActing = log.some((e) => e.seq > played && e.t === 'ability' && enemyIds.has(e.actorId));
+  }
+  return { pending, logUpTo, enemiesActing, onProgress, onCaughtUp };
+}
+
 export function CombatPage() {
   const { runId = '' } = useParams();
   const characterId = useActiveCharacter((s) => s.characterId);
   const run = useRun(runId, characterId);
   const action = useRunAction(runId, characterId);
   const [selected, setSelected] = useState<string | null>(null);
-  const fx = useCombatFx(run.data?.combat.log);
+  // While the canvas replays the last actions (e.g. the enemy phase), hold the controls.
+  const replay = useReplayState(run.data?.combat);
   const secondsLeft = useCountdown(run.data?.status === 'active' ? run.data.turnDeadline : null);
 
   // When the turn timer runs out, ask the server (it applies the timeout).
@@ -314,7 +117,7 @@ export function CombatPage() {
   const combat = run.data?.combat;
   const myId = characterId ? `p:${characterId}` : '';
   const me = combat?.combatants.find((c) => c.id === myId);
-  const myTurn = combat?.phase === 'party' && combat.activeId === myId;
+  const myTurn = !replay.enemiesActing && combat?.phase === 'party' && combat.activeId === myId;
   const ability = selected ? getAbility(selected) : undefined;
 
   const { targetIds, swapSlots } = useMemo(() => {
@@ -332,7 +135,7 @@ export function CombatPage() {
   if (!characterId) return <Navigate to="/characters" replace />;
   if (run.isPending) return <FullPageMessage>Opening the Rift…</FullPageMessage>;
   if (run.isError || !run.data || !combat)
-    return <FullPageMessage>Rift run not found.</FullPageMessage>;
+    return <FullPageMessage spinner={false}>Rift run not found.</FullPageMessage>;
   const data = run.data;
 
   const send = (a: Parameters<typeof action.mutate>[0]) => {
@@ -368,6 +171,7 @@ export function CombatPage() {
   const room = data.rooms[data.roomIndex];
   const byName = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
   const lines = combat.log
+    .filter((e) => e.seq <= replay.logUpTo)
     .map((e) => ({ seq: e.seq, text: describeLog(e, combat) }))
     .filter((l): l is { seq: number; text: string } => !!l.text)
     .slice(-40)
@@ -408,35 +212,20 @@ export function CombatPage() {
         )}
       </header>
 
-      <section className="stage" data-boss={room?.isBoss ?? false}>
-        <Formation
-          columnMode={columnMode}
-          nameOf={byName}
-          side="party"
-          units={combat.combatants.filter((c) => c.side === 'party')}
-          activeId={combat.activeId}
-          targetIds={targetIds}
-          swapSlots={swapSlots}
-          fx={fx}
-          onTarget={(u) => selected && send(targetAction(selected, u))}
-          onSlot={(slot) =>
-            selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
-          }
-        />
-        <div className="stage-gap" aria-hidden />
-        <Formation
-          columnMode={columnMode}
-          nameOf={byName}
-          side="enemies"
-          units={combat.combatants.filter((c) => c.side === 'enemies')}
-          activeId={combat.activeId}
-          targetIds={targetIds}
-          swapSlots={null}
-          fx={fx}
-          onTarget={(u) => selected && send(targetAction(selected, u))}
-          onSlot={() => {}}
-        />
-        {data.status === 'active' && combat.phase === 'room_cleared' && (
+      <CombatStage
+        onProgress={replay.onProgress}
+        onCaughtUp={replay.onCaughtUp}
+        combat={combat}
+        boss={room?.isBoss ?? false}
+        targetIds={targetIds}
+        swapSlots={swapSlots}
+        columnMode={columnMode}
+        onTarget={(u) => selected && send(targetAction(selected, u))}
+        onSlot={(slot) =>
+          selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
+        }
+      >
+        {!replay.pending && data.status === 'active' && combat.phase === 'room_cleared' && (
           <div className="combat-overlay">
             <div className="panel stack end-card">
               <h2>Room cleared</h2>
@@ -453,16 +242,19 @@ export function CombatPage() {
             </div>
           </div>
         )}
-        {data.status !== 'active' && <EndOverlay run={data} />}
-      </section>
+        {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
+        {(!replay.pending || data.status === 'abandoned') && data.status !== 'active' && (
+          <EndOverlay run={data} />
+        )}
+      </CombatStage>
 
       <footer className="combat-bottom">
         <div className="action-bar">
           <FormError error={action.error} />
           {myTurn && me ? (
             <>
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                <strong>Your turn</strong>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <strong className="your-turn">Your turn</strong>
                 <span className="muted">
                   Focus <strong data-testid="my-focus">{me.focus}</strong> · Mana {me.mana}
                 </span>
@@ -513,7 +305,7 @@ export function CombatPage() {
             <span className="muted" data-testid="waiting">
               {data.status !== 'active'
                 ? ''
-                : combat.phase === 'enemies'
+                : combat.phase === 'enemies' || replay.enemiesActing
                   ? 'The enemies are acting…'
                   : combat.phase === 'room_cleared'
                     ? 'Room cleared.'

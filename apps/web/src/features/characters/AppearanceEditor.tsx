@@ -9,13 +9,6 @@ import {
 } from '@realms/shared';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 
-const label = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: 'var(--text-muted)',
-  marginBottom: 4,
-} as const;
-
 function ColorRow<T extends string>(props: {
   name: string;
   options: readonly T[];
@@ -23,8 +16,8 @@ function ColorRow<T extends string>(props: {
   onChange: (v: T) => void;
 }) {
   return (
-    <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-      <legend style={label}>{props.name}</legend>
+    <fieldset className="field">
+      <legend className="legend">{props.name}</legend>
       <div className="swatches">
         {props.options.map((c) => (
           <button
@@ -53,9 +46,9 @@ export function AppearanceEditor({
   const set = <K extends keyof AppearanceV2>(k: K, v: AppearanceV2[K]) =>
     onChange({ ...value, [k]: v });
   return (
-    <div className="stack" style={{ gap: 12 }}>
-      <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend style={label}>Hair style</legend>
+    <div className="stack" style={{ gap: '0.9rem' }}>
+      <fieldset className="field">
+        <legend className="legend">Hair style</legend>
         <div className="swatches">
           {HAIR_STYLES.map((h) => (
             <button
@@ -76,9 +69,9 @@ export function AppearanceEditor({
           ))}
         </div>
       </fieldset>
-      <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend style={label}>Body</legend>
-        <div className="row" style={{ gap: 8 }}>
+      <fieldset className="field">
+        <legend className="legend">Body</legend>
+        <div className="row" style={{ gap: '0.5rem' }}>
           {BODY_TYPES.map((b) => (
             <button
               key={b}

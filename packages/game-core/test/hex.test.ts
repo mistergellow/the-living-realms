@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { hex, hexDistance, hexesInRange, hexNeighbors, hexToPixel } from '../src/hex.js';
+import {
+  hex,
+  hexDistance,
+  hexesInRange,
+  hexNeighbors,
+  hexToPixel,
+  pixelToHex,
+} from '../src/hex.js';
 
 describe('hex grid', () => {
   it('computes distance in axial coordinates', () => {
@@ -25,5 +32,14 @@ describe('hex grid', () => {
 
   it('maps the origin to pixel (0,0)', () => {
     expect(hexToPixel(hex(0, 0), 10)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('converts pixels back to the hex that contains them', () => {
+    for (const h of hexesInRange(hex(2, -3), 4)) {
+      const { x, y } = hexToPixel(h, 34);
+      expect(pixelToHex(x, y, 34)).toEqual(h);
+      // A point well inside the hex (not on an edge) still maps to it.
+      expect(pixelToHex(x + 10, y - 8, 34)).toEqual(h);
+    }
   });
 });

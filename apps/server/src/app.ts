@@ -7,7 +7,8 @@ import { ErrorCode } from '@realms/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { AppContext, AppDeps } from './context.js';
 import { registerErrorHandler } from './lib/errors.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
@@ -92,7 +93,7 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   await app.register(realtimeRoutes, { gateway, allowedOrigins: config.WEB_ORIGIN });
 
   // Optional: serve the built SPA from the same origin (single-container deploys).
-  const webDist = config.WEB_DIST_DIR ? resolve(config.WEB_DIST_DIR) : undefined;
+  const webDist = findWebDist(config.WEB_DIST_DIR, config.NODE_ENV);
   if (webDist && existsSync(webDist)) {
     await app.register(fastifyStatic, { root: webDist, wildcard: false });
   }
@@ -108,4 +109,18 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   app.addHook('onClose', async () => gateway.stop());
   await gateway.start();
   return { app, gateway, ctx };
+}
+
+/**
+ * The built SPA: `WEB_DIST_DIR` (Docker image), or — in production only — the
+ * repository's `apps/web/dist`, for hosts that build the repo themselves and run
+ * `pnpm start` (e.g. Railway without the Dockerfile, request #26).
+ */
+function findWebDist(configured: string | undefined, nodeEnv: string): string | undefined {
+  if (configured) return resolve(configured);
+  if (nodeEnv !== 'production') return undefined;
+  const here = dirname(fileURLToPath(import.meta.url));
+  return [resolve(here, '../../web/dist'), resolve(process.cwd(), 'apps/web/dist')].find((d) =>
+    existsSync(join(d, 'index.html')),
+  );
 }

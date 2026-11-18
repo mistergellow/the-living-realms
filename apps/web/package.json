@@ -11,9 +11,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/alegreya-sans": "5.3.0",
+    "@fontsource/cinzel": "5.3.0",
     "@realms/game-core": "workspace:*",
     "@realms/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.0",
+    "pixi.js": "~8.22.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.9.0",

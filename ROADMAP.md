@@ -49,7 +49,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **Column attacks (D41/D42):** attacks pick a column and hit both units; enemies play the formation (Rift Bulwark shields its column); rebalanced with `pnpm sim`
 - [x] **Formation fix (D38):** 3 columns (front, mid, back) × 2 lines per side, column-based reach and areas
 - [x] **M3 done:** friends (requests by character name, online status); lobbies up to 6 (public or invite-only, invites to friends, formation slots, ready check, kick, leader hand-over, leader starts for everyone); group combat (initiative across players, leaving penalises only the leaver); live refresh by polling
-- Separate combat screen and renderer (`/combat/:id`)
+- [x] Combat screen rendered with PixiJS (animated stage, layered characters, projectiles, effects; ADR-029)
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 
@@ -62,7 +62,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - `map_regions` / `map_hexes` tables, a map seeding/import tool
 - Movement intents (server-validated pathing and AP cost), position broadcast
 - Area-of-interest: clients receive only nearby activity
-- Map rendering: terrain, fog of war (if desired), panning/zoom
+- [x] Map rendered with PixiJS: pan (drag, keys), zoom (wheel, pinch, buttons), recenter (ADR-029)
+- Map rendering: terrain, fog of war (if desired)
 
 ## Phase 5 — Social layer and reputation ⏳ ❓
 

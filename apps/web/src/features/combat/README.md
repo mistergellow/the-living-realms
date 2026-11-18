@@ -1,8 +1,8 @@
-# Combat (reserved — not implemented in phase 1)
+# Combat (reserved)
 
-Turn-based strategic combat will live in this feature folder with its **own
-route (`/combat/:id`) and its own renderer** (planned: PixiJS on a canvas),
-completely separate from the exploration UI in `features/world`.
+The combat screen lives in `features/rifts` (`CombatPage.tsx`, `CombatStage.tsx`)
+and is drawn with PixiJS (`combat-scene.ts`, ADR-029). Shared canvas
+infrastructure is in `features/render`.
 
-The server will host each fight as an independent _combat instance_; see
-ARCHITECTURE.md → "Combat instances".
+This folder is reserved for combat UI that is not tied to Rifts (e.g. PvP,
+later). See ARCHITECTURE.md → "Combat instances".

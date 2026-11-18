@@ -2,6 +2,7 @@ import type { LobbyMemberDto } from '@realms/shared';
 import { useEffect } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
+import { Screen } from '../../shared/ui/Screen';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { useActiveCharacter } from '../characters/active-character';
@@ -94,8 +95,8 @@ export function LobbyPage() {
   };
 
   return (
-    <main className="page" style={{ maxWidth: 1000 }}>
-      <header className="page-header">
+    <Screen>
+      <header className="topbar">
         <div>
           <h1>{l.riftName}</h1>
           <span className="muted">
@@ -112,91 +113,95 @@ export function LobbyPage() {
           Leave lobby
         </button>
       </header>
-      <FormError error={err} />
-      <p className="muted" style={{ marginTop: -8 }}>
-        Click an empty slot to move there, or a taken one to swap. Difficulty does not change with
-        the number of players.
-      </p>
-
-      <section className="panel lobby-formation" data-testid="lobby-formation">
-        {COLUMNS.map((c) => (
-          <div key={c.label} className="lobby-column">
-            <div className="panel-title">{c.label}</div>
-            {c.slots.map((slot) => {
-              const occupant = l.members.find((m) => m.slot === slot);
-              if (occupant && occupant.characterId !== characterId)
-                return (
-                  <div
-                    key={slot}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => !busy && actions.slot.mutate({ lobbyId: l.id, slot })}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && actions.slot.mutate({ lobbyId: l.id, slot })
-                    }
-                    title="Swap places"
-                  >
-                    {cell(slot)}
-                  </div>
-                );
-              return cell(slot);
-            })}
-          </div>
-        ))}
-        <div className="lobby-enemy-side" aria-hidden>
-          <div className="rift-portal" />
-        </div>
-      </section>
-
-      <div className="row" style={{ margin: '16px 0', flexWrap: 'wrap' }}>
-        {me && !isLeader && (
-          <button
-            className={me.ready ? 'btn' : 'btn btn-primary'}
-            disabled={busy}
-            onClick={() => actions.ready.mutate({ lobbyId: l.id, ready: !me.ready })}
-          >
-            {me.ready ? 'Not ready' : "I'm ready"}
-          </button>
-        )}
-        {isLeader && (
-          <button
-            className="btn btn-primary"
-            disabled={busy || !allReady}
-            onClick={() => actions.start.mutate(l.id)}
-          >
-            {allReady ? 'Enter the Rift' : 'Waiting for everyone to be ready…'}
-          </button>
-        )}
-      </div>
-
-      <section className="panel">
-        <div className="panel-title">Invite friends</div>
-        {inviteable.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>
-            No friends to invite. <Link to="/friends">Add friends</Link>
+      <main className="screen-body">
+        <div className="contain stack" style={{ maxWidth: '64rem' }}>
+          <FormError error={err} />
+          <p className="muted" style={{ marginTop: -8 }}>
+            Click an empty slot to move there, or a taken one to swap. Difficulty does not change
+            with the number of players.
           </p>
-        ) : (
-          <ul className="friend-list">
-            {inviteable.map((f) => (
-              <li key={f.characterId} className="friend-row">
-                <CharacterToken appearance={f.appearance} size={32} />
-                <span style={{ flex: 1 }}>
-                  {f.name} <span className="muted">· {f.online ? 'online' : 'offline'}</span>
-                </span>
-                <button
-                  className="btn btn-sm"
-                  disabled={busy}
-                  onClick={() =>
-                    actions.invite.mutate({ lobbyId: l.id, friendCharacterId: f.characterId })
-                  }
-                >
-                  Invite
-                </button>
-              </li>
+
+          <section className="panel lobby-formation" data-testid="lobby-formation">
+            {COLUMNS.map((c) => (
+              <div key={c.label} className="lobby-column">
+                <div className="panel-title">{c.label}</div>
+                {c.slots.map((slot) => {
+                  const occupant = l.members.find((m) => m.slot === slot);
+                  if (occupant && occupant.characterId !== characterId)
+                    return (
+                      <div
+                        key={slot}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => !busy && actions.slot.mutate({ lobbyId: l.id, slot })}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && actions.slot.mutate({ lobbyId: l.id, slot })
+                        }
+                        title="Swap places"
+                      >
+                        {cell(slot)}
+                      </div>
+                    );
+                  return cell(slot);
+                })}
+              </div>
             ))}
-          </ul>
-        )}
-      </section>
-    </main>
+            <div className="lobby-enemy-side" aria-hidden>
+              <div className="rift-portal" />
+            </div>
+          </section>
+
+          <div className="row" style={{ margin: '16px 0', flexWrap: 'wrap' }}>
+            {me && !isLeader && (
+              <button
+                className={me.ready ? 'btn' : 'btn btn-primary'}
+                disabled={busy}
+                onClick={() => actions.ready.mutate({ lobbyId: l.id, ready: !me.ready })}
+              >
+                {me.ready ? 'Not ready' : "I'm ready"}
+              </button>
+            )}
+            {isLeader && (
+              <button
+                className="btn btn-primary"
+                disabled={busy || !allReady}
+                onClick={() => actions.start.mutate(l.id)}
+              >
+                {allReady ? 'Enter the Rift' : 'Waiting for everyone to be ready…'}
+              </button>
+            )}
+          </div>
+
+          <section className="panel">
+            <div className="panel-title">Invite friends</div>
+            {inviteable.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>
+                No friends to invite. <Link to="/friends">Add friends</Link>
+              </p>
+            ) : (
+              <ul className="friend-list">
+                {inviteable.map((f) => (
+                  <li key={f.characterId} className="friend-row">
+                    <CharacterToken appearance={f.appearance} size={32} />
+                    <span style={{ flex: 1 }}>
+                      {f.name} <span className="muted">· {f.online ? 'online' : 'offline'}</span>
+                    </span>
+                    <button
+                      className="btn btn-sm"
+                      disabled={busy}
+                      onClick={() =>
+                        actions.invite.mutate({ lobbyId: l.id, friendCharacterId: f.characterId })
+                      }
+                    >
+                      Invite
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </main>
+    </Screen>
   );
 }

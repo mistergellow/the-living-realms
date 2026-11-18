@@ -76,6 +76,9 @@ test('players see each other in real time', async ({ browser }) => {
 
   await b.close();
   await expect(a.getByTestId('player-list')).not.toContainText(nameB);
+  // Close it: an open world page keeps its canvas map rendering during later tests.
+  await a.context().close();
+  await b.context().close();
 });
 
 test('one active character per account: a second tab takes over', async ({ browser }) => {
@@ -86,11 +89,12 @@ test('one active character per account: a second tab takes over', async ({ brows
 
   const second = await context.newPage();
   await second.goto('/characters');
-  await second.getByRole('button', { name: 'Play' }).click();
+  await second.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(second.getByTestId('connection-status')).toContainText('Online');
 
   await expect(first.getByRole('heading', { name: 'Playing elsewhere' })).toBeVisible();
   await first.screenshot({ path: 'test-results/screens/04-replaced.png' });
+  await context.close(); // stop the canvas map rendering in these pages
 });
 
 test('character system: attributes, starting weapon, sheet and equipment', async ({ page }) => {
@@ -167,7 +171,8 @@ test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) 
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
 
   await page.getByRole('button', { name: 'End turn' }).click();
-  await expect(page.getByTestId('combat-log')).toContainText('Round 2');
+  // The enemy phase plays out on the canvas first (the text log keeps pace with it).
+  await expect(page.getByTestId('combat-log')).toContainText('Round 2', { timeout: 20_000 });
 
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Abandon' }).click();
@@ -233,4 +238,71 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
     timeout: 10_000,
   });
   await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`);
+});
+
+/** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */
+const VIEWPORTS = [
+  { name: 'phone', width: 390, height: 844 },
+  { name: 'tablet', width: 820, height: 1180 },
+  { name: 'laptop', width: 1366, height: 768 },
+  { name: 'fullhd', width: 1920, height: 1080 },
+  { name: 'ultrawide', width: 3440, height: 1440 },
+  { name: '4k', width: 3840, height: 2160 },
+];
+
+/** The page itself must never scroll or overflow: screens fit the viewport. */
+async function expectFitsViewport(page: Page) {
+  const box = await page.evaluate(() => ({
+    sw: document.documentElement.scrollWidth,
+    sh: document.documentElement.scrollHeight,
+    w: window.innerWidth,
+    h: window.innerHeight,
+  }));
+  expect(box.sw).toBeLessThanOrEqual(box.w);
+  expect(box.sh).toBeLessThanOrEqual(box.h);
+}
+
+test('screens fit every screen size', async ({ page }) => {
+  test.setTimeout(300_000); // 36 screenshots up to 4K, canvas rendered in software on CI
+  await register(page, `e2e-sizes-${unique()}@example.com`);
+  const name = randomName('Vista');
+  await createCharacter(page, name);
+  await expect(page.getByTestId('connection-status')).toContainText('Online');
+  const characterUrl = await page.getByRole('link', { name: 'Character' }).getAttribute('href');
+
+  const screens: Array<[string, () => Promise<unknown>]> = [
+    ['world', () => expect(page.getByTestId('self-name')).toHaveText(name)],
+    ['select', () => expect(page.getByTestId('character-card')).toContainText(name)],
+    ['create', () => expect(page.getByLabel('Name')).toBeVisible()],
+    ['sheet', () => expect(page.getByTestId('sheet-name')).toHaveText(name)],
+    ['rifts', () => expect(page.getByTestId('rift-card').first()).toBeVisible()],
+  ];
+  const paths: Record<string, string> = {
+    world: '/world',
+    select: '/characters',
+    create: '/characters/new',
+    sheet: characterUrl!,
+    rifts: '/rifts',
+  };
+
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    for (const [screen, ready] of screens) {
+      await page.goto(paths[screen]!);
+      await ready();
+      await expectFitsViewport(page);
+      await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-${screen}.png` });
+    }
+  }
+
+  // Combat screen at every size (one run, re-rendered per viewport).
+  await page.goto('/rifts');
+  await page.getByRole('button', { name: 'Enter solo' }).click();
+  await expect(page.getByText('Your turn')).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await expect(page.getByTestId('unit-enemies').first()).toBeVisible();
+    await expectFitsViewport(page);
+    await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-combat.png` });
+  }
 });

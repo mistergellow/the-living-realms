@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
+import { Icon } from '../../shared/ui/Icon';
+import { Screen } from '../../shared/ui/Screen';
 import { useLogout, useMe } from '../auth/api';
+import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { useActiveCharacter } from './active-character';
 import { useCharacters, useDeleteCharacter } from './api';
 import { CharacterToken } from './CharacterToken';
 
+/** Hero select: the focused character stands on a pedestal, the roster sits below. */
 export function CharacterSelectPage() {
   const me = useMe();
   const characters = useCharacters();
@@ -12,6 +17,7 @@ export function CharacterSelectPage() {
   const logout = useLogout();
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   const play = (id: string) => {
     select(id);
@@ -20,80 +26,123 @@ export function CharacterSelectPage() {
 
   const list = characters.data?.characters ?? [];
   const limit = characters.data?.limit ?? 0;
+  // Default focus: the most recently played character.
+  const lastPlayed = [...list].sort((a, b) =>
+    (b.lastPlayedAt ?? '').localeCompare(a.lastPlayedAt ?? ''),
+  )[0];
+  const focused = list.find((c) => c.id === focusId) ?? lastPlayed;
 
   return (
-    <main className="page">
-      <header className="page-header">
-        <h1>Your characters</h1>
+    <Screen>
+      <header className="topbar">
+        <span className="logo">The Living Realms</span>
         <span className="spacer" />
-        <span className="muted">{me.data?.email}</span>
+        <span className="muted" style={{ fontSize: '0.85rem' }}>
+          {me.data?.email}
+        </span>
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login') })}
         >
+          <Icon name="exit" />
           Log out
         </button>
       </header>
 
-      <FormError error={characters.error ?? del.error} />
-      {characters.isPending ? (
-        <p className="muted">Loading characters…</p>
-      ) : list.length === 0 ? (
-        <div className="panel stack" style={{ alignItems: 'flex-start' }}>
-          <p style={{ margin: 0 }}>You have no characters yet. Create one to enter the world.</p>
-          <Link className="btn btn-primary" to="/characters/new">
-            Create character
-          </Link>
-        </div>
-      ) : (
-        <div className="stack">
-          <div className="char-grid">
-            {list.map((c) => (
-              <article key={c.id} className="panel" data-testid="character-card">
-                <div className="char-card">
-                  <CharacterToken appearance={c.appearance} size={48} title={c.name} />
-                  <div>
-                    <div className="name">{c.name}</div>
-                    <div className="meta">
-                      {c.lastPlayedAt
-                        ? `Last played ${new Date(c.lastPlayedAt).toLocaleString()}`
-                        : 'Never played'}
-                    </div>
-                  </div>
+      <main className="select-body">
+        <section className="select-stage">
+          <div className="stack" style={{ alignItems: 'center', width: '100%' }}>
+            <FormError error={characters.error ?? del.error} />
+            {characters.isPending ? (
+              <div className="loading">
+                <span className="rune-spinner" aria-hidden />
+                Loading characters…
+              </div>
+            ) : !focused ? (
+              <div className="panel stack" style={{ alignItems: 'center', textAlign: 'center' }}>
+                <h2>No heroes yet</h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  You have no characters yet. Create one to enter the world.
+                </p>
+                <Link className="btn btn-primary btn-lg" to="/characters/new">
+                  Create character
+                </Link>
+              </div>
+            ) : (
+              <div className="select-hero">
+                <div className="pedestal">
+                  <CharacterAvatar
+                    appearance={focused.appearance}
+                    size={300}
+                    title={focused.name}
+                  />
                 </div>
-                <div className="char-card-actions">
-                  <button className="btn btn-primary btn-sm" onClick={() => play(c.id)}>
+                <h2 className="logo">{focused.name}</h2>
+                <span className="muted">
+                  {focused.lastPlayedAt
+                    ? `Last played ${new Date(focused.lastPlayedAt).toLocaleString()}`
+                    : 'Never played'}
+                </span>
+                <div className="select-actions">
+                  <button className="btn btn-primary btn-lg" onClick={() => play(focused.id)}>
                     Play
                   </button>
-                  <Link className="btn btn-sm" to={`/characters/${c.id}`}>
+                </div>
+                <div className="select-actions">
+                  <Link className="btn btn-sm" to={`/characters/${focused.id}`}>
+                    <Icon name="scroll" />
                     Sheet
                   </Link>
                   <button
                     className="btn btn-ghost btn-sm btn-danger"
                     disabled={del.isPending}
                     onClick={() => {
-                      if (confirm(`Delete ${c.name}? This cannot be undone.`)) del.mutate(c.id);
+                      if (confirm(`Delete ${focused.name}? This cannot be undone.`))
+                        del.mutate(focused.id, { onSuccess: () => setFocusId(null) });
                     }}
                   >
+                    <Icon name="trash" />
                     Delete
                   </button>
                 </div>
-              </article>
-            ))}
+              </div>
+            )}
           </div>
-          <div className="row">
-            <span className="muted">
-              {list.length} / {limit} characters
-            </span>
-            <span className="spacer" />
+        </section>
+
+        {list.length > 0 && (
+          <nav className="roster" aria-label="Your characters">
+            {list.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="roster-card"
+                data-testid="character-card"
+                aria-pressed={c.id === focused?.id}
+                onClick={() => setFocusId(c.id)}
+                onDoubleClick={() => play(c.id)}
+              >
+                <CharacterToken appearance={c.appearance} size={64} title={c.name} />
+                <span className="name">{c.name}</span>
+                <span className="meta">
+                  {c.lastPlayedAt ? new Date(c.lastPlayedAt).toLocaleDateString() : 'New'}
+                </span>
+              </button>
+            ))}
             {list.length < limit && (
-              <Link className="btn" to="/characters/new">
+              <Link className="roster-card roster-new" to="/characters/new">
+                <span className="plus" aria-hidden>
+                  +
+                </span>
                 New character
               </Link>
             )}
-          </div>
-        </div>
-      )}
-    </main>
+            <span className="roster-count">
+              {list.length} / {limit}
+            </span>
+          </nav>
+        )}
+      </main>
+    </Screen>
   );
 }

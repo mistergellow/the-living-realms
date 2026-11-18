@@ -69,3 +69,25 @@ export function hexCorners(size: number): Array<{ x: number; y: number }> {
     return { x: size * Math.cos(angle), y: size * Math.sin(angle) };
   });
 }
+
+/** Round fractional axial coordinates to the nearest hex (cube rounding). */
+export function hexRound(q: number, r: number): HexCoord {
+  const s = -q - r;
+  let rq = Math.round(q);
+  let rr = Math.round(r);
+  const rs = Math.round(s);
+  const dq = Math.abs(rq - q);
+  const dr = Math.abs(rr - r);
+  const ds = Math.abs(rs - s);
+  if (dq > dr && dq > ds) rq = -rr - rs;
+  else if (dr > ds) rr = -rq - rs;
+  // Avoid -0 so keys and equality stay clean.
+  return { q: rq + 0, r: rr + 0 };
+}
+
+/** Hex containing a pixel point (inverse of `hexToPixel`, pointy-top). */
+export function pixelToHex(x: number, y: number, size: number): HexCoord {
+  const q = ((Math.sqrt(3) / 3) * x - y / 3) / size;
+  const r = ((2 / 3) * y) / size;
+  return hexRound(q, r);
+}

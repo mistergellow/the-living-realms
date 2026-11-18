@@ -1,9 +1,22 @@
 import type { ReactNode } from 'react';
+import { Screen } from './Screen';
 
-export function FullPageMessage({ children }: { children: ReactNode }) {
+/** Full-screen loading / status message. Pass `spinner={false}` for static messages. */
+export function FullPageMessage({
+  children,
+  spinner = true,
+}: {
+  children: ReactNode;
+  spinner?: boolean;
+}) {
   return (
-    <div className="centered">
-      <div className="muted">{children}</div>
-    </div>
+    <Screen>
+      <div className="centered">
+        <div className="loading" role="status">
+          {spinner && <span className="rune-spinner" aria-hidden />}
+          <div>{children}</div>
+        </div>
+      </div>
+    </Screen>
   );
 }
