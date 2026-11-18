@@ -357,3 +357,9 @@ conforme a dificuldade do Rift.
 - Simulador guardado no projeto: `pnpm sim` (`scripts/simulate-balance.ts`).
 - Testes: 42 unitários no game-core, 58 de integração, 7 e2e.
 - Docs: CHANGE_MAP, ARCHITECTURE §7, ADR-028, ROADMAP, CLAUDE.md.
+
+### #25 — 2026-11-18 — "Dá full commit para eu experimentar"
+
+**Pedido:** garantir que tudo está commitado para testar.
+**Resultado:** confirmado: sem alterações pendentes; `main` no GitHub = commit
+`7d8fa39` (ataques por coluna) com CI verde. O Railway publica a partir do `main`.
