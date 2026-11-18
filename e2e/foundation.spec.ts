@@ -76,6 +76,9 @@ test('players see each other in real time', async ({ browser }) => {
 
   await b.close();
   await expect(a.getByTestId('player-list')).not.toContainText(nameB);
+  // Close it: an open world page keeps its canvas map rendering during later tests.
+  await a.context().close();
+  await b.context().close();
 });
 
 test('one active character per account: a second tab takes over', async ({ browser }) => {
@@ -91,6 +94,7 @@ test('one active character per account: a second tab takes over', async ({ brows
 
   await expect(first.getByRole('heading', { name: 'Playing elsewhere' })).toBeVisible();
   await first.screenshot({ path: 'test-results/screens/04-replaced.png' });
+  await context.close(); // stop the canvas map rendering in these pages
 });
 
 test('character system: point-buy, starting weapon, sheet and equipment', async ({ page }) => {
@@ -155,8 +159,10 @@ test('Rift combat: enter solo, attack, end turn, abandon', async ({ page }) => {
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
 
   await page.getByRole('button', { name: 'End turn' }).click();
-  await expect(page.getByTestId('combat-log')).toContainText('Round 2');
-  await expect(page.getByTestId('my-focus')).toHaveText('5'); // 2 carried over + 3
+  // The enemy phase plays out on the canvas first (the text log keeps pace with it);
+  // the controls come back when it is over.
+  await expect(page.getByTestId('combat-log')).toContainText('Round 2', { timeout: 20_000 });
+  await expect(page.getByTestId('my-focus')).toHaveText('5', { timeout: 20_000 }); // 2 carried over + 3
 
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Abandon' }).click();

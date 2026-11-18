@@ -375,43 +375,42 @@ a {
   padding: var(--space-4);
 }
 .hex-map {
-  width: 100%;
-  height: 100%;
-  display: block;
+  position: absolute;
+  inset: 0;
   user-select: none;
 }
-.hex-map .hex {
-  fill: var(--hex-fill);
-  stroke: var(--hex-stroke);
-  stroke-width: 1.5;
-  cursor: pointer;
-  transition: fill 0.1s;
+.hex-map-canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  outline: none;
 }
-.hex-map .hex:hover {
-  fill: var(--hex-hover);
+.hex-map-canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
-.hex-map .hex[data-selected='true'] {
-  fill: var(--hex-selected);
-  stroke: var(--accent);
+.hex-map-canvas canvas {
+  display: block;
 }
-.hex-map .hex[data-self='true'] {
-  stroke: var(--accent);
-  stroke-width: 2.5;
+.hex-map-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  text-align: center;
 }
-.hex-map .coord {
-  fill: var(--text-faint);
-  font-size: 9px;
-  font-family: var(--font-mono);
-  pointer-events: none;
+.map-controls {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
-.hex-map .badge {
-  fill: var(--accent);
-}
-.hex-map .badge-text {
-  fill: var(--accent-ink);
-  font-size: 10px;
-  font-weight: 700;
-  pointer-events: none;
+.map-controls .btn {
+  min-width: 34px;
+  font-size: 16px;
+  line-height: 1;
 }
 .map-legend {
   position: absolute;

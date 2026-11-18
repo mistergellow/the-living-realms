@@ -246,16 +246,22 @@ Combat is separate from exploration on both sides:
   runs; lobbies (M3) add WebSocket push and a worker sweep.
 - **Transport:** HTTP for actions in M2 (request → updated run). M3 adds a
   `combat:<runId>` bus channel to push updates to every participant.
-- **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and side-view
-  stage (`features/rifts`). Animations are derived from new combat log entries
-  (`useCombatFx`): the actor lunges, targets flash, numbers float.
-- **Art:** layered SVG characters (`features/avatar`) — provisional, see ADR-021.
+- **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and a side-view
+  stage drawn with PixiJS (`features/rifts/combat-scene.ts`, ADR-023). New
+  combat log entries become animation steps (`combat-timeline.ts`) played one
+  action at a time; the text log, the controls during enemy actions and the
+  result overlays wait for the replay. Clicks go to DOM buttons placed over
+  the canvas from the same layout (`combat-layout.ts`, `CombatStage.tsx`).
+- **Art:** layered SVG characters (`features/avatar`) — provisional, see
+  ADR-021 — rasterised into Pixi textures per layer (`features/render`).
 
 ## 8. World map
 
 Hexagonal grid, **axial coordinates (q, r)**, pointy-top. Utilities live in
 `packages/game-core/src/hex.ts` (distance, neighbours, ranges, pixel
-conversion). Characters store `hex_q`, `hex_r`. Movement cost in Action Points
+conversion, `pixelToHex` for picking). Characters store `hex_q`, `hex_r`.
+The client draws the map with PixiJS (`features/world/map-scene.ts`; camera
+maths in `map-camera.ts`): drag to pan, wheel/pinch/buttons/keys to zoom. Movement cost in Action Points
 per hex, terrain, pathfinding and fog of war are later-phase mechanics built on
 these utilities. The map tiles themselves will live in a `map_hexes` table (see
 DATABASE.md).
@@ -274,6 +280,10 @@ DATABASE.md).
 - **Structure:** feature folders (`features/auth`, `characters`, `world`,
   `combat`), shared UI primitives in `shared/ui`, infrastructure in `lib`
   (`api.ts`, `realtime.ts` with automatic reconnection and backoff).
+- **Rendering:** menus, panels and forms are React DOM. The world map and the
+  combat stage are PixiJS canvases (ADR-023), loaded lazily, with shared
+  infrastructure in `features/render` (`usePixiScene`, SVG → texture). Input
+  for combat stays on DOM buttons over the canvas (accessibility, tests).
 - **Validation** reuses the server's schemas and rules (`@realms/shared`,
   `@realms/game-core`) for instant feedback; the server re-validates everything.
 - All player-facing text is English.

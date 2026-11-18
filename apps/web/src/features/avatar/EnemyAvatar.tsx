@@ -104,9 +104,12 @@ export function EnemyAvatar({
   size = 160,
   title,
   className,
+  shadow = true,
 }: {
   enemyDefId: string | null;
   size?: number;
+  /** Ground shadow (the canvas renderer draws its own). */
+  shadow?: boolean;
   title?: string;
   className?: string;
 }) {
@@ -121,7 +124,7 @@ export function EnemyAvatar({
       aria-label={title ?? 'Enemy'}
     >
       {title && <title>{title}</title>}
-      <ellipse cx="60" cy="151" rx="34" ry="6" fill="rgba(0,0,0,0.4)" />
+      {shadow && <ellipse cx="60" cy="151" rx="34" ry="6" fill="rgba(0,0,0,0.4)" />}
       <g className="av-root">
         <Art />
       </g>

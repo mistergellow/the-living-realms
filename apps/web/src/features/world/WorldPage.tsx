@@ -1,6 +1,6 @@
 import { hexDistance } from '@realms/game-core';
-import type { HexCoord } from '@realms/shared';
-import { useState } from 'react';
+import type { HexCoord, PresencePlayer } from '@realms/shared';
+import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { useLogout } from '../auth/api';
@@ -26,6 +26,7 @@ export function WorldPage() {
   const navigate = useNavigate();
   const logout = useLogout();
   const [selected, setSelected] = useState<HexCoord | null>(null);
+  const [hovered, setHovered] = useState<HexCoord | null>(null);
   useWorldConnection(characterId);
 
   const { status, world, self, tick, log, lastError } = useWorldStore(
@@ -38,7 +39,8 @@ export function WorldPage() {
       lastError: s.lastError,
     })),
   );
-  const players = Object.values(useWorldStore((s) => s.players));
+  const playersById = useWorldStore((s) => s.players);
+  const players = useMemo(() => Object.values(playersById), [playersById]);
 
   if (!characterId) return <Navigate to="/characters" replace />;
   if (status === 'unauthenticated') return <Navigate to="/login" replace />;
@@ -95,6 +97,7 @@ export function WorldPage() {
             selfId={self.id}
             selected={selected}
             onSelect={setSelected}
+            onHover={setHovered}
           />
         ) : null}
         {status === 'replaced' ? (
@@ -131,17 +134,7 @@ export function WorldPage() {
         ) : null}
         {self && (
           <div className="map-legend panel" style={{ padding: '6px 10px' }}>
-            {selected ? (
-              <span>
-                Hex{' '}
-                <span className="mono">
-                  ({selected.q}, {selected.r})
-                </span>{' '}
-                · {hexDistance(self.position, selected)} away
-              </span>
-            ) : (
-              <span className="muted">Select a hex to inspect it.</span>
-            )}
+            <HexInfo hex={hovered ?? selected} from={self.position} players={players} />
           </div>
         )}
       </section>
@@ -182,5 +175,29 @@ export function WorldPage() {
         </section>
       </aside>
     </div>
+  );
+}
+
+/** One line about a hex: coordinates, distance and who is there. */
+function HexInfo({
+  hex,
+  from,
+  players,
+}: {
+  hex: HexCoord | null;
+  from: HexCoord;
+  players: PresencePlayer[];
+}) {
+  if (!hex) return <span className="muted">Select a hex to inspect it.</span>;
+  const here = players.filter((p) => p.position.q === hex.q && p.position.r === hex.r);
+  return (
+    <span data-testid="hex-info">
+      Hex{' '}
+      <span className="mono">
+        ({hex.q}, {hex.r})
+      </span>{' '}
+      · {hexDistance(from, hex)} away
+      {here.length > 0 && <> · {here.map((p) => p.name).join(', ')}</>}
+    </span>
   );
 }

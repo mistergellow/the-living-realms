@@ -1,17 +1,14 @@
 import { getAbility, validTargets, type CombatState } from '@realms/game-core';
-import type { CombatantView, RunDto } from '@realms/shared';
-import { useEffect, useMemo, useState } from 'react';
+import type { CombatView, RunDto } from '@realms/shared';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
-import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { EnemyAvatar } from '../avatar/EnemyAvatar';
-import { weaponArtFromAbilities } from '../avatar/weapon-art';
 import { useActiveCharacter } from '../characters/active-character';
 import { useRun, useRunAction } from './api';
 import { describeLog } from './combat-text';
 import './combat.css';
-import { useCombatFx, type CombatFx } from './useCombatFx';
+import { CombatStage } from './CombatStage';
 
 /** Seconds left on the current turn, refreshed every 250 ms. */
 function useCountdown(deadline: string | null): number | null {
@@ -22,139 +19,6 @@ function useCountdown(deadline: string | null): number | null {
     return () => clearInterval(id);
   }, [deadline]);
   return deadline ? Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000)) : null;
-}
-
-function Bar({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'mana' }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div className={`bar bar-${kind}`} title={`${value} / ${max}`}>
-      <span style={{ width: `${pct}%` }} />
-      <em>
-        {value}/{max}
-      </em>
-    </div>
-  );
-}
-
-function Unit(props: {
-  unit: CombatantView;
-  active: boolean;
-  targetable: boolean;
-  fx: CombatFx;
-  onClick?: () => void;
-}) {
-  const { unit, fx } = props;
-  const cls = [
-    'unit',
-    `unit-${unit.side}`,
-    unit.downed ? 'is-downed' : '',
-    props.active ? 'is-active' : '',
-    props.targetable ? 'is-targetable' : '',
-    fx.actingId === unit.id ? 'is-acting' : '',
-    fx.hitIds.has(unit.id) ? 'is-hit' : '',
-    unit.isBoss ? 'is-boss' : '',
-  ].join(' ');
-  const size = unit.isBoss ? 150 : 118;
-  return (
-    <button
-      type="button"
-      className={cls}
-      disabled={!props.targetable}
-      onClick={props.onClick}
-      data-testid={`unit-${unit.side}`}
-      aria-label={`${unit.name}${props.targetable ? ' (target)' : ''}`}
-    >
-      <div className="unit-floats">
-        {(fx.floats[unit.id] ?? []).map((f) => (
-          <span key={f.key} className={`float float-${f.kind}`}>
-            {f.text}
-          </span>
-        ))}
-      </div>
-      <div className="unit-art">
-        {unit.kind === 'player' ? (
-          <CharacterAvatar
-            appearance={unit.appearance}
-            weapon={weaponArtFromAbilities(unit.abilityIds)}
-            size={size}
-          />
-        ) : (
-          <EnemyAvatar enemyDefId={unit.enemyDefId} size={size} />
-        )}
-      </div>
-      <div className="unit-info">
-        <span className="unit-name">{unit.name}</span>
-        <Bar value={unit.hp} max={unit.maxHp} kind="hp" />
-        {unit.kind === 'player' && unit.maxMana > 0 && (
-          <Bar value={unit.mana} max={unit.maxMana} kind="mana" />
-        )}
-        {unit.kind === 'player' && (
-          <span className="focus-pips" aria-label={`${unit.focus} Focus`}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <i key={i} data-on={i < unit.focus} />
-            ))}
-          </span>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function Formation(props: {
-  side: 'party' | 'enemies';
-  units: CombatantView[];
-  activeId: string | null;
-  targetIds: Set<string>;
-  swapSlots: Set<number> | null;
-  fx: CombatFx;
-  onTarget: (u: CombatantView) => void;
-  onSlot: (slot: number) => void;
-}) {
-  // Party: back row on the far left, front row near the centre. Enemies mirrored.
-  const rows =
-    props.side === 'party'
-      ? [
-          [3, 4, 5],
-          [0, 1, 2],
-        ]
-      : [
-          [0, 1, 2],
-          [3, 4, 5],
-        ];
-  return (
-    <div className={`formation formation-${props.side}`}>
-      {rows.map((slots, ri) => (
-        <div className="formation-row" key={ri}>
-          {slots.map((slot) => {
-            const unit = props.units.find((u) => u.slot === slot);
-            const swappable = props.swapSlots?.has(slot) ?? false;
-            return (
-              <div className={`cell cell-${slot % 3}`} key={slot} data-slot={slot}>
-                {unit ? (
-                  <Unit
-                    unit={unit}
-                    active={unit.id === props.activeId}
-                    targetable={props.targetIds.has(unit.id) || swappable}
-                    fx={props.fx}
-                    onClick={() => (swappable ? props.onSlot(slot) : props.onTarget(unit))}
-                  />
-                ) : swappable ? (
-                  <button
-                    type="button"
-                    className="empty-slot"
-                    onClick={() => props.onSlot(slot)}
-                    aria-label={`Move to slot ${slot + 1}`}
-                  >
-                    Move here
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function EndOverlay({ run }: { run: RunDto }) {
@@ -206,13 +70,43 @@ function EndOverlay({ run }: { run: RunDto }) {
   );
 }
 
+/**
+ * Keeps the screen in step with the canvas replay. Computed during render
+ * (not in an effect), so new results never flash up before they are played:
+ * - `pending`: some log entries have not finished playing yet;
+ * - `logUpTo`: the text log shows entries up to this seq;
+ * - `enemiesActing`: the replay includes enemy actions (controls wait).
+ */
+function useReplayState(combat: CombatView | undefined) {
+  const [played, setPlayed] = useState<number | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const onProgress = useCallback((seq: number) => setProgress(seq), []);
+  const onCaughtUp = useCallback((seq: number) => {
+    setPlayed((p) => (p === null ? seq : Math.max(p, seq)));
+  }, []);
+
+  const log = combat?.log ?? [];
+  const maxSeq = log.length ? log[log.length - 1]!.seq : 0;
+  const pending = played !== null && maxSeq > played;
+  const logUpTo = pending ? Math.max(played, progress ?? played) : Infinity;
+  let enemiesActing = false;
+  if (pending && combat) {
+    const enemyIds = new Set(
+      combat.combatants.filter((c) => c.side === 'enemies').map((c) => c.id),
+    );
+    enemiesActing = log.some((e) => e.seq > played && e.t === 'ability' && enemyIds.has(e.actorId));
+  }
+  return { pending, logUpTo, enemiesActing, onProgress, onCaughtUp };
+}
+
 export function CombatPage() {
   const { runId = '' } = useParams();
   const characterId = useActiveCharacter((s) => s.characterId);
   const run = useRun(runId, characterId);
   const action = useRunAction(runId, characterId);
   const [selected, setSelected] = useState<string | null>(null);
-  const fx = useCombatFx(run.data?.combat.log);
+  // While the canvas replays the last actions (e.g. the enemy phase), hold the controls.
+  const replay = useReplayState(run.data?.combat);
   const secondsLeft = useCountdown(run.data?.status === 'active' ? run.data.turnDeadline : null);
 
   // When the turn timer runs out, ask the server (it applies the timeout).
@@ -223,7 +117,7 @@ export function CombatPage() {
   const combat = run.data?.combat;
   const myId = characterId ? `p:${characterId}` : '';
   const me = combat?.combatants.find((c) => c.id === myId);
-  const myTurn = combat?.phase === 'party' && combat.activeId === myId;
+  const myTurn = !replay.enemiesActing && combat?.phase === 'party' && combat.activeId === myId;
   const ability = selected ? getAbility(selected) : undefined;
 
   const { targetIds, swapSlots } = useMemo(() => {
@@ -269,6 +163,7 @@ export function CombatPage() {
   const room = data.rooms[data.roomIndex];
   const byName = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
   const lines = combat.log
+    .filter((e) => e.seq <= replay.logUpTo)
     .map((e) => ({ seq: e.seq, text: describeLog(e, combat) }))
     .filter((l): l is { seq: number; text: string } => !!l.text)
     .slice(-14)
@@ -307,35 +202,19 @@ export function CombatPage() {
         )}
       </header>
 
-      <section className="stage" data-boss={room?.isBoss ?? false}>
-        <Formation
-          side="party"
-          units={combat.combatants.filter((c) => c.side === 'party')}
-          activeId={combat.activeId}
-          targetIds={targetIds}
-          swapSlots={swapSlots}
-          fx={fx}
-          onTarget={(u) =>
-            selected && send({ type: 'ability', abilityId: selected, targetId: u.id })
-          }
-          onSlot={(slot) =>
-            selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
-          }
-        />
-        <div className="stage-gap" aria-hidden />
-        <Formation
-          side="enemies"
-          units={combat.combatants.filter((c) => c.side === 'enemies')}
-          activeId={combat.activeId}
-          targetIds={targetIds}
-          swapSlots={null}
-          fx={fx}
-          onTarget={(u) =>
-            selected && send({ type: 'ability', abilityId: selected, targetId: u.id })
-          }
-          onSlot={() => {}}
-        />
-        {data.status === 'active' && combat.phase === 'room_cleared' && (
+      <CombatStage
+        onProgress={replay.onProgress}
+        onCaughtUp={replay.onCaughtUp}
+        combat={combat}
+        boss={room?.isBoss ?? false}
+        targetIds={targetIds}
+        swapSlots={swapSlots}
+        onTarget={(u) => selected && send({ type: 'ability', abilityId: selected, targetId: u.id })}
+        onSlot={(slot) =>
+          selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
+        }
+      >
+        {!replay.pending && data.status === 'active' && combat.phase === 'room_cleared' && (
           <div className="combat-overlay">
             <div className="panel stack end-card">
               <h2>Room cleared</h2>
@@ -352,8 +231,8 @@ export function CombatPage() {
             </div>
           </div>
         )}
-        {data.status !== 'active' && <EndOverlay run={data} />}
-      </section>
+        {!replay.pending && data.status !== 'active' && <EndOverlay run={data} />}
+      </CombatStage>
 
       <footer className="combat-bottom">
         <div className="action-bar">
@@ -405,7 +284,7 @@ export function CombatPage() {
             </>
           ) : (
             <span className="muted">
-              {combat.phase === 'enemies'
+              {combat.phase === 'enemies' || replay.enemiesActing
                 ? 'The enemies are acting…'
                 : data.status === 'active'
                   ? 'Waiting…'

@@ -115,19 +115,20 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - BD: `characters.appearance` (JSONB com `version`); ao mudar a forma, **criar nova versão** e manter `normalizeAppearance` a converter as antigas
 - Arte (SVG em camadas, provisória): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
 - Inimigos: `apps/web/src/features/avatar/EnemyAvatar.tsx` (um desenho por `enemyDefId`) — **inimigo novo precisa de arte aqui**
-- Usos: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói), `HexMap.tsx` (mapa), `rifts/CombatPage.tsx` (combate)
+- Usos no DOM: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói), `rifts/CombatStage.tsx` (só sem WebGL)
+- Usos no canvas (PixiJS): `apps/web/src/features/render/avatar-textures.tsx` transforma as camadas em texturas (`part`: `base`/`weapon`/`head` + `eyesClosed`; âncoras usadas em `rifts/combat-scene.ts` → `UnitView`). **Camada nova** (ex.: equipamento) → acrescentar a `AvatarPart`, a `characterTextures` e ao `UnitView`; retrato do mapa → `portraitTexture` (`world/map-scene.ts`)
 - Presença: `PresencePlayer.appearance` (`protocol.ts`)
 - Testes: `helpers.ts` (v1, compatibilidade), `server-kit/test/presence.test.ts`, `web/test/world-state.test.ts`, `e2e` (botões "Hair style …")
 - Futuro (D32): camadas de equipamento por cima do corpo base, no mesmo `CharacterAvatar`
 
 ## Posição no mapa / hexágonos
 
-- Regras: `packages/game-core/src/hex.ts` (axial q,r, distância, vizinhos, píxeis)
+- Regras: `packages/game-core/src/hex.ts` (axial q,r, distância, vizinhos, píxeis, `pixelToHex`/`hexRound` para clicar)
 - Contrato: `HexCoord` em `packages/shared/src/api.ts`; `position` em `CharacterDto` e `PresencePlayer`
 - BD: `characters.hex_q/hex_r`, `worlds.spawn_q/spawn_r`
 - Servidor: `characters.service.ts` (spawn, `toCharacterDto`), `gateway.ts` (presença)
-- Web: `HexMap.tsx` (desenho, `SIZE`, `RADIUS`), `WorldPage.tsx` (seleção, distância)
-- Testes: `game-core/test/hex.test.ts`, `characters.test.ts` (posição inicial)
+- Web: `apps/web/src/features/world/map-scene.ts` (desenho em PixiJS: `HEX_SIZE`, `GRID_RADIUS`, cores, tokens, rato/teclado), `map-camera.ts` (zoom, arrastar, limites `MIN_ZOOM`/`MAX_ZOOM`), `HexMap.tsx` (componente React + botões de zoom), `WorldPage.tsx` (seleção, hexágono por baixo do rato, `HexInfo`)
+- Testes: `game-core/test/hex.test.ts`, `characters.test.ts` (posição inicial), `apps/web/test/map-camera.test.ts`
 - Futuro (AP, terreno): `ARCHITECTURE.md` §8, `DATABASE.md` → map_hexes
 
 ## Mundo (world) e relógio (tick)
@@ -216,16 +217,18 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Regras e números: `packages/game-core/src/combat/state.ts` (`COMBAT_RULES`: Focus por turno/máximo, crítico, 60 s, reviver com 1 HP)
 - Motor: `packages/game-core/src/combat/engine.ts` (`createEncounter`, `applyAction`, `validTargets`, IA dos inimigos, `enterNextRoom`, `timeoutTurn`), `rng.ts` (aleatoriedade determinística)
 - Contrato: `packages/shared/src/combat.ts` (`CombatView`, `CombatantView`, `CombatLogEntry`, `combatActionSchema`)
-- Ecrã: `apps/web/src/features/rifts/CombatPage.tsx`, `combat.css`, `useCombatFx.ts` (animações a partir do log), `combat-text.ts` (texto do log)
-- Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `e2e` ("Rift combat")
-- **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `useCombatFx.ts` (se tiver animação)
+- Ecrã: `apps/web/src/features/rifts/CombatPage.tsx` (controlos, `useReplayState`: registo/controlos/resultados esperam pela animação), `CombatStage.tsx` (canvas + botões DOM por cima), `combat-scene.ts` (desenho e animações em PixiJS, `stepMs`), `combat-timeline.ts` (log → passos de animação), `combat-layout.ts` (posição de cada slot no ecrã), `combat.css`, `combat-text.ts` (texto do log)
+- Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `apps/web/test/combat-render.test.ts`, `e2e` ("Rift combat")
+- **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `combat-timeline.ts` (`FxEvent`, `buildTimeline`, `applyStep`) → `combat-scene.ts` (`applyEvents`) se tiver animação
 - **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
+- **Posições 2×3 (D13) mudarem:** `combat-layout.ts` (`place`) e o teste `combat-render.test.ts`
 - Equilíbrio: correr a simulação (ver `docs/REQUESTS.md` A18) depois de mudar números
 
 ## Inimigos
 
 - Conteúdo: `packages/game-core/src/content/enemies.ts` + habilidades em `content/abilities.ts` (`source: 'enemy'`)
-- Arte: `apps/web/src/features/avatar/EnemyAvatar.tsx`
+- Arte: `apps/web/src/features/avatar/EnemyAvatar.tsx` (usada no canvas via `enemyTexture` em `render/avatar-textures.tsx`)
+- Tipo de animação (corpo a corpo / projétil / magia / cura) vem da habilidade: `abilityFxKind` em `rifts/combat-timeline.ts`
 - Uso em Rifts: `content/rifts.ts`
 
 ## Rifts e corridas (runs)
@@ -248,3 +251,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Guia do dono: `docs/DEPLOY_RAILWAY.md`; arquitetura: `ARCHITECTURE.md` → Deployment; decisão: ADR-018
 - Migrações no arranque: `packages/db/src/client.ts` (`migrateWithLock`), `apps/server/src/main.ts`, `apps/worker/src/main.ts`, variável `MIGRATE_ON_START` (ADR-019)
 - Ligação ao Redis: `packages/server-kit/src/redis.ts` (`family: 0`, necessário para IPv6)
+
+## Renderer canvas (PixiJS) — combate e mapa
+
+- Decisão: `DECISIONS.md` ADR-023; dependência `pixi.js` em `apps/web/package.json`
+- Arranque: `apps/web/src/features/render/pixi-app.ts` (imports de `pixi.js/*` que registam o que desenhamos — **um tipo de objeto novo do Pixi pode precisar de mais um import aqui**; `unsafe-eval` por causa da CSP)
+- Ciclo de vida React: `render/usePixiScene.ts` (`PixiScene`: `resize`, `destroy`; recurso sem WebGL → `failed`)
+- Texturas: `render/svg-texture.ts` (SVG → textura por `data:` URL, brilho, vinheta, gradientes), `render/avatar-textures.tsx` (arte dos personagens e inimigos)
+- Cenas: `rifts/combat-scene.ts`, `world/map-scene.ts`
+- CSP do servidor: `apps/server/src/plugins/security.ts` (`imgSrc` tem de manter `data:`; sem `blob:`/workers)
+- Dev server: `apps/web/vite.config.ts` → `optimizeDeps.include` (acrescentar aqui qualquer novo import `pixi.js/*`)
+- Testes e2e: fechar as páginas/contextos abertos (um mapa aberto continua a desenhar)
+- Docs: `ARCHITECTURE.md` §7–§9

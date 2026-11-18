@@ -46,7 +46,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
 - Lobby system (create, invite/join, ready check, start)
-- Separate combat screen and renderer (`/combat/:id`)
+- [x] Combat screen rendered with PixiJS (animated stage, layered characters, projectiles, effects; ADR-023)
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 
@@ -59,7 +59,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - `map_regions` / `map_hexes` tables, a map seeding/import tool
 - Movement intents (server-validated pathing and AP cost), position broadcast
 - Area-of-interest: clients receive only nearby activity
-- Map rendering: terrain, fog of war (if desired), panning/zoom
+- [x] Map rendered with PixiJS: pan (drag, keys), zoom (wheel, pinch, buttons), recenter (ADR-023)
+- Map rendering: terrain, fog of war (if desired)
 
 ## Phase 5 — Social layer and reputation ⏳ ❓
 

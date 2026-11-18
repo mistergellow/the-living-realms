@@ -13,6 +13,14 @@ import './avatar.css';
 
 export type WeaponArt = 'sword' | 'bow' | 'staff' | null;
 
+/**
+ * Which layers to draw. `full` is the whole figure; the others are the layers
+ * the canvas renderer animates separately (they share the same viewBox, so
+ * they line up when stacked): `base` = back hair, legs, torso and arms;
+ * `weapon` = weapon and front hand; `head` = neck, head, face and front hair.
+ */
+export type AvatarPart = 'full' | 'base' | 'weapon' | 'head';
+
 export interface CharacterAvatarProps {
   appearance: CharacterAppearance | null | undefined;
   weapon?: WeaponArt;
@@ -26,6 +34,10 @@ export interface CharacterAvatarProps {
   portrait?: boolean;
   title?: string;
   className?: string;
+  /** Draw only some layers (canvas renderer). Default `full`. */
+  part?: AvatarPart;
+  /** Closed eyes (blink frame for the canvas renderer). */
+  eyesClosed?: boolean;
 }
 
 function shade(hex: string, amount: number): string {
@@ -152,7 +164,10 @@ export function CharacterAvatar({
   portrait = false,
   title,
   className,
+  part = 'full',
+  eyesClosed = false,
 }: CharacterAvatarProps) {
+  const show = (p: Exclude<AvatarPart, 'full'>) => part === 'full' || part === p;
   const a = normalizeAppearance(appearance);
   const uid = useId().replace(/:/g, '');
   const wide = a.body === 'sturdy' ? 1 : 0.86;
@@ -181,71 +196,89 @@ export function CharacterAvatar({
         transform={flip ? 'translate(120 0) scale(-1 1)' : undefined}
         clipPath={portrait ? `url(#clip-${uid})` : undefined}
       >
-        {!portrait && (
+        {!portrait && part === 'full' && (
           <ellipse cx="60" cy="151" rx="30" ry="6" fill="rgba(0,0,0,0.35)" className="av-shadow" />
         )}
         <g className="av-root">
-          <BackHair a={a} />
+          {show('base') && <BackHair a={a} />}
           {/* legs */}
-          <g className="av-legs">
-            <rect x={60 - 14 * wide} y="118" width="12" height="28" rx="5" fill="#2b3040" />
-            <rect x={60 + 14 * wide - 12} y="118" width="12" height="28" rx="5" fill="#2b3040" />
-            <rect x={60 - 15 * wide} y="139" width="14" height="10" rx="4" fill="#4a3424" />
-            <rect x={60 + 15 * wide - 14} y="139" width="14" height="10" rx="4" fill="#4a3424" />
-          </g>
-          {/* torso + arms */}
-          <g className="av-body">
-            <rect x={60 - 30 * wide} y="88" width="11" height="30" rx="5.5" fill={outfitDark} />
-            <circle cx={60 - 24.5 * wide} cy="120" r="5.5" fill={a.skin} />
-            <path
-              d={`M${60 - 24 * wide} 126 L${60 - 20 * wide} 90 C${60 - 16 * wide} 84 ${60 + 16 * wide} 84 ${60 + 20 * wide} 90 L${60 + 24 * wide} 126 Z`}
-              fill={outfit}
-            />
-            <rect x={60 - 22 * wide} y="113" width={44 * wide} height="6" rx="2" fill="#3b2b1e" />
-            <rect x="57" y="113" width="6" height="6" rx="1" fill="#d4a64a" />
-            <path d={`M52 87 L60 100 L68 87`} stroke={outfitDark} strokeWidth="3" fill="none" />
-            <rect
-              x={60 + 30 * wide - 11}
-              y="88"
-              width="11"
-              height="30"
-              rx="5.5"
-              fill={outfitDark}
-            />
-          </g>
-          <Weapon weapon={weapon} />
-          <circle cx={60 + 24.5 * wide} cy="120" r="5.5" fill={a.skin} className="av-hand" />
-          {/* head */}
-          <g className="av-head">
-            <rect x="53" y="80" width="14" height="10" rx="4" fill={skinShade} />
-            <circle cx="26" cy="64" r="6" fill={a.skin} />
-            <circle cx="94" cy="64" r="6" fill={a.skin} />
-            <circle cx="60" cy="60" r="34" fill={a.skin} />
-            <g className="av-eyes">
-              <ellipse cx="47" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
-              <ellipse cx="73" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
-              <ellipse cx="47" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
-              <ellipse cx="73" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
-              <circle cx="45.5" cy="64" r="1.8" fill="#fff" />
-              <circle cx="71.5" cy="64" r="1.8" fill="#fff" />
+          {show('base') && (
+            <g className="av-legs">
+              <rect x={60 - 14 * wide} y="118" width="12" height="28" rx="5" fill="#2b3040" />
+              <rect x={60 + 14 * wide - 12} y="118" width="12" height="28" rx="5" fill="#2b3040" />
+              <rect x={60 - 15 * wide} y="139" width="14" height="10" rx="4" fill="#4a3424" />
+              <rect x={60 + 15 * wide - 14} y="139" width="14" height="10" rx="4" fill="#4a3424" />
             </g>
-            <path
-              d="M41 56 L52 57 M68 57 L79 56"
-              stroke={shade(a.hairColor, -0.1)}
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-            <ellipse cx="40" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
-            <ellipse cx="80" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
-            <path
-              d="M56 79 Q60 82 64 79"
-              stroke="#7a4a3a"
-              strokeWidth="1.8"
-              fill="none"
-              strokeLinecap="round"
-            />
-            <FrontHair a={a} />
-          </g>
+          )}
+          {/* torso + arms */}
+          {show('base') && (
+            <g className="av-body">
+              <rect x={60 - 30 * wide} y="88" width="11" height="30" rx="5.5" fill={outfitDark} />
+              <circle cx={60 - 24.5 * wide} cy="120" r="5.5" fill={a.skin} />
+              <path
+                d={`M${60 - 24 * wide} 126 L${60 - 20 * wide} 90 C${60 - 16 * wide} 84 ${60 + 16 * wide} 84 ${60 + 20 * wide} 90 L${60 + 24 * wide} 126 Z`}
+                fill={outfit}
+              />
+              <rect x={60 - 22 * wide} y="113" width={44 * wide} height="6" rx="2" fill="#3b2b1e" />
+              <rect x="57" y="113" width="6" height="6" rx="1" fill="#d4a64a" />
+              <path d={`M52 87 L60 100 L68 87`} stroke={outfitDark} strokeWidth="3" fill="none" />
+              <rect
+                x={60 + 30 * wide - 11}
+                y="88"
+                width="11"
+                height="30"
+                rx="5.5"
+                fill={outfitDark}
+              />
+            </g>
+          )}
+          {show('weapon') && <Weapon weapon={weapon} />}
+          {show('weapon') && (
+            <circle cx={60 + 24.5 * wide} cy="120" r="5.5" fill={a.skin} className="av-hand" />
+          )}
+          {/* head */}
+          {show('head') && (
+            <g className="av-head">
+              <rect x="53" y="80" width="14" height="10" rx="4" fill={skinShade} />
+              <circle cx="26" cy="64" r="6" fill={a.skin} />
+              <circle cx="94" cy="64" r="6" fill={a.skin} />
+              <circle cx="60" cy="60" r="34" fill={a.skin} />
+              {eyesClosed ? (
+                <path
+                  d="M42 67 Q47 70 52 67 M68 67 Q73 70 78 67"
+                  stroke="#1d1a22"
+                  strokeWidth="2.2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              ) : (
+                <g className="av-eyes">
+                  <ellipse cx="47" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
+                  <ellipse cx="73" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
+                  <ellipse cx="47" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
+                  <ellipse cx="73" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
+                  <circle cx="45.5" cy="64" r="1.8" fill="#fff" />
+                  <circle cx="71.5" cy="64" r="1.8" fill="#fff" />
+                </g>
+              )}
+              <path
+                d="M41 56 L52 57 M68 57 L79 56"
+                stroke={shade(a.hairColor, -0.1)}
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <ellipse cx="40" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
+              <ellipse cx="80" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
+              <path
+                d="M56 79 Q60 82 64 79"
+                stroke="#7a4a3a"
+                strokeWidth="1.8"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <FrontHair a={a} />
+            </g>
+          )}
         </g>
       </g>
     </svg>
