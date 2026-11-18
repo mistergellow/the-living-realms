@@ -1,11 +1,12 @@
 import type { CombatantView, CombatView } from '@realms/shared';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { EnemyAvatar } from '../avatar/EnemyAvatar';
-import { weaponArtFromAbilities } from '../avatar/weapon-art';
+import { artFromAbilities } from '../avatar/weapon-art';
 import { prefersReducedMotion, usePixiScene } from '../render/usePixiScene';
 import { combatLayout, unitRect } from './combat-layout';
 import type { CombatScene } from './combat-scene';
+import { IntentChips, StatusChips } from './UnitChips';
 
 interface CombatStageProps {
   combat: CombatView;
@@ -153,6 +154,26 @@ export function CombatStage({
               </button>
             );
           })}
+          {combat.combatants.map((unit) => {
+            const p = layout.place(unit.side, unit.slot);
+            const r = unitRect(layout, unit.side, unit.slot, unit.isBoss);
+            const nameOf = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
+            return (
+              <Fragment key={`chips-${unit.id}`}>
+                {unit.kind === 'enemy' && (
+                  <div
+                    className="unit-chips unit-chips-intents"
+                    style={{ left: p.x, top: r.top - 4, zIndex: 8 + (unit.slot % 3) }}
+                  >
+                    <IntentChips unit={unit} nameOf={nameOf} />
+                  </div>
+                )}
+                <div className="unit-chips" style={{ left: p.x, top: p.y + 6 }}>
+                  <StatusChips unit={unit} />
+                </div>
+              </Fragment>
+            );
+          })}
           {emptySwapSlots.map((slot) => {
             const p = layout.place('party', slot);
             return (
@@ -186,7 +207,7 @@ function FallbackUnit({ unit, height }: { unit: CombatantView; height: number })
       {unit.kind === 'player' ? (
         <CharacterAvatar
           appearance={unit.appearance}
-          weapon={weaponArtFromAbilities(unit.abilityIds)}
+          {...artFromAbilities(unit.abilityIds)}
           size={art}
         />
       ) : (

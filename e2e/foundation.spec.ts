@@ -97,19 +97,17 @@ test('one active character per account: a second tab takes over', async ({ brows
   await context.close(); // stop the canvas map rendering in these pages
 });
 
-test('character system: point-buy, starting weapon, sheet and equipment', async ({ page }) => {
+test('character system: attributes, starting weapon, sheet and equipment', async ({ page }) => {
   await register(page, `e2e-sheet-${unique()}@example.com`);
   const name = randomName('Archer');
   await page.getByLabel('Name').fill(name);
 
-  // Spend points: DEX 8 → 15 (9 points), CON 8 → 14 (7 points).
-  for (let i = 0; i < 7; i++)
-    await page.getByRole('button', { name: 'Increase Dexterity' }).click();
-  for (let i = 0; i < 6; i++)
-    await page.getByRole('button', { name: 'Increase Constitution' }).click();
-  await expect(page.getByTestId('attr-dex')).toContainText('15');
-  await expect(page.getByTestId('points-remaining')).toContainText('11 / 27');
-  await expect(page.getByRole('button', { name: 'Increase Dexterity' })).toBeDisabled();
+  // Spend points: Agility 5 → 10 (max), Vitality 5 → 9. 3 points left unspent.
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Increase Vitality' }).click();
+  await expect(page.getByTestId('attr-agility')).toHaveText('10');
+  await expect(page.getByTestId('points-remaining')).toContainText('3 / 12');
+  await expect(page.getByRole('button', { name: 'Increase Agility' })).toBeDisabled();
 
   await page.getByRole('button', { name: /Hunting Bow/ }).click();
   await page.screenshot({ path: 'test-results/screens/05-create-attributes.png', fullPage: true });
@@ -118,10 +116,17 @@ test('character system: point-buy, starting weapon, sheet and equipment', async 
 
   await page.getByRole('link', { name: 'Character' }).click();
   await expect(page.getByTestId('sheet-name')).toHaveText(name);
-  await expect(page.getByTestId('sheet-attr-dex')).toHaveText('15');
-  await expect(page.getByTestId('stat-hp')).toHaveText(String(20 + 2 * 14));
-  await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
+  await expect(page.getByTestId('sheet-attr-agility')).toHaveText('10');
+  await expect(page.getByTestId('stat-hp')).toHaveText(String(40 + 6 * 9));
+  await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
   await page.screenshot({ path: 'test-results/screens/06-sheet.png', fullPage: true });
+
+  // The 3 unspent points can be distributed later on the sheet.
+  const allocate = page.getByTestId('allocate');
+  await expect(allocate).toContainText('3 / 3 points left');
+  await allocate.getByRole('button', { name: 'Increase Precision' }).click();
+  await page.getByRole('button', { name: 'Confirm attributes' }).click();
+  await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
 
   await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
@@ -129,12 +134,13 @@ test('character system: point-buy, starting weapon, sheet and equipment', async 
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 
-test('Rift combat: enter solo, attack, end turn, abandon', async ({ page }) => {
+test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) => {
   await register(page, `e2e-rift-${unique()}@example.com`);
   await page.getByLabel('Name').fill(randomName('Raider'));
-  for (let i = 0; i < 7; i++) await page.getByRole('button', { name: 'Increase Strength' }).click();
-  for (let i = 0; i < 7; i++)
-    await page.getByRole('button', { name: 'Increase Constitution' }).click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Increase Vitality' }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
+  await page.getByRole('button', { name: 'Wooden Shield' }).click();
   await page.getByRole('button', { name: 'Hair style long' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page.getByTestId('self-name')).toBeVisible();
@@ -146,6 +152,8 @@ test('Rift combat: enter solo, attack, end turn, abandon', async ({ page }) => {
   await expect(page.getByText('Your turn')).toBeVisible();
   await expect(page.getByTestId('unit-enemies')).toHaveCount(3);
   await expect(page.getByTestId('my-focus')).toHaveText('3');
+  // Slay-the-Spire style intents: enemies show what they will do.
+  await expect(page.getByTestId('intent').first()).toBeVisible();
 
   // Slash: choose the ability, then a highlighted target.
   await page.getByRole('button', { name: /^Slash/ }).click();
@@ -155,17 +163,19 @@ test('Rift combat: enter solo, attack, end turn, abandon', async ({ page }) => {
     .click();
   await expect(page.getByTestId('my-focus')).toHaveText('2');
   await expect(page.getByTestId('combat-log')).toContainText('uses Slash on Rift Husk');
+
+  await page.getByRole('button', { name: /^Raise Shield/ }).click();
+  await expect(page.getByTestId('my-focus')).toHaveText('1');
+  await expect(page.getByTestId('combat-log')).toContainText('Block');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
 
   await page.getByRole('button', { name: 'End turn' }).click();
-  // The enemy phase plays out on the canvas first (the text log keeps pace with it);
-  // the controls come back when it is over.
+  // The enemy phase plays out on the canvas first (the text log keeps pace with it).
   await expect(page.getByTestId('combat-log')).toContainText('Round 2', { timeout: 20_000 });
-  await expect(page.getByTestId('my-focus')).toHaveText('5', { timeout: 20_000 }); // 2 carried over + 3
 
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Abandon' }).click();
   await expect(page.getByTestId('run-result')).toContainText('You fled the Rift');
-  await expect(page.getByTestId('run-result')).toContainText('quality 75');
+  await expect(page.getByTestId('run-result')).toContainText('Wooden Shield');
 });

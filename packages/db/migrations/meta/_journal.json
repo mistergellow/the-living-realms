@@ -29,6 +29,27 @@
       "when": 1794952527881,
       "tag": "0003_rift_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794954114977,
+      "tag": "0004_six_attributes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794954115454,
+      "tag": "0005_attribute_points_for_existing_characters",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794954116022,
+      "tag": "0006_drop_dnd_attributes",
+      "breakpoints": true
     }
   ]
 }

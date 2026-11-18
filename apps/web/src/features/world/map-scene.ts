@@ -22,7 +22,7 @@ import type { PixiScene } from '../render/usePixiScene';
 import { clampToBounds, fitZoom, screenToWorld, zoomAt, type Camera } from './map-camera';
 
 /*
- * World map renderer (PixiJS, ADR-022): hex grid around the player, player
+ * World map renderer (PixiJS, ADR-025): hex grid around the player, player
  * tokens, hover/selection, and a camera you can drag, zoom (wheel, pinch,
  * buttons, + / − keys) and recenter. Terrain, fog of war and movement come
  * in Phase 4; the server stays the source of truth for positions.

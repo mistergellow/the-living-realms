@@ -42,6 +42,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D30 | Derrota: −25% de qualidade em todo o equipamento equipado                                                                                                                                                                                                        | 2026-11-17 | M1/M2                                                                                          |
 | D31 | Entrada em Rifts: lista por agora. Convites a amigos + lobby público de Rifts. Mais tarde (mapa) conta o AP gasto para chegar ao hexágono do Rift                                                                                                                | 2026-11-17 | M2/M3/Fase 4                                                                                   |
 | D32 | Visual dos personagens ao estilo da referência enviada (personagens ilustrados tipo "chibi", com animações; equipamento à volta do personagem no ecrã de herói). Para já, aparência = editar o corpo base; mais tarde o equipamento passa a ver-se no personagem | 2026-11-17 | M2 (renderer em camadas)                                                                       |
+| D33 | Atributos: 6 lineares sem "atributos inúteis" (Might, Agility, Precision, Vitality, Arcana, Spirit), base 5 + 12 pontos na criação (máx. 10); o equipamento dá o resto. Armas escalam com 2 atributos; mão principal + secundária combinam habilidades           | 2026-11-17 | Combate 2.0                                                                                    |
+| D34 | Defesa passiva com retornos decrescentes (redução = rating ÷ (rating + 50)) + Block ativo que expira no início do próprio turno (estilo Slay the Spire)                                                                                                          | 2026-11-17 | Combate 2.0                                                                                    |
+| D35 | Estados: Bleed, Burn, Mark (+25% dano recebido), Weaken (−25% dano), Stun (perde o turno); sinergias entre habilidades                                                                                                                                           | 2026-11-17 | Combate 2.0                                                                                    |
+| D36 | O combate é "Slay the Spire sem cartas + Darkest Dungeon": inclui **intenções dos inimigos** visíveis antes do turno dos jogadores                                                                                                                               | 2026-11-17 | Combate 2.0                                                                                    |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -69,7 +73,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A20 | Posição inicial no combate                                      | espada na fila da frente; arco e cajado na fila de trás                                                                                                        | `rifts.service.ts`                                       |
 | A21 | Opções do corpo base                                            | tipo de corpo, tom de pele, penteado, cor do cabelo, cor dos olhos, cor da roupa                                                                               | `CharacterAvatar`                                        |
 | A22 | Arte                                                            | desenhada em código (SVG em camadas) como base provisória; arte profissional substitui as camadas mais tarde                                                   | ADR-021                                                  |
-| A23 | Ritmo das animações de combate                                  | 650 ms por ação (420 ms com "reduzir movimento"); a fase dos inimigos joga-se ataque a ataque e os controlos esperam pelo fim                                  | `apps/web/src/features/rifts/combat-scene.ts` (`stepMs`) |
+| A23 | Meta de dificuldade a solo                                      | média: ~40–50% de vitórias; grupos de 2–3 ~100% (simulação: espada+escudo 52%, machado 32%, adagas 68%, arco 56%, cajado 60%, tomo+talismã 26%; média 49%)     | conteúdo em `game-core/src/content`                      |
+| A24 | Armas iniciais                                                  | espada, machado, adaga, arco, cajado, tomo; mão secundária opcional: escudo, talismã ou adaga                                                                  | `STARTER_WEAPONS`, `STARTER_OFFHANDS`                    |
+| A25 | Ritmo das animações de combate                                  | 650 ms por ação (420 ms com "reduzir movimento"); a fase dos inimigos joga-se ataque a ataque e os controlos esperam pelo fim                                  | `apps/web/src/features/rifts/combat-scene.ts` (`stepMs`) |
 
 ---
 
@@ -265,15 +271,33 @@ que escalam com 2 atributos, armadura com retornos decrescentes
 traços. Sem alterações ao código.
 **A aguardar:** aprovação da proposta e respostas sobre o equilíbrio (#18).
 
-### #20 — 2026-11-17 — Usar Phaser? → PixiJS para o combate e o mapa
+### #20 — 2026-11-17 — Avançar com a proposta (Combate 2.0)
+
+**Pedido:** aprovada a proposta do #19. Durante o trabalho: "o combate é quase
+suposto ser um Slay the Spire sem cartas + Darkest Dungeon".
+**Decisões:** D33–D36; valores provisórios A23–A24 (sem resposta às perguntas
+de equilíbrio, usada a dificuldade média).
+**Resultado (Combate 2.0):**
+
+- 6 atributos lineares (base 5, 12 pontos, máx. 10); pontos por gastar podem ser distribuídos depois na ficha; personagens existentes convertidos (tudo a 5 + 12 pontos).
+- 6 armas iniciais (espada, machado, adaga, arco, cajado, tomo), cada uma a escalar com 2 atributos; mão secundária opcional (escudo, talismã, adaga) cujas habilidades se juntam às da arma.
+- Armadura e resistência com retornos decrescentes (rating ÷ (rating + 50)); dano em intervalo; Block que expira no próprio turno; estados Bleed, Burn, Mark, Weaken, Stun com sinergias (ex.: Backstab ×1,6 contra alvos a sangrar).
+- Intenções dos inimigos visíveis antes do turno dos jogadores (agrupadas, ex.: "4–6 ×3 → alvo").
+- Equilíbrio por simulação: média a solo 49%, todas as armas entre 26% e 68% (A23).
+- Bug encontrado pelos testes e corrigido: habilidades só para o próprio (ex.: Raise Shield) passavam a pedir um alvo.
+- Testes: 37 unitários no game-core, 48 de integração no servidor, 6 e2e.
+- Docs: CHANGE_MAP (atributos, estatísticas, itens, estados/Block/intenções), DATABASE, ARCHITECTURE §7, ADR-023, ADR-024, ROADMAP.
+  **Próximo:** M3 (lobby até 6 jogadores) — perguntas pendentes no pedido #17.
+
+### #21 — 2026-11-17 — Usar Phaser? → PixiJS para o combate e o mapa
 
 **Pedido:** o ChatGPT tinha sugerido fazer parte do jogo em Phaser; o jogo
 "parece quase browser". Depois de explicada a situação (tudo era React +
 DOM/SVG; o ADR-002 já previa PixiJS para o combate), o dono aprovou a
 recomendação: **PixiJS para o combate e para o mapa do mundo**, React para os
 menus e painéis.
-**Decisões técnicas:** ADR-023 (PixiJS em vez de Phaser; arte SVG
-rasterizada em texturas; botões DOM por cima do canvas). Valor provisório A23.
+**Decisões técnicas:** ADR-025 (PixiJS em vez de Phaser; arte SVG
+rasterizada em texturas; botões DOM por cima do canvas). Valor provisório A25.
 **Resultado:**
 
 - Infraestrutura Pixi partilhada em `apps/web/src/features/render/` (arranque
@@ -293,8 +317,9 @@ rasterizada em texturas; botões DOM por cima do canvas). Valor provisório A23.
 - `game-core`: `pixelToHex` / `hexRound` (clicar num hexágono).
 - Testes: unitários do layout, da timeline e da câmara; e2e atualizado (o turno
   dos inimigos agora demora a jogar-se; fecho de páginas abertas entre testes).
-- Docs: CHANGE_MAP (renderer canvas, aparência, mapa, combate), ADR-023,
+- Docs: CHANGE_MAP (renderer canvas, aparência, mapa, combate), ADR-025,
   ADR-002/021 (notas), ARCHITECTURE §7–§9, ROADMAP.
-  **Notado durante os testes (não alterado):** numa fase, os inimigos gastam
-  todo o Focus em vários ataques seguidos (até 8 golpes). Um personagem novo
-  com 36 HP pode cair na primeira ronda. É uma questão de equilíbrio (A18).
+- Integrado com o Combate 2.0 (#20): Block, estados, dano por estado e
+  atordoado têm animação própria; as intenções dos inimigos e os chips de
+  Block/estados ficam em HTML por cima do canvas; armas novas e mão
+  secundária (escudo, talismã, adaga) como camadas animadas.

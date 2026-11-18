@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { DerivedStatsDto, CharacterAppearance } from './api.js';
+import type { Attributes, CharacterAppearance, DerivedStatsDto } from './api.js';
 
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
@@ -11,6 +11,23 @@ import type { DerivedStatsDto, CharacterAppearance } from './api.js';
 export const SLOTS_PER_SIDE = 6;
 export type CombatSide = 'party' | 'enemies';
 export type CombatRow = 'front' | 'back';
+
+export const STATUS_IDS = ['bleed', 'burn', 'mark', 'weaken', 'stun'] as const;
+export type StatusId = (typeof STATUS_IDS)[number];
+
+export interface StatusView {
+  id: StatusId;
+  /** Turns left (counted at the start of the affected unit's turns). */
+  turns: number;
+  /** Damage per tick for bleed/burn. */
+  value: number;
+}
+
+/** What an enemy plans to do this round (shown to players, Slay-the-Spire style). */
+export interface IntentView {
+  abilityId: string;
+  targetIds: string[];
+}
 
 export interface CombatantView {
   id: string;
@@ -28,6 +45,15 @@ export interface CombatantView {
   mana: number;
   maxMana: number;
   focus: number;
+  /** Absorbs damage until the unit's next turn (Slay-the-Spire style). */
+  block: number;
+  statuses: StatusView[];
+  /** Player characters only (used for ability scaling). */
+  attributes: Attributes | null;
+  /** Enemies only: damage multiplier. */
+  power: number;
+  /** Enemies only: planned actions for their next turn (D36). */
+  intents: IntentView[];
   downed: boolean;
   isBoss: boolean;
   abilityIds: string[];
@@ -38,7 +64,11 @@ export type CombatLogEntry =
   | { t: 'round'; round: number }
   | { t: 'turn'; actorId: string }
   | { t: 'ability'; actorId: string; abilityId: string; targetIds: string[] }
-  | { t: 'damage'; targetId: string; amount: number; crit: boolean }
+  | { t: 'damage'; targetId: string; amount: number; crit: boolean; blocked: number }
+  | { t: 'block'; targetId: string; amount: number }
+  | { t: 'status'; targetId: string; status: StatusId; turns: number }
+  | { t: 'tick'; targetId: string; status: StatusId; amount: number }
+  | { t: 'stunned'; targetId: string }
   | { t: 'dodge'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'swap'; actorId: string; fromSlot: number; toSlot: number; withId: string | null }

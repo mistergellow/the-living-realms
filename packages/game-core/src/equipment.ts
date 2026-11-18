@@ -96,9 +96,13 @@ export function availableAbilities(
     }
   };
 
-  const weapons = activeEquipment(items).filter((i) => i.def.abilities?.length);
+  const order: Record<string, number> = { mainHand: 0, offHand: 1 };
+  const weapons = activeEquipment(items)
+    .filter((i) => i.def.abilities?.length)
+    .sort((a, b) => (order[a.equippedSlot!] ?? 9) - (order[b.equippedSlot!] ?? 9));
   for (const w of weapons) for (const id of w.def.abilities!) add(id, w.def.name);
-  if (weapons.length === 0) for (const id of UNARMED_ABILITIES) add(id, null);
+  const hasMainWeapon = weapons.some((w) => w.def.kind === 'weapon');
+  if (!hasMainWeapon) for (const id of UNARMED_ABILITIES) add(id, null);
   for (const id of learnedSkillIds) add(id, null);
   for (const id of UNIVERSAL_ABILITIES) add(id, null);
   return out;

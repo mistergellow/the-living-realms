@@ -1,5 +1,5 @@
 import { COMBAT_RULES } from '@realms/game-core';
-import type { CombatantView, CombatLogEntry, CombatView } from '@realms/shared';
+import type { CombatantView, CombatLogEntry, CombatView, StatusId } from '@realms/shared';
 import {
   ColorMatrixFilter,
   Container,
@@ -10,7 +10,7 @@ import {
   type Texture,
   type Ticker,
 } from 'pixi.js';
-import { weaponArtFromAbilities } from '../avatar/weapon-art';
+import { artFromAbilities } from '../avatar/weapon-art';
 import {
   characterTextures,
   enemyTexture,
@@ -23,7 +23,7 @@ import { BOSS_HEIGHT, plateScale, UNIT_HEIGHT, type CombatLayout } from './comba
 import { buildTimeline, type FxEvent, type FxStep } from './combat-timeline';
 
 /*
- * Combat screen renderer (PixiJS, ADR-022). Draws the battlefield and plays
+ * Combat screen renderer (PixiJS, ADR-025). Draws the battlefield and plays
  * the combat log as animations. It never decides anything: the server's
  * CombatView is the truth, and input goes through the DOM overlay in
  * CombatStage.tsx (accessible buttons on top of the canvas).
@@ -50,6 +50,18 @@ const COLORS = {
   crit: '#ffd166',
   heal: '#7ee2a8',
   dodge: '#cfd6e0',
+  block: '#8fb0f5',
+  status: '#f2d27a',
+  tick: '#ff9f6b',
+};
+
+/** Colour of each status (chips use the same hues, see combat.css). */
+const STATUS_COLORS: Record<StatusId, number> = {
+  bleed: 0xd8334a,
+  burn: 0xff8a2a,
+  mark: 0xe8c45a,
+  weaken: 0x9b7bff,
+  stun: 0xd6dbe4,
 };
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -104,6 +116,7 @@ class UnitView {
 
   private base?: Sprite;
   private weapon?: Sprite;
+  private offhand?: Sprite;
   private head?: Sprite;
   private whole?: Sprite;
   private headTex?: Texture;
@@ -211,7 +224,7 @@ class UnitView {
       if (this.view.kind === 'player') {
         const tex: CharacterTextures = await characterTextures(
           this.view.appearance,
-          weaponArtFromAbilities(this.view.abilityIds),
+          artFromAbilities(this.view.abilityIds),
         );
         if (this.root.destroyed) return;
         this.base = new Sprite(tex.base);
@@ -219,13 +232,16 @@ class UnitView {
         this.weapon = new Sprite(tex.weapon);
         this.weapon.anchor.set(97 / 120, 110 / 160);
         this.weapon.position.set(37, -40);
+        this.offhand = new Sprite(tex.offhand);
+        this.offhand.anchor.set(20 / 120, 104 / 160);
+        this.offhand.position.set(-40, -46);
         this.head = new Sprite(tex.head);
         this.head.anchor.set(0.5, 88 / 160);
         this.head.position.set(0, -62);
         this.headTex = tex.head;
         this.blinkTex = tex.headBlink;
-        for (const s of [this.base, this.weapon, this.head]) s.scale.set(k);
-        this.figure.addChild(this.base, this.weapon, this.head);
+        for (const s of [this.base, this.weapon, this.offhand, this.head]) s.scale.set(k);
+        this.figure.addChild(this.base, this.offhand, this.weapon, this.head);
       } else {
         const tex = await enemyTexture(this.view.enemyDefId);
         if (this.root.destroyed) return;
@@ -274,6 +290,8 @@ class UnitView {
       this.head!.rotation = (-1.5 * Math.PI * breathe) / 180;
       this.weapon!.rotation = (2 * Math.PI * breathe) / 180;
       this.weapon!.y = -40 - 1.2 * breathe;
+      this.offhand!.rotation = (-2 * Math.PI * breathe) / 180;
+      this.offhand!.y = -46 - 1.2 * breathe;
       // Blink.
       if (!reduced && this.headTex && this.blinkTex) {
         if (t >= this.blinkAt) {
@@ -796,9 +814,14 @@ export class CombatScene implements PixiScene {
       return;
     }
 
-    if (step.kind === 'heal') {
+    if (step.kind === 'heal' || step.kind === 'guard') {
       this.tween(S * 0.5, (p) => (actor.offY = -10 * Math.sin(p * Math.PI)));
-      this.glowAt(actor.chest().x, actor.chest().y, 0x7ee2a8, 0.9);
+      this.glowAt(
+        actor.chest().x,
+        actor.chest().y,
+        step.kind === 'heal' ? 0x7ee2a8 : 0x6f9cff,
+        0.9,
+      );
       impact(S * 0.35);
       return;
     }
@@ -826,9 +849,17 @@ export class CombatScene implements PixiScene {
       const fy = u.y - u.artHeight * 0.85 - n * 22;
       switch (e.t) {
         case 'damage': {
+          const away = actor ? Math.sign(u.x - actor.x) || -u.dir : -u.dir;
+          if (e.blocked > 0) {
+            this.glowAt(c.x, c.y, 0x6f9cff, 0.7);
+            this.float(u.x + 26 * u.dir, fy - 8, `${e.blocked} blocked`, COLORS.block, 14);
+          }
+          if (e.amount <= 0) {
+            this.knock(u, away * 4);
+            break;
+          }
           u.shownHp = Math.max(0, u.shownHp - e.amount);
           u.flash = 1;
-          const away = actor ? Math.sign(u.x - actor.x) || -u.dir : -u.dir;
           this.knock(u, away * (e.crit ? 16 : 9));
           this.burst(c.x, c.y, e.crit ? 0xffd166 : 0xffb199, e.crit ? 22 : 11, e.crit ? 1.5 : 1);
           this.float(
@@ -844,6 +875,27 @@ export class CombatScene implements PixiScene {
           } else this.shake = Math.max(this.shake, 3);
           break;
         }
+        case 'block':
+          this.glowAt(c.x, c.y, 0x6f9cff, 1.1);
+          this.rise(c.x, u.y, 0x8fb0f5, 10);
+          this.float(u.x, fy, `+${e.amount} Block`, COLORS.block, 16);
+          break;
+        case 'status': {
+          const name = e.status[0]!.toUpperCase() + e.status.slice(1);
+          this.burst(c.x, c.y, STATUS_COLORS[e.status], 10, 0.8);
+          this.float(u.x, fy, name, COLORS.status, 15);
+          break;
+        }
+        case 'tick':
+          u.shownHp = Math.max(0, u.shownHp - e.amount);
+          u.flash = 0.7;
+          this.rise(c.x, u.y, STATUS_COLORS[e.status], 12);
+          this.float(u.x, fy, `-${e.amount}`, COLORS.tick, 20);
+          break;
+        case 'stunned':
+          this.burst(u.x, u.y - u.artHeight * 0.95, 0xfff1a8, 12, 0.6);
+          this.float(u.x, fy, 'Stunned', COLORS.status, 15);
+          break;
         case 'heal':
           u.shownHp = Math.min(u.view.maxHp, u.shownHp + e.amount);
           this.rise(c.x, u.y, 0x7ee2a8, 16);

@@ -1,34 +1,30 @@
-import {
-  ATTRIBUTE_NAMES,
-  ATTRIBUTE_SUMMARIES,
-  attributeModifier,
-  POINT_BUY,
-  pointBuySpent,
-} from '@realms/game-core';
+import { ATTRIBUTE_NAMES, ATTRIBUTE_RULES, ATTRIBUTE_SUMMARIES } from '@realms/game-core';
 import { ATTRIBUTE_KEYS, type Attributes } from '@realms/shared';
 
-const fmtMod = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
-
-/** D&D 5e point-buy: 27 points, scores 8–15. */
-export function AttributePicker({
-  value,
-  onChange,
-}: {
+/**
+ * Distribute attribute points (D33). Used at creation (floor = base 5 in
+ * everything) and later to spend unspent points (floor = current scores).
+ */
+export function AttributePicker(props: {
   value: Attributes;
   onChange: (a: Attributes) => void;
+  /** Scores that cannot be lowered (current base attributes). */
+  floor: Attributes;
+  /** Points available in total on top of `floor`. */
+  points: number;
+  title?: string;
 }) {
-  const spent = pointBuySpent(value);
-  const remaining = POINT_BUY.budget - spent;
-  const costOfNext = (score: number) =>
-    (POINT_BUY.cost[score + 1] ?? Infinity) - (POINT_BUY.cost[score] ?? 0);
+  const { value, floor, points } = props;
+  const used = ATTRIBUTE_KEYS.reduce((s, k) => s + (value[k] - floor[k]), 0);
+  const remaining = points - used;
 
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="row">
-        <span className="field-label">Attributes</span>
+        <span className="field-label">{props.title ?? 'Attributes'}</span>
         <span className="spacer" />
         <span className={remaining < 0 ? 'field-error' : 'muted'} data-testid="points-remaining">
-          {remaining} / {POINT_BUY.budget} points left
+          {remaining} / {points} points left
         </span>
       </div>
       <div className="attr-grid">
@@ -45,21 +41,20 @@ export function AttributePicker({
                   type="button"
                   className="btn btn-sm"
                   aria-label={`Decrease ${ATTRIBUTE_NAMES[k]}`}
-                  disabled={score <= POINT_BUY.min}
-                  onClick={() => onChange({ ...value, [k]: score - 1 })}
+                  disabled={score <= floor[k]}
+                  onClick={() => props.onChange({ ...value, [k]: score - 1 })}
                 >
                   −
                 </button>
                 <span className="attr-score" data-testid={`attr-${k}`}>
                   {score}
-                  <small className="muted"> ({fmtMod(attributeModifier(score))})</small>
                 </span>
                 <button
                   type="button"
                   className="btn btn-sm"
                   aria-label={`Increase ${ATTRIBUTE_NAMES[k]}`}
-                  disabled={score >= POINT_BUY.max || costOfNext(score) > remaining}
-                  onClick={() => onChange({ ...value, [k]: score + 1 })}
+                  disabled={score >= ATTRIBUTE_RULES.creationMax || remaining <= 0}
+                  onClick={() => props.onChange({ ...value, [k]: score + 1 })}
                 >
                   +
                 </button>

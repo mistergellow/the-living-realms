@@ -1,4 +1,4 @@
-import { getAbility, validTargets, type CombatState } from '@realms/game-core';
+import { describeEffects, getAbility, validTargets, type CombatState } from '@realms/game-core';
 import type { CombatView, RunDto } from '@realms/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
@@ -147,7 +147,8 @@ export function CombatPage() {
     const a = getAbility(abilityId)!;
     if (!me) return;
     // Abilities with nothing to choose fire immediately.
-    if (a.targeting.area === 'all') return send({ type: 'ability', abilityId });
+    if (a.targeting.area === 'all' || a.targeting.side === 'self')
+      return send({ type: 'ability', abilityId });
     if (!a.effects.some((e) => e.kind === 'swap')) {
       const t = validTargets(combat as unknown as CombatState, me, a);
       if (
@@ -263,9 +264,10 @@ export function CombatPage() {
                       aria-pressed={selected === id}
                       disabled={!affordable || action.isPending}
                       onClick={() => pick(id)}
-                      title={a.description}
+                      title={`${a.description}\n${describeEffects(a).join(' · ')}`}
                     >
                       <strong>{a.name}</strong>
+                      <small className="ability-effects">{describeEffects(a).join(' · ')}</small>
                       <span>
                         <i className="cost">{a.focusCost} Focus</i>
                         {a.manaCost > 0 && <i className="cost mana">{a.manaCost} Mana</i>}

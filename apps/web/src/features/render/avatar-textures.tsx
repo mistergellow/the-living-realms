@@ -1,7 +1,12 @@
 import { normalizeAppearance, type CharacterAppearance } from '@realms/shared';
 import type { Texture } from 'pixi.js';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { CharacterAvatar, type AvatarPart, type WeaponArt } from '../avatar/CharacterAvatar';
+import {
+  CharacterAvatar,
+  type AvatarPart,
+  type OffhandArt,
+  type WeaponArt,
+} from '../avatar/CharacterAvatar';
 import { EnemyAvatar } from '../avatar/EnemyAvatar';
 import { svgTexture } from './svg-texture';
 
@@ -20,6 +25,7 @@ const H = 160 * TEX_SCALE;
 export interface CharacterTextures {
   base: Texture;
   weapon: Texture;
+  offhand: Texture;
   head: Texture;
   /** Head with closed eyes (blink frame). */
   headBlink: Texture;
@@ -29,17 +35,23 @@ function appearanceKey(appearance: CharacterAppearance | null | undefined): stri
   return JSON.stringify(normalizeAppearance(appearance));
 }
 
+export interface GearArt {
+  weapon: WeaponArt;
+  offhand: OffhandArt;
+}
+
 function part(
   appearance: CharacterAppearance | null | undefined,
-  weapon: WeaponArt,
+  gear: GearArt,
   which: Exclude<AvatarPart, 'full'>,
   eyesClosed = false,
 ): Promise<Texture> {
-  const key = `char:${appearanceKey(appearance)}:${weapon}:${which}:${eyesClosed}`;
+  const key = `char:${appearanceKey(appearance)}:${gear.weapon}:${gear.offhand}:${which}:${eyesClosed}`;
   const markup = renderToStaticMarkup(
     <CharacterAvatar
       appearance={appearance}
-      weapon={weapon}
+      weapon={gear.weapon}
+      offhand={gear.offhand}
       part={which}
       eyesClosed={eyesClosed}
       size={H}
@@ -51,15 +63,16 @@ function part(
 
 export async function characterTextures(
   appearance: CharacterAppearance | null | undefined,
-  weapon: WeaponArt,
+  gear: GearArt,
 ): Promise<CharacterTextures> {
-  const [base, w, head, headBlink] = await Promise.all([
-    part(appearance, weapon, 'base'),
-    part(appearance, weapon, 'weapon'),
-    part(appearance, weapon, 'head'),
-    part(appearance, weapon, 'head', true),
+  const [base, weapon, offhand, head, headBlink] = await Promise.all([
+    part(appearance, gear, 'base'),
+    part(appearance, gear, 'weapon'),
+    part(appearance, gear, 'offhand'),
+    part(appearance, gear, 'head'),
+    part(appearance, gear, 'head', true),
   ]);
-  return { base, weapon: w, head, headBlink };
+  return { base, weapon, offhand, head, headBlink };
 }
 
 export function enemyTexture(enemyDefId: string | null): Promise<Texture> {

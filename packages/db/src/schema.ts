@@ -117,13 +117,15 @@ export const characters = pgTable(
     name: text('name').notNull(),
     /** Versioned JSON, see CharacterAppearance in @realms/shared. */
     appearance: jsonb('appearance').notNull(),
-    /** Base attributes (D&D abilities, point-buy at creation; equipment adds bonuses on top). */
-    attrStr: smallint('attr_str').notNull().default(10),
-    attrDex: smallint('attr_dex').notNull().default(10),
-    attrCon: smallint('attr_con').notNull().default(10),
-    attrInt: smallint('attr_int').notNull().default(10),
-    attrWis: smallint('attr_wis').notNull().default(10),
-    attrCha: smallint('attr_cha').notNull().default(10),
+    /** Base attributes (D33): start at 5; creation points on top; equipment adds bonuses. */
+    attrMight: smallint('attr_might').notNull().default(5),
+    attrAgility: smallint('attr_agility').notNull().default(5),
+    attrPrecision: smallint('attr_precision').notNull().default(5),
+    attrVitality: smallint('attr_vitality').notNull().default(5),
+    attrArcana: smallint('attr_arcana').notNull().default(5),
+    attrSpirit: smallint('attr_spirit').notNull().default(5),
+    /** Attribute points not yet distributed. */
+    attributePoints: smallint('attribute_points').notNull().default(0),
     /** Per-character currency earned through activities. */
     reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
     /** Axial hex coordinates of the character on the world map. */

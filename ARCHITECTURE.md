@@ -229,11 +229,19 @@ across several workers (one advisory lock per partition).
 
 Combat is separate from exploration on both sides:
 
+- **Design goal (D36):** "Slay the Spire without cards + Darkest Dungeon":
+  Focus energy per turn, Block that expires at your next turn, statuses
+  (Bleed, Burn, Mark, Weaken, Stun) and **visible enemy intents**, on a
+  side-view battlefield with rows and positions.
 - **Engine (`game-core/combat`):** pure and deterministic, `(state, action) → state`.
   The RNG state lives inside the combat state, so every fight can be replayed
   and unit-tested. Rules: two rows of three slots per side; PvE rounds = party
   members by initiative, then every enemy (simple greedy AI); Focus per turn
-  with carry-over; rooms → boss; HP/mana persist between rooms.
+  with carry-over; rooms → boss; HP/mana persist between rooms. Damage =
+  roll in range × attribute scaling (two attributes per weapon) × statuses ×
+  crit, reduced by rating/(rating+50), then absorbed by Block. Enemies plan
+  their turn at the start of each round (intents) and execute it, re-targeting
+  if a planned target fell.
 - **Server (`modules/rifts`):** each Rift run is a row in `rift_runs` holding the
   whole `CombatState` as JSONB. Every action runs in a transaction that locks
   the run row, applies the engine, and saves the new state (so a refresh,
@@ -247,7 +255,7 @@ Combat is separate from exploration on both sides:
 - **Transport:** HTTP for actions in M2 (request → updated run). M3 adds a
   `combat:<runId>` bus channel to push updates to every participant.
 - **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and a side-view
-  stage drawn with PixiJS (`features/rifts/combat-scene.ts`, ADR-023). New
+  stage drawn with PixiJS (`features/rifts/combat-scene.ts`, ADR-025). New
   combat log entries become animation steps (`combat-timeline.ts`) played one
   action at a time; the text log, the controls during enemy actions and the
   result overlays wait for the replay. Clicks go to DOM buttons placed over
@@ -281,7 +289,7 @@ DATABASE.md).
   `combat`), shared UI primitives in `shared/ui`, infrastructure in `lib`
   (`api.ts`, `realtime.ts` with automatic reconnection and backoff).
 - **Rendering:** menus, panels and forms are React DOM. The world map and the
-  combat stage are PixiJS canvases (ADR-023), loaded lazily, with shared
+  combat stage are PixiJS canvases (ADR-025), loaded lazily, with shared
   infrastructure in `features/render` (`usePixiScene`, SVG → texture). Input
   for combat stays on DOM buttons over the canvas (accessibility, tests).
 - **Validation** reuses the server's schemas and rules (`@realms/shared`,

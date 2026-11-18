@@ -33,7 +33,7 @@ map, lists, chat). SEO and first-paint SSR do not matter behind a login.
 
 **Decision.** React 19 + Vite + React Router 7. Exploration is DOM/SVG. Combat
 will get its own canvas renderer (planned: PixiJS) on its own route.
-_(Update: the combat screen and the world map now render with PixiJS — ADR-023.)_
+_(Update: the combat screen and the world map now render with PixiJS — ADR-025.)_
 
 **Alternatives.** Next.js (SSR and server components: complexity without
 benefit here). Phaser for everything (a poor fit for a UI-heavy interface; may
@@ -340,7 +340,7 @@ each layer behind the same component. Equipment will be added as extra layers
 on the same anchors. Appearance v1 (emblem) characters are converted with
 `normalizeAppearance`.
 
-_Update (ADR-023):_ in the combat screen and on the map the same SVG layers
+_Update (ADR-025):_ in the combat screen and on the map the same SVG layers
 are rasterised into PixiJS textures and animated there; the CSS animations
 remain for the DOM uses (sheet, lists, editor).
 
@@ -365,7 +365,43 @@ without having to act.
 
 ---
 
-## ADR-023 — PixiJS for the combat screen and the world map
+## ADR-023 — Six linear attributes and diminishing-returns mitigation (replaces D&D attributes)
+
+**Status:** accepted (supersedes the D&D attribute part of M1)
+
+**Context.** The owner found the D&D abilities a poor fit and the balance
+swingy: D&D modifiers make most points meaningless, CHA/WIS were near-dead
+stats, there are no levels to recover from a bad build, and flat armor made
+small hits worthless and large hits barely affected.
+
+**Decision.** Six attributes with linear effects (Might, Agility, Precision,
+Vitality, Arcana, Spirit); base 5, 12 creation points, max 10 from points;
+equipment adds more. Each weapon scales with two attributes; main and off-hand
+abilities combine. Mitigation uses `reduction = rating / (rating + 50)` (each
+point adds the same effective HP; never 100%), plus active Block. Damage uses
+ranges. Existing characters were reset to 5s with 12 unspent points.
+
+**Consequences.** Build variety comes from attribute × weapon × off-hand ×
+status synergies rather than from attributes alone; balance is tuned against
+simulation targets (A23). Formulas live in `STAT_RULES`.
+
+---
+
+## ADR-024 — Enemy intents planned at round start
+
+**Status:** accepted (D36)
+
+**Decision.** At the start of each round, each enemy plans its whole turn
+(abilities and targets) with the Focus it will have; the plan is part of the
+combat state and shown to players. During the enemy phase the plan is executed;
+if a planned target is gone the enemy re-targets with its usual rule.
+
+**Why.** Telegraphed enemy actions are what make "Slay the Spire" decisions
+tactical (block now, kill the biggest threat, weaken the attacker).
+
+---
+
+## ADR-025 — PixiJS for the combat screen and the world map
 
 **Status:** accepted
 

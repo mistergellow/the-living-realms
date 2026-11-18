@@ -50,6 +50,26 @@ describe('combat timeline', () => {
     expect(abilityFxKind('slash')).toBe('melee');
     expect(abilityFxKind('aimed_shot')).toBe('ranged');
     expect(abilityFxKind('arcane_bolt')).toBe('magic');
+    expect(abilityFxKind('mend')).toBe('heal');
+    expect(abilityFxKind('raise_shield')).toBe('guard');
+    expect(abilityFxKind('swap_position')).toBe('swap');
+  });
+
+  it('carries Block, statuses, ticks and stuns, and ticks cost HP', () => {
+    const steps = buildTimeline([
+      { t: 'tick', targetId: 'e:1', status: 'bleed', amount: 3 },
+      { t: 'stunned', targetId: 'e:1' },
+      { t: 'ability', actorId: 'p:a', abilityId: 'raise_shield', targetIds: ['p:a'] },
+      { t: 'block', targetId: 'p:a', amount: 6 },
+      { t: 'ability', actorId: 'p:a', abilityId: 'rend', targetIds: ['e:1'] },
+      { t: 'damage', targetId: 'e:1', amount: 0, crit: false, blocked: 4 },
+      { t: 'status', targetId: 'e:1', status: 'bleed', turns: 2 },
+    ]);
+    expect(steps.map((s) => s.kind)).toEqual(['none', 'guard', 'melee']);
+    expect(steps[0]!.events.map((e) => e.t)).toEqual(['tick', 'stunned']);
+    const after = applyStep({ 'e:1': { hp: 10, maxHp: 10, downed: false } }, steps[0]!);
+    expect(after['e:1']!.hp).toBe(7);
+    expect(steps[2]!.events[0]).toMatchObject({ t: 'damage', amount: 0, blocked: 4 });
   });
 
   it('makes one step per ability, with its results attached', () => {
@@ -57,18 +77,18 @@ describe('combat timeline', () => {
       { t: 'round', round: 2 },
       { t: 'turn', actorId: 'e:1' },
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'] },
-      { t: 'damage', targetId: 'p:a', amount: 5, crit: false },
+      { t: 'damage', targetId: 'p:a', amount: 5, crit: false, blocked: 0 },
       { t: 'ability', actorId: 'e:2', abilityId: 'aimed_shot', targetIds: ['p:a'] },
       { t: 'dodge', targetId: 'p:a' },
       { t: 'ability', actorId: 'e:3', abilityId: 'slash', targetIds: ['p:a'] },
-      { t: 'damage', targetId: 'p:a', amount: 9, crit: true },
+      { t: 'damage', targetId: 'p:a', amount: 9, crit: true, blocked: 0 },
       { t: 'downed', targetId: 'p:a' },
     ];
     const steps = buildTimeline(log);
     expect(steps.map((s) => s.actorId)).toEqual(['e:1', 'e:2', 'e:3']);
     expect(steps[1]!.kind).toBe('ranged');
     expect(steps[2]!.events).toEqual([
-      { t: 'damage', targetId: 'p:a', amount: 9, crit: true },
+      { t: 'damage', targetId: 'p:a', amount: 9, crit: true, blocked: 0 },
       { t: 'downed', targetId: 'p:a' },
     ]);
   });
@@ -76,7 +96,7 @@ describe('combat timeline', () => {
   it('records the last log seq of each step (so the text log can keep pace)', () => {
     const steps = buildTimeline([
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'], seq: 5 },
-      { t: 'damage', targetId: 'p:a', amount: 2, crit: false, seq: 6 },
+      { t: 'damage', targetId: 'p:a', amount: 2, crit: false, blocked: 0, seq: 6 },
       { t: 'turn', actorId: 'e:2', seq: 7 },
       { t: 'ability', actorId: 'e:2', abilityId: 'slash', targetIds: ['p:a'], seq: 8 },
       { t: 'dodge', targetId: 'p:a', seq: 9 },
@@ -106,11 +126,11 @@ describe('combat timeline', () => {
     const start = { 'p:a': { hp: 10, maxHp: 12, downed: false } };
     const [hit, heal, fall] = buildTimeline([
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'] },
-      { t: 'damage', targetId: 'p:a', amount: 6, crit: false },
+      { t: 'damage', targetId: 'p:a', amount: 6, crit: false, blocked: 0 },
       { t: 'ability', actorId: 'p:b', abilityId: 'mend', targetIds: ['p:a'] },
       { t: 'heal', targetId: 'p:a', amount: 20 },
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'] },
-      { t: 'damage', targetId: 'p:a', amount: 30, crit: true },
+      { t: 'damage', targetId: 'p:a', amount: 30, crit: true, blocked: 0 },
       { t: 'downed', targetId: 'p:a' },
     ]);
     const a = applyStep(start, hit!);

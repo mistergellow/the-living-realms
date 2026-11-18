@@ -1,4 +1,4 @@
-import { getAbility } from '@realms/game-core';
+import { getAbility, STATUS_NAMES } from '@realms/game-core';
 import type { CombatLogEntry, CombatView } from '@realms/shared';
 
 /** Human-readable combat log line (English, player-facing). */
@@ -15,7 +15,15 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
         : `${name(e.actorId)} uses ${a}.`;
     }
     case 'damage':
-      return `${name(e.targetId)} takes ${e.amount} damage${e.crit ? ' (critical!)' : ''}.`;
+      return `${name(e.targetId)} takes ${e.amount} damage${e.crit ? ' (critical!)' : ''}${e.blocked ? ` (${e.blocked} blocked)` : ''}.`;
+    case 'block':
+      return `${name(e.targetId)} gains ${e.amount} Block.`;
+    case 'status':
+      return `${name(e.targetId)} is ${STATUS_NAMES[e.status].toLowerCase()} for ${e.turns} turn${e.turns > 1 ? 's' : ''}.`;
+    case 'tick':
+      return `${name(e.targetId)} suffers ${e.amount} from ${STATUS_NAMES[e.status].toLowerCase()}.`;
+    case 'stunned':
+      return `${name(e.targetId)} is stunned and loses the turn.`;
     case 'dodge':
       return `${name(e.targetId)} dodges.`;
     case 'heal':

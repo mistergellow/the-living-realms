@@ -45,8 +45,9 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **M2 done:** deterministic combat engine (2 rows × 3 slots per side, initiative, Focus with carry-over, row targeting, swap, enemy AI, rooms → boss, revive at 1 HP); Rift runs persisted every action; 60 s turn timer; rewards (reputation + drops) and defeat penalty (−25% quality); side-view combat screen with animations; layered SVG characters with an editable base body
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
+- [x] **Combat 2.0:** six linear attributes (12 creation points, unspent points can be spent later), weapons scaling with two attributes, main + off-hand combinations (6 starter weapons, 3 off-hands), diminishing-returns armor/resistance, Block, statuses (Bleed, Burn, Mark, Weaken, Stun), damage ranges, visible enemy intents; rebalanced by simulation
 - Lobby system (create, invite/join, ready check, start)
-- [x] Combat screen rendered with PixiJS (animated stage, layered characters, projectiles, effects; ADR-023)
+- [x] Combat screen rendered with PixiJS (animated stage, layered characters, projectiles, effects; ADR-025)
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 
@@ -59,7 +60,7 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - `map_regions` / `map_hexes` tables, a map seeding/import tool
 - Movement intents (server-validated pathing and AP cost), position broadcast
 - Area-of-interest: clients receive only nearby activity
-- [x] Map rendered with PixiJS: pan (drag, keys), zoom (wheel, pinch, buttons), recenter (ADR-023)
+- [x] Map rendered with PixiJS: pan (drag, keys), zoom (wheel, pinch, buttons), recenter (ADR-025)
 - Map rendering: terrain, fog of war (if desired)
 
 ## Phase 5 — Social layer and reputation ⏳ ❓

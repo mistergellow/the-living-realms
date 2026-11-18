@@ -1,63 +1,89 @@
 import { ATTRIBUTE_KEYS, type AttributeKey, type Attributes } from '@realms/shared';
 
 /*
- * The six D&D abilities, set at character creation with point-buy (D&D 5e
- * rules). Base scores never grow on their own; equipment can add bonuses.
+ * Six linear attributes (decision D33). Every point always has the same effect;
+ * no D&D-style modifiers. Characters start at BASE in each and distribute
+ * CREATION_POINTS at creation; equipment adds points on top (D21).
  */
 
 export const ATTRIBUTE_NAMES: Record<AttributeKey, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
+  might: 'Might',
+  agility: 'Agility',
+  precision: 'Precision',
+  vitality: 'Vitality',
+  arcana: 'Arcana',
+  spirit: 'Spirit',
 };
 
 export const ATTRIBUTE_SUMMARIES: Record<AttributeKey, string> = {
-  str: 'Physical damage',
-  dex: 'Initiative, ranged damage, dodge, critical chance',
-  con: 'Health and defense',
-  int: 'Maximum mana and spell power',
-  wis: 'Healing, resistance, mana recovery',
-  cha: 'Buffs and debuffs; trade and reputation later',
+  might: 'Physical damage and shield Block',
+  agility: 'Turn order (initiative) and dodge',
+  precision: 'Critical chance and critical damage',
+  vitality: 'Health and healing received',
+  arcana: 'Magic damage and maximum mana',
+  spirit: 'Healing, magic resistance, mana recovery, status effects',
 };
 
-export const POINT_BUY = {
-  budget: 27,
-  min: 8,
-  max: 15,
-  /** Cost of each score (D&D 5e). */
-  cost: { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 } as Record<number, number>,
+export const ATTRIBUTE_RULES = {
+  base: 5,
+  creationPoints: 12,
+  /** Highest score allowed from creation points alone (equipment can exceed it). */
+  creationMax: 10,
 } as const;
 
-export const BASE_ATTRIBUTES: Attributes = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
+export const BASE_ATTRIBUTES: Attributes = Object.fromEntries(
+  ATTRIBUTE_KEYS.map((k) => [k, ATTRIBUTE_RULES.base]),
+) as Attributes;
 
-/** D&D ability modifier: 10–11 → 0, 12–13 → +1, 8–9 → −1 … */
-export function attributeModifier(score: number): number {
-  return Math.floor((score - 10) / 2);
+export function pointsSpent(a: Attributes): number {
+  return ATTRIBUTE_KEYS.reduce((sum, k) => sum + (a[k] - ATTRIBUTE_RULES.base), 0);
 }
 
-export function pointBuySpent(a: Attributes): number {
-  return ATTRIBUTE_KEYS.reduce((sum, k) => sum + (POINT_BUY.cost[a[k]] ?? Infinity), 0);
-}
+export type AttributeValidation =
+  { ok: true; spent: number; unspent: number } | { ok: false; reason: string };
 
-export type PointBuyValidation = { ok: true; spent: number } | { ok: false; reason: string };
-
-/** Unspent points are allowed; overspending or out-of-range scores are not. */
-export function validatePointBuy(a: Attributes): PointBuyValidation {
+/** Creation: every score between base and creationMax, total extra ≤ creation points. */
+export function validateCreationAttributes(a: Attributes): AttributeValidation {
   for (const k of ATTRIBUTE_KEYS) {
     const v = a[k];
-    if (!Number.isInteger(v) || v < POINT_BUY.min || v > POINT_BUY.max)
+    if (!Number.isInteger(v) || v < ATTRIBUTE_RULES.base || v > ATTRIBUTE_RULES.creationMax)
       return {
         ok: false,
-        reason: `${ATTRIBUTE_NAMES[k]} must be between ${POINT_BUY.min} and ${POINT_BUY.max}.`,
+        reason: `${ATTRIBUTE_NAMES[k]} must be between ${ATTRIBUTE_RULES.base} and ${ATTRIBUTE_RULES.creationMax}.`,
       };
   }
-  const spent = pointBuySpent(a);
-  if (spent > POINT_BUY.budget)
-    return { ok: false, reason: `You spent ${spent} points; the budget is ${POINT_BUY.budget}.` };
-  return { ok: true, spent };
+  const spent = pointsSpent(a);
+  if (spent > ATTRIBUTE_RULES.creationPoints)
+    return {
+      ok: false,
+      reason: `You spent ${spent} points; you have ${ATTRIBUTE_RULES.creationPoints}.`,
+    };
+  return { ok: true, spent, unspent: ATTRIBUTE_RULES.creationPoints - spent };
+}
+
+/** Spending unspent points later (same per-attribute cap as creation). */
+export function validateAllocation(
+  base: Attributes,
+  add: Partial<Attributes>,
+  available: number,
+): { ok: true; result: Attributes; used: number } | { ok: false; reason: string } {
+  let used = 0;
+  const result = { ...base };
+  for (const k of ATTRIBUTE_KEYS) {
+    const n = add[k] ?? 0;
+    if (!Number.isInteger(n) || n < 0)
+      return { ok: false, reason: 'Points must be positive whole numbers.' };
+    result[k] += n;
+    used += n;
+    if (n > 0 && result[k] > ATTRIBUTE_RULES.creationMax)
+      return {
+        ok: false,
+        reason: `${ATTRIBUTE_NAMES[k]} cannot go above ${ATTRIBUTE_RULES.creationMax} with points.`,
+      };
+  }
+  if (used === 0) return { ok: false, reason: 'Choose where to put your points.' };
+  if (used > available) return { ok: false, reason: `You only have ${available} points.` };
+  return { ok: true, result, used };
 }
 
 export function addAttributes(base: Attributes, ...bonuses: Partial<Attributes>[]): Attributes {

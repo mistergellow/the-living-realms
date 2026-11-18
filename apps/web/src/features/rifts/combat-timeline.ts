@@ -1,5 +1,5 @@
 import { getAbility } from '@realms/game-core';
-import type { CombatLogEntry } from '@realms/shared';
+import type { CombatLogEntry, StatusId } from '@realms/shared';
 
 /*
  * Turns new combat log entries into animation steps (pure, no Pixi).
@@ -9,10 +9,14 @@ import type { CombatLogEntry } from '@realms/shared';
  */
 
 /** How an action looks on screen. */
-export type FxKind = 'melee' | 'ranged' | 'magic' | 'heal' | 'swap' | 'none';
+export type FxKind = 'melee' | 'ranged' | 'magic' | 'heal' | 'guard' | 'swap' | 'none';
 
 export type FxEvent =
-  | { t: 'damage'; targetId: string; amount: number; crit: boolean }
+  | { t: 'damage'; targetId: string; amount: number; crit: boolean; blocked: number }
+  | { t: 'block'; targetId: string; amount: number }
+  | { t: 'status'; targetId: string; status: StatusId; turns: number }
+  | { t: 'tick'; targetId: string; status: StatusId; amount: number }
+  | { t: 'stunned'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'dodge'; targetId: string }
   | { t: 'downed'; targetId: string }
@@ -31,12 +35,19 @@ export interface FxStep {
 export function abilityFxKind(abilityId: string): FxKind {
   const a = getAbility(abilityId);
   if (!a) return 'melee';
-  for (const e of a.effects) {
-    if (e.kind === 'swap') return 'swap';
-    if (e.kind === 'heal') return 'heal';
-    if (e.kind === 'damage')
-      return e.damageType === 'physical' ? 'melee' : e.damageType === 'ranged' ? 'ranged' : 'magic';
-  }
+  // The first damage effect decides; otherwise heal, block, then status/swap.
+  const dmg = a.effects.find((e) => e.kind === 'damage');
+  if (dmg && dmg.kind === 'damage')
+    return dmg.damageType === 'physical'
+      ? 'melee'
+      : dmg.damageType === 'ranged'
+        ? 'ranged'
+        : 'magic';
+  if (a.effects.some((e) => e.kind === 'heal')) return 'heal';
+  if (a.effects.some((e) => e.kind === 'block')) return 'guard';
+  if (a.effects.some((e) => e.kind === 'status'))
+    return a.targeting.side === 'enemy' ? 'magic' : 'guard';
+  if (a.effects.some((e) => e.kind === 'swap')) return 'swap';
   return 'none';
 }
 
@@ -87,7 +98,30 @@ export function buildTimeline(entries: ReadonlyArray<CombatLogEntry & { seq?: nu
           targetId: e.targetId,
           amount: e.amount,
           crit: e.crit,
+          blocked: e.blocked ?? 0,
         });
+        break;
+      case 'block':
+        current().events.push({ t: 'block', targetId: e.targetId, amount: e.amount });
+        break;
+      case 'status':
+        current().events.push({
+          t: 'status',
+          targetId: e.targetId,
+          status: e.status,
+          turns: e.turns,
+        });
+        break;
+      case 'tick':
+        current().events.push({
+          t: 'tick',
+          targetId: e.targetId,
+          status: e.status,
+          amount: e.amount,
+        });
+        break;
+      case 'stunned':
+        current().events.push({ t: 'stunned', targetId: e.targetId });
         break;
       case 'heal':
         current().events.push({ t: 'heal', targetId: e.targetId, amount: e.amount });
@@ -120,7 +154,7 @@ export function applyStep(state: ShownState, step: FxStep): ShownState {
   for (const e of step.events) {
     const u = next[e.targetId];
     if (!u) continue;
-    if (e.t === 'damage') u.hp = Math.max(0, u.hp - e.amount);
+    if (e.t === 'damage' || e.t === 'tick') u.hp = Math.max(0, u.hp - e.amount);
     else if (e.t === 'heal') u.hp = Math.min(u.maxHp, u.hp + e.amount);
     else if (e.t === 'downed') {
       u.downed = true;

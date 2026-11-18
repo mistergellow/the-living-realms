@@ -167,32 +167,45 @@ export function normalizeAppearance(a: CharacterAppearance | null | undefined): 
   return { ...DEFAULT_APPEARANCE, outfit: a.color };
 }
 
-// ---- Attributes (the six D&D abilities) ----
-export const ATTRIBUTE_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+// ---- Attributes (decision D33: six linear attributes, replacing D&D) ----
+export const ATTRIBUTE_KEYS = [
+  'might',
+  'agility',
+  'precision',
+  'vitality',
+  'arcana',
+  'spirit',
+] as const;
 export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 export type Attributes = Record<AttributeKey, number>;
 
-const attributeScore = z.number().int().min(1).max(30);
+const attributeScore = z.number().int().min(0).max(99);
 export const attributesSchema = z
   .object({
-    str: attributeScore,
-    dex: attributeScore,
-    con: attributeScore,
-    int: attributeScore,
-    wis: attributeScore,
-    cha: attributeScore,
+    might: attributeScore,
+    agility: attributeScore,
+    precision: attributeScore,
+    vitality: attributeScore,
+    arcana: attributeScore,
+    spirit: attributeScore,
   })
   .strict();
 
 export const createCharacterRequestSchema = z.object({
   name: z.string(),
   appearance: characterAppearanceSchema,
-  /** Point-buy scores; validated by @realms/game-core rules on the server. */
+  /** Final scores after distributing creation points; validated by game-core rules. */
   attributes: attributesSchema,
   /** Item definition id of the chosen starter weapon. */
   startingWeapon: z.string().max(64),
+  /** Optional starter off-hand (only with one-handed weapons). */
+  startingOffhand: z.string().max(64).optional(),
 });
 export type CreateCharacterRequest = z.infer<typeof createCharacterRequestSchema>;
+
+/** Spend unspent attribute points (e.g. characters converted from the old system). */
+export const allocateAttributesRequestSchema = z.object({ add: attributesSchema.partial() });
+export type AllocateAttributesRequest = z.infer<typeof allocateAttributesRequestSchema>;
 
 export interface CharacterListResponse {
   characters: CharacterDto[];
@@ -227,7 +240,8 @@ export interface ItemDto {
   slots: EquipSlot[];
   twoHanded: boolean;
   bonuses: Partial<Attributes>;
-  defense: number;
+  armor: number;
+  magicResist: number;
 }
 
 export type AbilitySource = 'weapon' | 'skill' | 'universal' | 'enemy';
@@ -243,23 +257,35 @@ export interface AbilityDto {
   manaCost: number;
   /** Human-readable targeting summary, e.g. "One enemy · front row". */
   targeting: string;
+  /** Human-readable effects, e.g. "6–8 physical damage", "Bleed 3 for 2 turns". */
+  effects: string[];
+  /** Attributes it scales with, e.g. "Might 60% · Agility 40%". */
+  scaling: string;
 }
 
 export interface DerivedStatsDto {
   maxHp: number;
   maxMana: number;
-  defense: number;
+  /** Physical mitigation rating; reduction = armor / (armor + K). */
+  armor: number;
+  /** Magic mitigation rating; same curve as armor. */
+  magicResist: number;
+  /** Percent damage reduction shown to players (derived from the ratings). */
+  physicalReduction: number;
+  magicReduction: number;
   initiative: number;
-  /** Percentages, 0–100. */
+  /** Percentages. */
   dodgeChance: number;
   critChance: number;
-  physicalPower: number;
-  rangedPower: number;
-  spellPower: number;
+  /** Damage of a critical hit, percent of normal (e.g. 170). */
+  critDamage: number;
+  /** Bonus percent to healing done. */
   healingPower: number;
-  resistance: number;
+  /** Bonus percent to healing received. */
+  healingReceived: number;
   manaRegen: number;
-  influence: number;
+  /** Bonus percent to status effects (bleed, burn, …) applied. */
+  effectPotency: number;
 }
 
 export interface CharacterSheetDto {
@@ -274,6 +300,8 @@ export interface CharacterSheetDto {
   abilities: AbilityDto[];
   /** Reputation is a per-character currency earned through activities. */
   reputation: number;
+  /** Attribute points not yet distributed. */
+  attributePoints: number;
 }
 
 export const equipRequestSchema = z.object({ itemId: z.uuid(), slot: z.enum(EQUIP_SLOTS) });

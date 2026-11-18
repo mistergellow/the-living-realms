@@ -43,12 +43,12 @@ describe('character creation (attributes + starter kit)', () => {
   it('rejects overspent or out-of-range point-buy', async () => {
     const { cookie } = await registerUser(t.app);
     const over = await createCharacter(t.app, cookie, 'Greedy', {
-      attributes: { str: 15, dex: 15, con: 15, int: 15, wis: 8, cha: 8 },
+      attributes: { might: 10, agility: 10, precision: 10, vitality: 5, arcana: 5, spirit: 5 },
     });
     expect(over.statusCode).toBe(400);
     expect(over.json().error.details[0].path).toBe('attributes');
     const range = await createCharacter(t.app, cookie, 'Mighty', {
-      attributes: { ...VALID_ATTRIBUTES, str: 18 },
+      attributes: { ...VALID_ATTRIBUTES, might: 11 },
     });
     expect(range.statusCode).toBe(400);
   });
@@ -66,13 +66,24 @@ describe('character creation (attributes + starter kit)', () => {
     const { cookie, id } = await newCharacter('hunting_bow');
     const sheet = await sheetOf(cookie, id);
     expect(sheet.baseAttributes).toEqual(VALID_ATTRIBUTES);
-    expect(sheet.stats.maxHp).toBe(20 + 2 * 13);
-    expect(sheet.stats.defense).toBe(1 + 1); // tunic + CON 13 modifier
+    expect(sheet.stats.maxHp).toBe(40 + 6 * 9);
+    expect(sheet.stats.armor).toBe(6); // padded tunic
+    expect(sheet.attributePoints).toBe(0);
     expect(sheet.equipment.mainHand?.defId).toBe('hunting_bow');
     expect(sheet.equipment.body?.defId).toBe('padded_tunic');
     expect(sheet.inventory).toEqual([]);
-    expect(sheet.abilities.map((a) => a.id)).toEqual(['aimed_shot', 'volley', 'swap_position']);
-    expect(sheet.abilities[0]).toMatchObject({ grantedBy: 'Hunting Bow', focusCost: 1 });
+    expect(sheet.abilities.map((a) => a.id)).toEqual([
+      'aimed_shot',
+      'volley',
+      'marking_shot',
+      'swap_position',
+    ]);
+    expect(sheet.abilities[0]).toMatchObject({
+      grantedBy: 'Hunting Bow',
+      focusCost: 1,
+      effects: ['7–9 ranged damage'],
+      scaling: 'Precision 60% · Agility 40%',
+    });
     expect(sheet.reputation).toBe(0);
   });
 
@@ -147,9 +158,9 @@ describe('equipment', () => {
       slot: 'accessory2',
     });
     const sheet = res.json() as CharacterSheetDto;
-    expect(sheet.baseAttributes.con).toBe(13);
-    expect(sheet.attributes.con).toBe(14);
-    expect(sheet.stats.maxHp).toBe(20 + 2 * 14);
+    expect(sheet.baseAttributes.vitality).toBe(9);
+    expect(sheet.attributes.vitality).toBe(11);
+    expect(sheet.stats.maxHp).toBe(40 + 6 * 11);
   });
 
   it('keeps one item per slot under concurrent equips', async () => {
@@ -169,5 +180,44 @@ describe('equipment', () => {
       { n: number },
     ];
     expect(n).toBe(1);
+  });
+});
+
+describe('creation off-hand and attribute points', () => {
+  it('one-handed weapons may start with an off-hand; two-handed may not', async () => {
+    const { cookie } = await registerUser(t.app);
+    const ok = await createCharacter(t.app, cookie, 'Shieldbearer', {
+      startingWeapon: 'training_sword',
+      startingOffhand: 'wooden_shield',
+    });
+    expect(ok.statusCode).toBe(201);
+    const sheet = await sheetOf(cookie, ok.json().character.id);
+    expect(sheet.equipment.offHand?.defId).toBe('wooden_shield');
+    expect(sheet.abilities.map((a) => a.id)).toContain('raise_shield');
+
+    const bad = await createCharacter(t.app, cookie, 'Overloaded', {
+      startingWeapon: 'hunting_bow',
+      startingOffhand: 'wooden_shield',
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error.details[0].path).toBe('startingOffhand');
+  });
+
+  it('keeps unspent creation points and lets you spend them later', async () => {
+    const { cookie } = await registerUser(t.app);
+    const res = await createCharacter(t.app, cookie, 'Saver', {
+      attributes: { might: 7, agility: 5, precision: 5, vitality: 5, arcana: 5, spirit: 5 },
+    });
+    const id = res.json().character.id;
+    expect((await sheetOf(cookie, id)).attributePoints).toBe(10);
+    const spend = await post(cookie, `/api/characters/${id}/attributes`, {
+      add: { vitality: 4, spirit: 3 },
+    });
+    expect(spend.statusCode).toBe(200);
+    const sheet = spend.json() as CharacterSheetDto;
+    expect(sheet.attributePoints).toBe(3);
+    expect(sheet.baseAttributes).toMatchObject({ vitality: 9, spirit: 8 });
+    const tooMuch = await post(cookie, `/api/characters/${id}/attributes`, { add: { might: 4 } });
+    expect(tooMuch.statusCode).toBe(400);
   });
 });

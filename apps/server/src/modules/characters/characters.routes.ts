@@ -1,5 +1,6 @@
 import {
   createCharacterRequestSchema,
+  allocateAttributesRequestSchema,
   equipRequestSchema,
   unequipRequestSchema,
   type CharacterListResponse,
@@ -40,6 +41,12 @@ export async function charactersRoutes(
     const { id } = parse(idParams, request.params);
     const { itemId, slot } = parse(equipRequestSchema, request.body);
     return sheets.equip(request.auth!.account.id, id, itemId, slot);
+  });
+
+  app.post('/:id/attributes', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { add } = parse(allocateAttributesRequestSchema, request.body);
+    return sheets.allocate(request.auth!.account.id, id, add);
   });
 
   app.post('/:id/unequip', async (request) => {
