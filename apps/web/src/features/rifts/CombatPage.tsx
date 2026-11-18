@@ -6,7 +6,7 @@ import {
   validTargets,
   type CombatState,
 } from '@realms/game-core';
-import type { CombatantView, RunDto } from '@realms/shared';
+import { columnOfSlot, type CombatantView, type IntentView, type RunDto } from '@realms/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -46,9 +46,11 @@ function Bar({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'm
 function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: string) => string }) {
   if (unit.downed || unit.intents.length === 0) return null;
   // Group identical actions (same ability and targets), e.g. three claws → "×3".
-  const groups: Array<{ abilityId: string; targetIds: string[]; count: number }> = [];
+  const groups: Array<IntentView & { count: number }> = [];
   for (const it of unit.intents) {
-    const same = groups.find((g) => g.abilityId === it.abilityId && g.targetIds.join() === it.targetIds.join());
+    const same = groups.find(
+      (g) => g.abilityId === it.abilityId && g.targetIds.join() === it.targetIds.join(),
+    );
     if (same) same.count++;
     else groups.push({ ...it, count: 1 });
   }
@@ -62,11 +64,13 @@ function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: strin
           dmg && dmg.kind === 'damage'
             ? `${Math.round(dmg.min * unit.power)}–${Math.round(dmg.max * unit.power)}`
             : (describeEffects(a)[0] ?? '');
+        const names = it.targetIds.map(nameOf).join(', ');
         const targets =
           a.targeting.area === 'all'
             ? 'everyone'
-            : it.targetIds.map(nameOf).join(', ') +
-              (a.targeting.area === 'column' ? ' (column)' : '');
+            : a.targeting.area === 'column'
+              ? `${it.column ?? ''} column (${names})`
+              : names;
         const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
         return (
           <span
@@ -178,6 +182,7 @@ function Unit(props: {
 }
 
 function Formation(props: {
+  columnMode: boolean;
   nameOf: (id: string) => string;
   side: 'party' | 'enemies';
   units: CombatantView[];
@@ -203,7 +208,7 @@ function Formation(props: {
           [4, 5],
         ];
   return (
-    <div className={`formation formation-${props.side}`}>
+    <div className={`formation formation-${props.side}${props.columnMode ? ' col-mode' : ''}`}>
       {rows.map((slots, ri) => (
         <div
           className="formation-column"
@@ -353,6 +358,13 @@ export function CombatPage() {
     setSelected(selected === abilityId ? null : abilityId);
   };
 
+  // D41: attacks aim at a column (both units in it); support picks one ally.
+  const columnMode = ability?.targeting.area === 'column';
+  const targetAction = (abilityId: string, u: CombatantView) =>
+    getAbility(abilityId)?.targeting.area === 'column'
+      ? ({ type: 'ability', abilityId, targetColumn: columnOfSlot(u.slot) } as const)
+      : ({ type: 'ability', abilityId, targetId: u.id } as const);
+
   const room = data.rooms[data.roomIndex];
   const byName = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
   const lines = combat.log
@@ -398,6 +410,7 @@ export function CombatPage() {
 
       <section className="stage" data-boss={room?.isBoss ?? false}>
         <Formation
+          columnMode={columnMode}
           nameOf={byName}
           side="party"
           units={combat.combatants.filter((c) => c.side === 'party')}
@@ -405,15 +418,14 @@ export function CombatPage() {
           targetIds={targetIds}
           swapSlots={swapSlots}
           fx={fx}
-          onTarget={(u) =>
-            selected && send({ type: 'ability', abilityId: selected, targetId: u.id })
-          }
+          onTarget={(u) => selected && send(targetAction(selected, u))}
           onSlot={(slot) =>
             selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
           }
         />
         <div className="stage-gap" aria-hidden />
         <Formation
+          columnMode={columnMode}
           nameOf={byName}
           side="enemies"
           units={combat.combatants.filter((c) => c.side === 'enemies')}
@@ -421,9 +433,7 @@ export function CombatPage() {
           targetIds={targetIds}
           swapSlots={null}
           fx={fx}
-          onTarget={(u) =>
-            selected && send({ type: 'ability', abilityId: selected, targetId: u.id })
-          }
+          onTarget={(u) => selected && send(targetAction(selected, u))}
           onSlot={() => {}}
         />
         {data.status === 'active' && combat.phase === 'room_cleared' && (
@@ -462,7 +472,11 @@ export function CombatPage() {
                   </span>
                 )}
                 <span className="spacer" />
-                {selected && <span className="muted">Choose a target…</span>}
+                {selected && (
+                  <span className="muted">
+                    {columnMode ? 'Choose a column…' : 'Choose a target…'}
+                  </span>
+                )}
               </div>
               <div className="abilities">
                 {me.abilityIds.map((id) => {

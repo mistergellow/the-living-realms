@@ -151,14 +151,14 @@ test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) 
   // Slay-the-Spire style intents: enemies show what they will do.
   await expect(page.getByTestId('intent').first()).toBeVisible();
 
-  // Slash: choose the ability, then a highlighted target.
+  // Only one column is in melee reach (the front), so Slash fires at once.
   await page.getByRole('button', { name: /^Slash/ }).click();
-  await page
-    .getByRole('button', { name: /Rift Husk \(target\)/ })
-    .first()
-    .click();
   await expect(page.getByTestId('my-focus')).toHaveText('2');
-  await expect(page.getByTestId('combat-log')).toContainText('uses Slash on Rift Husk');
+  // D41: attacks hit the whole column — the Bulwark and the Husk in front.
+  await expect(page.getByTestId('combat-log')).toContainText(
+    'uses Slash on Rift Bulwark, Rift Husk',
+  );
+  await expect(page.getByTestId('intent').first()).toContainText('column');
 
   await page.getByRole('button', { name: /^Raise Shield/ }).click();
   await expect(page.getByTestId('my-focus')).toHaveText('1');

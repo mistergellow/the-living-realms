@@ -34,6 +34,8 @@ export interface StatusView {
 export interface IntentView {
   abilityId: string;
   targetIds: string[];
+  /** Column targeted by column attacks (D41). */
+  column: CombatColumn | null;
 }
 
 export interface CombatantView {
@@ -148,8 +150,10 @@ export const combatActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('ability'),
     abilityId: z.string().max(64),
-    /** Target unit (single / row abilities). */
+    /** Target ally (single-target support abilities). */
     targetId: z.string().max(64).optional(),
+    /** Target column (attacks hit both units of a column, D41). */
+    targetColumn: z.enum(['front', 'mid', 'back']).optional(),
     /** Destination slot (Swap Position). */
     targetSlot: z
       .number()

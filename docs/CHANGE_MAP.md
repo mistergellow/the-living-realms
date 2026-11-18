@@ -217,7 +217,9 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Formação / posições (3 colunas × 2 linhas, D38)
 
 - Fonte única: `columnOfSlot`, `lineOfSlot`, `COMBAT_COLUMNS` em `packages/shared/src/combat.ts` (0–1 front, 2–3 mid, 4–5 back)
-- Alcance das habilidades: `reach` (`first`/`any`/colunas) e `area` (`single`/`column`/`all`) em `content/abilities.ts`; `validTargets`/`resolveTargets`/`intentTargets` no motor
+- Alcance das habilidades: `reach` (`first`/`any`/colunas) e `area` (`single`/`column`/`all`) em `content/abilities.ts`; `validTargets`/`resolveTargets`/`targetColumns`/`intentTargets` no motor
+- **Ataques escolhem a coluna (D41):** ação com `targetColumn` (`combatActionSchema`); só o apoio a aliados usa `targetId`; ecrã: `targetAction` + destaque da coluna (`col-mode` em `combat.css`)
+- IA por formação (D42): `bestMove`/`expectedValue`/`planEnemyIntents` no motor (Block vale mais com a coluna partilhada); intenções com `column` (`IntentView`)
 - Posições dos inimigos: `content/rifts.ts`; posições iniciais dos jogadores: `startingSlot` (`rifts.service.ts`) e `preferredSlot` (`lobbies.service.ts`)
 - Ecrãs: `Formation` em `CombatPage.tsx` + `combat.css` (bloco "D38"), `COLUMNS` em `LobbyPage.tsx`
 - Testes: `game-core/test/combat.test.ts` ("targeting by columns"), `lobbies.test.ts`, `rifts.test.ts` (posições iniciais)
@@ -232,7 +234,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `e2e` ("Rift combat")
 - **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `useCombatFx.ts` (se tiver animação)
 - **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
-- Equilíbrio: correr a simulação depois de mudar números (metas em `docs/REQUESTS.md` A23; o script de simulação deve ser recriado/guardado em `scripts/` se for preciso com frequência)
+- Equilíbrio: `pnpm sim` (`scripts/simulate-balance.ts`) depois de mudar números; metas em `docs/REQUESTS.md` (A23)
 
 ## Estados, Block e intenções (Slay the Spire + Darkest Dungeon)
 

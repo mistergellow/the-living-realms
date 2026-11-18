@@ -240,7 +240,10 @@ Combat is separate from exploration on both sides:
   with carry-over; rooms → boss; HP/mana persist between rooms. Formation
   (D38): per side 3 columns (front, mid, back) × 2 lines = 6 slots (0–1 front,
   2–3 mid, 4–5 back); melee reaches the first occupied column, ranged/magic any
-  position, column abilities hit both lines of a column. Damage =
+  position. **Attacks pick a column, never a single unit** (D41): they hit both
+  units in it; support abilities still pick one ally. Enemies plan per column
+  and play the formation (a blocker shields its column while its partner
+  attacks, D42). Damage =
   roll in range × attribute scaling (two attributes per weapon) × statuses ×
   crit, reduced by rating/(rating+50), then absorbed by Block. Enemies plan
   their turn at the start of each round (intents) and execute it, re-targeting
@@ -267,6 +270,9 @@ Combat is separate from exploration on both sides:
   stage (`features/rifts`). Animations are derived from new combat log entries
   (`useCombatFx`): the actor lunges, targets flash, numbers float.
 - **Art:** layered SVG characters (`features/avatar`) — provisional, see ADR-021.
+
+Balance is checked with `pnpm sim` (`scripts/simulate-balance.ts`), which plays
+the test Rift many times with a heuristic bot for six typical builds.
 
 ## 8. World map
 

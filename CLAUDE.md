@@ -59,4 +59,5 @@ pnpm infra:up && pnpm db:migrate && pnpm dev   # correr localmente
 pnpm lint && pnpm typecheck && pnpm test       # verificar
 pnpm test:e2e                                  # testes no browser
 pnpm db:generate                               # nova migração após mudar schema.ts
+pnpm sim                                       # simular o equilíbrio do combate
 ```

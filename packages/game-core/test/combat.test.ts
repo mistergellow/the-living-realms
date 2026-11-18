@@ -117,7 +117,8 @@ describe('targeting by columns (front, mid, back × 2 lines)', () => {
 
   it('back-column and any-position abilities', () => {
     const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], threeColumns);
-    expect(ids(s, 'volley')).toEqual(['shard_spitter']);
+    // Volley hits every enemy (D40).
+    expect(ids(s, 'volley')).toHaveLength(3);
     expect(ids(s, 'aimed_shot')).toHaveLength(3);
   });
 
@@ -138,11 +139,30 @@ describe('targeting by columns (front, mid, back × 2 lines)', () => {
     expect(hit).toEqual(['e:0:0', 'e:0:1']);
   });
 
-  it('rejects targets out of reach', () => {
+  it('rejects columns out of reach', () => {
     const s = encounter([member('a', 0)], threeColumns);
-    const spitter = s.combatants.find((c) => c.enemyDefId === 'shard_spitter')!;
-    const r = applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash', targetId: spitter.id });
+    const r = applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash', targetColumn: 'back' });
     expect(r).toMatchObject({ ok: false, code: 'INVALID_ACTION' });
+  });
+
+  it('attacks pick a column and hit both units in it (D41)', () => {
+    let s = encounter(
+      [member('a', 0, { critChance: 0 }, ['aimed_shot'])],
+      room([
+        { enemy: 'rift_husk', slot: 0 },
+        { enemy: 'shard_spitter', slot: 4 },
+        { enemy: 'shard_spitter', slot: 5 },
+      ]),
+    );
+    for (const c of s.combatants)
+      if (c.side === 'enemies') Object.assign(c.stats, { dodgeChance: 0 });
+    s = ok(
+      applyAction(s, 'p:a', { type: 'ability', abilityId: 'aimed_shot', targetColumn: 'back' }),
+    );
+    const hit = s.log
+      .filter((l) => l.t === 'damage')
+      .map((l) => (l as { targetId: string }).targetId);
+    expect(hit).toEqual(['e:0:1', 'e:0:2']);
   });
 });
 
@@ -306,7 +326,11 @@ describe('enemy intents (Slay-the-Spire style)', () => {
     let s = encounter([member('a', 0, { maxHp: 500 })], room([{ enemy: 'rift_husk', slot: 0 }]));
     const husk = s.combatants.find((c) => c.side === 'enemies')!;
     expect(husk.intents.length).toBeGreaterThan(0);
-    expect(husk.intents[0]).toEqual({ abilityId: 'husk_claw', targetIds: ['p:a'] });
+    expect(husk.intents[0]).toEqual({
+      abilityId: 'husk_claw',
+      targetIds: ['p:a'],
+      column: 'front',
+    });
     const planned = husk.intents.length;
     s = ok(applyAction(s, 'p:a', { type: 'end_turn' }));
     const used = s.log.filter((l) => l.t === 'ability' && l.actorId === husk.id);
@@ -344,5 +368,23 @@ describe('group runs', () => {
       'p:a',
     );
     expect(s).toMatchObject({ phase: 'ended', outcome: 'defeat' });
+  });
+});
+
+describe('enemies play the formation (D42)', () => {
+  it('a Bulwark sharing a column with an attacker shields the column, the other attacks', () => {
+    const s = encounter(
+      [member('a', 0), member('b', 1)],
+      room([
+        { enemy: 'rift_bulwark', slot: 0 },
+        { enemy: 'rift_husk', slot: 1 },
+      ]),
+    );
+    const bulwark = s.combatants.find((c) => c.enemyDefId === 'rift_bulwark')!;
+    const husk = s.combatants.find((c) => c.enemyDefId === 'rift_husk')!;
+    expect(bulwark.intents[0]).toMatchObject({ abilityId: 'bulwark_wall', column: 'front' });
+    expect(husk.intents.every((i) => i.abilityId === 'husk_claw')).toBe(true);
+    // Enemy attacks hit both party members in the front column.
+    expect(husk.intents[0]!.targetIds.sort()).toEqual(['p:a', 'p:b']);
   });
 });

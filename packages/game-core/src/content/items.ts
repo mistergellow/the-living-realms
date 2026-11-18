@@ -91,11 +91,11 @@ export const ITEMS = {
   wooden_shield: item({
     id: 'wooden_shield',
     name: 'Wooden Shield',
-    description: 'Block for yourself or an ally. Scales with Might and Vitality.',
+    description: 'Block for yourself or a whole column. Scales with Might and Vitality.',
     kind: 'offhand',
     slots: ['offHand'],
     weaponType: 'shield',
-    abilities: ['raise_shield', 'guard_ally'],
+    abilities: ['raise_shield', 'shield_wall'],
     armor: 4,
   }),
   bone_talisman: item({

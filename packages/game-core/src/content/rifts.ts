@@ -41,11 +41,13 @@ export const RIFTS = {
     id: 'shattered_breach',
     name: 'Shattered Breach',
     description: 'A small, unstable rift. A good place to test your mettle.',
+    // D42: enemies use the formation — a blocker shares a column with an
+    // attacker, and rooms spread over front, mid and back.
     rooms: [
       {
         name: 'The Threshold',
         enemies: [
-          { enemy: 'rift_husk', slot: 0 },
+          { enemy: 'rift_bulwark', slot: 0 },
           { enemy: 'rift_husk', slot: 1 },
           { enemy: 'shard_spitter', slot: 4 },
         ],
@@ -54,8 +56,9 @@ export const RIFTS = {
         name: 'Howling Gallery',
         enemies: [
           { enemy: 'hollow_hound', slot: 0 },
-          { enemy: 'rift_husk', slot: 1 },
-          { enemy: 'shard_spitter', slot: 3 },
+          { enemy: 'rift_husk', slot: 2 },
+          { enemy: 'shard_spitter', slot: 4 },
+          { enemy: 'shard_spitter', slot: 5 },
         ],
       },
       {
@@ -63,6 +66,7 @@ export const RIFTS = {
         isBoss: true,
         enemies: [
           { enemy: 'rift_warden', slot: 0 },
+          { enemy: 'rift_bulwark', slot: 1 },
           { enemy: 'shard_spitter', slot: 4 },
         ],
       },

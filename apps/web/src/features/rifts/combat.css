@@ -650,7 +650,24 @@
   font-weight: 500;
   color: var(--text-faint);
 }
-.cell { height: 178px; }
-.formation-column { gap: var(--space-2); }
-.intent { font-size: 10px; padding: 1px 6px; }
-.intents { top: -12px; gap: 2px; }
+.cell {
+  height: 178px;
+}
+.formation-column {
+  gap: var(--space-2);
+}
+.intent {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+.intents {
+  top: -12px;
+  gap: 2px;
+}
+/* D41: with a column attack selected, hovering a unit lights up its whole column. */
+.formation.col-mode .formation-column:has(.unit.is-targetable:hover) .unit.is-targetable .unit-art {
+  filter: drop-shadow(0 0 10px rgb(255 120 90 / 0.95));
+}
+.formation.col-mode .formation-column:has(.unit.is-targetable:hover) .unit.is-targetable {
+  transform: translateY(-3px);
+}

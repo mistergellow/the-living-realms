@@ -48,6 +48,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D36 | O combate é "Slay the Spire sem cartas + Darkest Dungeon": inclui **intenções dos inimigos** visíveis antes do turno dos jogadores                                                                                                                               | 2026-11-17 | Combate 2.0                                                                                    |
 | D37 | Sistema de amigos (adicionar amigo) e Rifts com lobby                                                                                                                                                                                                            | 2026-11-18 | M3                                                                                             |
 | D38 | **Formação corrigida:** cada lado tem 3 colunas (back, mid, front) × 2 linhas = 6 posições (substitui a interpretação "2 filas de 3" do D13)                                                                                                                     | 2026-11-18 | motor, combate, lobby                                                                          |
+| D39 | A coluna mid está a salvo do corpo-a-corpo enquanto houver alguém na front                                                                                                                                                                                       | 2026-11-18 | motor                                                                                          |
+| D40 | Há habilidades que atingem tudo                                                                                                                                                                                                                                  | 2026-11-18 | conteúdo                                                                                       |
+| D41 | **Nos ataques escolhe-se a coluna, não o alvo**: um ataque contra a front atinge sempre os dois da front (jogadores e inimigos)                                                                                                                                  | 2026-11-18 | motor, conteúdo, ecrã                                                                          |
+| D42 | Os inimigos jogam com a formação: ocupam as 3 colunas e/ou, na mesma coluna, um bloqueia e o outro ataca — conforme a dificuldade do Rift                                                                                                                        | 2026-11-18 | IA, conteúdo dos Rifts                                                                         |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -84,6 +88,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A29 | Atualização em tempo real no lobby/combate                      | o browser pergunta ao servidor a cada ~1,5 s (simples e robusto a esta escala; push por WebSocket fica para mais tarde)                                                              | `features/rifts/api.ts`                          |
 | A30 | Alcance por coluna                                              | corpo-a-corpo = primeira coluna ocupada (front → mid → back); distância/magia = qualquer coluna; Volley = coluna de trás inteira; Cleave/Rift Slam = primeira coluna ocupada inteira | `content/abilities.ts`                           |
 | A31 | Posições iniciais                                               | corpo-a-corpo na front; arco, cajado e tomo na back                                                                                                                                  | `startingSlot`                                   |
+| A32 | Habilidades de apoio (curar/proteger um aliado)                 | continuam a escolher a pessoa; só os ataques são por coluna                                                                                                                          | `content/abilities.ts`                           |
+| A33 | Proteção de coluna                                              | escudo: "Shield Wall" (Block para a coluna inteira); inimigo-tanque "Rift Bulwark"                                                                                                   | `content/*`                                      |
 
 ---
 
@@ -332,3 +338,22 @@ colunas: back, mid e frontline".
 - Equilíbrio inalterado na simulação (média a solo ~49%).
 - Testes: 40 unitários no game-core, 58 de integração, 7 e2e (corridos 2× seguidas).
 - Docs: CHANGE_MAP ("Formação / posições"), ARCHITECTURE §7, ADR-027, ROADMAP, CLAUDE.md.
+
+### #24 — 2026-11-18 — Ataques por coluna; inimigos jogam com a formação
+
+**Pedido:** (1) sim, a mid está a salvo; (2) há habilidades que atingem tudo;
+"no ataque não escolhemos alvos, escolhemos linhas — um ataque contra o da
+frente atinge sempre os dois da frente"; os inimigos devem jogar com isso
+(ocupar as 3 colunas e/ou, na mesma coluna, 1 bloqueia e outro ataca),
+conforme a dificuldade do Rift.
+**Decisões:** D39–D42; valores provisórios A32–A33.
+**Resultado:**
+
+- Motor: todos os ataques escolhem uma coluna e atingem as 2 unidades dessa coluna; o apoio a aliados continua a escolher a pessoa; Volley passa a atingir todos os inimigos.
+- IA: os inimigos escolhem a coluna com mais valor; um tanque valoriza Block quando partilha a coluna; intenções mostram a coluna ("→ front column (A, B)").
+- Conteúdo: novo inimigo **Rift Bulwark** (bloqueia a coluna); salas redesenhadas com formação (bloqueador + atacante na front, inimigos espalhados por front/mid/back); escudo com **Shield Wall** (Block para uma coluna de aliados).
+- Ecrã: ao escolher um ataque, passar o rato acende a coluna inteira; se só houver uma coluna ao alcance, o ataque sai logo.
+- Equilíbrio refeito (corpo-a-corpo mais forte, distância/magia mais fraca): média a solo 46%, todas as armas entre 31% e 63%.
+- Simulador guardado no projeto: `pnpm sim` (`scripts/simulate-balance.ts`).
+- Testes: 42 unitários no game-core, 58 de integração, 7 e2e.
+- Docs: CHANGE_MAP, ARCHITECTURE §7, ADR-028, ROADMAP, CLAUDE.md.

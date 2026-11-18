@@ -7,6 +7,8 @@ import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/
  * Battlefield (D38): per side 3 columns (front, mid, back) × 2 lines. Each
  * ability states its reach: 'first' = the first *occupied* column (melee,
  * A30), 'any' = every column, or specific columns.
+ * Attacks never pick a single unit (D41): they pick a column and hit both
+ * units in it. Support abilities on allies still pick one ally (A32).
  * Costs: Focus (per-turn energy) and, for spells, Mana.
  * Scaling (D33): each weapon ability scales with two attributes; the effect
  * value is multiplied by 1 + 8% × weighted attribute points.
@@ -51,12 +53,8 @@ export interface AbilityDef {
 }
 
 const ability = (a: AbilityDef) => a;
-const ENEMY_SINGLE_FRONT: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'single' };
-const ENEMY_SINGLE_ANY: AbilityTargeting = {
-  side: 'enemy',
-  reach: 'any',
-  area: 'single',
-};
+const ENEMY_FIRST_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'column' };
+const ENEMY_ANY_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'any', area: 'column' };
 const ALLY_ANY: AbilityTargeting = { side: 'ally', reach: 'any', area: 'single' };
 
 const SWORD = { might: 0.6, agility: 0.4 };
@@ -89,7 +87,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [{ kind: 'damage', damageType: 'physical', min: 2, max: 3 }],
     scaling: { might: 1 },
   }),
@@ -102,8 +100,8 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 5, max: 7 }],
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 6, max: 8 }],
     scaling: SWORD,
   }),
   cleave: ability({
@@ -114,7 +112,7 @@ export const ABILITIES = {
     focusCost: 2,
     manaCost: 0,
     targeting: { side: 'enemy', reach: 'first', area: 'column' },
-    effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 5 }],
+    effects: [{ kind: 'damage', damageType: 'physical', min: 7, max: 9 }],
     scaling: SWORD,
   }),
   rend: ability({
@@ -124,7 +122,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'physical', min: 2, max: 3 },
       { kind: 'status', status: 'bleed', turns: 2, value: 3 },
@@ -140,8 +138,8 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 6, max: 9 }],
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 7, max: 9 }],
     scaling: AXE,
   }),
   sunder: ability({
@@ -151,9 +149,9 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [
-      { kind: 'damage', damageType: 'physical', min: 6, max: 8 },
+      { kind: 'damage', damageType: 'physical', min: 8, max: 10 },
       { kind: 'status', status: 'weaken', turns: 2 },
     ],
     scaling: AXE,
@@ -167,8 +165,8 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 7, max: 9 }],
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 8, max: 10 }],
     scaling: DAGGER,
   }),
   puncture: ability({
@@ -178,7 +176,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'physical', min: 1, max: 2 },
       { kind: 'status', status: 'bleed', turns: 3, value: 4 },
@@ -192,7 +190,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [
       {
         kind: 'damage',
@@ -225,19 +223,19 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
-    effects: [{ kind: 'damage', damageType: 'ranged', min: 7, max: 9 }],
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'ranged', min: 6, max: 7 }],
     scaling: BOW,
   }),
   volley: ability({
     id: 'volley',
     name: 'Volley',
-    description: 'Rain arrows on the enemy back row.',
+    description: 'Rain arrows on every enemy.',
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', reach: ['back'], area: 'column' },
-    effects: [{ kind: 'damage', damageType: 'ranged', min: 4, max: 6 }],
+    targeting: { side: 'enemy', reach: 'any', area: 'all' },
+    effects: [{ kind: 'damage', damageType: 'ranged', min: 2, max: 3 }],
     scaling: BOW,
   }),
   marking_shot: ability({
@@ -247,7 +245,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'ranged', min: 3, max: 4 },
       { kind: 'status', status: 'mark', turns: 2 },
@@ -263,7 +261,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [{ kind: 'damage', damageType: 'physical', min: 2, max: 4 }],
     scaling: STAFF,
   }),
@@ -274,8 +272,8 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 2,
-    targeting: ENEMY_SINGLE_ANY,
-    effects: [{ kind: 'damage', damageType: 'magic', min: 5, max: 7 }],
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'magic', min: 4, max: 5 }],
     scaling: STAFF,
   }),
   firebolt: ability({
@@ -285,7 +283,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 3,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'magic', min: 2, max: 3 },
       { kind: 'status', status: 'burn', turns: 2, value: 3 },
@@ -300,7 +298,7 @@ export const ABILITIES = {
     focusCost: 1,
     manaCost: 5,
     targeting: ALLY_ANY,
-    effects: [{ kind: 'heal', min: 4, max: 5 }],
+    effects: [{ kind: 'heal', min: 3, max: 4 }],
     scaling: { spirit: 0.7, arcana: 0.3 },
   }),
 
@@ -312,8 +310,8 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
-    effects: [{ kind: 'damage', damageType: 'magic', min: 5, max: 6 }],
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'magic', min: 4, max: 6 }],
     scaling: TOME,
   }),
   hex: ability({
@@ -323,7 +321,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 2,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [
       { kind: 'status', status: 'mark', turns: 2 },
       { kind: 'status', status: 'weaken', turns: 2 },
@@ -343,15 +341,15 @@ export const ABILITIES = {
     effects: [{ kind: 'block', min: 4, max: 5 }],
     scaling: SHIELD,
   }),
-  guard_ally: ability({
-    id: 'guard_ally',
-    name: 'Guard Ally',
-    description: 'Give Block to an ally until your next turn.',
+  shield_wall: ability({
+    id: 'shield_wall',
+    name: 'Shield Wall',
+    description: 'Block for both allies in a column until your next turn.',
     source: 'weapon',
-    focusCost: 1,
+    focusCost: 2,
     manaCost: 0,
-    targeting: ALLY_ANY,
-    effects: [{ kind: 'block', min: 3, max: 4 }],
+    targeting: { side: 'ally', reach: 'any', area: 'column' },
+    effects: [{ kind: 'block', min: 4, max: 5 }],
     scaling: SHIELD,
   }),
 
@@ -387,7 +385,7 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 6 }],
     scaling: {},
   }),
@@ -398,7 +396,7 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 1,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [{ kind: 'damage', damageType: 'ranged', min: 3, max: 5 }],
     scaling: {},
   }),
@@ -409,11 +407,33 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 2,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_FRONT,
+    targeting: ENEMY_FIRST_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'physical', min: 5, max: 7 },
       { kind: 'status', status: 'bleed', turns: 2, value: 2 },
     ],
+    scaling: {},
+  }),
+  bulwark_wall: ability({
+    id: 'bulwark_wall',
+    name: 'Bulwark',
+    description: 'Raises a barrier: Block for its whole column.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: { side: 'ally', reach: 'any', area: 'column' },
+    effects: [{ kind: 'block', min: 6, max: 8 }],
+    scaling: {},
+  }),
+  bulwark_bash: ability({
+    id: 'bulwark_bash',
+    name: 'Shield Bash',
+    description: 'A heavy shove at the nearest column.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 2, max: 3 }],
     scaling: {},
   }),
   warden_slam: ability({
@@ -448,7 +468,7 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 3,
     manaCost: 0,
-    targeting: ENEMY_SINGLE_ANY,
+    targeting: ENEMY_ANY_COLUMN,
     effects: [
       { kind: 'damage', damageType: 'magic', min: 2, max: 3 },
       { kind: 'status', status: 'stun', turns: 1 },
