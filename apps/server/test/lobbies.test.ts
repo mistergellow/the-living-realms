@@ -47,7 +47,7 @@ describe('Rift lobbies', () => {
     expect(res.statusCode).toBe(201);
     const lobby = res.json() as LobbyDto;
     expect(lobby.members).toEqual([
-      expect.objectContaining({ name: leader.name, isLeader: true, slot: 1 }),
+      expect.objectContaining({ name: leader.name, isLeader: true, slot: 0 }),
     ]);
 
     const overview = (await call(archer, 'GET', '/api/rifts/lobbies')).json() as LobbyOverviewDto;
@@ -61,9 +61,9 @@ describe('Rift lobbies', () => {
       isLeader: false,
     });
 
-    // Swap slots: archer moves to slot 1 (taken by the leader) → they swap.
+    // Swap slots: archer moves to slot 0 (taken by the leader) → they swap.
     const swapped = (
-      await call(archer, 'POST', `/api/rifts/lobbies/${lobby.id}/slot`, { slot: 1 })
+      await call(archer, 'POST', `/api/rifts/lobbies/${lobby.id}/slot`, { slot: 0 })
     ).json() as LobbyDto;
     expect(swapped.members.find((m) => m.name === leader.name)!.slot).toBe(4);
 
@@ -87,7 +87,7 @@ describe('Rift lobbies', () => {
     const party = run.combat.combatants.filter((c) => c.side === 'party');
     expect(party.map((p) => [p.name, p.slot]).sort()).toEqual(
       [
-        [archer.name, 1],
+        [archer.name, 0],
         [leader.name, 4],
       ].sort(),
     );

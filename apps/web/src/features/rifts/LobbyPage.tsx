@@ -10,10 +10,11 @@ import { useFriends } from '../social/api';
 import { useLobby, useLobbyActions } from './lobby-api';
 import './combat.css';
 
-/** Party formation as in combat: back row on the left, front row near the enemies. */
+/** Party formation as in combat (D38): back, mid and front columns × 2 lines. */
 const COLUMNS = [
-  { label: 'Back row', slots: [3, 4, 5] },
-  { label: 'Front row', slots: [0, 1, 2] },
+  { label: 'Back', slots: [4, 5] },
+  { label: 'Mid', slots: [2, 3] },
+  { label: 'Front', slots: [0, 1] },
 ];
 
 export function LobbyPage() {

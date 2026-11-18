@@ -34,7 +34,9 @@ Este ficheiro é lido automaticamente pelo Claude Code no início de cada sessã
 Jogo multiplayer persistente para browser. Mapa do mundo em **hexágonos**
 (coordenadas axiais q,r; mover entre hexágonos custa X AP, valor por definir).
 Um único mundo partilhado. Uma conta tem vários personagens, mas joga com
-**um de cada vez**. Combate por turnos, num ecrã separado da exploração.
+**um de cada vez**. Combate por turnos ("Slay the Spire sem cartas + Darkest
+Dungeon"), num ecrã separado da exploração; formação de **3 colunas (back, mid,
+front) × 2 linhas** por lado. Rifts = portais para raids, a solo ou em lobby até 6.
 Progressão por reputação (sem níveis). Nações, línguas, economia, NPCs e
 eventos virão em fases futuras (ver ROADMAP.md).
 

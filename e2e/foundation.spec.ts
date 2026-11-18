@@ -229,7 +229,8 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   b.once('dialog', (d) => d.accept());
   await b.getByRole('button', { name: 'Abandon' }).click();
   await expect(b.getByTestId('run-result')).toContainText('You fled the Rift');
-  await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`, {
+  await expect(a.getByTestId('unit-party').filter({ hasText: nameB })).toContainText('(left)', {
     timeout: 10_000,
   });
+  await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`);
 });

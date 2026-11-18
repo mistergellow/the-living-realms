@@ -46,6 +46,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
 - [x] **Combat 2.0:** six linear attributes (12 creation points, unspent points can be spent later), weapons scaling with two attributes, main + off-hand combinations (6 starter weapons, 3 off-hands), diminishing-returns armor/resistance, Block, statuses (Bleed, Burn, Mark, Weaken, Stun), damage ranges, visible enemy intents; rebalanced by simulation
+- [x] **Formation fix (D38):** 3 columns (front, mid, back) × 2 lines per side, column-based reach and areas
 - [x] **M3 done:** friends (requests by character name, online status); lobbies up to 6 (public or invite-only, invites to friends, formation slots, ready check, kick, leader hand-over, leader starts for everyone); group combat (initiative across players, leaving penalises only the leaver); live refresh by polling
 - Separate combat screen and renderer (`/combat/:id`)
 - Enemy AI; combat log and replay from `game-core`

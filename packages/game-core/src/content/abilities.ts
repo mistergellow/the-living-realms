@@ -1,23 +1,26 @@
-import type { AbilitySource, Attributes, StatusId } from '@realms/shared';
+import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/shared';
 
 /*
  * Ability definitions (data). PROVISIONAL CONTENT — names and numbers are
  * placeholders tuned by simulation (see docs/REQUESTS.md).
  *
- * Battlefield (D13): two rows (front/back) of three slots per side. Each
- * ability states what it can hit; "front" = first *occupied* row (A14).
+ * Battlefield (D38): per side 3 columns (front, mid, back) × 2 lines. Each
+ * ability states its reach: 'first' = the first *occupied* column (melee,
+ * A30), 'any' = every column, or specific columns.
  * Costs: Focus (per-turn energy) and, for spells, Mana.
  * Scaling (D33): each weapon ability scales with two attributes; the effect
  * value is multiplied by 1 + 8% × weighted attribute points.
  */
 
-export type Row = 'front' | 'back';
+export type Column = CombatColumn;
+export type Reach = 'first' | 'any' | Column[];
 export type DamageType = 'physical' | 'ranged' | 'magic';
 
 export interface AbilityTargeting {
   side: 'enemy' | 'ally' | 'self';
-  rows: Row[];
-  area: 'single' | 'row' | 'all';
+  reach: Reach;
+  /** One target, both units of one column, or everyone on that side. */
+  area: 'single' | 'column' | 'all';
 }
 
 export type AbilityEffect =
@@ -48,13 +51,13 @@ export interface AbilityDef {
 }
 
 const ability = (a: AbilityDef) => a;
-const ENEMY_SINGLE_FRONT: AbilityTargeting = { side: 'enemy', rows: ['front'], area: 'single' };
+const ENEMY_SINGLE_FRONT: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'single' };
 const ENEMY_SINGLE_ANY: AbilityTargeting = {
   side: 'enemy',
-  rows: ['front', 'back'],
+  reach: 'any',
   area: 'single',
 };
-const ALLY_ANY: AbilityTargeting = { side: 'ally', rows: ['front', 'back'], area: 'single' };
+const ALLY_ANY: AbilityTargeting = { side: 'ally', reach: 'any', area: 'single' };
 
 const SWORD = { might: 0.6, agility: 0.4 };
 const AXE = { might: 0.6, vitality: 0.4 };
@@ -75,7 +78,7 @@ export const ABILITIES = {
     source: 'universal',
     focusCost: 1,
     manaCost: 0,
-    targeting: { side: 'ally', rows: ['front', 'back'], area: 'single' },
+    targeting: { side: 'ally', reach: 'any', area: 'single' },
     effects: [{ kind: 'swap' }],
     scaling: {},
   }),
@@ -110,7 +113,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', rows: ['front'], area: 'row' },
+    targeting: { side: 'enemy', reach: 'first', area: 'column' },
     effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 5 }],
     scaling: SWORD,
   }),
@@ -209,7 +212,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: { side: 'self', rows: ['front', 'back'], area: 'single' },
+    targeting: { side: 'self', reach: 'any', area: 'single' },
     effects: [{ kind: 'block', min: 4, max: 5 }],
     scaling: DAGGER,
   }),
@@ -233,7 +236,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', rows: ['back'], area: 'row' },
+    targeting: { side: 'enemy', reach: ['back'], area: 'column' },
     effects: [{ kind: 'damage', damageType: 'ranged', min: 4, max: 6 }],
     scaling: BOW,
   }),
@@ -336,7 +339,7 @@ export const ABILITIES = {
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
-    targeting: { side: 'self', rows: ['front', 'back'], area: 'single' },
+    targeting: { side: 'self', reach: 'any', area: 'single' },
     effects: [{ kind: 'block', min: 4, max: 5 }],
     scaling: SHIELD,
   }),
@@ -420,7 +423,7 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', rows: ['front'], area: 'row' },
+    targeting: { side: 'enemy', reach: 'first', area: 'column' },
     effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 6 }],
     scaling: {},
   }),
@@ -431,7 +434,7 @@ export const ABILITIES = {
     source: 'enemy',
     focusCost: 3,
     manaCost: 0,
-    targeting: { side: 'enemy', rows: ['front', 'back'], area: 'all' },
+    targeting: { side: 'enemy', reach: 'any', area: 'all' },
     effects: [
       { kind: 'damage', damageType: 'magic', min: 3, max: 4 },
       { kind: 'status', status: 'burn', turns: 2, value: 2 },
@@ -480,16 +483,17 @@ export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
 };
 
 export function describeTargeting(t: AbilityTargeting): string {
-  const who = t.side === 'self' ? 'Self' : t.side === 'ally' ? 'Ally' : 'Enemy';
   if (t.side === 'self') return 'Self';
-  const area =
-    t.area === 'single'
-      ? `One ${who.toLowerCase()}`
-      : t.area === 'row'
-        ? `${who} row`
-        : `All ${who.toLowerCase()}s`;
-  const rows = t.rows.length === 2 ? 'any row' : `${t.rows[0]} row`;
-  return t.area === 'all' ? area : `${area} · ${rows}`;
+  const who = t.side === 'ally' ? 'ally' : 'enemy';
+  const where =
+    t.reach === 'first'
+      ? 'nearest column'
+      : t.reach === 'any'
+        ? 'any position'
+        : `${t.reach.join(' or ')} column`;
+  if (t.area === 'all') return `All ${who === 'ally' ? 'allies' : 'enemies'}`;
+  if (t.area === 'column') return `Whole ${who} column · ${where}`;
+  return `One ${who} · ${where}`;
 }
 
 export function describeEffects(a: AbilityDef): string[] {

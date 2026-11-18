@@ -237,7 +237,10 @@ Combat is separate from exploration on both sides:
   The RNG state lives inside the combat state, so every fight can be replayed
   and unit-tested. Rules: two rows of three slots per side; PvE rounds = party
   members by initiative, then every enemy (simple greedy AI); Focus per turn
-  with carry-over; rooms → boss; HP/mana persist between rooms. Damage =
+  with carry-over; rooms → boss; HP/mana persist between rooms. Formation
+  (D38): per side 3 columns (front, mid, back) × 2 lines = 6 slots (0–1 front,
+  2–3 mid, 4–5 back); melee reaches the first occupied column, ranged/magic any
+  position, column abilities hit both lines of a column. Damage =
   roll in range × attribute scaling (two attributes per weapon) × statuses ×
   crit, reduced by rating/(rating+50), then absorbed by Block. Enemies plan
   their turn at the start of each round (intents) and execute it, re-targeting

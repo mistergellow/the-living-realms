@@ -96,37 +96,50 @@ describe('turn order and Focus', () => {
   });
 });
 
-describe('targeting by rows', () => {
-  const twoRows = room([
-    { enemy: 'rift_husk', slot: 1 },
-    { enemy: 'shard_spitter', slot: 4 },
+describe('targeting by columns (front, mid, back × 2 lines)', () => {
+  const threeColumns = room([
+    { enemy: 'rift_husk', slot: 1 }, // front
+    { enemy: 'hollow_hound', slot: 2 }, // mid
+    { enemy: 'shard_spitter', slot: 4 }, // back
   ]);
+  const ids = (s: CombatState, ability: string) =>
+    validTargets(s, unit(s, 'p:a'), getAbility(ability)!).map((c) => c.enemyDefId);
 
-  it('"front" abilities hit the first occupied row', () => {
-    const s = encounter([member('a', 0)], twoRows);
-    const actor = unit(s, 'p:a');
-    expect(validTargets(s, actor, getAbility('slash')!).map((c) => c.enemyDefId)).toEqual([
-      'rift_husk',
-    ]);
-    // Once the front row is empty, the back row is exposed.
+  it('melee hits the first occupied column: front, then mid, then back', () => {
+    const s = encounter([member('a', 0)], threeColumns);
+    expect(ids(s, 'slash')).toEqual(['rift_husk']);
     const noFront = structuredClone(s);
     noFront.combatants.find((c) => c.enemyDefId === 'rift_husk')!.downed = true;
-    expect(
-      validTargets(noFront, unit(noFront, 'p:a'), getAbility('slash')!).map((c) => c.enemyDefId),
-    ).toEqual(['shard_spitter']);
+    expect(ids(noFront, 'slash')).toEqual(['hollow_hound']);
+    noFront.combatants.find((c) => c.enemyDefId === 'hollow_hound')!.downed = true;
+    expect(ids(noFront, 'slash')).toEqual(['shard_spitter']);
   });
 
-  it('back-row and any-row abilities', () => {
-    const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], twoRows);
-    const actor = unit(s, 'p:a');
-    expect(validTargets(s, actor, getAbility('volley')!).map((c) => c.enemyDefId)).toEqual([
-      'shard_spitter',
-    ]);
-    expect(validTargets(s, actor, getAbility('aimed_shot')!)).toHaveLength(2);
+  it('back-column and any-position abilities', () => {
+    const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], threeColumns);
+    expect(ids(s, 'volley')).toEqual(['shard_spitter']);
+    expect(ids(s, 'aimed_shot')).toHaveLength(3);
   });
 
-  it('rejects targets outside the allowed rows', () => {
-    const s = encounter([member('a', 0)], twoRows);
+  it('column abilities hit both lines of that column', () => {
+    let s = encounter(
+      [member('a', 0, { critChance: 0 }, ['cleave'])],
+      room([
+        { enemy: 'rift_husk', slot: 0 },
+        { enemy: 'rift_husk', slot: 1 },
+        { enemy: 'shard_spitter', slot: 2 },
+      ]),
+    );
+    for (const c of s.combatants) if (c.side === 'enemies') c.stats.dodgeChance = 0;
+    s = ok(applyAction(s, 'p:a', { type: 'ability', abilityId: 'cleave' }));
+    const hit = s.log
+      .filter((l) => l.t === 'damage')
+      .map((l) => (l as { targetId: string }).targetId);
+    expect(hit).toEqual(['e:0:0', 'e:0:1']);
+  });
+
+  it('rejects targets out of reach', () => {
+    const s = encounter([member('a', 0)], threeColumns);
     const spitter = s.combatants.find((c) => c.enemyDefId === 'shard_spitter')!;
     const r = applyAction(s, 'p:a', { type: 'ability', abilityId: 'slash', targetId: spitter.id });
     expect(r).toMatchObject({ ok: false, code: 'INVALID_ACTION' });

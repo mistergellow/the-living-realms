@@ -58,10 +58,10 @@ export const toRiftDto = (r: RiftDef): RiftDto => ({
   rooms: r.rooms.map((room) => ({ name: room.name, isBoss: !!room.isBoss })),
 });
 
-/** Ranged and caster weapons start in the back row; everything else in front (A20). */
+/** Ranged and caster weapons start in the back column; everything else in front (A31). */
 export function startingSlot(abilityIds: string[]): number {
   const backline = ['aimed_shot', 'arcane_bolt', 'spark'].some((a) => abilityIds.includes(a));
-  return backline ? 4 : 1;
+  return backline ? 4 : 0;
 }
 
 /** A character can only be in one active Rift run and one open lobby at a time. */

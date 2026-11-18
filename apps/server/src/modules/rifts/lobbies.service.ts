@@ -350,7 +350,8 @@ export class LobbiesService {
   private async preferredSlot(db: DbOrTx, c: Character, taken: number[]): Promise<number> {
     const profile = await this.sheets.combatProfile(db, c);
     const preferred = startingSlot(profile.abilityIds);
-    const row = preferred < 3 ? [1, 0, 2, 4, 3, 5] : [4, 3, 5, 1, 0, 2];
+    // Front fighters fill front → mid → back; ranged/casters back → mid → front.
+    const row = preferred < 2 ? [0, 1, 2, 3, 4, 5] : [4, 5, 2, 3, 0, 1];
     return row.find((s) => !taken.includes(s)) ?? preferred;
   }
 

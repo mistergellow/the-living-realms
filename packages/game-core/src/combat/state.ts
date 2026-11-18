@@ -47,7 +47,7 @@ export interface PartyMemberInput {
   slot: number;
 }
 
-export const rowOfSlot = (slot: number) => (slot < 3 ? 'front' : 'back');
+export { columnOfSlot } from '@realms/shared';
 export const partyId = (characterId: string) => `p:${characterId}`;
 
 function enemyStats(e: EnemyDef): DerivedStatsDto {

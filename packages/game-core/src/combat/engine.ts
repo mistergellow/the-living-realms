@@ -8,7 +8,7 @@ import {
   enemyCombatants,
   partyCombatant,
   pushLog,
-  rowOfSlot,
+  columnOfSlot,
   type Combatant,
   type CombatState,
   type PartyMemberInput,
@@ -168,7 +168,7 @@ function advanceToNextPartyTurn(state: CombatState): void {
 // ---------------------------------------------------------------------------
 // Targeting
 // ---------------------------------------------------------------------------
-/** Units an ability may target. "front" = the first occupied row (A14). */
+/** Units an ability may target. 'first' = the first occupied column (A30). */
 export function validTargets(
   state: CombatState,
   actor: Combatant,
@@ -178,11 +178,16 @@ export function validTargets(
   if (t.side === 'self') return [actor];
   const side = t.side === 'enemy' ? opposite(actor.side) : actor.side;
   const units = on(state, side).filter(alive);
-  if (t.side === 'ally') return units.filter((u) => t.rows.includes(rowOfSlot(u.slot)));
-  if (t.rows.length === 2) return units;
-  if (t.rows[0] === 'back') return units.filter((u) => rowOfSlot(u.slot) === 'back');
-  const front = units.filter((u) => rowOfSlot(u.slot) === 'front');
-  return front.length ? front : units.filter((u) => rowOfSlot(u.slot) === 'back');
+  if (t.reach === 'any') return units;
+  if (t.reach === 'first') {
+    for (const col of ['front', 'mid', 'back'] as const) {
+      const inCol = units.filter((u) => columnOfSlot(u.slot) === col);
+      if (inCol.length) return inCol;
+    }
+    return [];
+  }
+  const cols = t.reach;
+  return units.filter((u) => cols.includes(columnOfSlot(u.slot)));
 }
 
 function resolveTargets(
@@ -197,12 +202,13 @@ function resolveTargets(
   if (area === 'all') return candidates;
   const chosen = targetId
     ? candidates.find((c) => c.id === targetId)
-    : candidates.length === 1 || area === 'row'
+    : candidates.length === 1 ||
+        (area === 'column' && new Set(candidates.map((c) => columnOfSlot(c.slot))).size === 1)
       ? candidates[0]
       : undefined;
   if (!chosen) return 'Choose a valid target.';
   if (area === 'single') return [chosen];
-  return candidates.filter((c) => rowOfSlot(c.slot) === rowOfSlot(chosen.slot));
+  return candidates.filter((c) => columnOfSlot(c.slot) === columnOfSlot(chosen.slot));
 }
 
 // ---------------------------------------------------------------------------
@@ -395,9 +401,9 @@ function intentTargets(
   if (candidates.length === 0) return [];
   if (a.targeting.area === 'all') return candidates;
   const still = candidates.filter((c) => planned.includes(c.id));
-  if (a.targeting.area === 'row') {
+  if (a.targeting.area === 'column') {
     const anchor = still[0] ?? candidates[0]!;
-    return candidates.filter((c) => rowOfSlot(c.slot) === rowOfSlot(anchor.slot));
+    return candidates.filter((c) => columnOfSlot(c.slot) === columnOfSlot(anchor.slot));
   }
   if (still[0]) return [still[0]];
   const minHp = Math.min(...candidates.map((t) => t.hp));

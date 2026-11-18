@@ -9,7 +9,7 @@ import type { EnemyId } from './enemies.js';
 
 export interface RiftRoomDef {
   name: string;
-  /** Enemy placement: slot 0–2 front row, 3–5 back row. */
+  /** Enemy placement (D38): slots 0–1 front column, 2–3 mid, 4–5 back. */
   enemies: Array<{ enemy: EnemyId; slot: number }>;
   isBoss?: boolean;
 }
@@ -54,7 +54,7 @@ export const RIFTS = {
         name: 'Howling Gallery',
         enemies: [
           { enemy: 'hollow_hound', slot: 0 },
-          { enemy: 'rift_husk', slot: 2 },
+          { enemy: 'rift_husk', slot: 1 },
           { enemy: 'shard_spitter', slot: 3 },
         ],
       },
@@ -62,7 +62,7 @@ export const RIFTS = {
         name: "Warden's Seal",
         isBoss: true,
         enemies: [
-          { enemy: 'rift_warden', slot: 1 },
+          { enemy: 'rift_warden', slot: 0 },
           { enemy: 'shard_spitter', slot: 4 },
         ],
       },

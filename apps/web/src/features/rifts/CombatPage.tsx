@@ -45,12 +45,11 @@ function Bar({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'm
 
 function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: string) => string }) {
   if (unit.downed || unit.intents.length === 0) return null;
-  // Group repeated actions (e.g. three claws at the same target → "×3").
+  // Group identical actions (same ability and targets), e.g. three claws → "×3".
   const groups: Array<{ abilityId: string; targetIds: string[]; count: number }> = [];
   for (const it of unit.intents) {
-    const last = groups[groups.length - 1];
-    if (last && last.abilityId === it.abilityId && last.targetIds.join() === it.targetIds.join())
-      last.count++;
+    const same = groups.find((g) => g.abilityId === it.abilityId && g.targetIds.join() === it.targetIds.join());
+    if (same) same.count++;
     else groups.push({ ...it, count: 1 });
   }
   return (
@@ -66,7 +65,8 @@ function IntentChips({ unit, nameOf }: { unit: CombatantView; nameOf: (id: strin
         const targets =
           a.targeting.area === 'all'
             ? 'everyone'
-            : it.targetIds.map(nameOf).join(', ') + (a.targeting.area === 'row' ? ' (row)' : '');
+            : it.targetIds.map(nameOf).join(', ') +
+              (a.targeting.area === 'column' ? ' (column)' : '');
         const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
         return (
           <span
@@ -156,7 +156,10 @@ function Unit(props: {
         )}
       </div>
       <div className="unit-info">
-        <span className="unit-name">{unit.name}</span>
+        <span className="unit-name">
+          {unit.name}
+          {unit.left && <em className="left-tag"> (left)</em>}
+        </span>
         <Bar value={unit.hp} max={unit.maxHp} kind="hp" />
         <StatusChips unit={unit} />
         {unit.kind === 'player' && unit.maxMana > 0 && (
@@ -185,26 +188,33 @@ function Formation(props: {
   onTarget: (u: CombatantView) => void;
   onSlot: (slot: number) => void;
 }) {
-  // Party: back row on the far left, front row near the centre. Enemies mirrored.
+  // D38: 3 columns × 2 lines per side. Party: back column far left, front
+  // column near the centre; enemies mirrored.
   const rows =
     props.side === 'party'
       ? [
-          [3, 4, 5],
-          [0, 1, 2],
+          [4, 5],
+          [2, 3],
+          [0, 1],
         ]
       : [
-          [0, 1, 2],
-          [3, 4, 5],
+          [0, 1],
+          [2, 3],
+          [4, 5],
         ];
   return (
     <div className={`formation formation-${props.side}`}>
       {rows.map((slots, ri) => (
-        <div className="formation-row" key={ri}>
+        <div
+          className="formation-column"
+          key={ri}
+          data-column={['front', 'mid', 'back'][Math.floor(slots[0]! / 2)]}
+        >
           {slots.map((slot) => {
             const unit = props.units.find((u) => u.slot === slot);
             const swappable = props.swapSlots?.has(slot) ?? false;
             return (
-              <div className={`cell cell-${slot % 3}`} key={slot} data-slot={slot}>
+              <div className={`cell cell-line-${slot % 2}`} key={slot} data-slot={slot}>
                 {unit ? (
                   <Unit
                     nameOf={props.nameOf}
@@ -334,9 +344,9 @@ export function CombatPage() {
     if (!a.effects.some((e) => e.kind === 'swap')) {
       const t = validTargets(combat as unknown as CombatState, me, a);
       if (
-        a.targeting.area === 'row' &&
+        a.targeting.area === 'column' &&
         t.length > 0 &&
-        new Set(t.map((u) => u.slot < 3)).size === 1
+        new Set(t.map((u) => Math.floor(u.slot / 2))).size === 1
       )
         return send({ type: 'ability', abilityId, targetId: t[0]!.id });
     }
@@ -348,7 +358,7 @@ export function CombatPage() {
   const lines = combat.log
     .map((e) => ({ seq: e.seq, text: describeLog(e, combat) }))
     .filter((l): l is { seq: number; text: string } => !!l.text)
-    .slice(-14)
+    .slice(-40)
     .reverse();
 
   return (

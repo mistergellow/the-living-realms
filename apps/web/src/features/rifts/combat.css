@@ -583,3 +583,74 @@
 .ability-btn {
   max-width: 230px;
 }
+
+/* ---------- D38: each side = 3 columns (back, mid, front) × 2 lines ---------- */
+.formation {
+  gap: var(--space-2);
+  align-items: center;
+}
+.formation-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* Fixed grid so positions never shift when slots are empty. */
+.cell {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transform: none;
+}
+.formation-party .cell-line-1 {
+  transform: translateX(-14px);
+}
+.formation-enemies .cell-line-1 {
+  transform: translateX(14px);
+}
+.unit {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+}
+.unit-enemies {
+  flex-direction: column;
+  text-align: center;
+}
+.unit-info,
+.unit-enemies .unit-info {
+  align-items: center;
+}
+.unit-party .unit-floats,
+.unit-enemies .unit-floats {
+  left: 0;
+  right: 0;
+}
+.intents {
+  top: -18px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .cell {
+    width: 72px;
+    height: 150px;
+  }
+  .formation-party .cell-line-1,
+  .formation-enemies .cell-line-1 {
+    transform: none;
+  }
+}
+.left-tag {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+.cell { height: 178px; }
+.formation-column { gap: var(--space-2); }
+.intent { font-size: 10px; padding: 1px 6px; }
+.intents { top: -12px; gap: 2px; }

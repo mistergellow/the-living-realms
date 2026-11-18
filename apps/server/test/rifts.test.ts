@@ -87,7 +87,7 @@ describe('Rifts', () => {
     expect(run).toMatchObject({ status: 'active', roomIndex: 0, riftName: 'Shattered Breach' });
     expect(run.combat.activeId).toBe(`p:${h.characterId}`);
     const me = run.combat.combatants.find((c) => c.characterId === h.characterId)!;
-    expect(me).toMatchObject({ focus: 3, slot: 1, hp: me.maxHp });
+    expect(me).toMatchObject({ focus: 3, slot: 0, hp: me.maxHp });
     const left = new Date(run.turnDeadline!).getTime() - Date.now();
     expect(left).toBeGreaterThan(55_000);
     expect(left).toBeLessThanOrEqual(60_000);
@@ -103,7 +103,7 @@ describe('Rifts', () => {
     expect(active.json().run.id).toBe(run.id);
   });
 
-  it('places ranged characters in the back row', async () => {
+  it('places ranged characters in the back column', async () => {
     const h = await hero('hunting_bow');
     const run = (await startRun(h)).json() as RunDto;
     expect(run.combat.combatants.find((c) => c.characterId === h.characterId)!.slot).toBe(4);

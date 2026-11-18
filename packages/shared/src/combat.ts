@@ -4,13 +4,20 @@ import type { Attributes, CharacterAppearance, DerivedStatsDto } from './api.js'
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
  *
- * Battlefield (decision D13): each side has 6 slots in 2 rows of 3.
- * Slots 0–2 = front row, 3–5 = back row.
+ * Battlefield (decision D38): each side has 3 columns (front, mid, back) of
+ * 2 lines each = 6 slots. Slots 0–1 = front, 2–3 = mid, 4–5 = back
+ * (even slot = top line, odd slot = bottom line).
  * ------------------------------------------------------------------------- */
 
 export const SLOTS_PER_SIDE = 6;
 export type CombatSide = 'party' | 'enemies';
-export type CombatRow = 'front' | 'back';
+export const COMBAT_COLUMNS = ['front', 'mid', 'back'] as const;
+export type CombatColumn = (typeof COMBAT_COLUMNS)[number];
+/** Column of a slot (0–1 front, 2–3 mid, 4–5 back). */
+export const columnOfSlot = (slot: number): CombatColumn =>
+  COMBAT_COLUMNS[Math.floor(slot / 2)] ?? 'back';
+/** Line of a slot: 0 = top, 1 = bottom. */
+export const lineOfSlot = (slot: number) => slot % 2;
 
 export const STATUS_IDS = ['bleed', 'burn', 'mark', 'weaken', 'stun'] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
