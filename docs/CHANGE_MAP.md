@@ -387,7 +387,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Catálogo/regras: `packages/game-core/src/content/affixes.ts` (`AFFIXES`, `AFFIX_RULES`: máx. 5, pesos dos drops, duração/valor dos estados on-hit; `rarityOf`, `RARITY_NAMES`, `normalizeAffixes`, `describeAffix`, `rollAffixes`, `rollAffixCount`, `gearTotals`, `isGear`)
 - Stats: `computeStats` (`stats.ts`) soma `gearTotals` dos itens equipados (`OwnedItem.affixes`) e devolve `gear` (efeitos de combate)
-- Requisitos (atributos base): `REQUIREMENT_RULES`, `itemRequirements`, `checkRequirements`, `planEquip(…, baseAttributes)` (`equipment.ts`); `ItemDef.requirements` (`content/items.ts`)
+- Requisitos (atributos base, não dependem do upgrade — D65): `REQUIREMENT_RULES`, `itemRequirements`, `checkRequirements`, `planEquip(…, baseAttributes)` (`equipment.ts`); `ItemDef.requirements` (`content/items.ts`)
 - Combate: `GearCombatEffects` (`api.ts`) → `CombatantView.gear` (`combat.ts`) → `PartyMemberInput.gear` / `partyCombatant` (`state.ts`) → `RunMember.gear` (`rift/run.ts`) → `applyEffect` + `gearOnHit` + `addStatus` (`combat/engine.ts`)
 - Contrato: `ItemDto.rarity`, `affixes` (`ItemAffixDto`), `requirements` (`ItemRequirementDto`), `runeSlots`; `ITEM_RARITIES`, `ItemRarity`, `AffixGroup` (`api.ts`)
 - BD: `items.specials` (efeitos `{ id, value }`), `items.rune_slots` (só os desbloqueados aparecem no cartão) — sem migração

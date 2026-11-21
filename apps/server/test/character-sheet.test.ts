@@ -260,19 +260,17 @@ describe('item cards (request #36): bonus effects, rarity, requirements, runes',
     expect(after.attributes.agility).toBe(before.attributes.agility + 2);
   });
 
-  it('needs the BASE attributes listed on the card', async () => {
+  it('lists the BASE attributes needed; upgrades do not change them', async () => {
     const { cookie, id } = await newCharacter();
-    // Agility 8 (base); a +8 dagger needs Agility 5 + 8/2 = 9.
     const [dagger] = await t.dbHandle.sql`
       insert into items (id, character_id, item_def_id, source, upgrade_level)
       values (gen_random_uuid(), ${id}, 'rusty_dagger', 'drop', 8) returning id`;
     const card = (await sheetOf(cookie, id)).inventory.find((i) => i.id === dagger!.id)!;
-    expect(card.requirements).toEqual([{ attribute: 'agility', value: 9, met: false }]);
+    expect(card.requirements).toEqual([{ attribute: 'agility', value: 5, met: true }]);
     const res = await post(cookie, `/api/characters/${id}/equip`, {
       itemId: dagger!.id,
       slot: 'mainHand',
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error.message).toMatch(/requires Agility 9/);
+    expect(res.statusCode).toBe(200);
   });
 });

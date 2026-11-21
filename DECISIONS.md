@@ -686,7 +686,9 @@ effects (0 common … 5 mythic). Equipped effects are folded into
 `computeStats`; combat-only effects travel as `GearCombatEffects` on the
 combatant (`gear`) and are applied in the engine (`gearOnHit`). Requirements to
 equip use BASE attributes only (consistent with D44); weapons derive theirs
-from the primary attribute and upgrade level. The item card shows rune slots
+from the primary attribute; upgrades (+0…+10) never change them — they only
+raise the weapon's base stats (D65). Each effect is a range; the value is
+rolled within it when the effect appears (D66). The item card shows rune slots
 only when some are unlocked.
 
 **Why.** Reusing `specials` avoids a migration and keeps old rows valid

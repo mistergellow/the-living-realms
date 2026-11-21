@@ -101,7 +101,7 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
     }),
     rarity: rarityOf(affixes.length),
     affixes,
-    requirements: def ? checkRequirements(itemRequirements(def, i.upgradeLevel), base) : [],
+    requirements: def ? checkRequirements(itemRequirements(def), base) : [],
     runeSlots:
       gear && unlocked.length > 0
         ? { used: unlocked.filter((r) => !!r.runeId).length, total: unlocked.length }

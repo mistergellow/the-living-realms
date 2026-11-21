@@ -39,25 +39,20 @@ export interface OwnedItem {
 
 /*
  * Requirements to equip an item (request #36): BASE attributes only, like the
- * exploration tests (D44). PROVISIONAL: weapons ask for their primary
- * attribute, starting at the base score (every new character can use the
- * starter kit) and +1 every `upgradesPerPoint` upgrade levels; other items
- * use the `requirements` of their definition.
+ * exploration tests (D44). They belong to the item itself and never change
+ * with upgrades (+0…+10 only raise the weapon's base stats — owner, request
+ * #37). PROVISIONAL: weapons ask for their primary attribute at
+ * `weaponPrimaryBase` unless the definition sets its own `requirements`.
  */
 export const REQUIREMENT_RULES = {
   weaponPrimaryBase: 5,
-  upgradesPerPoint: 2,
 } as const;
 
-export function itemRequirements(def: ItemDef, upgradeLevel = 0): Partial<Attributes> {
+export function itemRequirements(def: ItemDef): Partial<Attributes> {
   const out: Partial<Attributes> = { ...(def.requirements ?? {}) };
   const w = getWeaponType(def.weaponType);
-  if (w && def.kind === 'weapon') {
-    const need =
-      REQUIREMENT_RULES.weaponPrimaryBase +
-      Math.floor(Math.max(0, upgradeLevel) / REQUIREMENT_RULES.upgradesPerPoint);
-    out[w.primary] = Math.max(out[w.primary] ?? 0, need);
-  }
+  if (w && def.kind === 'weapon' && out[w.primary] === undefined)
+    out[w.primary] = REQUIREMENT_RULES.weaponPrimaryBase;
   return out;
 }
 
@@ -101,10 +96,7 @@ export function planEquip(
     return { ok: false, reason: `${def.name} is broken and cannot be used.` };
   if (!def.slots.includes(slot))
     return { ok: false, reason: `${def.name} cannot be equipped there.` };
-  const unmet = checkRequirements(
-    itemRequirements(def, target.upgradeLevel),
-    baseAttributes,
-  ).filter((r) => !r.met);
+  const unmet = checkRequirements(itemRequirements(def), baseAttributes).filter((r) => !r.met);
   if (unmet.length)
     return {
       ok: false,

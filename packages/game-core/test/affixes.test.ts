@@ -105,21 +105,26 @@ describe('bonus effects (request #36)', () => {
 });
 
 describe('requirements (request #36): BASE attributes', () => {
-  it('weapons need their primary attribute; the starter kit is always usable', () => {
+  it('weapons need their primary attribute; upgrades never change it (request #37)', () => {
     const sword = getItemDef('training_sword')!;
-    expect(itemRequirements(sword, 0)).toEqual({ might: 5 });
-    expect(itemRequirements(sword, 4)).toEqual({ might: 7 });
+    expect(itemRequirements(sword)).toEqual({ might: 5 });
+    expect(itemRequirements({ ...sword, requirements: { might: 8, will: 6 } })).toEqual({
+      might: 8,
+      will: 6,
+    });
     expect(checkRequirements({ might: 7 }, base)).toEqual([
       { attribute: 'might', value: 7, met: false },
     ]);
   });
 
-  it('blocks equipping when the base attributes are too low', () => {
+  it('blocks equipping when the base attributes are too low, whatever the upgrade level', () => {
     const items: OwnedItem[] = [
-      { id: 's', defId: 'training_sword', quality: 100, equippedSlot: null, upgradeLevel: 4 },
+      { id: 's', defId: 'training_sword', quality: 100, equippedSlot: null, upgradeLevel: 10 },
     ];
-    expect(planEquip(items, 's', 'mainHand', base)).toMatchObject({ ok: false });
-    expect(planEquip(items, 's', 'mainHand', { ...base, might: 7 }).ok).toBe(true);
+    expect(planEquip(items, 's', 'mainHand', base).ok).toBe(true);
+    expect(planEquip(items, 's', 'mainHand', { ...base, might: 4 })).toMatchObject({
+      ok: false,
+    });
   });
 });
 

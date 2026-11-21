@@ -74,6 +74,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D62 | **Cor/raridade = número de efeitos bónus:** 0 Common (cinza), 1 Uncommon (verde), 2 Rare (azul), 3 Epic (roxo), 4 Legendary (laranja), 5 Mythic (vermelho)                                                                                                           | 2026-11-21 | `rarityOf`, `RARITY_NAMES`, `--rarity-*` (`tokens.css`)                                               |
 | D63 | **Requisitos para usar = atributos base** (como a regra dos BASE STATS)                                                                                                                                                                                              | 2026-11-21 | `itemRequirements`, `checkRequirements`, `planEquip`                                                  |
 | D64 | **Efeitos bónus variados, em todo o equipamento** (armas, mão secundária, armadura, acessórios): atributos, stats derivados, ofensivos em %, efeitos de combate                                                                                                      | 2026-11-21 | `content/affixes.ts` (`AFFIXES`)                                                                      |
+| D65 | **Upgrades +0 a +10 só melhoram os stats base da arma** (dano/valores das habilidades); não mudam requisitos nem efeitos                                                                                                                                             | 2026-11-21 | `upgradeMultiplier`, `itemRequirements` (sem nível)                                                   |
+| D66 | **Efeitos bónus = pool:** cada efeito tem um intervalo (ex.: roubo de vida 3–8%); quando aparece num item, o valor é sorteado dentro do intervalo. Os intervalos atuais são aleatórios, por definir (A64)                                                            | 2026-11-21 | `AFFIXES` (`min`/`max`), `rollAffixes`                                                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -144,7 +146,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A63 | Equilíbrio com a linha de 4 (40 corridas por build)             | média a solo 47% (volta ao alvo de 40–50%; o corpo a corpo só alcança o mais próximo)                                                                                                                                                                                                                                                                                                                     | `pnpm sim`                                                 |
 | A64 | Catálogo de efeitos bónus (pedido #36)                          | atributos +1–3; Health +5–20, Mana +4–12, Armor/Magic Resist +2–8, Initiative +1–3, Dodge +1–5%, Focus por ronda +1; Damage +3–10%, Critical chance +2–6%, Critical damage +10–25%, Damage vs bosses +5–15%; Bleed/Burn on hit 5–15%, Stun on hit 2–5%, Life steal 3–8%, Thorns 2–6. Sangrar/queimar on hit: 3 por ronda, 2 rondas; atordoar 1 ronda. Cada efeito só pode rolar em certos tipos de item   | `AFFIXES`, `AFFIX_RULES`                                   |
 | A65 | Quantos efeitos traz um drop                                    | 0: 50%, 1: 28%, 2: 13%, 3: 6%, 4: 2,5%, 5: 0,5% (drops do boss e itens encontrados no Rift; itens fabricados e o kit inicial vêm sem efeitos)                                                                                                                                                                                                                                                             | `AFFIX_RULES.dropAffixWeights`, `rollDropAffixes`          |
-| A66 | Requisitos das armas                                            | atributo principal da arma ≥ 5 + 1 por cada 2 níveis de upgrade (+10 → 10); o kit inicial serve sempre. Armaduras e acessórios: sem requisitos (campo `requirements` pronto). Uma arma já equipada que suba de nível fica equipada mesmo sem o requisito                                                                                                                                                  | `REQUIREMENT_RULES`, `ItemDef.requirements`                |
+| A66 | Requisitos das armas                                            | atributo principal da arma ≥ 5 (por agora sempre cumprido); **não mudam com o upgrade** (D65). Armaduras e acessórios: sem requisitos (campo `requirements` pronto para itens que peçam mais)                                                                                                                                                                                                             | `REQUIREMENT_RULES`, `ItemDef.requirements`                |
 | A67 | Efeitos que já existem nos itens                                | o campo `items.specials` passa a guardar os efeitos bónus de qualquer equipamento; ids desconhecidos são ignorados                                                                                                                                                                                                                                                                                        | `normalizeAffixes`                                         |
 
 ---
@@ -681,3 +683,18 @@ equipamento.
 - Testes: 84 unitários (9 novos), 67 de integração (2 novos), e2e da ficha com
   o cartão.
 - Docs: CHANGE_MAP ("Cartão do item e efeitos bónus"), DECISIONS (ADR-040).
+
+### #37 — 2026-11-21 — Upgrades só mudam os stats base; efeitos são uma pool
+
+**Pedido:** "O efeito de +0 até +10 não muda nada sem ser os stats base da
+arma. O resto é uma pool: por exemplo, roubo de vida pode ser de 3% a 8% e,
+quando o bónus aparece, é uma % entre esses valores (valores aleatórios, não
+pensados). Assim como todos."
+**Decisões:** D65, D66; A66 atualizado.
+**Resultado:**
+
+- Requisitos já não sobem com o upgrade (`itemRequirements(def)` sem nível);
+  o upgrade continua a mudar só o dano base e os valores das habilidades da arma.
+- Pool de efeitos: já funcionava assim (`rollAffixes` sorteia o valor entre
+  `min` e `max` de cada efeito); fica registado como decisão.
+- Testes atualizados (game-core e servidor).
