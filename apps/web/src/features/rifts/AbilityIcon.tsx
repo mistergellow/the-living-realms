@@ -83,6 +83,18 @@ const GLYPH_BY_ABILITY: Record<string, Glyph> = {
   bolt_shot: 'arrow',
   piercing_bolt: 'arrow',
   fireball: 'flame',
+  // request #46
+  skewer: 'sword',
+  stagger: 'fist',
+  focused_bolt: 'orb',
+  smite: 'sun',
+  radiance: 'heart',
+  chakram_throw: 'orb',
+  ricochet: 'volley',
+  reap: 'slash',
+  soul_harvest: 'drop',
+  sling_stone: 'arrow',
+  stunning_shot: 'target',
 };
 
 /** The kind of action, from the ability's effects (decides the tile colour). */

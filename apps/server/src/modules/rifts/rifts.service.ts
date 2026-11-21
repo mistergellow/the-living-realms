@@ -116,6 +116,9 @@ export function startingSlot(abilityIds: string[]): number {
     'wand_bolt',
     'staff_strike',
     'bolt_shot',
+    'smite',
+    'chakram_throw',
+    'sling_stone',
   ].some((a) => abilityIds.includes(a));
   return backline ? SLOTS_PER_SIDE - 1 : 0;
 }

@@ -19,6 +19,10 @@ const MAIN: Record<string, WeaponArt> = {
   morningstar: 'morningstar',
   lance: 'lance',
   crossbow: 'crossbow',
+  scepter: 'scepter',
+  chakram: 'chakram',
+  scythe: 'scythe',
+  sling: 'sling',
 };
 const OFF: Record<string, OffhandArt> = {
   shield: 'shield',
@@ -41,6 +45,10 @@ export function offhandArtFor(defId: string | null | undefined): OffhandArt {
 /** Weapon art from a combatant's ability list (the combat view has no items). */
 /** Basic attack → weapon art (the combat view only has the ability list). */
 const ART_BY_BASIC: Array<[string, Exclude<WeaponArt, null>]> = [
+  ['smite', 'scepter'],
+  ['chakram_throw', 'chakram'],
+  ['reap', 'scythe'],
+  ['sling_stone', 'sling'],
   ['great_swing', 'greatsword'],
   ['great_chop', 'greataxe'],
   ['great_smash', 'greathammer'],

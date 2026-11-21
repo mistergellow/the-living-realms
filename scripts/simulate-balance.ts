@@ -49,35 +49,39 @@ const attrs = (o: Partial<Attributes>): Attributes => ({
 });
 
 /** Typical 12-point builds, one per starter weapon. */
+/** One typical 12-point build per weapon type (request #46: 21 types). */
 const BUILDS: Record<string, { attributes: Attributes; main: string; off?: string }> = {
   'sword+shield': {
-    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
+    attributes: attrs({ might: 10, agility: 9, endurance: 8 }),
     main: 'training_sword',
     off: 'wooden_shield',
   },
   'axe+shield': {
-    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    attributes: attrs({ might: 13, endurance: 9 }),
     main: 'woodcutter_axe',
     off: 'wooden_shield',
   },
-  spear: { attributes: attrs({ might: 10, precision: 10, endurance: 7 }), main: 'ash_spear' },
-  mace: { attributes: attrs({ might: 10, endurance: 10, agility: 7 }), main: 'iron_mace' },
   'dual dagger': {
-    attributes: attrs({ agility: 10, precision: 10, endurance: 7 }),
+    attributes: attrs({ agility: 10, endurance: 10, precision: 7 }),
     main: 'rusty_dagger',
     off: 'rusty_dagger',
   },
+  spear: { attributes: attrs({ might: 10, precision: 9, endurance: 8 }), main: 'ash_spear' },
+  'mace+shield': {
+    attributes: attrs({ endurance: 10, might: 10, agility: 7 }),
+    main: 'iron_mace',
+    off: 'wooden_shield',
+  },
   bow: { attributes: attrs({ precision: 10, agility: 9, endurance: 8 }), main: 'hunting_bow' },
   staff: { attributes: attrs({ intellect: 10, will: 9, endurance: 8 }), main: 'apprentice_staff' },
-  wand: { attributes: attrs({ intellect: 10, precision: 10, endurance: 7 }), main: 'birch_wand' },
+  wand: { attributes: attrs({ intellect: 10, endurance: 10, agility: 7 }), main: 'birch_wand' },
   'tome+talisman': {
-    attributes: attrs({ intellect: 9, precision: 8, will: 8, endurance: 7 }),
+    attributes: attrs({ intellect: 10, precision: 9, endurance: 8 }),
     main: 'worn_tome',
     off: 'bone_talisman',
   },
-  // Request #45: new weapon types.
   greatsword: {
-    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
+    attributes: attrs({ might: 10, intellect: 9, endurance: 8 }),
     main: 'iron_greatsword',
   },
   greataxe: {
@@ -85,29 +89,33 @@ const BUILDS: Record<string, { attributes: Attributes; main: string; off?: strin
     main: 'bearded_greataxe',
   },
   'hand axe x2': {
-    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
+    attributes: attrs({ agility: 10, endurance: 9, might: 8 }),
     main: 'hand_axe',
     off: 'hand_axe',
   },
   'hammer+shield': {
-    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    attributes: attrs({ endurance: 10, will: 9, might: 8 }),
     main: 'war_hammer',
     off: 'wooden_shield',
   },
   'great hammer': {
-    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    attributes: attrs({ endurance: 10, intellect: 9, might: 8 }),
     main: 'great_maul',
   },
   'morning star+shield': {
-    attributes: attrs({ might: 10, precision: 8, endurance: 9 }),
+    attributes: attrs({ might: 10, will: 9, endurance: 8 }),
     main: 'morning_star',
     off: 'wooden_shield',
   },
-  lance: { attributes: attrs({ might: 10, agility: 8, endurance: 9 }), main: 'knight_lance' },
+  lance: { attributes: attrs({ precision: 10, endurance: 9, might: 8 }), main: 'knight_lance' },
   crossbow: {
-    attributes: attrs({ precision: 10, might: 9, endurance: 8 }),
+    attributes: attrs({ precision: 10, endurance: 10, agility: 7 }),
     main: 'light_crossbow',
   },
+  scepter: { attributes: attrs({ will: 10, endurance: 10, agility: 7 }), main: 'oak_scepter' },
+  chakram: { attributes: attrs({ agility: 10, intellect: 9, endurance: 8 }), main: 'rune_chakram' },
+  scythe: { attributes: attrs({ agility: 10, will: 9, endurance: 8 }), main: 'reaper_scythe' },
+  sling: { attributes: attrs({ precision: 10, will: 9, endurance: 8 }), main: 'leather_sling' },
 };
 
 function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
@@ -122,9 +130,16 @@ function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
     ];
     const { stats, attributes } = computeStats(build.attributes, items);
     const abilityIds = availableAbilities(items).map((a) => a.ability.id);
-    const backline = ['aimed_shot', 'staff_strike', 'spark', 'wand_bolt', 'bolt_shot'].some((a) =>
-      abilityIds.includes(a),
-    );
+    const backline = [
+      'aimed_shot',
+      'staff_strike',
+      'spark',
+      'wand_bolt',
+      'bolt_shot',
+      'smite',
+      'chakram_throw',
+      'sling_stone',
+    ].some((a) => abilityIds.includes(a));
     return {
       characterId: `${name}-${i}`,
       name,

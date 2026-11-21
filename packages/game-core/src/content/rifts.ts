@@ -246,6 +246,11 @@ export const RIFTS = {
         { item: 'morning_star', weight: 1 },
         { item: 'knight_lance', weight: 1 },
         { item: 'light_crossbow', weight: 1 },
+        // Request #46
+        { item: 'oak_scepter', weight: 1 },
+        { item: 'rune_chakram', weight: 1 },
+        { item: 'reaper_scythe', weight: 1 },
+        { item: 'leather_sling', weight: 1 },
       ],
     },
     lootRoom: {
@@ -262,6 +267,8 @@ export const RIFTS = {
         { item: 'morning_star', weight: 1 },
         { item: 'war_hammer', weight: 1 },
         { item: 'light_crossbow', weight: 1 },
+        { item: 'leather_sling', weight: 1 },
+        { item: 'oak_scepter', weight: 1 },
       ],
     },
     secretRoom: {
