@@ -39,6 +39,12 @@ export function CharacterSelectPage() {
       <header className="topbar">
         <span className="logo">The Living Realms</span>
         <span className="spacer" />
+        {me.data?.isAdmin && (
+          <Link className="btn btn-ghost btn-sm" to="/admin">
+            <Icon name="gear" />
+            Admin
+          </Link>
+        )}
         <span className="muted" style={{ fontSize: '0.85rem' }}>
           {me.data?.email}
         </span>

@@ -203,6 +203,23 @@ open/started/closed, `run_id` once started) has up to 6 members (slot 0–5,
 unique per lobby; `ready`) and pending invitations (lobby + invited character +
 who invited). Rows are locked (`FOR UPDATE`) on every change.
 
+### `custom_content`
+
+Admin-made items and abilities (request #41, ADR-044), for testing.
+
+| Column     | Type         | Notes                                                                   |
+| ---------- | ------------ | ----------------------------------------------------------------------- |
+| id         | text PK      | `custom_<slug>_<6 hex>`; never collides with built-in content ids       |
+| kind       | text         | `item` or `ability` (CHECK)                                             |
+| definition | jsonb        | validated by `customItemInputSchema` / `customAbilityInputSchema` (zod) |
+| created_by | uuid FK null | admin account; set null on delete                                       |
+| created_at | timestamptz  | index `(kind, created_at)`                                              |
+| updated_at | timestamptz  |                                                                         |
+
+Owned copies are normal `items` rows (`item_def_id` = the custom id, `source`
+= `admin`); taught abilities are normal `character_skills` rows. Definitions
+are never deleted (old runs and items may reference them).
+
 ### `world_events`
 
 | Column             | Type             | Notes                                                      |
@@ -214,6 +231,11 @@ who invited). Rows are locked (`FOR UPDATE`) on every change.
 | actor_character_id | uuid FK null     | set null on delete                                         |
 | payload            | jsonb            | event-specific data                                        |
 | created_at         | timestamptz      |                                                            |
+
+Admin tools (request #41) write `admin.item_created`, `admin.item_updated`,
+`admin.ability_created`, `admin.ability_updated`, `admin.item_granted`,
+`admin.item_removed`, `admin.skill_taught`, `admin.skill_forgotten` and
+`admin.character_updated` (actor = the admin account; character = the target).
 
 Purpose: audit trail today; tomorrow the world's **history and chronicle** (who
 founded what, which battle changed which border) and the input for systems that

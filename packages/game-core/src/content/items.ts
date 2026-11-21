@@ -1,6 +1,7 @@
 import type { Attributes, EquipSlot, ItemKind } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
+import { customItemDef } from './custom.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -207,7 +208,8 @@ export const ITEMS = {
 export type ItemDefId = keyof typeof ITEMS | MaterialId;
 
 export function getItemDef(id: string): ItemDef | undefined {
-  return (ITEMS as Record<string, ItemDef>)[id];
+  // Built-in content first; then admin-made items (request #41).
+  return Object.hasOwn(ITEMS, id) ? (ITEMS as Record<string, ItemDef>)[id] : customItemDef(id);
 }
 
 /** Main-hand weapons a new character can pick from. */

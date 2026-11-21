@@ -393,6 +393,29 @@ export const riftLobbyInvites = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Custom content (admin tools, request #41): items and abilities made by the
+// admin for testing. `definition` is validated by the zod schemas in
+// @realms/shared (customItemInputSchema / customAbilityInputSchema) and loaded
+// into the game-core content registry. Ids start with 'custom_'.
+// ---------------------------------------------------------------------------
+export const customContent = pgTable(
+  'custom_content',
+  {
+    id: text('id').primaryKey(),
+    /** 'item' | 'ability' */
+    kind: text('kind').notNull(),
+    definition: jsonb('definition').notNull(),
+    createdBy: uuid('created_by').references(() => accounts.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('custom_content_kind_ck', sql`${t.kind} in ('item', 'ability')`),
+    index('custom_content_kind_idx').on(t.kind, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // World events: append-only log of meaningful things that happened.
 // Audit trail today; the backbone of world history / world-changing events later.
 // ---------------------------------------------------------------------------
@@ -425,6 +448,7 @@ export type Session = typeof sessions.$inferSelect;
 export type World = typeof worlds.$inferSelect;
 export type Character = typeof characters.$inferSelect;
 export type WorldEvent = typeof worldEvents.$inferSelect;
+export type CustomContent = typeof customContent.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type CharacterSkill = typeof characterSkills.$inferSelect;
 export type CharacterProfession = typeof characterProfessions.$inferSelect;

@@ -14,9 +14,9 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Conta (account)
 
-- Contrato: `packages/shared/src/api.ts` (`emailSchema`, `passwordSchema`, `registerRequestSchema`, `loginRequestSchema`, `AccountDto`, `MeResponse`)
+- Contrato: `packages/shared/src/api.ts` (`emailSchema`, `passwordSchema`, `registerRequestSchema`, `loginRequestSchema`, `AccountDto` com `isAdmin`, `MeResponse`)
 - BD: `packages/db/src/schema.ts` → `accounts` (+ nova migração `pnpm db:generate`)
-- Servidor: `apps/server/src/modules/auth/accounts.repository.ts`, `auth.service.ts`, `auth.routes.ts` (`toAccountDto`)
+- Servidor: `apps/server/src/modules/auth/accounts.repository.ts`, `auth.service.ts`, `auth.routes.ts` (`toAccountDto`, `isAdmin` a partir de `ADMIN_EMAILS`)
 - Web: `apps/web/src/features/auth/api.ts`, `LoginPage.tsx`, `RegisterPage.tsx`, `guards.tsx`
 - Testes: `apps/server/test/auth.test.ts`, `apps/server/test/helpers.ts` (`registerUser`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → accounts
@@ -79,6 +79,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
 - Web: `CharacterSheetPage.tsx` (tabs), `characters/sheet/EquipmentTab.tsx` (boneco, mochila, drag and drop, stats), `sheet/ItemTooltip.tsx` (tooltip do item), `sheet/ItemIcon.tsx` (ícone por tipo de item: `BY_DEF`, `BY_WEAPON`, `SLOT_GLYPH`), `sheet/slots.ts` (`SLOT_LABELS`, `LEFT_SLOTS`/`RIGHT_SLOTS`), `sheet/drag.tsx` (drag and drop por ponteiro, `Tooltip`), `sheet/sheet.css`; `api.ts` (`useEquipment`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
+- Itens feitos pelo admin: ver "Admin e conteúdo personalizado" (`getItemDef` procura primeiro em `ITEMS`, depois no registo)
 - **Item novo:** acrescentar em `content/items.ts`; se for arma, o tipo tem de existir em `content/weapons.ts` (a 1.ª habilidade é o ataque básico do tipo) e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts` (`MAIN`, `artFromAbilities`); se for de kit inicial, rever a migração de dados para personagens antigos e `startingSlot`/`BUILDS` do simulador; se puder cair de Rifts, `content/rifts.ts` (`rewards.loot`, `lootRoom`, `secretRoom`)
 - **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS`/`LEFT_SLOTS`/`RIGHT_SLOTS` (`sheet/slots.ts`), `SLOT_GLYPH` (`sheet/ItemIcon.tsx`), itens que o usam (`content/items.ts`), migração de dados para itens equipados no espaço antigo, testes (`character-system.test.ts`, `character-sheet.test.ts`)
 - **Item novo:** também o ícone em `sheet/ItemIcon.tsx` (`BY_DEF`) se o ícone do tipo não servir
@@ -87,6 +88,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
 - Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + skills **preparadas** + universais, D69), `planLoadout` (8 espaços, só skills aprendidas, sem repetidas)
+- Habilidades feitas pelo admin: ver "Admin e conteúdo personalizado" (`getAbility` procura primeiro em `ABILITIES`, depois no registo); **campo novo em `AbilityDef`/`AbilityEffect`** → acrescentar também a `customAbilityInputSchema` (`shared/src/admin.ts`), `toCustomAbilityDef` e ao formulário `AbilityEditor.tsx`
 - Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto), `MAX_PREPARED_SKILLS`, `CharacterSheetDto.learnedSkills`/`loadout`, `loadoutRequestSchema`
 - BD: `character_skills` (skills aprendidas por livros; `loadout_slot` 0–7 = preparada; as de arma não se guardam)
 - Servidor: `sheet.service.ts` (`abilities`, `learnedSkills`, `loadout`, `setLoadout`, `combatProfile` usa só as preparadas), `items.repository.ts` (`learnedSkills`, `setLoadout`), `characters.routes.ts` (`PUT /:id/loadout`)
@@ -240,7 +242,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Validação: `apps/server/src/config.ts` e/ou `apps/worker/src/config.ts`
 - `.env.example` (com comentário) e o `.env` local
 - `infra/docker-compose.prod.yml`, `.github/workflows/ci.yml`, `playwright.config.ts` (se for relevante nesses ambientes)
-- `apps/server/test/helpers.ts` (valores de teste)
+- `apps/server/test/helpers.ts` (valores de teste); `ADMIN_EMAILS` também em `apps/server/test/admin.test.ts`
 - **Railway (produção):** as variáveis vivem no painel do Railway, não no código. Atualizar a lista em `docs/DEPLOY_RAILWAY.md` e avisar o dono para a acrescentar no serviço certo (`server` e/ou `worker`)
 
 ## Ecrã / rota nova no frontend
@@ -412,7 +414,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Armas (catálogo, pedido #31)
 
 - Catálogo: `packages/game-core/src/content/weapons.ts` (`WEAPON_TYPES`, `WEAPON_RULES`: pesos 60/40, upgrade por nível, máx. especiais/runas, custo do ataque básico; `weaponScaling`, `weaponDamage`, `upgradeMultiplier`, `normalizeWeaponInstance`, `weaponInfo`)
-- Custo do ataque básico **por tipo** (D54): `basicAttackCost` em `WEAPON_TYPES`; mostrado no cartão do item (`ItemDto.weapon.basicAttackCost`, `ItemCard.tsx`)
+- Custo do ataque básico **por tipo** (D54): `basicAttackCost` em `WEAPON_TYPES`; mostrado no cartão do item (`ItemDto.weapon.basicAttackCost`, `sheet/ItemTooltip.tsx`)
 - Ataques básicos: `basicAttack()` em `content/abilities.ts` (slash, chop, stab, thrust, crush, aimed_shot, staff_strike, wand_bolt, spark)
 - Itens: `content/items.ts` (`weaponType`, `twoHanded` tem de bater com `hands`); upgrades → `abilityMultipliers` (`equipment.ts`) → `PartyMemberInput.abilityMultipliers` → `valueMultiplier` no motor
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
@@ -432,7 +434,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `ItemDto.rarity`, `affixes` (`ItemAffixDto`), `requirements` (`ItemRequirementDto`), `runeSlots`; `ITEM_RARITIES`, `ItemRarity`, `AffixGroup` (`api.ts`)
 - BD: `items.specials` (efeitos `{ id, value }`), `items.rune_slots` (só os desbloqueados aparecem no cartão) — sem migração
 - Servidor: `toOwned`, `toItemDto(row, base)`, `equip` (passa os atributos base), `combatProfile` (`sheet.service.ts`); drops e itens encontrados → `rollDropAffixes` em `finish()` (`rifts.service.ts`); `gear: profile.gear` em `createRun`/`createPvpRun`
-- Interface: `apps/web/src/features/characters/ItemCard.tsx`; `CharacterSheetPage.tsx` (inventário em grelha, `SlotTile` com cor e cartão ao clicar, modal `item-modal`); estilos `.item-card*`, `.item-grid`, `[data-rarity]` em `global.css`; cores `--rarity-*` em `tokens.css`
+- Interface: `apps/web/src/features/characters/sheet/ItemTooltip.tsx` (o cartão do item vive na caixa que aparece ao passar o rato: nome com a cor da raridade, "Requires", "Bonus effects", "Rune slots"); `sheet/EquipmentTab.tsx` (`data-rarity` nos espaços e na mochila → contorno com a cor); `sheet/sheet.css` (secção "rarity"); cores `--rarity-*` em `tokens.css` e `[data-rarity]` em `global.css`
 - Testes: `game-core/test/affixes.test.ts`; `apps/server/test/character-sheet.test.ts` ("item cards"); `e2e/foundation.spec.ts` (ficha)
 - **Efeito novo:** só dados em `AFFIXES` (se for de um tipo novo, acrescentar o `kind` a `AffixEffect` e tratá-lo em `gearTotals` e, se for de combate, em `GearCombatEffects` + motor)
 
@@ -468,3 +470,17 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx`, `api.ts`, `professions.css`), rota `/professions` no `GameShell`, botão no Hub (`HomePage.tsx`); quantidades na ficha
 - **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS` se precisar)
 - Testes: `game-core/test/professions.test.ts`, `apps/server/test/professions.test.ts`, `e2e` ("professions")
+
+## Admin e conteúdo personalizado (pedido #41, ADR-044)
+
+- Quem é admin: variável `ADMIN_EMAILS` (`apps/server/src/config.ts`, `.env.example`, `playwright.config.ts`, `docs/DEPLOY_RAILWAY.md`) → `isAdminEmail`/`requireAdmin` (`apps/server/src/plugins/auth.ts`) → `AccountDto.isAdmin` (`auth.routes.ts`)
+- Contrato: `packages/shared/src/admin.ts` (`customItemInputSchema`, `customAbilityInputSchema`, `customAbilityEffectSchema`, `CustomContentDto`, `AdminCharacterDto`, pedidos `adminGrantItemSchema`/`adminUpdateItemSchema`/`adminTeachSkillSchema`/`adminUpdateCharacterSchema`)
+- Regras: `packages/game-core/src/content/custom.ts` (registo: `setCustomContent`, `customItemDef`, `customAbilityDef`, `toCustomItemDef`, `toCustomAbilityDef`), `content/custom-rules.ts` (`validateCustomItem`: espaços por tipo, ataque básico primeiro, duas mãos; `validateCustomAbility`; `customIdFor`); ligações em `getItemDef` (`items.ts`) e `getAbility` (`abilities.ts`)
+- BD: `custom_content` (migração 0012); cópias em `items` (`source = 'admin'`) e `character_skills`
+- Servidor: `apps/server/src/modules/admin/` (`custom-content.service.ts`: carregar/criar/editar + `content.changed`; `admin.service.ts`: ferramentas de personagem + eventos `admin.*`; `admin.routes.ts`: `/api/admin/*` e `GET /api/content/custom`); `app.ts` (carrega o registo no arranque); `sheet.service.ts` (`sheetOf`)
+- Tempo real: `ControlMessage` `content.changed` (`packages/server-kit/src/bus.ts`) → `RealtimeGateway.onContentChanged` (`gateway.ts`)
+- Web: `apps/web/src/features/admin/` (`api.ts` com `useCustomContent`, `AdminPage.tsx`, `CharacterTools.tsx`, `ItemEditor.tsx`, `AbilityEditor.tsx`, `catalog.ts`, `fields.tsx`, `admin.css`); `auth/guards.tsx` (`RequireAuth` carrega o conteúdo antes dos ecrãs); rota `/admin` em `router.tsx`; link "Admin" em `CharacterSelectPage.tsx`
+- Testes: `game-core/test/custom-content.test.ts`, `apps/server/test/admin.test.ts`, `e2e/admin.spec.ts`; TRUNCATE de `custom_content` em `helpers.ts` e `worker.test.ts`
+- Docs: `DATABASE.md` (custom_content, eventos `admin.*`), `DECISIONS.md` ADR-044, `ARCHITECTURE.md` §9
+- **Tipo de arma novo / espaço novo / tipo de item novo:** rever `validateCustomItem` (`SLOTS_BY_KIND`, `OFFHAND_TYPES`) e os selects de `ItemEditor.tsx`
+- **Estado novo (`STATUS_IDS`):** aparece sozinho nos formulários (vêm de `STATUS_IDS`/`STATUS_NAMES`)

@@ -29,7 +29,9 @@ export type ControlMessage =
   /** An account entered the world on `keepConnectionId`; drop its other in-world connections. */
   | { kind: 'account.replace'; accountId: string; keepConnectionId: string }
   /** A session was revoked (logout); close every connection opened with it. */
-  | { kind: 'session.revoked'; sessionId: string };
+  | { kind: 'session.revoked'; sessionId: string }
+  /** Admin-made content changed (request #41); reload the game-core content registry. */
+  | { kind: 'content.changed' };
 
 /** Redis list with the recent chat of one hex (newest first, capped). */
 export const chatKey = (worldId: string, q: number, r: number) =>

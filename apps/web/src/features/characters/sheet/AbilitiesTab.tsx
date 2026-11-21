@@ -118,7 +118,10 @@ export function AbilitiesTab({
   });
 
   // Prepared skills are also in `abilities` (usable in combat): list them only once.
-  const weapon = s.abilities.filter((a) => a.source === 'weapon' && !slots.includes(a.id));
+  // Everything your gear grants (including admin-made abilities on a weapon).
+  const weapon = s.abilities.filter(
+    (a) => (a.source === 'weapon' || a.grantedBy !== null) && !slots.includes(a.id),
+  );
   const universal = s.abilities.filter((a) => a.source === 'universal');
   const q = query.trim().toLowerCase();
   const library = s.learnedSkills.filter(

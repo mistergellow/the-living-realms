@@ -29,6 +29,19 @@ export const configSchema = z.object({
   MAX_CHARACTERS_PER_ACCOUNT: z.coerce.number().int().min(1).max(50).default(2),
   /** Max auth attempts (login/register) per IP per minute. */
   AUTH_RATE_LIMIT: z.coerce.number().int().min(1).default(10),
+  /**
+   * Admin tools (request #41): comma-separated account emails allowed to use
+   * /api/admin (create items/abilities, grant them to characters). Empty = no admin.
+   */
+  ADMIN_EMAILS: z
+    .string()
+    .default('')
+    .transform((s) =>
+      s
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
 });
 
 export type Config = z.infer<typeof configSchema>;

@@ -11,6 +11,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AppContext, AppDeps } from './context.js';
 import { registerErrorHandler } from './lib/errors.js';
+import { adminRoutes, contentRoutes } from './modules/admin/admin.routes.js';
+import { AdminService } from './modules/admin/admin.service.js';
+import { CustomContentService } from './modules/admin/custom-content.service.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { SessionService } from './modules/auth/session.service.js';
 import { charactersRoutes } from './modules/characters/characters.routes.js';
@@ -56,6 +59,10 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   const characters = new CharactersService(ctx);
   const sheets = new CharacterSheetService(deps.db);
   const gateway = new RealtimeGateway(ctx, characters, app.log);
+  // Admin-made items/abilities (request #41) must be in the registry before any request.
+  const content = new CustomContentService(ctx, app.log);
+  await content.reload();
+  gateway.onContentChanged = () => content.reload();
 
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
@@ -93,6 +100,13 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
       await api.register(riftsRoutes, { prefix: '/rifts', service: rifts });
       await api.register(socialRoutes, { prefix: '/social', friends });
       await api.register(worldRoutes, { prefix: '/world', ctx });
+      await api.register(contentRoutes, { prefix: '/content', content });
+      await api.register(adminRoutes, {
+        prefix: '/admin',
+        admin: new AdminService(ctx, sheets),
+        content,
+        adminEmails: config.ADMIN_EMAILS,
+      });
     },
     { prefix: '/api' },
   );

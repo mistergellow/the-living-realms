@@ -255,6 +255,11 @@ export class CharacterSheetService {
     };
   }
 
+  /** Admin tools (request #41): the sheet of any living character. */
+  async sheetOf(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
+    return this.buildSheet(db, c);
+  }
+
   private async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
     const [rows, skills] = await Promise.all([
       itemsRepository.listByCharacter(db, c.id),

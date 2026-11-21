@@ -152,7 +152,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A62 | Corridas e lobbies abertos durante a mudança de formação        | fechados sem penalização (migração 0010)                                                                                                                                                                                                                                                                                                                                                                  | `0010_one_line_formation.sql`                                                    |
 | A63 | Equilíbrio com a linha de 4 (40 corridas por build)             | média a solo 47% (volta ao alvo de 40–50%; o corpo a corpo só alcança o mais próximo)                                                                                                                                                                                                                                                                                                                     | `pnpm sim`                                                                       |
 | A64 | Mapa (placeholder): nomes, cores, tamanho e forma               | "Kingdom of the West/East/North", "The Riftlands"; capitais "West/East/North Capital"; azul/vermelho/verde/roxo; continente oval ~44 × 32 hexágonos (1 114 hexágonos: ~290 por país, ~300 Riftlands); capitais em (−14, 2), (12, 2), (5, −10)                                                                                                                                                             | `content/world-map.ts`, `REGION_COLORS` (`map-scene.ts`)                         |
-| A65 | Onde nascem os personagens                                      | continua em (0, 0) = Riftlands (centro do mapa); por decidir se passa a ser uma capital (ex.: escolher país na criação)                                                                                                                                                                                                                                                                                   | `worlds.spawn_q/spawn_r`, `characters.service.ts`                                |
+| A65 | Onde nascem os personagens                                      | continua em (0, 0) = Riftlands (centro do mapa), onde fica a cidade inicial Emberhold (A75); por decidir se passa a ser uma capital (ex.: escolher país na criação)                                                                                                                                                                                                                                       | `worlds.spawn_q/spawn_r`, `characters.service.ts`                                |
 | A66 | Sistema de AP (próximo passo)                                   | por definir: AP máximo, AP ganho por hora real, custo por hexágono e por atividade                                                                                                                                                                                                                                                                                                                        | ROADMAP Fase 4                                                                   |
 | A67 | Catálogo de efeitos bónus (pedido #37)                          | atributos +1–3; Health +5–20, Mana +4–12, Armor/Magic Resist +2–8, Initiative +1–3, Dodge +1–5%, Focus por ronda +1; Damage +3–10%, Critical chance +2–6%, Critical damage +10–25%, Damage vs bosses +5–15%; Bleed/Burn on hit 5–15%, Stun on hit 2–5%, Life steal 3–8%, Thorns 2–6. Sangrar/queimar on hit: 3 por ronda, 2 rondas; atordoar 1 ronda. Cada efeito só pode rolar em certos tipos de item   | `AFFIXES`, `AFFIX_RULES`                                                         |
 | A68 | Quantos efeitos traz um drop                                    | 0: 50%, 1: 28%, 2: 13%, 3: 6%, 4: 2,5%, 5: 0,5% (drops do boss e itens encontrados no Rift; itens fabricados e o kit inicial vêm sem efeitos)                                                                                                                                                                                                                                                             | `AFFIX_RULES.dropAffixWeights`, `rollDropAffixes`                                |
@@ -796,3 +796,63 @@ desbloqueia-se depois (dinheiro real ou outra coisa).
   com mais de 2 personagens mantêm-nos, mas não podem criar mais.
 - Testes: 78 unitários, 67 de integração, 19 web, 9 e2e.
 - Docs: CHANGE_MAP, DECISIONS (ADR-043), ARCHITECTURE, ROADMAP, DATABASE.
+
+### #41 — 2026-11-21 — Controlo de "admin" para testar
+
+**Pedido:** "Cria uma forma de admin control. O user conseguir criar armas /
+adicionar poderes etc. para testar. Eu sou o único admin."
+**Decisões (técnicas, ADR-044):**
+
+- Admin = contas cujo email está na variável `ADMIN_EMAILS` do servidor (não
+  há forma de alguém se tornar admin pelo jogo). **No Railway, o dono tem de
+  acrescentar `ADMIN_EMAILS=<o seu email>` ao serviço `server`.**
+- Armas e habilidades criadas pelo admin ficam na base de dados
+  (`custom_content`) e entram num registo do game-core; funcionam no combate,
+  na ficha, na barra de habilidades e na arte (pelo tipo de arma) sem deploy.
+- Uma arma personalizada escolhe um tipo do catálogo, que lhe dá o ataque
+  básico (sempre o primeiro), as mãos e a arte — respeita o ADR-034.
+- Definições editam-se mas não se apagam (itens e corridas podem usá-las).
+- Mudanças feitas durante um Rift contam a partir da próxima corrida.
+
+**Resultado:**
+
+- Página `/admin` (link "Admin" no ecrã de personagens, só para o admin) com 3
+  separadores:
+  - **Characters:** qualquer personagem de qualquer conta — dar itens (com
+    upgrade +0–+10 e qualidade), mudar qualidade/upgrade, remover itens,
+    ensinar/esquecer habilidades (incluindo as de inimigos e as personalizadas),
+    mudar atributos base, pontos por gastar e reputação.
+  - **Items & weapons:** criar/editar armas (tipo, uma/duas mãos, mão
+    secundária), mãos secundárias (escudo/talismã), armaduras e acessórios, com
+    habilidades concedidas, bónus de atributos, armadura e resistência mágica.
+  - **Abilities:** criar/editar habilidades (skill ou de arma): custos de
+    Focus/Mana, alvo (inimigos/aliados/próprio, alcance, área), até 6 efeitos
+    (dano, cura, Block, estado, bónus contra estado) e escala por atributo, com
+    pré-visualização do texto.
+- Todas as ações do admin ficam em `world_events` (`admin.*`).
+- Testes: 6 unitários (game-core), 5 de integração (servidor), 2 e2e.
+- Docs: CHANGE_MAP ("Admin e conteúdo personalizado"), DECISIONS ADR-044,
+  DATABASE, ARCHITECTURE §9, ROADMAP, DEPLOY_RAILWAY, `.env.example`.
+
+### #42 — 2026-11-21 — Juntar ao main o trabalho das outras sessões
+
+**Pedido:** "Dá commit a tudo e puxa tudo para o main. E a funcionar no
+Railway." / "Não deste commit às alterações do inventário e isso que pedi?" —
+o trabalho de outras sessões estava em ramos que nunca chegaram ao `main`.
+Escolhidos pelo dono: inventário, cartões de itens, hex + chat + 2 espaços,
+ferramentas de admin (o ramo de reorganização dos docs, de manhã, ficou de fora).
+**Resultado:**
+
+- Juntados os ramos: cartões de itens (#37, #38), perfil com tabs e inventário
+  (#39), entrar no hex + chat + 2 espaços (#40), admin (#41; era o #32 no ramo).
+  Pedidos, decisões (D62–D73), valores provisórios (A67–A78) e ADRs
+  (041–044) renumerados para não colidir.
+- Cartão do item + inventário novo: o cartão passou a ser a caixa que aparece
+  ao passar o rato num item (raridade com cor, requisitos, efeitos bónus,
+  runas); a mochila e os espaços mostram o contorno da raridade.
+- Admin com os espaços novos: armaduras head/body/feet; acessórios = anel
+  (ring1/ring2) ou pendente; alcances com as 4 posições; skill ensinada pelo
+  admin fica logo preparada no 1.º espaço livre; habilidades dadas por uma
+  arma do admin aparecem em "From your weapons".
+- Migração do admin renumerada: `0012_admin_custom_content.sql` (era 0009).
+- Testes: 101 unitários, 76 de integração, 19 web, 11 e2e.
