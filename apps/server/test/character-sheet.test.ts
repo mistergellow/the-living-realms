@@ -314,3 +314,42 @@ describe('item cards (request #37): bonus effects, rarity, requirements, runes',
     expect(res.statusCode).toBe(200);
   });
 });
+
+describe('Skill Books (request #47)', () => {
+  const useItem = (cookie: string, id: string, itemId: string) =>
+    t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${id}/items/${itemId}/use`,
+      headers: { cookie },
+    });
+  const give = async (id: string, defId: string) => {
+    const [row] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source)
+      values (gen_random_uuid(), ${id}, ${defId}, 'drop') returning id`;
+    return row!.id as string;
+  };
+
+  it('reading a book teaches and prepares its skill, and uses the book up', async () => {
+    const { cookie, id } = await newCharacter();
+    const book = await give(id, 'book_second_wind');
+    const res = await useItem(cookie, id, book);
+    expect(res.statusCode).toBe(200);
+    const sheet = res.json() as CharacterSheetDto;
+    expect(sheet.learnedSkills.map((s) => s.id)).toEqual(['second_wind']);
+    expect(sheet.loadout[0]).toBe('second_wind');
+    expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
+    // Reading it again is not possible (the book is gone; a second copy says you know it).
+    const again = await give(id, 'book_second_wind');
+    expect((await useItem(cookie, id, again)).json().error.message).toMatch(/already know/);
+  });
+
+  it('needs the BASE attributes the skill requires', async () => {
+    const { cookie, id } = await newCharacter();
+    const book = await give(id, 'book_chain_lightning'); // Intellect 9
+    const res = await useItem(cookie, id, book);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/Intellect 9/);
+    const sword = (await sheetOf(cookie, id)).equipment.mainHand!.id;
+    expect((await useItem(cookie, id, sword)).statusCode).toBe(400);
+  });
+});

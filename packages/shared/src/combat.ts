@@ -42,6 +42,8 @@ export const STATUS_IDS = [
   'intangible',
   'ritual',
   'fuse',
+  // request #47
+  'regen',
 ] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
 

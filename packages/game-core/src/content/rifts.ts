@@ -1,4 +1,5 @@
 import type { ItemDefId } from './items.js';
+import { skillBookId, SKILLS } from './skills.js';
 import type { EnemyId } from './enemies.js';
 import type { EventId } from './events.js';
 import type { HexCoord } from '@realms/shared';
@@ -63,6 +64,10 @@ export interface RiftDef {
 }
 
 const rift = (r: RiftDef) => r;
+
+/** Skill Books in the loot (request #47), with a weight each. */
+const books = (weight: number): LootEntry[] =>
+  Object.keys(SKILLS).map((id) => ({ item: skillBookId(id) as ItemDefId, weight }));
 
 /** Default map: 7 rows + boss, 5 lanes, 4 walks (≈ 15–20 rooms, 8 on any path). */
 export const DEFAULT_MAP_TEMPLATE: MapTemplate = {
@@ -251,6 +256,7 @@ export const RIFTS = {
         { item: 'rune_chakram', weight: 1 },
         { item: 'reaper_scythe', weight: 1 },
         { item: 'leather_sling', weight: 1 },
+        ...books(0.5),
       ],
     },
     lootRoom: {
@@ -278,6 +284,7 @@ export const RIFTS = {
         { item: 'charm_of_focus', weight: 2 },
         { item: 'hawkeye_band', weight: 2 },
         { item: 'brawler_wrap', weight: 2 },
+        ...books(1),
       ],
     },
   }),

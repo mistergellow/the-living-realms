@@ -2,6 +2,7 @@ import type { Attributes, EquipSlot, ItemKind, StarterKitId } from '@realms/shar
 import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
 import { customItemDef } from './custom.js';
+import { skillBookId, SKILLS, type SkillDef } from './skills.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -28,6 +29,8 @@ export interface ItemDef {
   magicResist?: number;
   /** BASE attributes needed to equip it (request #37); weapons add their primary. */
   requirements?: Partial<Attributes>;
+  /** Skill Books (request #47): reading it teaches this skill (and uses the book up). */
+  teaches?: string;
 }
 
 const item = (i: ItemDef) => i;
@@ -420,6 +423,30 @@ export const MATERIALS = {
 
 export type MaterialId = keyof typeof MATERIALS;
 Object.assign(ITEMS, MATERIALS);
+
+/**
+ * Skill Books (request #47): one per skill. Read one (double-click in the bag)
+ * to learn its skill; skills with requirements need those BASE attributes.
+ */
+export const SKILL_BOOKS: Record<string, ItemDef> = Object.fromEntries(
+  Object.values(SKILLS).map((sk) => {
+    const req = Object.entries((sk as SkillDef).requirements ?? {})
+      .map(([k, v]) => `${k[0]!.toUpperCase()}${k.slice(1)} ${v}`)
+      .join(', ');
+    return [
+      skillBookId(sk.id),
+      {
+        id: skillBookId(sk.id),
+        name: `Book: ${sk.name}`,
+        description: `Teaches ${sk.name}. ${sk.description}${req ? ` Requires ${req}.` : ''}`,
+        kind: 'consumable' as const,
+        slots: [],
+        teaches: sk.id,
+      },
+    ];
+  }),
+);
+Object.assign(ITEMS, SKILL_BOOKS);
 
 /** Materials and consumables stack in the inventory. */
 export const isStackable = (def: ItemDef | undefined) =>

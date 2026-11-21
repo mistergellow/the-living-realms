@@ -61,6 +61,12 @@ export function useEquipment(id: string) {
         api<CharacterSheetDto>('POST', `/characters/${id}/unequip`, input),
       onSuccess,
     }),
+    /** Use an item, e.g. read a Skill Book (request #47). */
+    use: useMutation({
+      mutationFn: (itemId: string) =>
+        api<CharacterSheetDto>('POST', `/characters/${id}/items/${itemId}/use`),
+      onSuccess,
+    }),
   };
 }
 

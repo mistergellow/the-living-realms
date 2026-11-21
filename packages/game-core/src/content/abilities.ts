@@ -1,6 +1,7 @@
 import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/shared';
 import { customAbilityDef } from './custom.js';
 import { WEAPON_TYPES, weaponScaling, type CatalogueWeaponType } from './weapons.js';
+import { getSkill } from './skills.js';
 
 /*
  * Ability definitions (data). PROVISIONAL CONTENT — names and numbers are
@@ -47,7 +48,9 @@ export type AbilityEffect =
   | { kind: 'status'; status: StatusId; turns: number; value?: number }
   | { kind: 'swap' }
   /** Calls an enemy into the first empty position of the actor's side (request #44). */
-  | { kind: 'summon'; enemy: string };
+  | { kind: 'summon'; enemy: string }
+  /** Removes harmful statuses (all of them, or only the ones listed) — request #47. */
+  | { kind: 'cleanse'; statuses?: StatusId[] };
 
 export interface AbilityDef {
   id: string;
@@ -944,9 +947,10 @@ export type AbilityId = keyof typeof ABILITIES;
 
 export function getAbility(id: string): AbilityDef | undefined {
   // Built-in content first; then admin-made abilities (request #41).
+  // Built-in abilities, then skills (request #47), then admin-made ones.
   return Object.hasOwn(ABILITIES, id)
     ? (ABILITIES as Record<string, AbilityDef>)[id]
-    : customAbilityDef(id);
+    : (getSkill(id) ?? customAbilityDef(id));
 }
 
 export const UNIVERSAL_ABILITIES: AbilityId[] = ['block', 'swap_position'];
@@ -963,6 +967,7 @@ export const STATUS_NAMES: Record<StatusId, string> = {
   intangible: 'Intangible',
   ritual: 'Ritual',
   fuse: 'Fuse',
+  regen: 'Regeneration',
 };
 
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
@@ -976,7 +981,11 @@ export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
   intangible: 'Every hit deals at most 1 damage.',
   ritual: 'Gains that much Strength at the start of every round.',
   fuse: 'Explodes when the counter runs out, hurting every foe. Kill it first!',
+  regen: 'Regains that much health at the start of every round.',
 };
+
+/** Statuses that hurt the one who has them: what a cleanse removes (request #47). */
+export const HARMFUL_STATUSES: StatusId[] = ['bleed', 'burn', 'mark', 'weaken', 'stun'];
 
 export function describeTargeting(t: AbilityTargeting): string {
   if (t.side === 'self') return 'Self';
@@ -1021,6 +1030,12 @@ export function describeEffects(a: AbilityDef): string[] {
         return [];
       case 'summon':
         return [`Summon ${e.enemy.replace(/_/g, ' ')}`];
+      case 'cleanse':
+        return [
+          e.statuses
+            ? `Removes ${e.statuses.map((x) => STATUS_NAMES[x]).join(', ')}`
+            : 'Removes harmful statuses',
+        ];
     }
   });
 }

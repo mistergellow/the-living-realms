@@ -1,4 +1,11 @@
-import { AFFIX_RULES, ATTRIBUTE_NAMES, RARITY_NAMES } from '@realms/game-core';
+import {
+  AFFIX_RULES,
+  ATTRIBUTE_NAMES,
+  getItemDef,
+  getSkill,
+  RARITY_NAMES,
+} from '@realms/game-core';
+import { AbilityEffects } from '../../../shared/ui/EffectIcon';
 import type { AttributeKey, EquipSlot, ItemDto } from '@realms/shared';
 import { SLOT_LABELS } from './slots';
 
@@ -116,6 +123,29 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
           </span>
         </div>
       )}
+
+      {(() => {
+        // Skill Books (request #47): what it teaches, its effects and requirements.
+        const skillId = getItemDef(item.defId)?.teaches;
+        const sk = skillId ? getSkill(skillId) : undefined;
+        if (!sk) return null;
+        return (
+          <div className="tip-block" data-testid="book-skill">
+            <span className="tip-label">Teaches {sk.name}</span>
+            <AbilityEffects abilityId={sk.id} />
+            <span className="muted">
+              {sk.focusCost} Focus{sk.manaCost ? ` + ${sk.manaCost} Mana` : ''}
+            </span>
+            {Object.entries(sk.requirements ?? {}).map(([k, v]) => (
+              <div key={k} className="tip-row">
+                <span>Requires {ATTRIBUTE_NAMES[k as AttributeKey]}</span>
+                <b>{v}</b>
+              </div>
+            ))}
+            <p className="tip-identity">Double-click to read it and learn the skill.</p>
+          </div>
+        );
+      })()}
 
       {item.grantsAbilities.length > 0 && (
         <div className="tip-block">
