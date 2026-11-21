@@ -18,7 +18,9 @@ import type {
 } from '@realms/shared';
 import { getEvent, type EventEffect, type EventTarget } from '../content/events.js';
 import { getItemDef } from '../content/items.js';
-import { getRift, type LootTable, type RiftDef } from '../content/rifts.js';
+import type { EnemyId } from '../content/enemies.js';
+import { WORLD_BOSS_ID, worldBossEnemy } from '../content/world-boss.js';
+import { getRift, riftTierModifiers, type LootTable, type RiftDef } from '../content/rifts.js';
 import {
   CONDITIONS,
   EXPLORATION_RULES,
@@ -102,7 +104,9 @@ export interface ItemGrant {
 export interface RunState {
   version: typeof RUN_STATE_VERSION;
   /** 'pvp' = an arena match (request #33): one fight, two teams of players, no map. */
-  mode?: 'rift' | 'pvp';
+  mode?: 'rift' | 'pvp' | 'worldboss';
+  /** World boss fight (request #43): the season and the boss HP when it began. */
+  worldBoss?: { season: number; startHp: number };
   /** PvP: the winning team ('party' = team A, 'enemies' = team B). */
   winner?: 'party' | 'enemies' | null;
   riftId: string;
@@ -185,7 +189,8 @@ export function createRun(opts: {
     outcome: null,
     votes: [],
     roomsVisited: 0,
-    threat: 0,
+    // Deeper Rifts start with Threat already building (request #43).
+    threat: rift.startingThreat ?? 0,
     grants: [],
   };
 }
@@ -230,6 +235,69 @@ export function createPvpRun(opts: {
     threat: 0,
     grants: [],
   };
+}
+
+/**
+ * World boss fight (request #43): no map, one fight against the season's boss,
+ * whose HP is the shared pool. Ends when the party falls (or, one day, the
+ * boss does). The damage dealt is `worldBossDamage`.
+ */
+export function createWorldBossRun(opts: {
+  season: number;
+  bossHp: number;
+  party: Array<Omit<RunMember, 'conditions' | 'left'>>;
+  leaderId: string;
+  seed: number;
+}): RunState {
+  const party: RunMember[] = opts.party.map((m) => ({ ...m, conditions: [], left: false }));
+  const enemy = worldBossEnemy(opts.season);
+  const combat = createEncounter({
+    party: party.map(toPartyInput),
+    room: {
+      name: enemy.name,
+      enemies: [{ enemy: enemy.id as EnemyId, slot: 0 }],
+      isBoss: true,
+    },
+    roomIndex: 0,
+    isLastRoom: true,
+    seed: opts.seed,
+    enemyModifiers: { hpMultiplier: Math.max(1, opts.bossHp) / enemy.maxHp },
+  });
+  // Exact pool (the multiplier can round).
+  for (const c of combat.combatants) {
+    if (c.side !== 'enemies') continue;
+    c.hp = c.maxHp = Math.max(1, opts.bossHp);
+    c.stats = { ...c.stats, maxHp: c.maxHp };
+  }
+  return {
+    version: RUN_STATE_VERSION,
+    mode: 'worldboss',
+    worldBoss: { season: opts.season, startHp: Math.max(1, opts.bossHp) },
+    riftId: WORLD_BOSS_ID,
+    rng: (opts.seed * 2654435761) | 0,
+    map: { rows: 0, cols: 0, nodes: [], edges: [], bossId: '' },
+    currentId: null,
+    visited: [],
+    revealed: [],
+    phase: 'combat',
+    status: 'active',
+    party,
+    leaderId: opts.leaderId,
+    combat,
+    event: null,
+    outcome: null,
+    votes: [],
+    roomsVisited: 1,
+    threat: 0,
+    grants: [],
+  };
+}
+
+/** Damage dealt to the world boss so far in this fight. */
+export function worldBossDamage(s: RunState): number {
+  if (s.mode !== 'worldboss' || !s.worldBoss || !s.combat) return 0;
+  const boss = s.combat.combatants.find((c) => c.side === 'enemies');
+  return Math.max(0, s.worldBoss.startHp - (boss?.hp ?? 0));
 }
 
 /** Rooms the party can go to next (hidden secrets excluded). */
@@ -449,14 +517,21 @@ function enterRoom(s: RunState, nodeId: string): void {
         node.type === 'boss'
           ? rift.encounters.boss
           : rift.encounters[node.type][node.encounter ?? 0]!;
-      const tier = node.type === 'boss' ? threatTier(s.threat) : null;
+      const threat = node.type === 'boss' ? threatTier(s.threat) : null;
+      // Every fight is scaled by the Rift's tier; the boss also by the Threat.
+      const site = riftTierModifiers(rift.tier);
+      const tier = {
+        hpMultiplier: site.hpMultiplier * (threat?.hpMultiplier ?? 1),
+        powerMultiplier: site.powerMultiplier * (threat?.powerMultiplier ?? 1),
+        precisionBonus: threat?.precisionBonus ?? 0,
+      };
       s.combat = createEncounter({
         party: s.party.map(toPartyInput),
         room,
         roomIndex: s.roomsVisited,
         isLastRoom: node.type === 'boss',
         seed: rng.int(2 ** 31),
-        enemyModifiers: tier ?? undefined,
+        enemyModifiers: tier,
       });
       // Exploration conditions with combat effects were applied; anything the
       // combat statuses carry is visible on the fighters.

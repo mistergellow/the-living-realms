@@ -67,8 +67,12 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - [x] Hub (home screen) with the in-game shell (top bar, bottom navigation); MMO-style ability bar with tooltips (request #30)
 - [x] **Request #40:** the game opens with the last character played on the hex where it stopped; hex screen with the place's picture and actions (starting town Emberhold; other hexes are open wilds); 2 character slots
 - [x] One continent, 4 regions: nations west, east and north, the neutral Rift-infected Riftlands in the middle; one capital hex per nation (placeholders, request #36, ADR-040)
-- ❓ Terrain types, points of interest, starting area (spawn is still (0, 0) in the Riftlands)
-- ❓ Action Points = time an activity takes (moving between hexes costs AP; X AP gained per real hour): pool size, regeneration, AP cost per hex / per terrain / per activity — **next**
+- [x] Terrain (plains, forest, river, mountains with mines); gathering needs the right terrain; Rift entrances on hexes, harder towards the heart of the Riftlands (request #43, ADR-046)
+- [x] Nation of origin at creation; start in its capital (request #43)
+- [x] World boss: one per season, roams the Riftlands, shared HP, party damage leaderboard (request #43)
+- ❓ Points of interest, NPCs, more terrain kinds; world boss rewards
+- [x] Action Points: max 120, +10 per real hour; travel to any land hex for AP × distance (request #43, ADR-045)
+- ❓ AP cost per terrain / per activity (professions, Rifts)
 - `map_regions` / `map_hexes` tables, a map seeding/import tool
 - Movement intents (server-validated pathing and AP cost), position broadcast
 - Area-of-interest: clients receive only nearby activity

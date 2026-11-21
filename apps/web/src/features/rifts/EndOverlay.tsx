@@ -8,8 +8,22 @@ export function EndOverlay({ run }: { run: RunDto }) {
     <div className="combat-overlay">
       <div className="panel stack end-card" data-testid="run-result">
         <h2 style={{ color: victory ? 'var(--accent)' : 'var(--danger)' }}>
-          {victory ? 'Victory' : run.status === 'abandoned' ? 'You fled the Rift' : 'Defeat'}
+          {run.worldBoss
+            ? victory
+              ? 'The world boss falls!'
+              : 'Your party has fallen'
+            : victory
+              ? 'Victory'
+              : run.status === 'abandoned'
+                ? 'You fled the Rift'
+                : 'Defeat'}
         </h2>
+        {run.worldBoss && (
+          <p style={{ margin: 0 }} data-testid="boss-damage">
+            Damage dealt to the world boss: <strong>{run.worldBoss.damage.toLocaleString()}</strong>
+            . It counts on the leaderboard.
+          </p>
+        )}
         {run.rewards && (
           <div>
             <p style={{ margin: 0 }}>
@@ -39,8 +53,8 @@ export function EndOverlay({ run }: { run: RunDto }) {
           </div>
         )}
         <div className="row" style={{ justifyContent: 'center' }}>
-          <Link className="btn" to="/rifts">
-            Back to Rifts
+          <Link className="btn" to={run.worldBoss ? '/world-boss' : '/rifts'}>
+            {run.worldBoss ? 'Leaderboard' : 'Back to Rifts'}
           </Link>
           <Link className="btn btn-primary" to="/home">
             Return home

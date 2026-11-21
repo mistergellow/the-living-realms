@@ -60,7 +60,7 @@ const plan = (s: CombatState, id: string, a: Omit<PlanActionInput, 'type'>) =>
 /** Make enemies harmless and predictable for a test. */
 function calm(s: CombatState): CombatState {
   for (const c of s.combatants) {
-    c.stats = { ...c.stats, dodgeChance: 0, critChance: 0 };
+    c.stats = { ...c.stats, critChance: 0 };
     if (c.side === 'enemies') c.intents = [];
   }
   return s;

@@ -145,9 +145,11 @@ export function CombatScreen({
       <header className="combat-top">
         <span className="title">{run.riftName}</span>
         <span className="muted">
-          {pvp
-            ? `PvP · you are on team ${mySide === 'party' ? 'A (left)' : 'B (right)'}`
-            : `${boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room ${run.roomsVisited}`}
+          {run.worldBoss
+            ? `World boss · your party has dealt ${run.worldBoss.damage.toLocaleString()} damage`
+            : pvp
+              ? `PvP · you are on team ${mySide === 'party' ? 'A (left)' : 'B (right)'}`
+              : `${boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room ${run.roomsVisited}`}
           {boss && run.threat.tier
             ? ` · Threat ${run.threat.tier.name}: ${run.threat.tier.description}`
             : ''}
@@ -282,7 +284,7 @@ export function CombatScreen({
             <div key={e.id} className="intent-row" data-downed={e.downed}>
               <strong>{e.name}</strong>
               <span className="muted small">
-                {e.hp}/{e.maxHp} HP{e.block ? ` · ${e.block} Block` : ''}
+                {e.hp}/{e.maxHp} HP{e.block ? ` · ${e.block} Dodge` : ''}
               </span>
               <span className="intent-icons">
                 {e.intents.map((it, i) => (

@@ -71,6 +71,8 @@ export type ServerMessage =
   | { type: 'world.left' }
   | { type: 'player.joined'; data: { player: PresencePlayer } }
   | { type: 'player.left'; data: { characterId: string } }
+  /** A character travelled to another hex (request #43). */
+  | { type: 'player.moved'; data: { characterId: string; position: HexCoord } }
   | { type: 'world.tick'; data: { tick: number; at: string } }
   | { type: 'pong'; data: { t: number } }
   | { type: 'error'; data: { code: string; message: string } };

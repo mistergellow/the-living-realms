@@ -56,14 +56,7 @@ export type AffixEffect =
   | { kind: 'attribute'; attribute: AttributeKey }
   | {
       kind: 'stat';
-      stat:
-        | 'maxHp'
-        | 'maxMana'
-        | 'armor'
-        | 'magicResist'
-        | 'initiative'
-        | 'dodgeChance'
-        | 'focusPerRound';
+      stat: 'maxHp' | 'maxMana' | 'armor' | 'magicResist' | 'initiative' | 'focusPerRound';
     }
   | { kind: 'offense'; stat: 'damagePct' | 'critChance' | 'critDamage' | 'bossDamagePct' }
   | { kind: 'lifesteal' }
@@ -151,16 +144,6 @@ export const AFFIXES: Record<string, AffixDef> = Object.fromEntries(
       min: 1,
       max: 3,
       kinds: ALL,
-    },
-    {
-      id: 'dodge',
-      label: 'Dodge',
-      group: 'stat',
-      effect: { kind: 'stat', stat: 'dodgeChance' },
-      min: 1,
-      max: 5,
-      percent: true,
-      kinds: DEFENSIVE,
     },
     {
       id: 'focus',
@@ -323,7 +306,6 @@ export interface GearTotals {
     armor: number;
     magicResist: number;
     initiative: number;
-    dodgeChance: number;
     focusPerRound: number;
     critChance: number;
     critDamage: number;
@@ -349,7 +331,6 @@ export function gearTotals(affixes: WeaponSpecial[]): GearTotals {
       armor: 0,
       magicResist: 0,
       initiative: 0,
-      dodgeChance: 0,
       focusPerRound: 0,
       critChance: 0,
       critDamage: 0,

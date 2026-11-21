@@ -19,11 +19,37 @@ const self: CharacterDto = {
   name: 'Alda',
   appearance,
   position: { q: 0, r: 0 },
+  nation: 'west',
+  ap: { current: 120, max: 120, perHour: 10, fullAt: null },
   createdAt: '',
   lastPlayedAt: null,
 };
 
 describe('world state reducer', () => {
+  it('moves players and yourself when someone travels (request #43)', () => {
+    let s = applyServerMessage(initialWorldState, {
+      type: 'world.entered',
+      data: {
+        world,
+        character: self,
+        players: [player('a', 'Alda'), player('b', 'Brann')],
+        chat: [],
+      },
+    });
+    s = applyServerMessage(s, {
+      type: 'player.moved',
+      data: { characterId: 'b', position: { q: 2, r: -1 } },
+    });
+    expect(s.players.b!.position).toEqual({ q: 2, r: -1 });
+    expect(s.self!.position).toEqual({ q: 0, r: 0 });
+    s = applyServerMessage(s, {
+      type: 'player.moved',
+      data: { characterId: 'a', position: { q: 1, r: 0 } },
+    });
+    expect(s.self!.position).toEqual({ q: 1, r: 0 });
+    expect(s.players.a!.position).toEqual({ q: 1, r: 0 });
+  });
+
   it('tracks players joining and leaving', () => {
     let s = applyServerMessage(initialWorldState, {
       type: 'world.entered',

@@ -1,3 +1,4 @@
+import { AP_RULES, hexDistance } from '@realms/game-core';
 import { PVP_ARENA_ID, type LobbyVisibility } from '@realms/shared';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
@@ -5,9 +6,10 @@ import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { useActiveRun, useRifts, useStartRun } from './api';
 import { useLobbyActions, useLobbyOverview } from './lobby-api';
+import { useWorldStore } from '../world/world-store';
 import './combat.css';
 
-/** Rift list (D31: a list for now; portals on the map in phase 4). Solo or lobby. */
+/** Rifts (request #43): the entrance on your hex (solo or lobby) and the list of entrances. */
 export function RiftsPage() {
   const characterId = useActiveCharacter((s) => s.characterId);
   const rifts = useRifts();
@@ -17,6 +19,7 @@ export function RiftsPage() {
   const lobby = useLobbyActions(characterId);
   const [visibility, setVisibility] = useState<LobbyVisibility>('public');
   const navigate = useNavigate();
+  const pos = useWorldStore((st) => st.self?.position ?? null);
   if (!characterId) return <Navigate to="/" replace />;
 
   const mine = overview.data?.mine;
@@ -29,8 +32,8 @@ export function RiftsPage() {
         <h1 className="page-title">Rifts</h1>
         <p className="muted" style={{ margin: 0, fontSize: '1.05rem', fontStyle: 'italic' }}>
           Rifts are dungeons with branching paths: choose your way, avoid or pick fights, rest,
-          solve events and find secret rooms before the boss. Go alone or in a group of up to 6 —
-          difficulty does not change with the number of players.
+          solve events and find secret rooms before the boss. Each opens on a hex of the Riftlands;
+          deeper ones are harder and start with more Threat. Go alone or in a group of up to 4.
         </p>
         <FormError error={start.error ?? rifts.error ?? lobby.create.error ?? lobby.join.error} />
 
@@ -92,18 +95,31 @@ export function RiftsPage() {
           </section>
         )}
 
-        <div className="stack">
-          {rifts.data?.map((r) => (
-            <article key={r.id} className="panel rift-card" data-testid="rift-card">
+        {(() => {
+          const here = rifts.data?.find(
+            (r) => r.site && pos && r.site.q === pos.q && r.site.r === pos.r,
+          );
+          if (!here)
+            return (
+              <section className="panel" data-testid="no-rift-here">
+                <strong>There is no Rift on this hex.</strong>
+                <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                  Rifts open on certain hexes of the Riftlands; the closer to its heart, the harder
+                  they are. Travel to one on the <Link to="/world">world map</Link>.
+                </p>
+              </section>
+            );
+          return (
+            <article className="panel rift-card" data-testid="rift-card">
               <div className="rift-portal" aria-hidden />
               <div className="stack" style={{ gap: 6, flex: 1 }}>
                 <h2 className="logo" style={{ fontSize: '1.6rem' }}>
-                  {r.name}
+                  {here.name}
                 </h2>
-                <span className="muted">{r.description}</span>
+                <span className="muted">{here.description}</span>
                 <span className="muted small">
-                  {r.depth} rooms on any path · boss: <strong>{r.bossName}</strong> · branching map
-                  with combats, elites, campsites, events, loot and secret rooms
+                  Tier {here.tier} · {here.depth} rooms on any path · boss:{' '}
+                  <strong>{here.bossName}</strong>
                 </span>
                 <div className="row" style={{ flexWrap: 'wrap' }}>
                   <button
@@ -111,7 +127,7 @@ export function RiftsPage() {
                     disabled={start.isPending || busy}
                     onClick={() =>
                       start.mutate(
-                        { riftId: r.id, characterId },
+                        { riftId: here.id, characterId },
                         { onSuccess: (run) => navigate(`/rifts/runs/${run.id}`) },
                       )
                     }
@@ -123,7 +139,7 @@ export function RiftsPage() {
                     disabled={lobby.create.isPending || busy}
                     onClick={() =>
                       lobby.create.mutate(
-                        { riftId: r.id, visibility },
+                        { riftId: here.id, visibility },
                         { onSuccess: (l) => goLobby(l.id) },
                       )
                     }
@@ -141,8 +157,48 @@ export function RiftsPage() {
                 </div>
               </div>
             </article>
-          ))}
-        </div>
+          );
+        })()}
+
+        <section className="panel">
+          <div className="panel-title">
+            <span>Rift entrances</span>
+          </div>
+          <ul className="rift-sites" data-testid="rift-sites">
+            {[...(rifts.data ?? [])]
+              .filter((r) => r.site)
+              .sort((a, b) => (pos ? hexDistance(pos, a.site!) - hexDistance(pos, b.site!) : 0))
+              .map((r) => (
+                <li key={r.id}>
+                  <span className="hex-tag rift">Tier {r.tier}</span>
+                  <span style={{ flex: 1 }}>{r.name}</span>
+                  {pos && (
+                    <span className="muted">
+                      {hexDistance(pos, r.site!)} hexes ·{' '}
+                      {hexDistance(pos, r.site!) * AP_RULES.moveCostPerHex} AP
+                    </span>
+                  )}
+                </li>
+              ))}
+          </ul>
+        </section>
+
+        <article className="panel rift-card boss-card" data-testid="world-boss-card">
+          <div className="stack" style={{ gap: 6, flex: 1 }}>
+            <h2 className="logo" style={{ fontSize: '1.4rem' }}>
+              World boss
+            </h2>
+            <span className="muted">
+              The season&apos;s boss roams the Riftlands with a huge shared life. Find it, fight it
+              with your party and climb the damage leaderboard.
+            </span>
+            <div className="row">
+              <Link className="btn" to="/world-boss">
+                See the world boss
+              </Link>
+            </div>
+          </div>
+        </article>
 
         <article className="panel rift-card" data-testid="pvp-card">
           <div className="stack" style={{ gap: 6, flex: 1 }}>

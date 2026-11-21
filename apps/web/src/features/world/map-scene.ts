@@ -11,7 +11,6 @@ import {
   pixelToHex,
   worldMapHexes,
   type MapHex,
-  type RegionId,
 } from '@realms/game-core';
 import type { HexCoord, PresencePlayer } from '@realms/shared';
 import {
@@ -26,6 +25,7 @@ import {
 import { portraitTexture } from '../render/avatar-textures';
 import { glowTexture, vignetteTexture } from '../render/svg-texture';
 import type { PixiScene } from '../render/usePixiScene';
+import { REGION_COLORS } from './region-colors';
 import { clampToBounds, fitZoom, screenToWorld, zoomAt, type Camera } from './map-camera';
 
 /*
@@ -40,14 +40,6 @@ import { clampToBounds, fitZoom, screenToWorld, zoomAt, type Camera } from './ma
 export const HEX_SIZE = 34;
 /** Rings that fit the view when the map opens. */
 const VIEW_RADIUS = 5;
-
-/** Region colours on the map (placeholders, A64). */
-export const REGION_COLORS: Readonly<Record<RegionId, number>> = {
-  west: 0x2f5d9e,
-  east: 0x9e3b32,
-  north: 0x3d7f48,
-  riftlands: 0x5a2f78,
-};
 
 const MAP_HEXES: readonly MapHex[] = worldMapHexes();
 /** Centre and radius (world units) of the continent, for the camera and the mist. */
@@ -83,6 +75,8 @@ export interface MapSceneData {
   players: PresencePlayer[];
   selfId: string | null;
   selected: HexCoord | null;
+  /** Where the season's world boss stands (request #43), if known. */
+  boss: HexCoord | null;
 }
 
 export interface MapSceneCallbacks {
@@ -93,6 +87,14 @@ export interface MapSceneCallbacks {
 function mix(a: number, b: number, t: number): number {
   const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t) << s;
   return ch(16) | ch(8) | ch(0);
+}
+
+/** Terrain changes the region colour (request #43): water, rock and deep forest. */
+function terrainTint(base: number, terrain: MapHex['terrain']): number {
+  if (terrain === 'river') return mix(base, 0x2f6fb0, 0.6);
+  if (terrain === 'mountain') return mix(base, 0x6f6a60, 0.45);
+  if (terrain === 'forest') return mix(base, 0x16351c, 0.3);
+  return base;
 }
 
 /** Stable pseudo-random value per hex in [0, 1). */
@@ -187,6 +189,10 @@ export class MapScene implements PixiScene {
   private readonly hexLines = new Graphics();
   private readonly borderG = new Graphics();
   private readonly capitalLayer = new Container();
+  private readonly terrainG = new Graphics();
+  private readonly siteLayer = new Container();
+  private readonly bossMarker = new Container();
+  private bossKey = '';
   private readonly regionLabels = new Container();
   private readonly labelAnchors: Array<{ t: Text; y: number; below: boolean }> = [];
   private readonly hoverG = new Graphics();
@@ -234,12 +240,15 @@ export class MapScene implements PixiScene {
       this.hexFill,
       this.hoverG,
       this.hexLines,
+      this.terrainG,
       this.borderG,
       this.selectedG,
       this.selfGlow,
       this.selfG,
       this.coordLayer,
       this.capitalLayer,
+      this.siteLayer,
+      this.bossMarker,
       this.tokenLayer,
       this.regionLabels,
       this.fogLayer,
@@ -279,6 +288,7 @@ export class MapScene implements PixiScene {
       }
     }
     if (prev?.players !== d.players || prev?.selfId !== d.selfId) this.buildTokens(d);
+    this.placeBoss(d.boss);
     this.drawSelected();
     this.drawSelf();
   }
@@ -332,6 +342,8 @@ export class MapScene implements PixiScene {
     for (const t of this.coords.values()) t.destroy();
     this.coords.clear();
     this.capitalLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.siteLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.terrainG.clear();
     this.regionLabels.removeChildren().forEach((c) => c.destroy());
     this.labelAnchors.length = 0;
     const corners = hexCorners(HEX_SIZE);
@@ -339,8 +351,10 @@ export class MapScene implements PixiScene {
     for (const h of MAP_HEXES) {
       const { x, y } = hexToPixel(h, HEX_SIZE);
       const pts = CORNERS.map((v, i) => v + (i % 2 === 0 ? x : y));
-      const base = REGION_COLORS[h.region];
+      const base = terrainTint(REGION_COLORS[h.region], h.terrain);
       fill.poly(pts).fill(mix(mix(base, C.bg, 0.45), base, hexNoise(h) * 0.35));
+      this.drawTerrainGlyph(h, x, y);
+      if (h.rift) this.siteLayer.addChild(this.riftMarker(x, y, h.rift.tier));
       lines.poly(pts).stroke({ width: 1, color: mix(base, C.text, 0.15), alpha: 0.35 });
 
       // Edges towards the sea (coast) or another region (border).
@@ -416,6 +430,107 @@ export class MapScene implements PixiScene {
         MAP_BOUNDS.x + (Math.random() - 0.5) * 2 * R,
         MAP_BOUNDS.y + (Math.random() - 0.5) * 1.4 * R,
       );
+  }
+
+  /** Terrain glyphs (request #43, placeholder art): trees, peaks, water ripples. */
+  private drawTerrainGlyph(h: MapHex, x: number, y: number) {
+    const g = this.terrainG;
+    const j = (hexNoise(h) - 0.5) * 8;
+    if (h.terrain === 'forest') {
+      for (const [dx, dy] of [
+        [-9, 4],
+        [5, -2],
+        [9, 10],
+      ] as const)
+        g.poly([
+          x + dx + j - 6,
+          y + dy + 6,
+          x + dx + j,
+          y + dy - 8,
+          x + dx + j + 6,
+          y + dy + 6,
+        ]).fill({
+          color: 0x14301a,
+          alpha: 0.75,
+        });
+    } else if (h.terrain === 'mountain') {
+      g.poly([x - 15, y + 10, x - 3 + j / 2, y - 12, x + 9, y + 10]).fill({
+        color: 0x9a9a92,
+        alpha: 0.7,
+      });
+      g.poly([x - 3 + j / 2, y - 12, x - 7, y - 4, x + 1, y - 4]).fill({
+        color: 0xe8e8e0,
+        alpha: 0.7,
+      });
+    } else if (h.terrain === 'river') {
+      for (const dy of [-6, 2, 10])
+        g.moveTo(x - 12, y + dy)
+          .quadraticCurveTo(x - 4, y + dy - 5, x + 4, y + dy)
+          .quadraticCurveTo(x + 10, y + dy + 4, x + 14, y + dy)
+          .stroke({ width: 1.5, color: 0xbfe0ff, alpha: 0.5 });
+    }
+  }
+
+  /** A Rift entrance: a purple portal with its tier (request #43). */
+  private riftMarker(x: number, y: number, tier: number): Container {
+    const c = new Container();
+    c.position.set(x, y);
+    const ring = new Graphics()
+      .ellipse(0, 0, 11, 15)
+      .fill({ color: 0x2a0f3d })
+      .stroke({ width: 3, color: 0xc77dff })
+      .ellipse(0, 0, 5, 8)
+      .fill({ color: 0xe0b3ff, alpha: 0.8 });
+    const label = new Text({
+      text: `T${tier}`,
+      style: {
+        fontFamily: FONT,
+        fontSize: 10,
+        fontWeight: '800',
+        fill: 0xf3e2ff,
+        stroke: { color: 0x000000, width: 3, join: 'round' },
+      },
+      resolution: 3,
+    });
+    label.anchor.set(0.5, 0);
+    label.position.set(0, 15);
+    c.addChild(ring, label);
+    return c;
+  }
+
+  /** The world boss marker (request #43): a red skull that pulses. */
+  private placeBoss(h: HexCoord | null) {
+    const key = h ? hexKey(h) : '';
+    if (key === this.bossKey) return;
+    this.bossKey = key;
+    this.bossMarker.removeChildren().forEach((c) => c.destroy({ children: true }));
+    if (!h) return;
+    const { x, y } = hexToPixel(h, HEX_SIZE);
+    this.bossMarker.position.set(x, y);
+    const g = new Graphics()
+      .circle(0, 0, 17)
+      .fill({ color: 0x3a0606 })
+      .stroke({ width: 3, color: 0xff4d4d })
+      .circle(-5, -2, 3.5)
+      .fill(0xffd0d0)
+      .circle(5, -2, 3.5)
+      .fill(0xffd0d0)
+      .rect(-5, 6, 10, 4)
+      .fill(0xffd0d0);
+    const label = new Text({
+      text: 'World boss',
+      style: {
+        fontFamily: FONT,
+        fontSize: 10,
+        fontWeight: '800',
+        fill: 0xff9a9a,
+        stroke: { color: 0x000000, width: 3, join: 'round' },
+      },
+      resolution: 3,
+    });
+    label.anchor.set(0.5, 0);
+    label.position.set(0, 19);
+    this.bossMarker.addChild(g, label);
   }
 
   /** A placeholder capital: a gold keep on its hex with the city name. */
@@ -679,6 +794,9 @@ export class MapScene implements PixiScene {
     }
     const capScale = Math.max(1, 0.7 / this.cam.zoom);
     for (const c of this.capitalLayer.children) c.scale.set(capScale);
+    for (const c of this.siteLayer.children) c.scale.set(capScale);
+    this.bossMarker.scale.set(capScale * (1 + (reduced ? 0 : 0.06 * Math.sin(this.time / 300))));
+    this.terrainG.visible = this.cam.zoom >= 0.4;
     const pulse = 0.5 + 0.5 * Math.sin(this.time / 600);
     this.selfGlow.alpha = 0.18 + 0.12 * (reduced ? 0.5 : pulse);
     this.selectedG.alpha = 0.75 + 0.25 * (reduced ? 1 : pulse);

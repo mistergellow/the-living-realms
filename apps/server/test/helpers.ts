@@ -1,5 +1,6 @@
 import { createDb, loadEnv, type DbHandle } from '@realms/db';
 import { createRedis, PresenceStore, type Redis } from '@realms/server-kit';
+import { riftSites } from '@realms/game-core';
 import type { ServerMessage } from '@realms/shared';
 import { sql } from 'drizzle-orm';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
@@ -57,7 +58,7 @@ export async function createTestApp(
 
 export async function resetState(t: TestApp): Promise<void> {
   await t.dbHandle.db.execute(
-    sql`TRUNCATE world_events, custom_content, rift_lobby_invites, rift_lobby_members, rift_lobbies, friendships, rift_run_participants, rift_runs, items, character_skills, character_professions, characters, sessions, accounts CASCADE`,
+    sql`TRUNCATE world_events, world_boss_attempts, world_bosses, custom_content, rift_lobby_invites, rift_lobby_members, rift_lobbies, friendships, rift_run_participants, rift_runs, items, character_skills, character_professions, characters, sessions, accounts CASCADE`,
   );
   await t.redis.flushdb();
 }
@@ -97,6 +98,7 @@ export async function createCharacter(
     attributes?: Record<string, number>;
     startingWeapon?: string;
     startingOffhand?: string;
+    nation?: string;
   } = {},
 ) {
   return app.inject({
@@ -106,11 +108,29 @@ export async function createCharacter(
     payload: {
       name,
       appearance,
+      nation: extra.nation ?? 'west',
       attributes: extra.attributes ?? VALID_ATTRIBUTES,
       startingWeapon: extra.startingWeapon ?? 'training_sword',
       ...(extra.startingOffhand ? { startingOffhand: extra.startingOffhand } : {}),
     },
   });
+}
+
+/** Puts a character on a hex (request #43: Rifts, gathering and the boss depend on where you stand). */
+export async function placeCharacter(
+  t: TestApp,
+  characterId: string,
+  hex: { q: number; r: number },
+) {
+  await t.dbHandle.db.execute(
+    sql`update characters set hex_q = ${hex.q}, hex_r = ${hex.r} where id = ${characterId}`,
+  );
+}
+
+/** A tier-1 Rift entrance (no extra difficulty): its id and hex. */
+export function firstRiftSite() {
+  const h = riftSites().find((s) => s.rift!.tier === 1)!;
+  return { id: h.rift!.id, hex: { q: h.q, r: h.r } };
 }
 
 // ---- WebSocket test client ----

@@ -66,7 +66,7 @@ export function StatusChips({ unit }: { unit: CombatantView }) {
       {unit.block > 0 && (
         <span
           className="status status-block"
-          title="Block: absorbs damage until this unit's next turn"
+          title="Dodge: avoids that much damage until this unit's next turn"
         >
           ⛨ {unit.block}
         </span>

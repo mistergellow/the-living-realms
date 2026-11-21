@@ -31,7 +31,9 @@ export type ControlMessage =
   /** A session was revoked (logout); close every connection opened with it. */
   | { kind: 'session.revoked'; sessionId: string }
   /** Admin-made content changed (request #41); reload the game-core content registry. */
-  | { kind: 'content.changed' };
+  | { kind: 'content.changed' }
+  /** A character travelled (request #43): update its presence on the instance that holds it. */
+  | { kind: 'character.moved'; characterId: string; position: HexCoord };
 
 /** Redis list with the recent chat of one hex (newest first, capped). */
 export const chatKey = (worldId: string, q: number, r: number) =>

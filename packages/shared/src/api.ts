@@ -63,8 +63,21 @@ export interface CharacterDto {
   name: string;
   appearance: CharacterAppearance;
   position: HexCoord;
+  /** Nation of origin (request #43); null for characters made before nations. */
+  nation: NationId | null;
+  /** Action Points now (request #43): they refill in real time. */
+  ap: ApDto;
   createdAt: string;
   lastPlayedAt: string | null;
+}
+
+export interface ApDto {
+  current: number;
+  max: number;
+  /** AP regained per real hour. */
+  perHour: number;
+  /** When the bar is full again (ISO), or null if it is full. */
+  fullAt: string | null;
 }
 
 /**
@@ -193,17 +206,38 @@ export const attributesSchema = z
   })
   .strict();
 
+/** Nations a character can come from (request #43); spawn at its capital. */
+export const NATION_IDS = ['west', 'east', 'north'] as const;
+export type NationId = (typeof NATION_IDS)[number];
+
+/** Starting kits (request #43): sword, bow, dagger, or a wand with Fireball. */
+export const STARTER_KIT_IDS = ['sword', 'bow', 'dagger', 'fireball'] as const;
+export type StarterKitId = (typeof STARTER_KIT_IDS)[number];
+
 export const createCharacterRequestSchema = z.object({
   name: z.string(),
   appearance: characterAppearanceSchema,
-  /** Final scores after distributing creation points; validated by game-core rules. */
-  attributes: attributesSchema,
-  /** Item definition id of the chosen starter weapon. */
-  startingWeapon: z.string().max(64),
+  /** Nation of origin (request #43): the character starts at its capital. */
+  nation: z.enum(NATION_IDS),
+  /** Starting kit (request #43). Either this or the older `startingWeapon`. */
+  starterKit: z.enum(STARTER_KIT_IDS).optional(),
+  /**
+   * Final scores after distributing creation points. Optional since request
+   * #43: without it every point stays unspent, to spend on the sheet.
+   */
+  attributes: attributesSchema.optional(),
+  /** Item definition id of a starter weapon (older form of creation). */
+  startingWeapon: z.string().max(64).optional(),
   /** Optional starter off-hand (only with one-handed weapons). */
   startingOffhand: z.string().max(64).optional(),
 });
 export type CreateCharacterRequest = z.infer<typeof createCharacterRequestSchema>;
+
+/** Travel on the world map (request #43): any land hex, paid in AP. */
+export const moveRequestSchema = z.object({
+  to: z.object({ q: z.number().int(), r: z.number().int() }),
+});
+export type MoveRequest = z.infer<typeof moveRequestSchema>;
 
 /** Spend unspent attribute points (e.g. characters converted from the old system). */
 export const allocateAttributesRequestSchema = z.object({ add: attributesSchema.partial() });
@@ -369,8 +403,6 @@ export interface DerivedStatsDto {
   physicalReduction: number;
   magicReduction: number;
   initiative: number;
-  /** Percentages. */
-  dodgeChance: number;
   critChance: number;
   /** Damage of a critical hit, percent of normal (e.g. 170). */
   critDamage: number;

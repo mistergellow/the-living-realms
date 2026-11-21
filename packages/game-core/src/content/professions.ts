@@ -1,4 +1,5 @@
 import type { MaterialId, ItemDefId } from './items.js';
+import type { Terrain } from './world-map.js';
 
 /*
  * Professions (request #33, "like Project Zomboid"): every character can
@@ -443,6 +444,24 @@ export const PROFESSIONS = {
 } satisfies Record<string, ProfessionDef>;
 
 export type ProfessionId = keyof typeof PROFESSIONS;
+
+/**
+ * Where gathering happens (request #43): the hex you stand on must have one of
+ * these terrains. Crafting and services work anywhere for now (A82).
+ */
+export const GATHERING_TERRAIN: Partial<Record<ProfessionId, readonly Terrain[]>> = {
+  fishing: ['river'],
+  mining: ['mountain'],
+  woodcutting: ['forest'],
+  herbalism: ['forest', 'plains'],
+  hunting: ['forest', 'plains'],
+  farming: ['plains'],
+};
+
+/** Terrains a profession needs, or null when it can be practised anywhere. */
+export function professionTerrains(id: string): readonly Terrain[] | null {
+  return (GATHERING_TERRAIN as Record<string, readonly Terrain[]>)[id] ?? null;
+}
 
 export function getProfession(id: string): ProfessionDef | undefined {
   return (PROFESSIONS as Record<string, ProfessionDef>)[id];

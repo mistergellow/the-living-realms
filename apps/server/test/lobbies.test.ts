@@ -6,12 +6,16 @@ import {
   registerUser,
   resetState,
   type TestApp,
+  firstRiftSite,
+  placeCharacter,
 } from './helpers.js';
 
 let t: TestApp;
 beforeAll(async () => (t = await createTestApp()));
 beforeEach(() => resetState(t));
 afterAll(() => t.close());
+
+const SITE = firstRiftSite();
 
 let seq = 0;
 const letters = (n: number) =>
@@ -20,7 +24,9 @@ async function player(weapon = 'training_sword') {
   const user = await registerUser(t.app);
   const name = `Lob${letters(seq++)}`;
   const res = await createCharacter(t.app, user.cookie, name, { startingWeapon: weapon });
-  return { ...user, id: res.json().character.id as string, name };
+  const id = res.json().character.id as string;
+  await placeCharacter(t, id, SITE.hex);
+  return { ...user, id, name };
 }
 type P = Awaited<ReturnType<typeof player>>;
 
@@ -32,7 +38,7 @@ const call = (p: P, method: 'GET' | 'POST', url: string, payload: Record<string,
     ...(method === 'POST' ? { payload: { characterId: p.id, ...payload } } : {}),
   });
 const create = (p: P, visibility: 'public' | 'private' = 'public') =>
-  call(p, 'POST', '/api/rifts/lobbies', { riftId: 'shattered_breach', visibility });
+  call(p, 'POST', '/api/rifts/lobbies', { riftId: SITE.id, visibility });
 
 async function befriend(a: P, b: P) {
   await call(a, 'POST', '/api/social/friends/requests', { name: b.name });
@@ -135,7 +141,7 @@ describe('Rift lobbies', () => {
     expect(full.json().error.code).toBe('LOBBY_FULL');
 
     expect((await create(leader)).json().error.code).toBe('IN_LOBBY');
-    const solo = await call(leader, 'POST', '/api/rifts/shattered_breach/runs');
+    const solo = await call(leader, 'POST', `/api/rifts/${SITE.id}/runs`);
     expect(solo.json().error.code).toBe('IN_LOBBY');
   });
 
@@ -199,7 +205,7 @@ describe('group combat', () => {
     const { a, b, runId } = await groupRun();
     const left = (await act(a, runId, { type: 'abandon' })).json() as RunDto;
     expect(left.status).toBe('abandoned');
-    expect(left.penalty!.damaged.every((d) => d.quality === 75)).toBe(true);
+    expect(left.penalty!.damaged.every((d) => d.quality >= 97 && d.quality <= 99)).toBe(true);
 
     const forB = (await call(b, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
     expect(forB.status).toBe('active');

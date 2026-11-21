@@ -29,6 +29,8 @@ import { FriendsService } from './modules/social/friends.service.js';
 import { socialRoutes } from './modules/social/social.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { worldRoutes } from './modules/world/world.routes.js';
+import { worldBossRoutes } from './modules/worldboss/worldboss.routes.js';
+import { WorldBossService } from './modules/worldboss/worldboss.service.js';
 import { authPlugin } from './plugins/auth.js';
 import { securityPlugin } from './plugins/security.js';
 import { RealtimeGateway } from './realtime/gateway.js';
@@ -93,10 +95,12 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
       const rifts = new RiftsService(ctx, sheets);
       const friends = new FriendsService(ctx, sheets);
       // Lobby routes first: '/rifts/lobbies' must not be captured by '/rifts/:riftId'.
+      const worldBoss = new WorldBossService(ctx, sheets, rifts);
       await api.register(lobbiesRoutes, {
         prefix: '/rifts/lobbies',
-        lobbies: new LobbiesService(ctx, sheets, rifts, friends),
+        lobbies: new LobbiesService(ctx, sheets, rifts, friends, worldBoss),
       });
+      await api.register(worldBossRoutes, { prefix: '/world-boss', service: worldBoss, rifts });
       await api.register(riftsRoutes, { prefix: '/rifts', service: rifts });
       await api.register(socialRoutes, { prefix: '/social', friends });
       await api.register(worldRoutes, { prefix: '/world', ctx });

@@ -32,9 +32,13 @@ import {
   rollAffixCount,
   rollAffixes,
   Rng,
-  RIFTS,
+  riftSites,
   RUN_STATE_VERSION,
   seedFrom,
+  createWorldBossRun,
+  WORLD_BOSS_ID,
+  worldBossDamage,
+  worldBossSeason,
   timeoutRun,
   toCombatView,
   toMapDto,
@@ -59,6 +63,7 @@ import {
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
+import { settleWorldBossFight } from '../worldboss/worldboss.repository.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
 import { riftsRepository as repo } from './rifts.repository.js';
@@ -79,7 +84,28 @@ export const toRiftDto = (r: RiftDef): RiftDto => ({
   description: r.description,
   depth: riftDepth(r),
   bossName: bossName(r),
+  tier: r.tier ?? null,
+  site: r.site ?? null,
 });
+
+/**
+ * Rifts are entered from their hex (request #43): every character must stand
+ * on the entrance. Templates without a site cannot be entered.
+ */
+export function assertAtRift(
+  rift: RiftDef,
+  chars: Array<{ name: string; hexQ: number; hexR: number }>,
+) {
+  if (!rift.site)
+    throw new AppError(409, ErrorCode.NOT_HERE, 'Rifts are entered from their hex on the map.');
+  const away = chars.filter((c) => c.hexQ !== rift.site!.q || c.hexR !== rift.site!.r);
+  if (away.length)
+    throw new AppError(
+      409,
+      ErrorCode.NOT_HERE,
+      `${away.map((c) => c.name).join(', ')} must be at ${rift.name} (hex ${rift.site.q}, ${rift.site.r}).`,
+    );
+}
 
 /** Ranged and caster weapons start at the back of the line; everything else in front (A31). */
 export function startingSlot(abilityIds: string[]): number {
@@ -139,8 +165,9 @@ export class RiftsService {
     this.db = ctx.db;
   }
 
+  /** Every Rift entrance on the map (request #43). */
   list(): RiftDto[] {
-    return Object.values(RIFTS).map(toRiftDto);
+    return riftSites().map((h) => toRiftDto(getRift(h.rift!.id)!));
   }
 
   async active(accountId: string, characterId: string): Promise<RunDto | null> {
@@ -156,9 +183,76 @@ export class RiftsService {
     const runId = await this.db.transaction(async (tx) => {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertFreeForRift(tx, c.id);
+      assertAtRift(rift, [c]);
       return this.createRun(tx, rift, [{ accountId, character: c }]);
     });
     return this.get(accountId, runId, characterId);
+  }
+
+  /** World boss fight (request #43): one combat against the shared HP pool. */
+  async createWorldBossRun(
+    tx: DbOrTx,
+    members: Array<{ accountId: string; character: Character; slot?: number }>,
+    leaderId: string,
+    boss: { season: number; hp: number },
+  ): Promise<string> {
+    const party: Array<Omit<RunMember, 'conditions' | 'left'>> = [];
+    const used = new Set<number>();
+    for (const m of members) {
+      const profile = await this.sheets.combatProfile(tx, m.character);
+      let slot = m.slot ?? startingSlot(profile.abilityIds);
+      if (used.has(slot))
+        slot = Array.from({ length: SLOTS_PER_SIDE }, (_, i) => i).find((s) => !used.has(s))!;
+      used.add(slot);
+      party.push({
+        characterId: m.character.id,
+        name: m.character.name,
+        appearance: profile.appearance,
+        baseAttributes: profile.baseAttributes,
+        attributes: profile.attributes,
+        stats: profile.stats,
+        abilityIds: profile.abilityIds,
+        abilityMultipliers: profile.abilityMultipliers,
+        gear: profile.gear,
+        hp: profile.stats.maxHp,
+        mana: profile.stats.maxMana,
+        slot,
+      });
+    }
+    const state = createWorldBossRun({
+      season: boss.season,
+      bossHp: boss.hp,
+      party,
+      leaderId,
+      seed: randomInt(2 ** 31),
+    });
+    const [run] = await tx
+      .insert(riftRuns)
+      .values({
+        worldId: this.ctx.world.id,
+        riftId: WORLD_BOSS_ID,
+        state,
+        turnDeadline: new Date(Date.now() + TURN_MS),
+      })
+      .returning({ id: riftRuns.id });
+    for (const m of members) {
+      await tx
+        .insert(riftRunParticipants)
+        .values({ runId: run!.id, characterId: m.character.id, accountId: m.accountId });
+      await tx.insert(worldEvents).values({
+        worldId: this.ctx.world.id,
+        type: 'worldboss.fight_started',
+        actorAccountId: m.accountId,
+        actorCharacterId: m.character.id,
+        payload: {
+          runId: run!.id,
+          season: boss.season,
+          bossHp: boss.hp,
+          partySize: members.length,
+        },
+      });
+    }
+    return run!.id;
   }
 
   /** PvP arena match (request #33, test mode) for two teams from a lobby. */
@@ -414,6 +508,16 @@ export class RiftsService {
    * way; equipment quality loss on defeat (D19/D30) — a wiped party keeps nothing.
    */
   private async finish(tx: DbOrTx, run: RiftRun, status: RunStatus): Promise<void> {
+    if (run.riftId === WORLD_BOSS_ID) {
+      // World boss (request #43): the damage counts; no rewards, no gear damage (A87).
+      const state = run.state as RunState;
+      await settleWorldBossFight(tx, run.id, worldBossDamage(state));
+      for (const p of await repo.participants(tx, run.id)) {
+        if (p.leftAt) continue;
+        await this.recordResult(tx, run, p.characterId, p.accountId, {}, status);
+      }
+      return;
+    }
     if (run.riftId === PVP_ARENA_ID) {
       // PvP test mode: no rewards, no equipment damage — just the result.
       const state = run.state as RunState;
@@ -496,9 +600,9 @@ export class RiftsService {
   ): Promise<void> {
     const p = await repo.participant(tx, run.id, characterId);
     if (!p || p.leftAt) return;
-    // PvP test mode: leaving or losing never damages equipment.
+    // PvP test mode and the world boss: leaving or losing never damages equipment.
     const equipped =
-      run.riftId === PVP_ARENA_ID
+      run.riftId === PVP_ARENA_ID || run.riftId === WORLD_BOSS_ID
         ? []
         : await tx
             .select()
@@ -506,7 +610,7 @@ export class RiftsService {
             .where(and(eq(items.characterId, characterId), isNotNull(items.equippedSlot)));
     const damaged: RunPenaltyDto['damaged'] = [];
     for (const it of equipped) {
-      const quality = qualityAfterDefeat(it.quality);
+      const quality = qualityAfterDefeat(it.quality, Math.random());
       await tx.update(items).set({ quality }).where(eq(items.id, it.id));
       damaged.push({
         id: it.id,
@@ -571,6 +675,7 @@ export class RiftsService {
   private async toRunDto(tx: DbOrTx, run: RiftRun, characterId: string): Promise<RunDto> {
     const state = runStateOf(run);
     const pvp = state.mode === 'pvp';
+    const boss = state.mode === 'worldboss';
     const me = await repo.participant(tx, run.id, characterId);
     const result = (me?.result ?? null) as ParticipantResult | null;
     const myTeam = state.party.find((m) => m.characterId === characterId)?.team ?? 'party';
@@ -592,8 +697,16 @@ export class RiftsService {
     return {
       id: run.id,
       riftId: run.riftId,
-      riftName: pvp ? PVP_ARENA_NAME : (getRift(run.riftId)?.name ?? run.riftId),
-      mode: pvp ? 'pvp' : 'rift',
+      riftName: pvp
+        ? PVP_ARENA_NAME
+        : boss
+          ? (worldBossSeason(state.worldBoss?.season ?? 0)?.name ?? 'World boss')
+          : (getRift(run.riftId)?.name ?? run.riftId),
+      mode: pvp ? 'pvp' : boss ? 'worldboss' : 'rift',
+      worldBoss:
+        boss && state.worldBoss
+          ? { damage: worldBossDamage(state), startHp: state.worldBoss.startHp }
+          : null,
       status,
       phase: state.phase,
       roomsVisited: state.roomsVisited,

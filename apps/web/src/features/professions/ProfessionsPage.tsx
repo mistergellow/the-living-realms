@@ -111,6 +111,16 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
           {p.xpToNext ? ` · ${p.xp}/${p.xpToNext} XP` : ' · mastered'}
           {busy > 0 && <span className="muted"> · busy for {busy}s</span>}
         </p>
+        {p.terrains && (
+          <p
+            className={p.availableHere ? 'muted' : 'field-error'}
+            style={{ margin: '0.3rem 0 0' }}
+            data-testid="profession-terrain"
+          >
+            Needs: {p.terrains.join(' or ')}
+            {p.availableHere ? ' · you are on one' : ' · travel to one on the world map'}
+          </p>
+        )}
       </header>
       <FormError error={perform.error} />
       {result && (
@@ -175,7 +185,14 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
               )}
               <button
                 className="btn btn-primary btn-sm"
-                disabled={a.locked || missing || needsTarget || busy > 0 || perform.isPending}
+                disabled={
+                  !p.availableHere ||
+                  a.locked ||
+                  missing ||
+                  needsTarget ||
+                  busy > 0 ||
+                  perform.isPending
+                }
                 onClick={() => run(a)}
               >
                 {a.name}

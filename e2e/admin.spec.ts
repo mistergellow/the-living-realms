@@ -31,8 +31,8 @@ test('admin: create an ability and a weapon, give them to a character', async ({
     data: {
       name: hero,
       appearance: { version: 1, color: '#2e86c1', emblem: 'star' },
-      attributes: { might: 10, agility: 8, precision: 5, endurance: 9, intellect: 5, will: 5 },
-      startingWeapon: 'training_sword',
+      nation: 'west',
+      starterKit: 'sword',
     },
   });
   // Old runs may have filled the character limit: reuse any character then.

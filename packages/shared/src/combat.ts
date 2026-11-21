@@ -3,6 +3,7 @@ import type {
   AttributeKey,
   Attributes,
   CharacterAppearance,
+  HexCoord,
   DerivedStatsDto,
   GearCombatEffects,
 } from './api.js';
@@ -101,7 +102,6 @@ export type CombatLogEntry =
   | { t: 'tick'; targetId: string; status: StatusId; amount: number }
   | { t: 'stunned'; targetId: string }
   | { t: 'left'; actorId: string }
-  | { t: 'dodge'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'swap'; actorId: string; fromSlot: number; toSlot: number; withId: string | null }
   | { t: 'downed'; targetId: string }
@@ -170,6 +170,9 @@ export interface RiftDto {
   /** Rooms on any path from the entrance to the boss (boss included). */
   depth: number;
   bossName: string;
+  /** Map entrance (request #43): difficulty tier and hex; null on templates. */
+  tier: number | null;
+  site: HexCoord | null;
 }
 
 export interface MapNodeDto {
@@ -303,8 +306,13 @@ export interface RunDto {
   id: string;
   riftId: string;
   riftName: string;
-  /** 'pvp' = arena match (test mode): one fight between two teams of players. */
-  mode: 'rift' | 'pvp';
+  /**
+   * 'pvp' = arena match (test mode): one fight between two teams of players.
+   * 'worldboss' = a fight against the season's world boss (request #43).
+   */
+  mode: 'rift' | 'pvp' | 'worldboss';
+  /** World boss fights: damage dealt so far and the boss HP when the fight began. */
+  worldBoss: { damage: number; startHp: number } | null;
   status: RunStatus;
   phase: RunPhase;
   /** Rooms entered so far. */

@@ -115,8 +115,8 @@ export const ABILITIES = {
   }),
   block: ability({
     id: 'block',
-    name: 'Block',
-    description: 'Brace yourself: gain Block until the end of the round. Stacks.',
+    name: 'Dodge',
+    description: 'Get ready to evade: gain Dodge until the end of the round. Stacks.',
     source: 'universal',
     focusCost: BASIC_ACTIONS.block.focusCost,
     manaCost: 0,
@@ -235,7 +235,7 @@ export const ABILITIES = {
   shadowstep: ability({
     id: 'shadowstep',
     name: 'Shadowstep',
-    description: 'Slip out of reach: gain Block until the end of the round.',
+    description: 'Slip out of reach: gain Dodge until the end of the round.',
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
@@ -266,6 +266,22 @@ export const ABILITIES = {
     name: 'Wand Bolt',
     description: 'Basic wand attack: a precise bolt at any column. Costs no mana.',
     targeting: ENEMY_ANY_COLUMN,
+  }),
+
+  /** Starting spell (request #43): a level-1 Fireball, learned at creation. */
+  fireball: ability({
+    id: 'fireball',
+    name: 'Fireball',
+    description: 'Level 1 spell: hurl a ball of fire that sets the target alight.',
+    source: 'skill',
+    focusCost: 1,
+    manaCost: 4,
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [
+      { kind: 'damage', damageType: 'magic', min: 5, max: 7 },
+      { kind: 'status', status: 'burn', turns: 2, value: 2 },
+    ],
+    scaling: weaponScaling('wand'),
   }),
 
   // ---- bow: Precision + Agility (two-handed) ----
@@ -371,7 +387,7 @@ export const ABILITIES = {
   raise_shield: ability({
     id: 'raise_shield',
     name: 'Raise Shield',
-    description: 'Gain Block until the end of the round.',
+    description: 'Gain Dodge until the end of the round.',
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
@@ -382,7 +398,7 @@ export const ABILITIES = {
   shield_wall: ability({
     id: 'shield_wall',
     name: 'Shield Wall',
-    description: 'Block for the two allies at the front until the end of the round.',
+    description: 'Dodge for the two allies at the front until the end of the round.',
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
@@ -406,7 +422,7 @@ export const ABILITIES = {
   ward: ability({
     id: 'ward',
     name: 'Ward',
-    description: 'A protective barrier: Block for an ally.',
+    description: 'A protective barrier: Dodge for an ally.',
     source: 'weapon',
     focusCost: 1,
     manaCost: 2,
@@ -455,7 +471,7 @@ export const ABILITIES = {
   bulwark_wall: ability({
     id: 'bulwark_wall',
     name: 'Bulwark',
-    description: 'Raises a barrier: Block for the two enemies at the front.',
+    description: 'Raises a barrier: Dodge for the two enemies at the front.',
     source: 'enemy',
     focusCost: 2,
     manaCost: 0,
@@ -575,7 +591,7 @@ export function describeEffects(a: AbilityDef): string[] {
       case 'heal':
         return [`Heal ${e.min}–${e.max}`];
       case 'block':
-        return [`Block ${e.min}–${e.max}`];
+        return [`Dodge ${e.min}–${e.max}`];
       case 'status':
         return [
           `${STATUS_NAMES[e.status]}${e.value ? ` ${e.value}` : ''} for ${e.turns} turn${e.turns > 1 ? 's' : ''}`,

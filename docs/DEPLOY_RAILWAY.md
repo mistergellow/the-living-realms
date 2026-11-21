@@ -50,7 +50,10 @@ variáveis abaixo usam-nos.
 
    `ADMIN_EMAILS` (pedido #41): o email da conta com acesso ao painel `/admin`
    (criar armas e habilidades, dar itens). Vários emails separados por vírgula.
-   Sem esta variável ninguém é admin.
+   **Opcional desde o pedido #43:** a conta do dono já é sempre admin (o email
+   está guardado no código como hash). Esta variável só serve para dar admin a
+   mais contas. Se `MAX_CHARACTERS_PER_ACCOUNT` estiver definida no Railway,
+   apaga-a (o valor certo, 2, já é o padrão).
 
 4. Guarda e clica em **Deploy** (ou **Apply changes**).
 

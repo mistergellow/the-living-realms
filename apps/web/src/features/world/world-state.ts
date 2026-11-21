@@ -85,6 +85,19 @@ export function applyServerMessage(state: WorldState, msg: ServerMessage): World
       const { [msg.data.characterId]: _gone, ...rest } = state.players;
       return { ...state, players: rest, log: withLog(state, `${left.name} departed.`) };
     }
+    case 'player.moved': {
+      // Travel (request #43): move the token; your own move also clears the
+      // hex chat (it belongs to the hex you left).
+      const { characterId, position } = msg.data;
+      const p = state.players[characterId];
+      const isSelf = state.self?.id === characterId;
+      return {
+        ...state,
+        players: p ? { ...state.players, [characterId]: { ...p, position } } : state.players,
+        self: isSelf && state.self ? { ...state.self, position } : state.self,
+        chat: isSelf ? [] : state.chat,
+      };
+    }
     case 'world.tick':
       return { ...state, tick: msg.data.tick };
     case 'error':

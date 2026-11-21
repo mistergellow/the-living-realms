@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fp from 'fastify-plugin';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { errors } from '../lib/errors.js';
@@ -27,9 +28,19 @@ export async function requireAuth(request: FastifyRequest, _reply: FastifyReply)
   if (!request.auth) throw errors.unauthenticated();
 }
 
-/** Is this email one of the admins in ADMIN_EMAILS (request #41)? */
-export const isAdminEmail = (adminEmails: readonly string[], email: string) =>
-  adminEmails.includes(email.toLowerCase());
+/**
+ * The project owner is always an admin (request #43). Stored as a SHA-256 of
+ * the lower-cased email so the address is not published in the repository.
+ */
+const OWNER_EMAIL_SHA256 = '4e35e029dbf001fcf4fbdb49f27eae3516e4f7daf0ffcb2e00f40873196ced9f';
+
+/** Is this email the owner's or one of the admins in ADMIN_EMAILS (request #41)? */
+export const isAdminEmail = (adminEmails: readonly string[], email: string) => {
+  const e = email.toLowerCase();
+  return (
+    adminEmails.includes(e) || createHash('sha256').update(e).digest('hex') === OWNER_EMAIL_SHA256
+  );
+};
 
 /** Route-level guard for the admin tools: logged in and listed in ADMIN_EMAILS. */
 export function requireAdmin(adminEmails: readonly string[]) {

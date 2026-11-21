@@ -1,7 +1,9 @@
 import type { ItemDefId } from './items.js';
 import type { EnemyId } from './enemies.js';
 import type { EventId } from './events.js';
+import type { HexCoord } from '@realms/shared';
 import type { MapTemplate } from '../rift/map.js';
+import { riftSiteById } from './world-map.js';
 
 /*
  * Rift definitions (data). A Rift is a dungeon (request #31): a branching
@@ -50,6 +52,14 @@ export interface RiftDef {
   lootRoom: LootTable;
   /** Secret Rooms: rarer rewards. */
   secretRoom: LootTable;
+  /**
+   * Rift entrances on the map (request #43): difficulty tier (1 … RIFT_TIERS)
+   * and the hex you must stand on to enter. Absent on the template.
+   */
+  tier?: number;
+  site?: HexCoord;
+  /** Dungeon Threat the run starts with (deeper Rifts start more restless). */
+  startingThreat?: number;
 }
 
 const rift = (r: RiftDef) => r;
@@ -200,6 +210,51 @@ export const RIFTS = {
 
 export type RiftId = keyof typeof RIFTS;
 
+/**
+ * Difficulty per Rift tier (request #43), PROVISIONAL (A81): tier 1 is the
+ * base Rift; each tier above adds enemy HP and damage, starting Threat and
+ * reputation.
+ */
+export const RIFT_TIER_RULES = {
+  hpPerTier: 0.25,
+  powerPerTier: 0.15,
+  threatPerTier: 1,
+  reputationPerTier: 0.5,
+  names: ['Fringe Rift', 'Shallow Rift', 'Deep Rift', 'Abyssal Rift', 'Heart Rift'],
+} as const;
+
+/** Extra enemy strength for a tier (1 = none). */
+export function riftTierModifiers(tier = 1): { hpMultiplier: number; powerMultiplier: number } {
+  const t = Math.max(0, tier - 1);
+  return {
+    hpMultiplier: 1 + RIFT_TIER_RULES.hpPerTier * t,
+    powerMultiplier: 1 + RIFT_TIER_RULES.powerPerTier * t,
+  };
+}
+
+/** The Rift at a map entrance: the template Rift scaled to the site's tier. */
+function siteRift(id: string): RiftDef | undefined {
+  const h = riftSiteById(id);
+  if (!h?.rift) return undefined;
+  const base = RIFTS.shattered_breach as RiftDef;
+  const tier = h.rift.tier;
+  const t = tier - 1;
+  return {
+    ...base,
+    id,
+    name: `${RIFT_TIER_RULES.names[t] ?? 'Rift'} (${h.q}, ${h.r})`,
+    description: `A Rift of tier ${tier}. The deeper into the Riftlands, the stronger what waits inside.`,
+    tier,
+    site: { q: h.q, r: h.r },
+    startingThreat: RIFT_TIER_RULES.threatPerTier * t,
+    rewards: {
+      ...base.rewards,
+      reputation: Math.round(base.rewards.reputation * (1 + RIFT_TIER_RULES.reputationPerTier * t)),
+    },
+  };
+}
+
+/** A Rift by id: a map entrance (`rift_q_r`) or a template. */
 export function getRift(id: string): RiftDef | undefined {
-  return (RIFTS as Record<string, RiftDef>)[id];
+  return (RIFTS as Record<string, RiftDef>)[id] ?? siteRift(id);
 }

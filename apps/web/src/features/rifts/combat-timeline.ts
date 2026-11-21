@@ -18,7 +18,6 @@ export type FxEvent =
   | { t: 'tick'; targetId: string; status: StatusId; amount: number }
   | { t: 'stunned'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
-  | { t: 'dodge'; targetId: string }
   | { t: 'downed'; targetId: string }
   | { t: 'revived'; targetId: string; hp: number };
 
@@ -125,9 +124,6 @@ export function buildTimeline(entries: ReadonlyArray<CombatLogEntry & { seq?: nu
         break;
       case 'heal':
         current().events.push({ t: 'heal', targetId: e.targetId, amount: e.amount });
-        break;
-      case 'dodge':
-        current().events.push({ t: 'dodge', targetId: e.targetId });
         break;
       case 'downed':
         current().events.push({ t: 'downed', targetId: e.targetId });

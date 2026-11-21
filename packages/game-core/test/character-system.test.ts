@@ -66,7 +66,6 @@ describe('derived stats', () => {
     expect(stats.maxHp).toBe(40 + 6 * 10);
     expect(stats.maxMana).toBe(10 + 4 * 8);
     expect(stats.initiative).toBe(9);
-    expect(stats.dodgeChance).toBe(18);
     expect(stats.critChance).toBe(5 + 2 * 7);
     expect(stats.critDamage).toBe(150 + 4 * 7);
   });
@@ -154,6 +153,10 @@ describe('equipment and abilities', () => {
     expect(planEquip(items, 'b', 'feet').ok).toBe(true);
   });
   it('loses 25% quality per defeat and breaks at 0', () => {
-    expect([100, 75, 50, 25, 10].map(qualityAfterDefeat)).toEqual([75, 50, 25, 0, 0]);
+    // Request #43: a lost Rift costs 1–3% durability per item.
+    expect(qualityAfterDefeat(100, 0)).toBe(99);
+    expect(qualityAfterDefeat(100, 0.5)).toBe(98);
+    expect(qualityAfterDefeat(100, 0.999)).toBe(97);
+    expect(qualityAfterDefeat(2, 0.999)).toBe(0);
   });
 });

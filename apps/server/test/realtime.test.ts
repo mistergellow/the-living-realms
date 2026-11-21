@@ -141,7 +141,7 @@ describe('realtime gateway', () => {
 
     sa.send({ type: 'chat.send', data: { text: '  Well met!\u0007 ' } });
     const heard = (await sb.next('chat.message')).data.message;
-    expect(heard).toMatchObject({ name: 'Talker', text: 'Well met!', hex: { q: 0, r: 0 } });
+    expect(heard).toMatchObject({ name: 'Talker', text: 'Well met!', hex: { q: -14, r: 2 } }); // the West capital (#43)
     expect((await sa.next('chat.message')).data.message.id).toBe(heard.id);
 
     // A newcomer gets the recent chat of the hex.

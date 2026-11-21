@@ -292,6 +292,17 @@ export class RealtimeGateway {
       );
       return;
     }
+    if (msg.kind === 'character.moved') {
+      // Travel (request #43): keep the presence (and hex chat routing) in step.
+      for (const c of this.connections.values()) {
+        if (c.presence?.player.characterId !== msg.characterId) continue;
+        c.presence = { ...c.presence, player: { ...c.presence.player, position: msg.position } };
+        void this.ctx.presence
+          .set(this.ctx.world.id, c.presence)
+          .catch((err: unknown) => this.log.warn({ err }, 'presence move failed'));
+      }
+      return;
+    }
     for (const c of this.connections.values()) {
       if (
         msg.kind === 'account.replace' &&

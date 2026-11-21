@@ -1,5 +1,6 @@
 import {
   createCharacterRequestSchema,
+  moveRequestSchema,
   allocateAttributesRequestSchema,
   equipRequestSchema,
   loadoutRequestSchema,
@@ -23,7 +24,7 @@ export async function charactersRoutes(
 
   app.get('/', async (request): Promise<CharacterListResponse> => {
     const list = await service.list(request.auth!.account.id);
-    return { characters: list.map(toCharacterDto), limit: service.limit };
+    return { characters: list.map((c) => toCharacterDto(c)), limit: service.limit };
   });
 
   app.post('/', async (request, reply) => {
@@ -31,6 +32,13 @@ export async function charactersRoutes(
     const character = await service.create(request.auth!.account.id, input);
     request.log.info({ characterId: character.id }, 'character created');
     return reply.status(201).send({ character: toCharacterDto(character) });
+  });
+
+  app.post('/:id/move', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { to } = parse(moveRequestSchema, request.body);
+    const character = await service.move(request.auth!.account.id, id, to);
+    return { character: toCharacterDto(character) };
   });
 
   app.get('/:id', async (request) => {

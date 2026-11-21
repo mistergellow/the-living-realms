@@ -84,7 +84,6 @@ function enemyStats(e: EnemyDef, precision: number): DerivedStatsDto {
     physicalReduction: Math.round(reductionFromRating(e.armor) * 100),
     magicReduction: Math.round(reductionFromRating(e.magicResist) * 100),
     initiative: e.initiative,
-    dodgeChance: e.dodgeChance,
     critChance: e.critChance,
     critDamage: 150,
     healingPower: 0,

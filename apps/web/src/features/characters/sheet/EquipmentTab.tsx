@@ -281,7 +281,6 @@ export function EquipmentTab({
                       ['Magic resist', `${s.stats.magicResist} (−${s.stats.magicReduction}%)`],
                       ['Initiative', s.stats.initiative],
                       ['Focus per round', s.stats.focusPerRound],
-                      ['Dodge', `${s.stats.dodgeChance}%`],
                       ['Critical chance', `${s.stats.critChance}%`],
                       ['Critical damage', `${s.stats.critDamage}%`],
                       ['Healing done', `+${s.stats.healingPower}%`],

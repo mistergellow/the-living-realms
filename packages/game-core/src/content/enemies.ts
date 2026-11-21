@@ -15,7 +15,6 @@ export interface EnemyDef {
   initiative: number;
   /** Precision: Focus per round, same rule as players (default 5 → 3 Focus). */
   precision?: number;
-  dodgeChance: number;
   critChance: number;
   power: number;
   abilities: AbilityId[];
@@ -32,7 +31,6 @@ export const ENEMIES = {
     armor: 8,
     magicResist: 0,
     initiative: 3,
-    dodgeChance: 0,
     critChance: 5,
     power: 1,
     abilities: ['husk_claw'],
@@ -44,7 +42,6 @@ export const ENEMIES = {
     armor: 0,
     magicResist: 10,
     initiative: 7,
-    dodgeChance: 10,
     critChance: 5,
     power: 1,
     abilities: ['spit_shard'],
@@ -56,7 +53,6 @@ export const ENEMIES = {
     armor: 4,
     magicResist: 4,
     initiative: 9,
-    dodgeChance: 15,
     critChance: 10,
     power: 1,
     abilities: ['hound_lunge'],
@@ -68,7 +64,6 @@ export const ENEMIES = {
     armor: 20,
     magicResist: 5,
     initiative: 1,
-    dodgeChance: 0,
     critChance: 0,
     power: 1,
     abilities: ['bulwark_wall', 'bulwark_bash'],
@@ -80,10 +75,27 @@ export const ENEMIES = {
     armor: 15,
     magicResist: 15,
     initiative: 5,
-    dodgeChance: 0,
     critChance: 5,
     power: 1,
     precision: 7,
+    abilities: ['warden_slam', 'warden_pulse', 'warden_seal'],
+    isBoss: true,
+  }),
+  /**
+   * World boss, season 1 (request #43). Its real HP is the shared pool in the
+   * database; maxHp here is only the base the pool is scaled from.
+   * PLACEHOLDER: name, theme, numbers.
+   */
+  hollow_colossus: enemy({
+    id: 'hollow_colossus',
+    name: 'The Hollow Colossus',
+    maxHp: 1000,
+    armor: 30,
+    magicResist: 30,
+    initiative: 6,
+    critChance: 10,
+    power: 3,
+    precision: 9,
     abilities: ['warden_slam', 'warden_pulse', 'warden_seal'],
     isBoss: true,
   }),

@@ -1,3 +1,4 @@
+import { AP_RULES, REGIONS } from '@realms/game-core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   createCharacter,
@@ -18,12 +19,17 @@ describe('characters', () => {
     expect((await t.app.inject('/api/characters')).statusCode).toBe(401);
   });
 
-  it('creates a character at the world spawn hex and lists it', async () => {
+  it('creates a character in the capital of its nation and lists it (request #43)', async () => {
     const { cookie } = await registerUser(t.app);
-    const res = await createCharacter(t.app, cookie, '  Aria   Vell ');
+    const res = await createCharacter(t.app, cookie, '  Aria   Vell ', { nation: 'east' });
     expect(res.statusCode).toBe(201);
     const { character } = res.json();
-    expect(character).toMatchObject({ name: 'Aria Vell', position: { q: 0, r: 0 } });
+    expect(character).toMatchObject({
+      name: 'Aria Vell',
+      nation: 'east',
+      position: REGIONS.east.capital!.hex,
+      ap: { current: AP_RULES.max, max: AP_RULES.max, perHour: AP_RULES.perHour, fullAt: null },
+    });
 
     const list = await t.app.inject({ url: '/api/characters', headers: { cookie } });
     expect(list.json()).toMatchObject({ limit: 3, characters: [{ id: character.id }] });
@@ -105,5 +111,70 @@ describe('world', () => {
     const res = await t.app.inject({ url: '/api/world', headers: { cookie } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ slug: 'main', tick: expect.any(Number) });
+  });
+
+  it('starter kits: the Fireball kit has a wand and the spell prepared (request #43)', async () => {
+    const { cookie } = await registerUser(t.app);
+    const res = await t.app.inject({
+      method: 'POST',
+      url: '/api/characters',
+      headers: { cookie },
+      payload: {
+        name: 'Pyra',
+        appearance: { version: 1, color: '#2e86c1', emblem: 'star' },
+        nation: 'north',
+        starterKit: 'fireball',
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const id = res.json().character.id as string;
+    const sheet = (
+      await t.app.inject({ url: `/api/characters/${id}`, headers: { cookie } })
+    ).json();
+    expect(sheet.equipment.mainHand.defId).toBe('birch_wand');
+    expect(sheet.loadout[0]).toBe('fireball');
+    expect(sheet.abilities.map((a: { id: string }) => a.id)).toContain('fireball');
+    // No attributes sent: every creation point is left to spend on the sheet.
+    expect(sheet.attributePoints).toBe(12);
+    const noNation = await t.app.inject({
+      method: 'POST',
+      url: '/api/characters',
+      headers: { cookie },
+      payload: {
+        name: 'Nobody',
+        appearance: { version: 1, color: '#2e86c1', emblem: 'star' },
+        starterKit: 'bow',
+      },
+    });
+    expect(noNation.statusCode).toBe(400);
+  });
+
+  it('travels: AP per hex, not into the sea, not beyond your AP (request #43)', async () => {
+    const { cookie } = await registerUser(t.app);
+    const { character } = (await createCharacter(t.app, cookie, 'Walker')).json();
+    const from = character.position as { q: number; r: number };
+    const to = { q: from.q + 3, r: from.r };
+    const move = (dest: { q: number; r: number }) =>
+      t.app.inject({
+        method: 'POST',
+        url: `/api/characters/${character.id}/move`,
+        headers: { cookie },
+        payload: { to: dest },
+      });
+    const res = await move(to);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().character.position).toEqual(to);
+    expect(res.json().character.ap.current).toBe(AP_RULES.max - 3 * AP_RULES.moveCostPerHex);
+    expect((await move({ q: 200, r: 0 })).statusCode).toBe(400);
+    // Far beyond what is left.
+    await t.dbHandle
+      .sql`update characters set ap = 10, ap_updated_at = now() where id = ${character.id}`;
+    const far = { q: 12, r: 2 }; // the East capital
+    expect((await move(far)).json().error.message).toMatch(/costs \d+ AP/);
+    // AP regenerate with time.
+    await t.dbHandle
+      .sql`update characters set ap = 0, ap_updated_at = now() - interval '2 hours' where id = ${character.id}`;
+    const list = (await t.app.inject({ url: '/api/characters', headers: { cookie } })).json();
+    expect(list.characters[0].ap.current).toBe(2 * AP_RULES.perHour);
   });
 });

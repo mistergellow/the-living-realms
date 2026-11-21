@@ -83,7 +83,7 @@ describe('combat timeline', () => {
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'] },
       { t: 'damage', targetId: 'p:a', amount: 5, crit: false, blocked: 0 },
       { t: 'ability', actorId: 'e:2', abilityId: 'aimed_shot', targetIds: ['p:a'] },
-      { t: 'dodge', targetId: 'p:a' },
+      { t: 'damage', targetId: 'p:a', amount: 3, crit: false, blocked: 0 },
       { t: 'ability', actorId: 'e:3', abilityId: 'slash', targetIds: ['p:a'] },
       { t: 'damage', targetId: 'p:a', amount: 9, crit: true, blocked: 0 },
       { t: 'downed', targetId: 'p:a' },
@@ -103,7 +103,7 @@ describe('combat timeline', () => {
       { t: 'damage', targetId: 'p:a', amount: 2, crit: false, blocked: 0, seq: 6 },
       { t: 'resolve', first: 'party', seq: 7 },
       { t: 'ability', actorId: 'e:2', abilityId: 'slash', targetIds: ['p:a'], seq: 8 },
-      { t: 'dodge', targetId: 'p:a', seq: 9 },
+      { t: 'damage', targetId: 'p:a', amount: 1, crit: false, blocked: 0, seq: 9 },
     ]);
     expect(steps.map((s) => s.seq)).toEqual([7, 9]);
   });
