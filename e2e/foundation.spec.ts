@@ -256,7 +256,9 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await expect(a.getByTestId('unit-party').filter({ hasText: nameB })).toContainText('(left)', {
     timeout: 10_000,
   });
-  // The text log waits for the canvas to finish replaying the enemy phase.
+  // The text log waits for the canvas to finish replaying the enemy phase, and
+  // a page in the background barely animates: bring A to the front first.
+  await a.bringToFront();
   await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`, {
     timeout: 20_000,
   });
