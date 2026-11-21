@@ -229,6 +229,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `combat.test.ts` ("skills"), `character-sheet.test.ts` ("Skill Books")
 - **Skill nova:** só dados em `SKILLS` (o livro e o saque aparecem sozinhos); ícone opcional em `AbilityIcon.tsx`
 
+## Reputação (pedido #49)
+
+- Regras: `packages/game-core/src/reputation.ts` (`REPUTATION_RULES`, `riftClearFactor`, `gearReputationBonusPct`, `riftReputation`)
+- Servidor: `rifts.service.ts` (`finish`), `rifts.repository.ts` (`victoriesIn`), `sheet.service.ts` (`reputationGearBonus`, `reputationBonusPct`)
+- Contrato: `RunRewardsDto.clearNumber/clearFactorPct/gearBonusPct`, `CharacterSheetDto.reputationBonusPct`
+- Web: `EndOverlay.tsx`, `CharacterSheetPage.tsx`
+- Testes: `game-core/test/reputation.test.ts`, `rifts.test.ts` ("full run")
+- **Fonte nova de reputação** (ex. profissões): somar `characters.reputation` e decidir se o bónus do equipamento se aplica
+
 ## Recompensa da época do world boss (pedido #44)
 
 - `WORLD_BOSS_SEASONS[].endsAt/reward` (`world-boss.ts`), item `hollow_heart` (`items.ts`), `world_bosses.rewarded_at` (migração 0014), `WorldBossService.settleSeason`/`seasonOver`, `WorldBossDto.endsAt/seasonOver/rewardedAt/reward`, `WorldBossPage.tsx`

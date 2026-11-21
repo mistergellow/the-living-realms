@@ -1,7 +1,30 @@
 import { riftRunParticipants, riftRuns, type DbOrTx, type RiftRun } from '@realms/db';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 
 export const riftsRepository = {
+  /** Times a character has beaten this Rift before (request #49), not counting `exceptRunId`. */
+  async victoriesIn(
+    db: DbOrTx,
+    characterId: string,
+    riftId: string,
+    exceptRunId: string,
+  ): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(riftRunParticipants)
+      .innerJoin(riftRuns, eq(riftRuns.id, riftRunParticipants.runId))
+      .where(
+        and(
+          eq(riftRunParticipants.characterId, characterId),
+          eq(riftRuns.riftId, riftId),
+          eq(riftRuns.status, 'victory'),
+          isNull(riftRunParticipants.leftAt),
+          ne(riftRuns.id, exceptRunId),
+        ),
+      );
+    return row?.n ?? 0;
+  },
+
   /** The active run a character is in, if any. */
   async activeRunIdFor(db: DbOrTx, characterId: string): Promise<string | null> {
     const [row] = await db

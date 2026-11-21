@@ -52,6 +52,16 @@ export function CharacterSheetPage() {
             <h1 data-testid="sheet-name">{s.character.name}</h1>
             <span className="rep-badge">
               Reputation <strong data-testid="reputation">{s.reputation}</strong>
+              {s.reputationBonusPct > 0 && (
+                <span
+                  className="muted"
+                  title="Better equipped gear (bonus effects, upgrades) gives more reputation"
+                  data-testid="reputation-bonus"
+                >
+                  {' '}
+                  · gear +{s.reputationBonusPct}%
+                </span>
+              )}
             </span>
           </div>
         </div>

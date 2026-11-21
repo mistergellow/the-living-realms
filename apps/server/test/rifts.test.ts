@@ -234,7 +234,27 @@ describe('Rifts', () => {
     const events = await t.dbHandle
       .sql`select type from world_events where type in ('rift.entered', 'rift.completed') order by created_at`;
     expect(events.map((e) => e.type)).toEqual(['rift.entered', 'rift.completed']);
-    expect((await startRun(h)).statusCode).toBe(201);
+    expect(run.rewards).toMatchObject({ clearNumber: 1, clearFactorPct: 100, gearBonusPct: 0 });
+
+    // Request #49: the same Rift gives less the second time (50%)…
+    const second = (await startRun(h)).json() as RunDto;
+    expect(second.status).toBe('active');
+    const again = (await clearRift(h, second.id)).run;
+    expect(again.rewards).toMatchObject({ reputation: 20, clearNumber: 2, clearFactorPct: 50 });
+    // …and nothing from the fourth time on.
+    await t.dbHandle.sql`
+      insert into rift_runs (id, world_id, rift_id, state, status)
+      select gen_random_uuid(), world_id, rift_id, state, 'victory' from rift_runs where id = ${second.id}`;
+    await t.dbHandle.sql`
+      insert into rift_run_participants (run_id, character_id, account_id)
+      select r.id, ${h.characterId}, p.account_id from rift_runs r, rift_run_participants p
+      where p.run_id = ${second.id} and r.id not in (${id}, ${second.id})`;
+    const fourth = (await startRun(h)).json() as RunDto;
+    expect((await clearRift(h, fourth.id)).run.rewards).toMatchObject({
+      reputation: 0,
+      clearNumber: 4,
+      clearFactorPct: 0,
+    });
   });
 
   it('items found in Loot rooms are kept only if the party beats the Rift', async () => {

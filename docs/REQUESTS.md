@@ -101,6 +101,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D89 | **Mais tipos de arma**, escolhidos por mim a pedido do dono ("pensa tu"): espadão, machado grande, machado de mão, martelo, martelo grande, morning star, lança de cavaleiro, besta                                                                                                                                    | 2026-11-21 | `weapons.ts`, `items.ts`, `abilities.ts`                                                              |
 | D90 | **Uma arma por atributo e uma por cada combinação de 2 atributos** (6 + 15 = 21 tipos); **cada arma tem só 2 ações**: o ataque básico e 1 poder                                                                                                                                                                        | 2026-11-21 | `WEAPON_TYPES`, `ITEMS`, `weapons.test.ts`                                                            |
 | D91 | **Muitas skills (feitiços aprendidos)**: buffs, debuffs, dano, cura, mudanças de estado; umas livres e outras com requisitos de atributo, coerentes (ex. Espada Rotativa, Investida)                                                                                                                                   | 2026-11-21 | `content/skills.ts`, livros `SKILL_BOOKS`                                                             |
+| D92 | **Reputação de Rifts decrescente:** derrotar um Rift dá X; a 2.ª vez menos; depois ainda menos; depois nada (por personagem e por Rift)                                                                                                                                                                                | 2026-11-21 | `reputation.ts`, `rifts.service.ts` (`finish`)                                                        |
+| D93 | **Equipamento equipado melhor dá mais reputação**; mais tarde também haverá reputação por profissões                                                                                                                                                                                                                   | 2026-11-21 | `gearReputationBonusPct`, `reputationBonusPct`                                                        |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -207,6 +209,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A99  | Equilíbrio das 21 armas (150 corridas)                          | média a solo 55 %; de 37 % (morning star+escudo) a 77 % (duas adagas); adagas, lança de cavaleiro e besta ainda fortes (~70–77 %)                                                                                                                                                                                                                                                                                                                                                                                                                          | `pnpm sim`                                                                       |
 | A100 | Skills (números e requisitos)                                   | 34 skills (6 livres, 28 com requisitos de 6 a 9 em atributos de BASE; 5 pedem dois atributos); ver lista em `content/skills.ts`. Aprendem-se lendo livros ("Book: …") que caem no boss (peso 0,5 cada) e nas salas secretas (peso 1 cada); ler = duplo clique na mochila; fica logo preparada se houver espaço                                                                                                                                                                                                                                             | `skills.ts`, `rifts.ts`                                                          |
 | A101 | Estado e efeito novos                                           | Regeneration (cura no início de cada ronda); Purify/First Aid removem estados maus (Bleed, Burn, Marked, Weakened, Stunned)                                                                                                                                                                                                                                                                                                                                                                                                                                | `engine.ts`                                                                      |
+| A102 | Reputação por vitória no mesmo Rift                             | 1.ª vez 100 %, 2.ª 50 %, 3.ª 25 %, a partir da 4.ª 0 % (conta por entrada de Rift, ex. `rift_3_8`)                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `REPUTATION_RULES.riftClearFactors`                                              |
+| A103 | Bónus de reputação do equipamento                               | +3 % por cada efeito bónus (raridade) e +2 % por nível de upgrade de cada peça equipada; máximo +100 %                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `REPUTATION_RULES`                                                               |
 
 ---
 
@@ -1022,3 +1026,18 @@ Status change. Espada rotativa. Investida. Funciona como spells."
 - O painel passou a listar também os livros de skill, consumíveis e materiais
   ("Give item") e as 34 skills ("Teach ability"); antes só tinha equipamento e
   habilidades de armas/inimigos.
+
+### #49 — 2026-11-21 — Sistema de reputação
+
+**Pedido:** "Derrotar um Rift dá X reputação, derrotar a segunda vez dá menos, e
+depois ainda menos. E depois não dá nada. O equipamento (enquanto equipado),
+quanto melhor for, mais reputação dá. Depois também vai haver outras formas
+relacionadas com profissões."
+**Decisões:** D92–D93; valores provisórios A102–A103.
+**Resultado:**
+
+- `packages/game-core/src/reputation.ts`: fatores por vitória (100/50/25/0 %) e
+  bónus do equipamento; o servidor conta as vitórias anteriores no mesmo Rift.
+- O fim do Rift mostra "time #2: 50 %, gear +12 %"; a ficha mostra o bónus.
+- Reputação das profissões: fica para depois (ROADMAP).
+- Testes: 124 unitários, 86 de integração, 20 web, 11 e2e.

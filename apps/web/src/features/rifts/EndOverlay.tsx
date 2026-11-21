@@ -26,9 +26,24 @@ export function EndOverlay({ run }: { run: RunDto }) {
         )}
         {run.rewards && (
           <div>
-            <p style={{ margin: 0 }}>
+            <p style={{ margin: 0 }} data-testid="reputation-reward">
               Reputation <strong>+{run.rewards.reputation}</strong>
+              {run.rewards.clearNumber !== undefined && (
+                <span className="muted">
+                  {' '}
+                  (
+                  {run.rewards.clearNumber === 1
+                    ? 'first time'
+                    : `time #${run.rewards.clearNumber}: ${run.rewards.clearFactorPct}%`}
+                  {run.rewards.gearBonusPct ? `, gear +${run.rewards.gearBonusPct}%` : ''})
+                </span>
+              )}
             </p>
+            {run.rewards.clearFactorPct === 0 && (
+              <p className="muted" style={{ margin: 0 }}>
+                You have beaten this Rift enough times: it gives no more reputation.
+              </p>
+            )}
             {run.rewards.items.map((i) => (
               <p key={i.id} style={{ margin: '0.25rem 0 0' }}>
                 Loot: <strong>{i.name}</strong>

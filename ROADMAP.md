@@ -84,7 +84,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - [x] Hex chat (request #40): everyone on the same hex, recent history on arrival
 - Chat (region, global, private), with moderation basics
 - Player inspection, interaction menu
-- ❓ Reputation model (tracks, sources, decay, effects) in place of levels
+- [x] Rift reputation decreases per repeat clear (100/50/25/0 %); equipped gear adds a bonus (request #49)
+- ❓ Reputation from professions and other sources; what reputation buys
 - ❓ How in-game languages affect communication (ties into phase 6)
 - Account security additions: email verification, password reset (needs an email provider)
 
