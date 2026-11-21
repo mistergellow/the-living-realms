@@ -77,6 +77,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D65 | **Efeitos bónus variados, em todo o equipamento** (armas, mão secundária, armadura, acessórios): atributos, stats derivados, ofensivos em %, efeitos de combate                                                                                                                                                        | 2026-11-21 | `content/affixes.ts` (`AFFIXES`)                                                                      |
 | D66 | **Upgrades +0 a +10 só melhoram os stats base da arma** (dano/valores das habilidades); não mudam requisitos nem efeitos                                                                                                                                                                                               | 2026-11-21 | `upgradeMultiplier`, `itemRequirements` (sem nível)                                                   |
 | D67 | **Efeitos bónus = pool:** cada efeito tem um intervalo (ex.: roubo de vida 3–8%); quando aparece num item, o valor é sorteado dentro do intervalo. Os intervalos atuais são aleatórios, por definir (A67)                                                                                                              | 2026-11-21 | `AFFIXES` (`min`/`max`), `rollAffixes`                                                                |
+| D68 | **Espaços de equipamento:** mão principal, mão secundária, cabeça, corpo, botas, anel 1, anel 2, pendente ("pelo menos, para já"). Substitui D25                                                                                                                                                                       |
+| D69 | **Skills preparadas:** as habilidades (as que se aprendem nos livros) são imensas; prepara-se **8** para o combate. Em combate: 8 skills + as habilidades da arma + Block e Swap Position (garantidos). Substitui D23 ("todas disponíveis")                                                                            |
+| D70 | **Perfil do personagem em tabs:** Equipamento + inventário (drag and drop, tooltips dos itens) / Habilidades / Profissões                                                                                                                                                                                              |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -152,6 +155,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A68 | Quantos efeitos traz um drop                                    | 0: 50%, 1: 28%, 2: 13%, 3: 6%, 4: 2,5%, 5: 0,5% (drops do boss e itens encontrados no Rift; itens fabricados e o kit inicial vêm sem efeitos)                                                                                                                                                                                                                                                             | `AFFIX_RULES.dropAffixWeights`, `rollDropAffixes`          |
 | A69 | Requisitos das armas                                            | atributo principal da arma ≥ 5 (por agora sempre cumprido); **não mudam com o upgrade** (D66). Armaduras e acessórios: sem requisitos (campo `requirements` pronto para itens que peçam mais)                                                                                                                                                                                                             | `REQUIREMENT_RULES`, `ItemDef.requirements`                |
 | A70 | Efeitos que já existem nos itens                                | o campo `items.specials` passa a guardar os efeitos bónus de qualquer equipamento; ids desconhecidos são ignorados                                                                                                                                                                                                                                                                                        | `normalizeAffixes`                                         |
+| A71 | Peças antigas nos espaços novos                                 | Leather Leggings passam a Leather Boots (botas); acessórios → anéis; Charm of Focus → pendente (se estava equipado, volta ao inventário); a receita de Leatherworking faz botas                                                                                                                                                                                                                           | `content/items.ts`, migração 0011                          |
+| A72 | Habilidades por arma                                            | **Não alterado:** as armas dão 1–4 habilidades (espada 3, adaga 4, lança 1…), não 2. Falta decidir se se corta para 2 por arma e quais                                                                                                                                                                                                                                                                    | `content/items.ts` (`abilities`)                           |
+| A73 | Livros de skills                                                | Ainda não existem livros nem skills de livro: a biblioteca aparece vazia. As skills já aprendidas (se houver) ficaram preparadas nos primeiros 8 espaços                                                                                                                                                                                                                                                  | `content/abilities.ts`, `character_skills`                 |
+| A74 | Loadout dentro do Rift                                          | Não se pode mudar as skills preparadas durante um Rift (como o equipamento)                                                                                                                                                                                                                                                                                                                               | `sheet.service.ts` (`assertNotInRift`)                     |
 
 ---
 
@@ -726,3 +733,30 @@ pensados). Assim como todos."
 - Pool de efeitos: já funcionava assim (`rollAffixes` sorteia o valor entre
   `min` e `max` de cada efeito); fica registado como decisão.
 - Testes atualizados (game-core e servidor).
+
+### #39 — 2026-11-21 — Perfil do personagem: tabs, inventário e skills
+
+**Pedido:** "A página de perfil está horrível." Inventário separado das skills;
+Block e Swap Position não são skills (são garantidos), tal como as habilidades
+das armas; as Abilities são as dos livros. Equipar: mão, cabeça, corpo, off
+hand, botas, anel 1, anel 2, pendente. Inventário com drag and drop e tooltips
+decentes. Skills numa tab à parte (vão ser imensas); preparar 8 (8 + 2 da arma
+
+- Block e Swap). Outra tab com as profissões.
+  **Decisões:** D68, D69, D70; valores provisórios A71–A74.
+  **Resultado:**
+
+* Espaços novos `feet`, `ring1`, `ring2`, `pendant` (saem `legs`,
+  `accessory1/2`); Leather Leggings → Leather Boots; Charm of Focus → pendente.
+* Skills preparadas: coluna `character_skills.loadout_slot` (0–7, única por
+  personagem), `PUT /api/characters/:id/loadout`, `planLoadout`; o combate só
+  usa as preparadas (+ arma + Block/Swap). Migração 0011 (slots e loadout).
+* Ficha: tabs Equipment / Abilities / Professions (`?tab=`). Equipment: boneco
+  com 8 espaços, mochila em grelha com filtros, drag and drop por ponteiro
+  (rato e toque), duplo clique para equipar/desequipar, tooltips completas
+  (dano, custo, escala, habilidades que dá, qualidade), atributos + stats.
+  Abilities: 8 espaços preparados (arrastar ou clicar), biblioteca com pesquisa
+  e filtros, "Always available" (arma + ações básicas). Professions: o mesmo
+  painel da página de profissões.
+* Testes: 77 unitários, 67 de integração, 18 web, 9 e2e.
+* Docs: CHANGE_MAP, DECISIONS (ADR-042), ROADMAP.

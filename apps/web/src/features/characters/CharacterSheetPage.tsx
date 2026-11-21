@@ -1,144 +1,42 @@
-import { ATTRIBUTE_NAMES } from '@realms/game-core';
-import {
-  ATTRIBUTE_KEYS,
-  type Attributes,
-  type CharacterSheetDto,
-  type EquipSlot,
-  type ItemDto,
-} from '@realms/shared';
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
-import { AttributePicker } from './AttributePicker';
-import { FormError } from '../../shared/ui/FormError';
+import { MAX_PREPARED_SKILLS } from '@realms/shared';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { Icon } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
+import { ProfessionsPanel } from '../professions/ProfessionsPage';
 import { useActiveCharacter } from './active-character';
-import { useAllocateAttributes, useCharacterSheet, useEquipment } from './api';
+import { useCharacterSheet } from './api';
 import { CharacterToken } from './CharacterToken';
-import { ItemCard } from './ItemCard';
-import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
+import { AbilitiesTab } from './sheet/AbilitiesTab';
+import { EquipmentTab } from './sheet/EquipmentTab';
+import './sheet/sheet.css';
 
-const SLOT_LABELS: Record<EquipSlot, string> = {
-  mainHand: 'Main hand',
-  offHand: 'Off hand',
-  head: 'Head',
-  body: 'Body',
-  legs: 'Legs',
-  accessory1: 'Accessory',
-  accessory2: 'Accessory',
-};
-
-function AllocatePanel(props: {
-  base: Attributes;
-  points: number;
-  busy: boolean;
-  onSave: (add: Partial<Attributes>) => void;
-}) {
-  const [value, setValue] = useState<Attributes>(props.base);
-  const add = Object.fromEntries(
-    ATTRIBUTE_KEYS.map((k) => [k, value[k] - props.base[k]]).filter(([, n]) => n !== 0),
-  );
-  return (
-    <div className="allocate panel" data-testid="allocate">
-      <AttributePicker
-        value={value}
-        onChange={setValue}
-        floor={props.base}
-        points={props.points}
-        title="Unspent points"
-      />
-      <button
-        className="btn btn-primary btn-sm"
-        disabled={props.busy || Object.keys(add).length === 0}
-        onClick={() => props.onSave(add)}
-      >
-        Confirm attributes
-      </button>
-    </div>
-  );
-}
-
-const LEFT_SLOTS: EquipSlot[] = ['mainHand', 'head', 'accessory1', 'offHand'];
-const RIGHT_SLOTS: EquipSlot[] = ['body', 'legs', 'accessory2'];
-
-function SlotTile(props: {
-  slot: EquipSlot;
-  item: ItemDto | null;
-  busy: boolean;
-  onUnequip: () => void;
-  onInspect: () => void;
-}) {
-  const { slot, item } = props;
-  return (
-    <div
-      className="slot-tile"
-      data-empty={!item}
-      data-broken={item?.broken ?? false}
-      data-rarity={item?.rarity}
-    >
-      <span className="slot-label">{SLOT_LABELS[slot]}</span>
-      {item ? (
-        <>
-          <button
-            type="button"
-            className="slot-item rarity-text"
-            data-rarity={item.rarity}
-            onClick={props.onInspect}
-            title="Show item card"
-          >
-            {item.name}
-          </button>
-          <QualityBar quality={item.quality} />
-          <button
-            className="btn btn-ghost btn-sm"
-            disabled={props.busy}
-            onClick={props.onUnequip}
-            aria-label={`Unequip ${item.name}`}
-          >
-            Unequip
-          </button>
-        </>
-      ) : (
-        <span className="muted">Empty</span>
-      )}
-    </div>
-  );
-}
-
-const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
-
-/** First allowed slot that is free, otherwise the first allowed slot (swap). */
-function targetSlot(item: ItemDto, sheet: CharacterSheetDto): EquipSlot | undefined {
-  return item.slots.find((s) => !sheet.equipment[s]) ?? item.slots[0];
-}
-
-function QualityBar({ quality }: { quality: number }) {
-  const tone = quality <= 0 ? 'var(--danger)' : quality <= 25 ? 'var(--warning)' : 'var(--success)';
-  return (
-    <span className="quality" title={`Quality ${quality}/100`}>
-      <span style={{ width: `${quality}%`, background: tone }} />
-    </span>
-  );
-}
+/*
+ * Character sheet (request #39): three tabs — Equipment (paper doll, bag with
+ * drag and drop, stats), Abilities (prepared skills, library, weapon
+ * abilities) and Professions. The tab lives in the URL (?tab=…).
+ */
+const TABS = [
+  { id: 'equipment', label: 'Equipment' },
+  { id: 'abilities', label: 'Abilities' },
+  { id: 'professions', label: 'Professions' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 export function CharacterSheetPage() {
   const { id = '' } = useParams();
+  const [params, setParams] = useSearchParams();
   const sheet = useCharacterSheet(id);
-  const { equip, unequip } = useEquipment(id);
-  const allocate = useAllocateAttributes(id);
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
-  const [inspect, setInspect] = useState<string | null>(null);
+  const tab: TabId = TABS.some((t) => t.id === params.get('tab'))
+    ? (params.get('tab') as TabId)
+    : 'equipment';
 
   if (sheet.isPending) return <FullPageMessage>Loading character…</FullPageMessage>;
   if (sheet.isError) return <FullPageMessage spinner={false}>Character not found.</FullPageMessage>;
   const s = sheet.data;
-  const busy = equip.isPending || unequip.isPending;
-  const inspected = inspect
-    ? (Object.values(s.equipment).find((i) => i?.id === inspect) ?? null)
-    : null;
+  const prepared = s.loadout.filter(Boolean).length;
 
   return (
     <Screen>
@@ -169,244 +67,40 @@ export function CharacterSheetPage() {
       </header>
 
       <main className="screen-body">
-        <div className="contain stack">
-          <FormError error={equip.error ?? unequip.error ?? allocate.error} />
+        <div className="contain sheet">
+          <nav className="sheet-tabs" role="tablist" aria-label="Character sheet">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                className="sheet-tab"
+                onClick={() =>
+                  setParams(t.id === 'equipment' ? {} : { tab: t.id }, { replace: true })
+                }
+              >
+                {t.label}
+                {t.id === 'abilities' && (
+                  <span className="tab-count">
+                    {prepared}/{MAX_PREPARED_SKILLS}
+                  </span>
+                )}
+                {t.id === 'equipment' && s.attributePoints > 0 && (
+                  <span className="tab-count" data-alert>
+                    +{s.attributePoints}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
-          <div className="sheet-grid">
-            <section className="panel area-hero hero" data-testid="equipment">
-              <div className="hero-slots">
-                {LEFT_SLOTS.map((slot) => (
-                  <SlotTile
-                    key={slot}
-                    slot={slot}
-                    item={s.equipment[slot]}
-                    busy={busy}
-                    onUnequip={() => unequip.mutate({ slot })}
-                    onInspect={() => setInspect(s.equipment[slot]?.id ?? null)}
-                  />
-                ))}
-              </div>
-              <div className="hero-center">
-                <div className="hero-stage">
-                  <CharacterAvatar
-                    appearance={s.character.appearance}
-                    weapon={weaponArtFor(
-                      s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId,
-                    )}
-                    offhand={offhandArtFor(
-                      s.equipment.offHand?.broken ? null : s.equipment.offHand?.defId,
-                    )}
-                    size={260}
-                    title={s.character.name}
-                  />
-                </div>
-                <div className="hero-stats">
-                  <div>
-                    <span>HP</span>
-                    <strong data-testid="stat-hp">{s.stats.maxHp}</strong>
-                  </div>
-                  <div>
-                    <span>Mana</span>
-                    <strong>{s.stats.maxMana}</strong>
-                  </div>
-                  <div>
-                    <span>Armor</span>
-                    <strong>−{s.stats.physicalReduction}%</strong>
-                  </div>
-                  <div>
-                    <span>Initiative</span>
-                    <strong>{fmt(s.stats.initiative)}</strong>
-                  </div>
-                </div>
-              </div>
-              <div className="hero-slots">
-                {RIGHT_SLOTS.map((slot) => (
-                  <SlotTile
-                    key={slot}
-                    slot={slot}
-                    item={s.equipment[slot]}
-                    busy={busy}
-                    onUnequip={() => unequip.mutate({ slot })}
-                    onInspect={() => setInspect(s.equipment[slot]?.id ?? null)}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section className="panel area-attrs">
-              <div className="panel-title">
-                <span>Attributes</span>
-              </div>
-              {s.attributePoints > 0 && (
-                <AllocatePanel
-                  key={s.attributePoints}
-                  base={s.baseAttributes}
-                  points={s.attributePoints}
-                  busy={allocate.isPending}
-                  onSave={(add) => allocate.mutate({ add })}
-                />
-              )}
-              <table className="kv">
-                <tbody>
-                  {ATTRIBUTE_KEYS.map((k) => {
-                    const bonus = s.attributes[k] - s.baseAttributes[k];
-                    return (
-                      <tr key={k}>
-                        <th>{ATTRIBUTE_NAMES[k]}</th>
-                        <td data-testid={`sheet-attr-${k}`}>
-                          {s.attributes[k]}
-                          {bonus !== 0 && <span className="bonus"> ({fmt(bonus)})</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </section>
-
-            <section className="panel area-stats">
-              <div className="panel-title">
-                <span>Combat stats</span>
-              </div>
-              <table className="kv">
-                <tbody>
-                  <tr>
-                    <th>HP</th>
-                    <td>{s.stats.maxHp}</td>
-                  </tr>
-                  <tr>
-                    <th>Mana</th>
-                    <td>{s.stats.maxMana}</td>
-                  </tr>
-                  <tr>
-                    <th>Armor</th>
-                    <td>{`${s.stats.armor} (−${s.stats.physicalReduction}%)`}</td>
-                  </tr>
-                  <tr>
-                    <th>Magic resist</th>
-                    <td>{`${s.stats.magicResist} (−${s.stats.magicReduction}%)`}</td>
-                  </tr>
-                  <tr>
-                    <th>Initiative</th>
-                    <td>{s.stats.initiative}</td>
-                  </tr>
-                  <tr>
-                    <th>Dodge</th>
-                    <td>{`${s.stats.dodgeChance}%`}</td>
-                  </tr>
-                  <tr>
-                    <th>Critical chance</th>
-                    <td>{`${s.stats.critChance}%`}</td>
-                  </tr>
-                  <tr>
-                    <th>Critical damage</th>
-                    <td>{`${s.stats.critDamage}%`}</td>
-                  </tr>
-                  <tr>
-                    <th>Healing done</th>
-                    <td>{`+${s.stats.healingPower}%`}</td>
-                  </tr>
-                  <tr>
-                    <th>Healing received</th>
-                    <td>{`+${s.stats.healingReceived}%`}</td>
-                  </tr>
-                  <tr>
-                    <th>Mana per turn</th>
-                    <td>{s.stats.manaRegen}</td>
-                  </tr>
-                  <tr>
-                    <th>Status potency</th>
-                    <td>{`+${s.stats.effectPotency}%`}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
-
-            <section className="panel area-inv" id="inventory">
-              <div className="panel-title">
-                <span>Inventory ({s.inventory.length})</span>
-              </div>
-              {s.inventory.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>
-                  No unequipped items. Rifts will drop loot.
-                </p>
-              ) : (
-                <ul className="item-grid" data-testid="inventory">
-                  {s.inventory.map((item) => {
-                    const slot = targetSlot(item, s);
-                    const unmet = item.requirements.some((r) => !r.met);
-                    return (
-                      <li key={item.id}>
-                        <ItemCard
-                          item={item}
-                          actions={
-                            item.slots.length > 0 && (
-                              <button
-                                className="btn btn-sm"
-                                disabled={busy || item.broken || unmet || !slot}
-                                onClick={() => slot && equip.mutate({ itemId: item.id, slot })}
-                                aria-label={`Equip ${item.name}`}
-                                title={unmet ? 'Requirements not met' : undefined}
-                              >
-                                Equip
-                              </button>
-                            )
-                          }
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-
-            <section className="panel area-abil">
-              <div className="panel-title">
-                <span>Abilities in combat</span>
-              </div>
-              <ul className="ability-list" data-testid="abilities">
-                {s.abilities.map((a) => (
-                  <li key={a.id}>
-                    <div className="row" style={{ gap: '0.5rem' }}>
-                      <strong>{a.name}</strong>
-                      <span className="cost">{a.focusCost} Focus</span>
-                      {a.manaCost > 0 && <span className="cost mana">{a.manaCost} Mana</span>}
-                      <span className="spacer" />
-                      <span className="field-hint">
-                        {a.grantedBy ?? (a.source === 'universal' ? 'Always available' : 'Learned')}
-                      </span>
-                    </div>
-                    <div className="field-hint">
-                      {[a.targeting, ...a.effects].join(' · ')}
-                      {a.scaling && <> · scales with {a.scaling}</>}
-                    </div>
-                    <div className="field-hint">{a.description}</div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          <div role="tabpanel">
+            {tab === 'equipment' && <EquipmentTab sheet={s} characterId={id} />}
+            {tab === 'abilities' && <AbilitiesTab sheet={s} characterId={id} />}
+            {tab === 'professions' && <ProfessionsPanel characterId={id} />}
           </div>
         </div>
       </main>
-      {inspected && (
-        <div
-          className="item-modal"
-          role="dialog"
-          aria-label={inspected.name}
-          onClick={() => setInspect(null)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <ItemCard
-              item={inspected}
-              actions={
-                <button className="btn btn-ghost btn-sm" onClick={() => setInspect(null)}>
-                  Close
-                </button>
-              }
-            />
-          </div>
-        </div>
-      )}
     </Screen>
   );
 }

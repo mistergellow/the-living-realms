@@ -2,6 +2,7 @@ import {
   createCharacterRequestSchema,
   allocateAttributesRequestSchema,
   equipRequestSchema,
+  loadoutRequestSchema,
   unequipRequestSchema,
   type CharacterListResponse,
 } from '@realms/shared';
@@ -47,6 +48,12 @@ export async function charactersRoutes(
     const { id } = parse(idParams, request.params);
     const { add } = parse(allocateAttributesRequestSchema, request.body);
     return sheets.allocate(request.auth!.account.id, id, add);
+  });
+
+  app.put('/:id/loadout', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { slots } = parse(loadoutRequestSchema, request.body);
+    return sheets.setLoadout(request.auth!.account.id, id, slots);
   });
 
   app.post('/:id/unequip', async (request) => {

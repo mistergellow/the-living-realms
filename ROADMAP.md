@@ -91,6 +91,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 - [x] **Professions (request #33):** 15 professions (gathering, crafting, service) with levels 0–10, materials that stack, crafting, repairs and weapon upgrades (+1); balance and time cost (AP) to be decided
 - Consumables usable in the Rift (food, draughts, bandages); runes from rune stones
+- [x] **Character sheet (request #39):** tabs (Equipment / Abilities / Professions); 8 equipment slots (boots, 2 rings, pendant); drag-and-drop inventory with item tooltips; 8 prepared skills + weapon abilities + Block/Swap
+- Skill books (learn skills from books); weapon ability count per weapon (2?) to be decided
 
 - ❓ Currency, resources, crafting/production, sinks and faucets
 - Items and inventories, double-entry ledger

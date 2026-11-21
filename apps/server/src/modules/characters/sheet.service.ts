@@ -11,7 +11,9 @@ import {
   describeTargeting,
   validateAllocation,
   emptyEquipment,
+  getAbility,
   getItemDef,
+  planLoadout,
   isBroken,
   isGear,
   itemRequirements,
@@ -20,10 +22,13 @@ import {
   rarityOf,
   weaponInfo,
   type BaseAttributes,
+  type AbilityDef,
   type OwnedItem,
 } from '@realms/game-core';
 import {
   ErrorCode,
+  MAX_PREPARED_SKILLS,
+  type AbilityDto,
   type Attributes,
   type CharacterAppearance,
   type CharacterSheetDto,
@@ -106,8 +111,36 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
       gear && unlocked.length > 0
         ? { used: unlocked.filter((r) => !!r.runeId).length, total: unlocked.length }
         : null,
+    grantsAbilities: (def?.abilities ?? []).flatMap((id) => getAbility(id)?.name ?? []),
   };
 }
+
+function toAbilityDto(ability: AbilityDef, grantedBy: string | null): AbilityDto {
+  return {
+    id: ability.id,
+    name: ability.name,
+    description: ability.description,
+    source: ability.source,
+    grantedBy,
+    focusCost: ability.focusCost,
+    manaCost: ability.manaCost,
+    targeting: describeTargeting(ability.targeting),
+    effects: describeEffects(ability),
+    scaling: describeScaling(ability.scaling),
+  };
+}
+
+type LearnedSkill = { id: string; loadoutSlot: number | null };
+
+/** Prepared skill ids by loadout slot (length MAX_PREPARED_SKILLS). */
+function loadoutOf(skills: LearnedSkill[]): Array<string | null> {
+  const out: Array<string | null> = Array.from({ length: MAX_PREPARED_SKILLS }, () => null);
+  for (const s of skills)
+    if (s.loadoutSlot !== null && s.loadoutSlot < MAX_PREPARED_SKILLS) out[s.loadoutSlot] = s.id;
+  return out;
+}
+const preparedIds = (skills: LearnedSkill[]) =>
+  loadoutOf(skills).filter((id): id is string => id !== null);
 
 /** Assembles the character sheet and applies equipment changes. */
 export class CharacterSheetService {
@@ -156,6 +189,22 @@ export class CharacterSheetService {
     });
   }
 
+  /** Choose which learned skills are prepared for combat (request #39). */
+  async setLoadout(accountId: string, characterId: string, slots: Array<string | null>) {
+    return this.db.transaction(async (tx) => {
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
+      const learned = await itemsRepository.learnedSkills(tx, c.id);
+      const plan = planLoadout(
+        learned.map((s) => s.id),
+        slots,
+      );
+      if (!plan.ok) throw errors.validation(plan.reason, [{ path: 'slots', message: plan.reason }]);
+      await itemsRepository.setLoadout(tx, c.id, plan.slots);
+      return this.buildSheet(tx, c);
+    });
+  }
+
   async unequip(accountId: string, characterId: string, slot: EquipSlot) {
     return this.db.transaction(async (tx) => {
       const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
@@ -194,14 +243,14 @@ export class CharacterSheetService {
   async combatProfile(db: DbOrTx, c: Character) {
     const [rows, skills] = await Promise.all([
       itemsRepository.listByCharacter(db, c.id),
-      itemsRepository.learnedSkillIds(db, c.id),
+      itemsRepository.learnedSkills(db, c.id),
     ]);
     const owned = rows.map(toOwned);
     return {
       appearance: c.appearance as CharacterAppearance,
       baseAttributes: baseAttributesOf(c),
       ...computeStats(baseAttributesOf(c), owned),
-      abilityIds: availableAbilities(owned, skills).map((a) => a.ability.id),
+      abilityIds: availableAbilities(owned, preparedIds(skills)).map((a) => a.ability.id),
       abilityMultipliers: abilityMultipliers(owned),
     };
   }
@@ -209,7 +258,7 @@ export class CharacterSheetService {
   private async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
     const [rows, skills] = await Promise.all([
       itemsRepository.listByCharacter(db, c.id),
-      itemsRepository.learnedSkillIds(db, c.id),
+      itemsRepository.learnedSkills(db, c.id),
     ]);
     const owned = rows.map(toOwned);
     const base = baseAttributesOf(c);
@@ -230,18 +279,14 @@ export class CharacterSheetService {
       stats,
       equipment,
       inventory,
-      abilities: availableAbilities(owned, skills).map(({ ability, grantedBy }) => ({
-        id: ability.id,
-        name: ability.name,
-        description: ability.description,
-        source: ability.source,
-        grantedBy,
-        focusCost: ability.focusCost,
-        manaCost: ability.manaCost,
-        targeting: describeTargeting(ability.targeting),
-        effects: describeEffects(ability),
-        scaling: describeScaling(ability.scaling),
-      })),
+      abilities: availableAbilities(owned, preparedIds(skills)).map(({ ability, grantedBy }) =>
+        toAbilityDto(ability, grantedBy),
+      ),
+      learnedSkills: skills.flatMap((sk) => {
+        const a = getAbility(sk.id);
+        return a ? [toAbilityDto(a, null)] : [];
+      }),
+      loadout: loadoutOf(skills),
       reputation: c.reputation,
       attributePoints: c.attributePoints,
     };

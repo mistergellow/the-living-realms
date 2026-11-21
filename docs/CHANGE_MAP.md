@@ -75,23 +75,30 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `STARTER_WEAPONS`, `STARTER_OFFHANDS`, `STARTER_ARMOR`; `armor`/`magicResist` são ratings); armas → ver "Armas (catálogo)"
 - Regras: `packages/game-core/src/equipment.ts` (`planEquip`, duas mãos, `isBroken`, `qualityAfterDefeat`, `DEFEAT_QUALITY_LOSS`)
 - Contrato: `EQUIP_SLOTS`, `ItemDto`, `equipRequestSchema`, `unequipRequestSchema` (`api.ts`); erro `INVALID_EQUIPMENT` (`errors.ts`)
-- BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade, `upgrade_level`/`specials`/`rune_slots`); migração de dados `0002_starter_kit_for_existing_characters.sql`
+- BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade, `upgrade_level`/`specials`/`rune_slots`); migrações de dados `0002_starter_kit_for_existing_characters.sql`, `0011_equipment_slots_and_loadout.sql` (espaços novos)
 - Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
-- Web: `CharacterSheetPage.tsx` (Equipment, Inventory, `QualityBar`), `api.ts` (`useEquipment`)
+- Web: `CharacterSheetPage.tsx` (tabs), `characters/sheet/EquipmentTab.tsx` (boneco, mochila, drag and drop, stats), `sheet/ItemTooltip.tsx` (tooltip do item), `sheet/ItemIcon.tsx` (ícone por tipo de item: `BY_DEF`, `BY_WEAPON`, `SLOT_GLYPH`), `sheet/slots.ts` (`SLOT_LABELS`, `LEFT_SLOTS`/`RIGHT_SLOTS`), `sheet/drag.tsx` (drag and drop por ponteiro, `Tooltip`), `sheet/sheet.css`; `api.ts` (`useEquipment`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
 - **Item novo:** acrescentar em `content/items.ts`; se for arma, o tipo tem de existir em `content/weapons.ts` (a 1.ª habilidade é o ataque básico do tipo) e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts` (`MAIN`, `artFromAbilities`); se for de kit inicial, rever a migração de dados para personagens antigos e `startingSlot`/`BUILDS` do simulador; se puder cair de Rifts, `content/rifts.ts` (`rewards.loot`, `lootRoom`, `secretRoom`)
-- **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS` (`CharacterSheetPage.tsx`), itens que o usam
+- **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS`/`LEFT_SLOTS`/`RIGHT_SLOTS` (`sheet/slots.ts`), `SLOT_GLYPH` (`sheet/ItemIcon.tsx`), itens que o usam (`content/items.ts`), migração de dados para itens equipados no espaço antigo, testes (`character-system.test.ts`, `character-sheet.test.ts`)
+- **Item novo:** também o ícone em `sheet/ItemIcon.tsx` (`BY_DEF`) se o ícone do tipo não servir
 
 ## Habilidades (armas, skills aprendidas, universais)
 
 - Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
-- Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + aprendidas + universais)
-- Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto)
-- BD: `character_skills` (skills aprendidas por drops; as de arma não se guardam)
-- Servidor: `sheet.service.ts` (`abilities`)
-- Web: `CharacterSheetPage.tsx` (lista), `CharacterCreatePage.tsx` (habilidades de cada arma inicial)
-- Testes: `character-system.test.ts`, `character-sheet.test.ts`
+- Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + skills **preparadas** + universais, D69), `planLoadout` (8 espaços, só skills aprendidas, sem repetidas)
+- Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto), `MAX_PREPARED_SKILLS`, `CharacterSheetDto.learnedSkills`/`loadout`, `loadoutRequestSchema`
+- BD: `character_skills` (skills aprendidas por livros; `loadout_slot` 0–7 = preparada; as de arma não se guardam)
+- Servidor: `sheet.service.ts` (`abilities`, `learnedSkills`, `loadout`, `setLoadout`, `combatProfile` usa só as preparadas), `items.repository.ts` (`learnedSkills`, `setLoadout`), `characters.routes.ts` (`PUT /:id/loadout`)
+- Web: `characters/sheet/AbilitiesTab.tsx` (8 espaços, biblioteca, "Always available"), `api.ts` (`useLoadout`), `CharacterCreatePage.tsx` (habilidades de cada arma inicial); ícones em `rifts/AbilityIcon.tsx` (estilos `.ability-icon`/`.school-*` em `styles/global.css`)
+- **Número de skills preparadas:** `MAX_PREPARED_SKILLS` (shared) + CHECK `character_skills_loadout_range` (schema + migração)
+- Testes: `character-system.test.ts`, `character-sheet.test.ts` (loadout), `e2e` (tab Abilities)
 - Futuro: execução em combate no motor M2
+
+## Ficha do personagem (tabs, pedido #39)
+
+- `apps/web/src/features/characters/CharacterSheetPage.tsx` (`TABS`, `?tab=`), `sheet/EquipmentTab.tsx`, `sheet/AbilitiesTab.tsx`, `professions/ProfessionsPage.tsx` (`ProfessionsPanel`, também usado na tab Professions), `sheet/sheet.css`
+- Testes: `e2e/foundation.spec.ts` (character system: tabs, drag and drop, tooltip)
 
 ## Reputação (moeda por personagem)
 
