@@ -672,3 +672,24 @@ keeps its "column" vocabulary: a column is now one position
 (`COMBAT_COLUMNS = front, second, third, back`), so `area: 'column'` hits one
 unit and reach `first`/`first2` mean the nearest one/two positions. Abilities
 that used to hit a whole column use `reach: 'first2', area: 'all'`.
+
+## ADR-040 — Item cards, bonus effects (affixes), rarity and requirements
+
+**Status:** accepted (request #36)
+
+**Decision.** Every piece of gear can carry up to 5 bonus effects, stored as
+`{ id, value }` in the existing `items.specials` column (no migration). The
+catalogue lives in `game-core/src/content/affixes.ts`; each effect has a
+group (attribute, derived stat, offensive %, combat effect), a value range and
+the gear kinds it can roll on. Rarity is not stored: it is the number of
+effects (0 common … 5 mythic). Equipped effects are folded into
+`computeStats`; combat-only effects travel as `GearCombatEffects` on the
+combatant (`gear`) and are applied in the engine (`gearOnHit`). Requirements to
+equip use BASE attributes only (consistent with D44); weapons derive theirs
+from the primary attribute and upgrade level. The item card shows rune slots
+only when some are unlocked.
+
+**Why.** Reusing `specials` avoids a migration and keeps old rows valid
+(unknown ids are ignored by `normalizeAffixes`). Deriving rarity from the
+effect count keeps a single source of truth. All numbers are provisional
+(A64–A66) and data-only.

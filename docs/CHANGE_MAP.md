@@ -372,7 +372,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Armas (catálogo, pedido #31)
 
 - Catálogo: `packages/game-core/src/content/weapons.ts` (`WEAPON_TYPES`, `WEAPON_RULES`: pesos 60/40, upgrade por nível, máx. especiais/runas, custo do ataque básico; `weaponScaling`, `weaponDamage`, `upgradeMultiplier`, `normalizeWeaponInstance`, `weaponInfo`)
-- Custo do ataque básico **por tipo** (D54): `basicAttackCost` em `WEAPON_TYPES`; mostrado na ficha (`ItemDto.weapon.basicAttackCost`, `ItemLine` em `CharacterSheetPage.tsx`)
+- Custo do ataque básico **por tipo** (D54): `basicAttackCost` em `WEAPON_TYPES`; mostrado no cartão do item (`ItemDto.weapon.basicAttackCost`, `ItemCard.tsx`)
 - Ataques básicos: `basicAttack()` em `content/abilities.ts` (slash, chop, stab, thrust, crush, aimed_shot, staff_strike, wand_bolt, spark)
 - Itens: `content/items.ts` (`weaponType`, `twoHanded` tem de bater com `hands`); upgrades → `abilityMultipliers` (`equipment.ts`) → `PartyMemberInput.abilityMultipliers` → `valueMultiplier` no motor
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
@@ -381,7 +381,20 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Arte: `CharacterAvatar.tsx` (`Weapon`), `weapon-art.ts` — lança/maça/varinha ainda sem desenho próprio
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
-- Futuro: Runemaster, runas, especiais (só a estrutura existe)
+- Futuro: Runemaster, runas (só a estrutura existe); os especiais passaram a ser os efeitos bónus → ver "Cartão do item e efeitos bónus"
+
+## Cartão do item e efeitos bónus (pedido #36, D61–D64)
+
+- Catálogo/regras: `packages/game-core/src/content/affixes.ts` (`AFFIXES`, `AFFIX_RULES`: máx. 5, pesos dos drops, duração/valor dos estados on-hit; `rarityOf`, `RARITY_NAMES`, `normalizeAffixes`, `describeAffix`, `rollAffixes`, `rollAffixCount`, `gearTotals`, `isGear`)
+- Stats: `computeStats` (`stats.ts`) soma `gearTotals` dos itens equipados (`OwnedItem.affixes`) e devolve `gear` (efeitos de combate)
+- Requisitos (atributos base): `REQUIREMENT_RULES`, `itemRequirements`, `checkRequirements`, `planEquip(…, baseAttributes)` (`equipment.ts`); `ItemDef.requirements` (`content/items.ts`)
+- Combate: `GearCombatEffects` (`api.ts`) → `CombatantView.gear` (`combat.ts`) → `PartyMemberInput.gear` / `partyCombatant` (`state.ts`) → `RunMember.gear` (`rift/run.ts`) → `applyEffect` + `gearOnHit` + `addStatus` (`combat/engine.ts`)
+- Contrato: `ItemDto.rarity`, `affixes` (`ItemAffixDto`), `requirements` (`ItemRequirementDto`), `runeSlots`; `ITEM_RARITIES`, `ItemRarity`, `AffixGroup` (`api.ts`)
+- BD: `items.specials` (efeitos `{ id, value }`), `items.rune_slots` (só os desbloqueados aparecem no cartão) — sem migração
+- Servidor: `toOwned`, `toItemDto(row, base)`, `equip` (passa os atributos base), `combatProfile` (`sheet.service.ts`); drops e itens encontrados → `rollDropAffixes` em `finish()` (`rifts.service.ts`); `gear: profile.gear` em `createRun`/`createPvpRun`
+- Interface: `apps/web/src/features/characters/ItemCard.tsx`; `CharacterSheetPage.tsx` (inventário em grelha, `SlotTile` com cor e cartão ao clicar, modal `item-modal`); estilos `.item-card*`, `.item-grid`, `[data-rarity]` em `global.css`; cores `--rarity-*` em `tokens.css`
+- Testes: `game-core/test/affixes.test.ts`; `apps/server/test/character-sheet.test.ts` ("item cards"); `e2e/foundation.spec.ts` (ficha)
+- **Efeito novo:** só dados em `AFFIXES` (se for de um tipo novo, acrescentar o `kind` a `AffixEffect` e tratá-lo em `gearTotals` e, se for de combate, em `GearCombatEffects` + motor)
 
 ## Loot do Rift (D55)
 

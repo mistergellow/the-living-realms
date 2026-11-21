@@ -7,6 +7,7 @@ import {
   type PlannedActionView,
   type StatusId,
 } from '@realms/shared';
+import { AFFIX_RULES } from '../content/affixes.js';
 import { getAbility, type AbilityDef, type AbilityEffect } from '../content/abilities.js';
 import type { RiftRoomDef } from '../content/rifts.js';
 import { reductionFromRating, scalingMultiplier } from '../stats.js';
@@ -322,6 +323,58 @@ export function absorbWithBlock(
   return { toHp: Math.max(0, incoming - block), blocked, blockLeft: Math.max(0, block - incoming) };
 }
 
+function addStatus(
+  state: CombatState,
+  target: Combatant,
+  status: StatusId,
+  turns: number,
+  value: number,
+): void {
+  const existing = target.statuses.find((s) => s.id === status);
+  if (existing) {
+    existing.turns = Math.max(existing.turns, turns);
+    existing.value = Math.max(existing.value, value);
+  } else target.statuses.push({ id: status, turns, value });
+  pushLog(state, { t: 'status', targetId: target.id, status, turns });
+}
+
+/**
+ * Gear effects after a hit lands (request #36): life steal heals the attacker,
+ * thorns hurt the attacker, on-hit statuses may stick to the target.
+ */
+function gearOnHit(
+  state: CombatState,
+  rng: Rng,
+  actor: Combatant,
+  target: Combatant,
+  toHp: number,
+): void {
+  const g = actor.gear;
+  if (g && g.lifestealPct > 0 && toHp > 0 && !actor.downed) {
+    const heal = Math.min(actor.maxHp - actor.hp, Math.round((toHp * g.lifestealPct) / 100));
+    if (heal > 0) {
+      actor.hp += heal;
+      pushLog(state, { t: 'heal', targetId: actor.id, amount: heal });
+    }
+  }
+  if (g && !target.downed) {
+    const potency = 1 + actor.stats.effectPotency / 100;
+    for (const hit of g.onHit) {
+      if (!rng.chance(hit.chance)) continue;
+      const base = AFFIX_RULES.onHitValue[hit.status];
+      const value = base ? Math.max(1, Math.round(base * potency)) : 0;
+      addStatus(state, target, hit.status, AFFIX_RULES.onHitTurns[hit.status], value);
+    }
+  }
+  const thorns = target.gear?.thorns ?? 0;
+  if (thorns > 0 && actor !== target && actor.side !== target.side && !actor.downed) {
+    const amount = Math.min(actor.hp, thorns);
+    actor.hp -= amount;
+    pushLog(state, { t: 'damage', targetId: actor.id, amount, crit: false, blocked: 0 });
+    if (actor.hp <= 0) knockDown(state, actor);
+  }
+}
+
 /** Returns false if the target dodged (the rest of the ability misses it too). */
 function applyEffect(
   state: CombatState,
@@ -344,6 +397,9 @@ function applyEffect(
       if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
       if (effect.bonusVs && hasStatus(target, effect.bonusVs.status))
         dmg *= effect.bonusVs.multiplier;
+      // Gear effects (request #36): +% damage, +% vs bosses.
+      if (actor.gear)
+        dmg *= 1 + (actor.gear.damagePct + (target.isBoss ? actor.gear.bossDamagePct : 0)) / 100;
       const crit = rng.chance(actor.stats.critChance);
       if (crit) dmg *= actor.stats.critDamage / 100;
       const rating = effect.damageType === 'magic' ? target.stats.magicResist : target.stats.armor;
@@ -356,6 +412,7 @@ function applyEffect(
       pushLog(state, { t: 'damage', targetId: target.id, amount, crit, blocked });
       // 4–5. Status update and defeat check.
       if (target.hp <= 0) knockDown(state, target);
+      gearOnHit(state, rng, actor, target, amount);
       return true;
     }
     case 'heal': {
@@ -376,17 +433,7 @@ function applyEffect(
     case 'status': {
       const potency = 1 + actor.stats.effectPotency / 100;
       const value = effect.value ? Math.max(1, Math.round(effect.value * mult * potency)) : 0;
-      const existing = target.statuses.find((s) => s.id === effect.status);
-      if (existing) {
-        existing.turns = Math.max(existing.turns, effect.turns);
-        existing.value = Math.max(existing.value, value);
-      } else target.statuses.push({ id: effect.status, turns: effect.turns, value });
-      pushLog(state, {
-        t: 'status',
-        targetId: target.id,
-        status: effect.status,
-        turns: effect.turns,
-      });
+      addStatus(state, target, effect.status, effect.turns, value);
       return true;
     }
     case 'swap':
@@ -410,8 +457,9 @@ function applyAbility(
     targetIds: targets.map((x) => x.id),
   });
   for (const target of targets) {
+    if (actor.downed) break; // e.g. killed by thorns
     for (const effect of ability.effects) {
-      if (target.downed) break;
+      if (target.downed || actor.downed) break;
       if (!applyEffect(state, rng, actor, ability, effect, target)) break;
     }
   }

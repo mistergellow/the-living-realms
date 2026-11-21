@@ -25,6 +25,8 @@ export interface ItemDef {
   bonuses?: Partial<Attributes>;
   armor?: number;
   magicResist?: number;
+  /** BASE attributes needed to equip it (request #36); weapons add their primary. */
+  requirements?: Partial<Attributes>;
 }
 
 const item = (i: ItemDef) => i;

@@ -138,7 +138,18 @@ test('character system: attributes, starting weapon, sheet and equipment', async
 
   await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
+  // Item card (request #36): type, base effect and BASE-attribute requirements.
+  const card = page.getByTestId('inventory').getByTestId('item-card');
+  await expect(card).toHaveAttribute('data-rarity', 'common');
+  await expect(card).toContainText('Weapon · Bow');
+  await expect(card).toContainText('Requires');
+  await expect(card).toContainText('Precision');
+  await page.screenshot({ path: 'test-results/screens/06b-item-card.png', fullPage: true });
   await page.getByRole('button', { name: 'Equip Hunting Bow' }).click();
+  // Clicking an equipped item opens its card.
+  await page.getByRole('button', { name: 'Hunting Bow', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Hunting Bow' })).toContainText('Physical damage');
+  await page.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 

@@ -3,6 +3,7 @@ import type {
   CharacterAppearance,
   ConditionView,
   DerivedStatsDto,
+  GearCombatEffects,
   EventResultView,
   MapDto,
   PlanActionInput,
@@ -81,6 +82,8 @@ export interface RunMember {
   stats: DerivedStatsDto;
   abilityIds: string[];
   abilityMultipliers: Record<string, number>;
+  /** Gear effects (request #36); missing on runs saved before it. */
+  gear?: GearCombatEffects;
   hp: number;
   mana: number;
   slot: number;
@@ -361,6 +364,7 @@ function toPartyInput(m: RunMember): PartyMemberInput {
     stats: m.stats,
     abilityIds: m.abilityIds,
     abilityMultipliers: m.abilityMultipliers,
+    gear: m.gear,
     hp: m.left ? 0 : m.hp,
     mana: m.mana,
     slot: m.slot,

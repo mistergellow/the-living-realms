@@ -226,3 +226,53 @@ describe('creation off-hand and attribute points', () => {
     expect(tooMuch.statusCode).toBe(400);
   });
 });
+
+describe('item cards (request #36): bonus effects, rarity, requirements, runes', () => {
+  it('shows rolled effects and rarity, and they change the stats when equipped', async () => {
+    const { cookie, id } = await newCharacter();
+    const [ring] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source, specials, rune_slots)
+      values (gen_random_uuid(), ${id}, 'ring_of_vigor', 'drop',
+        ${JSON.stringify([
+          { id: 'health', value: 10 },
+          { id: 'agility', value: 2 },
+        ])}::jsonb,
+        ${JSON.stringify([
+          { unlocked: true, runeId: null },
+          { unlocked: false, runeId: null },
+        ])}::jsonb)
+      returning id`;
+    const before = await sheetOf(cookie, id);
+    const card = before.inventory.find((i) => i.id === ring!.id)!;
+    expect(card.rarity).toBe('rare');
+    expect(card.affixes.map((a) => [a.label, a.display])).toEqual([
+      ['Health', '+10'],
+      ['Agility', '+2'],
+    ]);
+    expect(card.runeSlots).toEqual({ used: 0, total: 1 });
+    expect(before.equipment.body?.runeSlots).toBeNull(); // no unlocked slots: hidden
+    const res = await post(cookie, `/api/characters/${id}/equip`, {
+      itemId: ring!.id,
+      slot: 'accessory2',
+    });
+    const after = res.json() as CharacterSheetDto;
+    expect(after.stats.maxHp).toBe(before.stats.maxHp + 6 * 2 + 10);
+    expect(after.attributes.agility).toBe(before.attributes.agility + 2);
+  });
+
+  it('needs the BASE attributes listed on the card', async () => {
+    const { cookie, id } = await newCharacter();
+    // Agility 8 (base); a +8 dagger needs Agility 5 + 8/2 = 9.
+    const [dagger] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source, upgrade_level)
+      values (gen_random_uuid(), ${id}, 'rusty_dagger', 'drop', 8) returning id`;
+    const card = (await sheetOf(cookie, id)).inventory.find((i) => i.id === dagger!.id)!;
+    expect(card.requirements).toEqual([{ attribute: 'agility', value: 9, met: false }]);
+    const res = await post(cookie, `/api/characters/${id}/equip`, {
+      itemId: dagger!.id,
+      slot: 'mainHand',
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/requires Agility 9/);
+  });
+});

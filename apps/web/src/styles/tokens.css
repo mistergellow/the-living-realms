@@ -42,6 +42,13 @@
   --warning: #e0b35a;
   --mana: #5b8def;
   --arcane: #8f7cf0;
+  /* item rarity = number of bonus effects (request #36) */
+  --rarity-common: #a3a19c;
+  --rarity-uncommon: #5fcf6b;
+  --rarity-rare: #4f8fef;
+  --rarity-epic: #a86df0;
+  --rarity-legendary: #f39a2b;
+  --rarity-mythic: #e8493a;
 
   --radius: 0.375rem;
   --radius-sm: 0.25rem;
