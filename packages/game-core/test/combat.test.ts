@@ -202,55 +202,48 @@ describe('Block', () => {
   });
 });
 
-describe('targeting by columns (front, mid, back × 2 lines)', () => {
-  const threeColumns = room([
-    { enemy: 'rift_husk', slot: 1 }, // front
-    { enemy: 'hollow_hound', slot: 2 }, // mid
-    { enemy: 'shard_spitter', slot: 4 }, // back
+describe('targeting in one line of 4 positions (request #35)', () => {
+  const line = room([
+    { enemy: 'rift_husk', slot: 0 },
+    { enemy: 'hollow_hound', slot: 1 },
+    { enemy: 'shard_spitter', slot: 2 },
   ]);
   const ids = (s: CombatState, ability: string) =>
     validTargets(s, unit(s, 'p:a'), getAbility(ability)!).map((c) => c.enemyDefId);
 
-  it('melee hits the first occupied column: front, then mid, then back', () => {
-    const s = encounter([member('a', 0)], threeColumns);
+  it('melee hits the nearest occupied position', () => {
+    const s = encounter([member('a', 0)], line);
     expect(ids(s, 'slash')).toEqual(['rift_husk']);
-    const noFront = structuredClone(s);
-    noFront.combatants.find((c) => c.enemyDefId === 'rift_husk')!.downed = true;
-    expect(ids(noFront, 'slash')).toEqual(['hollow_hound']);
-    noFront.combatants.find((c) => c.enemyDefId === 'hollow_hound')!.downed = true;
-    expect(ids(noFront, 'slash')).toEqual(['shard_spitter']);
+    const t = structuredClone(s);
+    t.combatants.find((c) => c.enemyDefId === 'rift_husk')!.downed = true;
+    expect(ids(t, 'slash')).toEqual(['hollow_hound']);
   });
 
-  it('the spear reaches the two nearest columns', () => {
-    const s = encounter([member('a', 0, {}, ['thrust'])], threeColumns);
+  it('the spear and Cleave reach the two nearest; ranged reaches anyone; Volley hits all', () => {
+    const s = encounter([member('a', 0, {}, ['thrust', 'cleave', 'aimed_shot', 'volley'])], line);
     expect(ids(s, 'thrust')).toEqual(['rift_husk', 'hollow_hound']);
-  });
-
-  it('ranged reaches any column; Volley hits everyone', () => {
-    const s = encounter([member('a', 0, {}, ['aimed_shot', 'volley'])], threeColumns);
-    expect(ids(s, 'volley')).toHaveLength(3);
+    expect(ids(s, 'cleave')).toEqual(['rift_husk', 'hollow_hound']);
     expect(ids(s, 'aimed_shot')).toHaveLength(3);
+    expect(ids(s, 'volley')).toHaveLength(3);
   });
 
-  it('attacks pick a column and hit both units in it (D41); out of reach is rejected', () => {
-    let s = encounter(
-      [member('a', 0, { critChance: 0 }, ['aimed_shot', 'stab'])],
-      room([
-        { enemy: 'rift_husk', slot: 0 },
-        { enemy: 'shard_spitter', slot: 4 },
-        { enemy: 'shard_spitter', slot: 5 },
-      ]),
+  it('a single-target attack hits one position; Cleave hits both in reach; out of reach is rejected', () => {
+    let s = calm(
+      encounter([member('a', 0, { focusPerRound: 6 }, ['aimed_shot', 'cleave', 'stab'])], line),
     );
-    s = calm(s);
-    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'stab', targetColumn: 'back' }).ok).toBe(
-      false,
-    );
-    s = plan(s, 'p:a', { abilityId: 'aimed_shot', targetColumn: 'back' });
-    s = ok(setReady(s, 'p:a'));
-    const hit = s.log
-      .filter((l) => l.t === 'damage')
-      .map((l) => (l as { targetId: string }).targetId);
-    expect(hit).toEqual(['e:0:1', 'e:0:2']);
+    expect(
+      planAction(s, 'p:a', { type: 'plan', abilityId: 'stab', targetColumn: 'third' }).ok,
+    ).toBe(false);
+    let seq = s.logSeq;
+    s = plan(s, 'p:a', { abilityId: 'aimed_shot', targetColumn: 'third' });
+    const hits = (from: number) =>
+      s.log
+        .filter((l) => l.seq > from && l.t === 'damage')
+        .map((l) => (l as { targetId: string }).targetId);
+    expect(hits(seq)).toEqual(['e:0:2']);
+    seq = s.logSeq;
+    s = plan(s, 'p:a', { abilityId: 'cleave' });
+    expect(hits(seq)).toEqual(['e:0:0', 'e:0:1']);
   });
 });
 
@@ -258,8 +251,8 @@ describe('change position', () => {
   it('moving to an empty slot costs 1 Focus for the actor only', () => {
     let s = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]));
     expect(getAbility('swap_position')!.focusCost).toBe(BASIC_ACTIONS.changePosition.focusCost);
-    s = plan(s, 'p:a', { abilityId: 'swap_position', targetSlot: 4 });
-    expect(unit(s, 'p:a')).toMatchObject({ slot: 4, focus: 2 });
+    s = plan(s, 'p:a', { abilityId: 'swap_position', targetSlot: 3 });
+    expect(unit(s, 'p:a')).toMatchObject({ slot: 3, focus: 2 });
   });
 
   it('swapping with another player costs Focus for both', () => {
@@ -323,7 +316,7 @@ describe('enemy intents', () => {
     expect(s.combatants.find((c) => c.id === husk.id)!.intents.length).toBeGreaterThan(0);
   });
 
-  it('a Bulwark sharing a column with an attacker shields it; the attacker hits the column (D42)', () => {
+  it('a Bulwark shields the two enemies at the front; attackers hit the nearest position', () => {
     const s = encounter(
       [member('a', 0), member('b', 1)],
       room([
@@ -333,8 +326,8 @@ describe('enemy intents', () => {
     );
     const bulwark = s.combatants.find((c) => c.enemyDefId === 'rift_bulwark')!;
     const husk = s.combatants.find((c) => c.enemyDefId === 'rift_husk')!;
-    expect(bulwark.intents[0]).toMatchObject({ abilityId: 'bulwark_wall', column: 'front' });
-    expect(husk.intents[0]!.targetIds.sort()).toEqual(['p:a', 'p:b']);
+    expect(bulwark.intents[0]).toMatchObject({ abilityId: 'bulwark_wall' });
+    expect(husk.intents[0]!.targetIds).toEqual(['p:a']);
   });
 
   it('elite enemies are significantly stronger', () => {

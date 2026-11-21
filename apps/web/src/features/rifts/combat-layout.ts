@@ -5,11 +5,9 @@ import type { CombatSide } from '@realms/shared';
  * Shared by the canvas scene (drawing) and the DOM overlay (click targets),
  * so both always agree.
  *
- * Side view: party on the left, enemies mirrored on the right. Each side has
- * 3 columns (D38): slots 0–1 front (nearest the centre), 2–3 mid, 4–5 back.
- * Within a column, the even slot is the top line (farther away: higher up,
- * smaller, stepped back) and the odd slot the bottom line (nearer: lower,
- * larger), so the two units of a column overlap as little as possible.
+ * Side view: party on the left, enemies mirrored on the right. Each side is
+ * one line of 4 positions (request #35): slot 0 front (nearest the centre),
+ * 1 second, 2 third, 3 back.
  */
 
 export interface SlotPlace {
@@ -54,12 +52,11 @@ export function combatLayout(width: number, height: number): CombatLayout {
     horizon: height * 0.46,
     riftX: cx,
     place(side, slot) {
-      const column = Math.min(2, Math.floor(slot / 2));
-      const line = slot % 2;
-      const off = width * (0.11 + 0.105 * column) + (line === 0 ? width * 0.045 : 0);
+      const pos = Math.max(0, Math.min(3, slot));
+      const off = width * (0.09 + 0.098 * pos);
       const x = side === 'party' ? cx - off : cx + off;
-      const y = height * (0.66 + 0.15 * line);
-      return { x, y, scale: base * (0.9 + 0.08 * line), depth: line };
+      const y = height * 0.76;
+      return { x, y, scale: base * 0.98, depth: 0 };
     },
   };
 }

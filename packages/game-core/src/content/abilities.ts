@@ -55,6 +55,7 @@ export interface AbilityDef {
 }
 
 const ability = (a: AbilityDef) => a;
+// Request #35: one line of 4 positions per side; a "column" is one position.
 const ENEMY_FIRST_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'column' };
 const ENEMY_ANY_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'any', area: 'column' };
 const ALLY_ANY: AbilityTargeting = { side: 'ally', reach: 'any', area: 'single' };
@@ -144,11 +145,11 @@ export const ABILITIES = {
   cleave: ability({
     id: 'cleave',
     name: 'Cleave',
-    description: 'A wide swing that hits the whole front row.',
+    description: 'A wide swing that hits the two nearest enemies.',
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', reach: 'first', area: 'column' },
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
     effects: [{ kind: 'damage', damageType: 'physical', min: 7, max: 9 }],
     scaling: SWORD,
   }),
@@ -246,7 +247,7 @@ export const ABILITIES = {
   thrust: basicAttack('spear', {
     id: 'thrust',
     name: 'Thrust',
-    description: 'Basic spear attack: reaches either of the two nearest columns.',
+    description: 'Basic spear attack: reaches either of the two nearest enemies.',
     targeting: { side: 'enemy', reach: 'first2', area: 'column' },
   }),
 
@@ -380,11 +381,11 @@ export const ABILITIES = {
   shield_wall: ability({
     id: 'shield_wall',
     name: 'Shield Wall',
-    description: 'Block for both allies in a column until the end of the round.',
+    description: 'Block for the two allies at the front until the end of the round.',
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'ally', reach: 'any', area: 'column' },
+    targeting: { side: 'ally', reach: 'first2', area: 'all' },
     effects: [{ kind: 'block', min: 4, max: 5 }],
     scaling: SHIELD,
   }),
@@ -453,11 +454,11 @@ export const ABILITIES = {
   bulwark_wall: ability({
     id: 'bulwark_wall',
     name: 'Bulwark',
-    description: 'Raises a barrier: Block for its whole column.',
+    description: 'Raises a barrier: Block for the two enemies at the front.',
     source: 'enemy',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'ally', reach: 'any', area: 'column' },
+    targeting: { side: 'ally', reach: 'first2', area: 'all' },
     effects: [{ kind: 'block', min: 6, max: 8 }],
     scaling: {},
   }),
@@ -475,11 +476,11 @@ export const ABILITIES = {
   warden_slam: ability({
     id: 'warden_slam',
     name: 'Rift Slam',
-    description: 'Shakes the whole front row.',
+    description: 'Shakes the two nearest foes.',
     source: 'enemy',
     focusCost: 2,
     manaCost: 0,
-    targeting: { side: 'enemy', reach: 'first', area: 'column' },
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
     effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 6 }],
     scaling: {},
   }),
@@ -543,14 +544,17 @@ export function describeTargeting(t: AbilityTargeting): string {
   const who = t.side === 'ally' ? 'ally' : 'enemy';
   const where =
     t.reach === 'first'
-      ? 'nearest column'
+      ? 'nearest position'
       : t.reach === 'first2'
-        ? 'two nearest columns'
+        ? 'two nearest positions'
         : t.reach === 'any'
           ? 'any position'
-          : `${t.reach.join(' or ')} column`;
-  if (t.area === 'all') return `All ${who === 'ally' ? 'allies' : 'enemies'}`;
-  if (t.area === 'column') return `Whole ${who} column · ${where}`;
+          : `${t.reach.join(' or ')} position`;
+  if (t.area === 'all')
+    return t.reach === 'any'
+      ? `All ${who === 'ally' ? 'allies' : 'enemies'}`
+      : `All ${who === 'ally' ? 'allies' : 'enemies'} · ${where}`;
+  if (t.area === 'column') return `One ${who} · ${where}`;
   return `One ${who} · ${where}`;
 }
 

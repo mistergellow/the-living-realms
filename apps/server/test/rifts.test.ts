@@ -145,7 +145,7 @@ describe('Rifts', () => {
     expect(fight.phase).toBe('combat');
     expect(fight.combat!.phase).toBe('planning');
     const me = fight.combat!.combatants.find((c) => c.characterId === h.characterId)!;
-    expect(me).toMatchObject({ slot: 4, focus: me.focusPerRound });
+    expect(me).toMatchObject({ slot: 3, focus: me.focusPerRound });
   });
 
   it('locks equipment and deletion while inside a Rift', async () => {

@@ -1589,10 +1589,18 @@ fieldset.field {
 }
 .lobby-formation {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 90px;
+  /* One line of 4 positions (request #35), then the Rift portal. */
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 90px;
   gap: var(--space-3);
   align-items: stretch;
   background: radial-gradient(ellipse at 70% 50%, #2b2350 0%, #171a2b 60%, #11131d 100%);
+}
+.lobby-formation[data-mode='pvp'] {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+.lobby-formation[data-mode='pvp'] .lobby-slot {
+  flex-direction: column;
+  text-align: center;
 }
 .lobby-column {
   display: flex;

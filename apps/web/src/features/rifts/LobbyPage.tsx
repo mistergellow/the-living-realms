@@ -11,11 +11,12 @@ import { useFriends } from '../social/api';
 import { useLobby, useLobbyActions } from './lobby-api';
 import './combat.css';
 
-/** Party formation as in combat (D38): back, mid and front columns × 2 lines. */
+/** Party formation as in combat (request #35): one line of 4, back → front. */
 const COLUMNS = [
-  { label: 'Back', slots: [4, 5] },
-  { label: 'Mid', slots: [2, 3] },
-  { label: 'Front', slots: [0, 1] },
+  { label: 'Back', slots: [3] },
+  { label: 'Third', slots: [2] },
+  { label: 'Second', slots: [1] },
+  { label: 'Front', slots: [0] },
 ];
 
 export function LobbyPage() {
@@ -127,7 +128,11 @@ export function LobbyPage() {
               side to change teams. No rewards and no equipment damage.
             </p>
           )}
-          <section className="panel lobby-formation" data-testid="lobby-formation">
+          <section
+            className="panel lobby-formation"
+            data-testid="lobby-formation"
+            data-mode={l.mode}
+          >
             {(l.mode === 'pvp'
               ? [
                   ...COLUMNS.map((c) => ({ ...c, label: `A · ${c.label}` })),

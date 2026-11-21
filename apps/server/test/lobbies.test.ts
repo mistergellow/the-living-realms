@@ -57,7 +57,7 @@ describe('Rift lobbies', () => {
       await call(archer, 'POST', `/api/rifts/lobbies/${lobby.id}/join`)
     ).json() as LobbyDto;
     expect(joined.members.find((m) => m.name === archer.name)).toMatchObject({
-      slot: 4,
+      slot: 3,
       isLeader: false,
     });
 
@@ -65,7 +65,7 @@ describe('Rift lobbies', () => {
     const swapped = (
       await call(archer, 'POST', `/api/rifts/lobbies/${lobby.id}/slot`, { slot: 0 })
     ).json() as LobbyDto;
-    expect(swapped.members.find((m) => m.name === leader.name)!.slot).toBe(4);
+    expect(swapped.members.find((m) => m.name === leader.name)!.slot).toBe(3);
 
     const notReady = await call(leader, 'POST', `/api/rifts/lobbies/${lobby.id}/start`);
     expect(notReady.statusCode).toBe(409);
@@ -96,7 +96,7 @@ describe('Rift lobbies', () => {
     expect(party.map((p) => [p.name, p.slot]).sort()).toEqual(
       [
         [archer.name, 0],
-        [leader.name, 4],
+        [leader.name, 3],
       ].sort(),
     );
   });
@@ -123,10 +123,10 @@ describe('Rift lobbies', () => {
     expect((await call(b, 'GET', '/api/rifts/lobbies')).json().invites).toEqual([]);
   });
 
-  it('holds at most 6; one lobby per character; no solo run while in a lobby', async () => {
+  it('holds at most 4; one lobby per character; no solo run while in a lobby', async () => {
     const leader = await player();
     const lobby = (await create(leader)).json() as LobbyDto;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       const p = await player();
       expect((await call(p, 'POST', `/api/rifts/lobbies/${lobby.id}/join`)).statusCode).toBe(200);
     }
@@ -223,12 +223,12 @@ describe('PvP arena (test mode)', () => {
     const lobby = (
       await call(a, 'POST', '/api/rifts/lobbies', { riftId: 'pvp_arena', visibility: 'public' })
     ).json() as LobbyDto;
-    expect(lobby).toMatchObject({ mode: 'pvp', maxMembers: 12 });
+    expect(lobby).toMatchObject({ mode: 'pvp', maxMembers: 8 });
     const joined = (
       await call(b, 'POST', `/api/rifts/lobbies/${lobby.id}/join`)
     ).json() as LobbyDto;
-    // The second player joins the smaller team (B = slots 6–11).
-    expect(joined.members.find((m) => m.name === b.name)!.slot).toBeGreaterThanOrEqual(6);
+    // The second player joins the smaller team (B = slots 4–7).
+    expect(joined.members.find((m) => m.name === b.name)!.slot).toBeGreaterThanOrEqual(4);
     await call(b, 'POST', `/api/rifts/lobbies/${lobby.id}/ready`, { ready: true });
     const { runId } = (
       await call(a, 'POST', `/api/rifts/lobbies/${lobby.id}/start`)

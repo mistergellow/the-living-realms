@@ -661,3 +661,14 @@ begins. No initiative roll in PvE. The party's Block is removed when a round
 begins; the enemies' Block is removed when their phase begins, so it lasts
 through the party's turn. PvP (`mode: 'pvp'`) keeps ADR-033: hidden plans and
 alternating resolution by team initiative.
+
+## ADR-039 — One line of 4 positions per side
+
+**Status:** accepted (request #35, replaces ADR-027/D38's 3 × 2 formation)
+
+**Decision.** Each side stands in one line of 4 positions (slot 0 front … 3
+back), Darkest-Dungeon style; a party/lobby is 4 (PvP 4 v 4). The engine
+keeps its "column" vocabulary: a column is now one position
+(`COMBAT_COLUMNS = front, second, third, back`), so `area: 'column'` hits one
+unit and reach `first`/`first2` mean the nearest one/two positions. Abilities
+that used to hit a whole column use `reach: 'first2', area: 'all'`.

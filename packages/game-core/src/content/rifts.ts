@@ -10,7 +10,7 @@ import type { MapTemplate } from '../rift/map.js';
  * PROVISIONAL CONTENT.
  */
 
-/** A fight: enemy placement (D38): slots 0–1 front column, 2–3 mid, 4–5 back. */
+/** A fight: enemy placement in one line (request #35): slot 0 front … 3 back. */
 export interface RiftRoomDef {
   name: string;
   enemies: Array<{ enemy: EnemyId; slot: number; elite?: boolean }>;
@@ -94,15 +94,15 @@ export const RIFTS = {
           enemies: [
             { enemy: 'rift_bulwark', slot: 0 },
             { enemy: 'rift_husk', slot: 1 },
-            { enemy: 'shard_spitter', slot: 4 },
+            { enemy: 'shard_spitter', slot: 2 },
           ],
         },
         {
           name: 'Howling Gallery',
           enemies: [
             { enemy: 'hollow_hound', slot: 0 },
-            { enemy: 'rift_husk', slot: 2 },
-            { enemy: 'shard_spitter', slot: 4 },
+            { enemy: 'rift_husk', slot: 1 },
+            { enemy: 'shard_spitter', slot: 2 },
           ],
         },
         {
@@ -115,9 +115,9 @@ export const RIFTS = {
         {
           name: 'Shard Nest',
           enemies: [
-            { enemy: 'hollow_hound', slot: 1 },
-            { enemy: 'shard_spitter', slot: 4 },
-            { enemy: 'shard_spitter', slot: 5 },
+            { enemy: 'hollow_hound', slot: 0 },
+            { enemy: 'shard_spitter', slot: 1 },
+            { enemy: 'shard_spitter', slot: 2 },
           ],
         },
       ],
@@ -127,7 +127,7 @@ export const RIFTS = {
           enemies: [
             { enemy: 'rift_bulwark', slot: 0, elite: true },
             { enemy: 'rift_husk', slot: 1, elite: true },
-            { enemy: 'shard_spitter', slot: 4 },
+            { enemy: 'shard_spitter', slot: 2 },
           ],
         },
         {
@@ -135,7 +135,7 @@ export const RIFTS = {
           enemies: [
             { enemy: 'hollow_hound', slot: 0, elite: true },
             { enemy: 'hollow_hound', slot: 1 },
-            { enemy: 'shard_spitter', slot: 4, elite: true },
+            { enemy: 'shard_spitter', slot: 2, elite: true },
           ],
         },
       ],
@@ -145,7 +145,7 @@ export const RIFTS = {
         enemies: [
           { enemy: 'rift_warden', slot: 0 },
           { enemy: 'rift_bulwark', slot: 1 },
-          { enemy: 'shard_spitter', slot: 4 },
+          { enemy: 'shard_spitter', slot: 2 },
         ],
       },
     },

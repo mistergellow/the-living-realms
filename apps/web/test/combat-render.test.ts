@@ -7,7 +7,7 @@ describe('combat layout', () => {
   const l = combatLayout(1050, 440);
 
   it('puts the party on the left, enemies mirrored on the right', () => {
-    for (let slot = 0; slot < 6; slot++) {
+    for (let slot = 0; slot < 4; slot++) {
       const p = l.place('party', slot);
       const e = l.place('enemies', slot);
       expect(p.x).toBeLessThan(l.width / 2);
@@ -17,37 +17,27 @@ describe('combat layout', () => {
     }
   });
 
-  it('orders the columns front, mid, back from the centre outwards', () => {
-    for (const line of [0, 1]) {
-      const [front, mid, back] = [0, 2, 4].map((c) => l.place('party', c + line).x);
-      expect(front).toBeGreaterThan(mid!);
-      expect(mid).toBeGreaterThan(back!);
-      const [ef, , eb] = [0, 2, 4].map((c) => l.place('enemies', c + line).x);
-      expect(ef).toBeLessThan(eb!);
-    }
+  it('puts the 4 positions in one line, front nearest the centre (request #35)', () => {
+    const xs = [0, 1, 2, 3].map((slot) => l.place('party', slot).x);
+    for (let i = 1; i < 4; i++) expect(xs[i]!).toBeLessThan(xs[i - 1]!);
+    const ys = [0, 1, 2, 3].map((slot) => l.place('party', slot).y);
+    expect(new Set(ys).size).toBe(1);
+    const ex = [0, 3].map((slot) => l.place('enemies', slot).x);
+    expect(ex[0]!).toBeLessThan(ex[1]!);
   });
 
-  it('keeps the two units of a column apart enough to click either', () => {
-    for (const col of [0, 2, 4]) {
-      const top = unitRect(l, 'enemies', col, false);
-      const bottom = unitRect(l, 'enemies', col + 1, false);
-      // The centre of the top unit's box is not covered by the bottom unit's box.
-      const cx = top.left + top.width / 2;
-      expect(cx < bottom.left || cx > bottom.left + bottom.width).toBe(true);
+  it('keeps neighbours apart enough to click either', () => {
+    for (let slot = 0; slot < 3; slot++) {
+      const a = unitRect(l, 'enemies', slot, false);
+      const b = unitRect(l, 'enemies', slot + 1, false);
+      expect(a.left + a.width / 2).toBeLessThan(b.left);
     }
-  });
-
-  it('draws the bottom line lower and larger', () => {
-    const far = l.place('party', 0);
-    const near = l.place('party', 1);
-    expect(near.y).toBeGreaterThan(far.y);
-    expect(near.scale).toBeGreaterThan(far.scale);
   });
 
   it('gives every unit an on-screen click box, larger for bosses', () => {
     for (const w of [380, 800, 1600]) {
       const lay = combatLayout(w, 420);
-      for (let slot = 0; slot < 6; slot++) {
+      for (let slot = 0; slot < 4; slot++) {
         const r = unitRect(lay, 'enemies', slot, false);
         expect(r.left).toBeGreaterThanOrEqual(0);
         expect(r.left + r.width).toBeLessThanOrEqual(w);
