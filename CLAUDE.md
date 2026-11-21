@@ -34,9 +34,13 @@ Este ficheiro é lido automaticamente pelo Claude Code no início de cada sessã
 Jogo multiplayer persistente para browser. Mapa do mundo em **hexágonos**
 (coordenadas axiais q,r; mover entre hexágonos custa X AP, valor por definir).
 Um único mundo partilhado. Uma conta tem vários personagens, mas joga com
-**um de cada vez**. Combate por turnos ("Slay the Spire sem cartas + Darkest
-Dungeon"), num ecrã separado da exploração; formação de **3 colunas (back, mid,
-front) × 2 linhas** por lado. Rifts = portais para raids, a solo ou em lobby até 6.
+**um de cada vez**. Combate por rondas ("Slay the Spire sem cartas + Darkest
+Dungeon"): fase de planeamento e resolução alternada entre equipas por
+iniciativa; Focus gerado pela Precision; ecrã separado da exploração; formação
+de **3 colunas (back, mid, front) × 2 linhas** por lado. Rifts = dungeons com
+mapa ramificado (estilo Slay the Spire) até um boss, a solo ou em lobby até 6.
+**Testes de exploração usam só os BASE STATS.** Armas: catálogo com números
+iguais por tipo e nível.
 Progressão por reputação (sem níveis). Nações, línguas, economia, NPCs e
 eventos virão em fases futuras (ver ROADMAP.md).
 
@@ -47,7 +51,7 @@ apps/web          React + Vite (features/auth, characters, world; combat reserva
 apps/server       Fastify: API HTTP + gateway WebSocket (modules/*, realtime/*)
 apps/worker       Simulação do mundo (tick, eleição de líder, manutenção)
 packages/shared   Contratos: schemas zod, DTOs, protocolo WS, códigos de erro
-packages/game-core Regras puras (hex, nomes) — sem I/O
+packages/game-core Regras puras (hex, combate, Rift/mapa, conteúdo) — sem I/O
 packages/db       Schema Drizzle, migrações, cliente, seed
 packages/server-kit Infra partilhada servidor/worker (logger, Redis, bus, presença)
 ```

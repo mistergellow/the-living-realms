@@ -7,7 +7,7 @@ import { CharacterSelectPage } from '../features/characters/CharacterSelectPage'
 import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
-import { CombatPage } from '../features/rifts/CombatPage';
+import { RunPage } from '../features/rifts/RunPage';
 import { LobbyPage } from '../features/rifts/LobbyPage';
 import { FriendsPage } from '../features/social/FriendsPage';
 import { Screen } from '../shared/ui/Screen';
@@ -23,7 +23,7 @@ import { HomePage } from '../features/game/HomePage';
  *   /home                    hub (requires an active character; in GameShell)
  *   /world                   exploration map (in GameShell)
  *   /rifts                   Rift list, lobbies (in GameShell)
- *   /rifts/runs/:runId       combat screen (separate from exploration)
+ *   /rifts/runs/:runId       a Rift run: map/exploration screen, combat screen for fights
  *   /rifts/lobbies/:lobbyId  group lobby (up to 6)
  *   /friends                 friends list and requests (in GameShell)
  */
@@ -52,7 +52,7 @@ export const router = createBrowserRouter([
           { path: '/friends', element: <FriendsPage /> },
         ],
       },
-      { path: '/rifts/runs/:runId', element: <CombatPage /> },
+      { path: '/rifts/runs/:runId', element: <RunPage /> },
       { path: '/rifts/lobbies/:lobbyId', element: <LobbyPage /> },
     ],
   },

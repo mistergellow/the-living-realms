@@ -57,6 +57,13 @@
       "when": 1794998717477,
       "tag": "0007_friends_and_lobbies",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795251003099,
+      "tag": "0008_rift_exploration_and_weapons",
+      "breakpoints": true
     }
   ]
 }

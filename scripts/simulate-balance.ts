@@ -1,6 +1,9 @@
 /*
  * Balance simulator (dev tool): plays the test Rift many times with a simple
- * bot for six typical builds, solo and in groups, and prints win rates.
+ * bot for typical builds, solo and in groups, and prints win rates. Since
+ * request #31 a run is a whole dungeon: the bot walks the branching map
+ * (random path), resolves events with the best BASE stat, rests at
+ * campsites, and fights with plan → ready rounds.
  *
  *   pnpm sim
  *
@@ -8,57 +11,73 @@
  * the numbers to compare builds and spot outliers, not as absolute truth.
  */
 import {
-  applyAction,
+  asBaseAttributes,
   availableAbilities,
+  availableRooms,
+  combatAction,
   computeStats,
-  createEncounter,
-  enterNextRoom,
+  continueRun,
+  createRun,
+  decisionOptions,
+  findNode,
   getAbility,
+  getEvent,
   getRift,
+  reservedBy,
   targetColumns,
+  testChance,
   validTargets,
+  vote,
   type AbilityDef,
   type Combatant,
   type CombatState,
   type OwnedItem,
-  type PartyMemberInput,
+  type RunMember,
+  type RunState,
 } from '../packages/game-core/src/index.ts';
-import type { Attributes, CombatAction, CombatColumn } from '../packages/shared/src/index.ts';
+import type { Attributes, CombatColumn, PlanActionInput } from '../packages/shared/src/index.ts';
 
 const RUNS = Number(process.env.RUNS ?? 300);
 const attrs = (o: Partial<Attributes>): Attributes => ({
   might: 5,
   agility: 5,
   precision: 5,
-  vitality: 5,
-  arcana: 5,
-  spirit: 5,
+  endurance: 5,
+  intellect: 5,
+  will: 5,
   ...o,
 });
 
 /** Typical 12-point builds, one per starter weapon. */
 const BUILDS: Record<string, { attributes: Attributes; main: string; off?: string }> = {
   'sword+shield': {
-    attributes: attrs({ might: 10, agility: 8, vitality: 9 }),
+    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
     main: 'training_sword',
     off: 'wooden_shield',
   },
-  axe: { attributes: attrs({ might: 10, vitality: 10, agility: 7 }), main: 'woodcutter_axe' },
+  'axe+shield': {
+    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    main: 'woodcutter_axe',
+    off: 'wooden_shield',
+  },
+  spear: { attributes: attrs({ might: 10, precision: 10, endurance: 7 }), main: 'ash_spear' },
+  mace: { attributes: attrs({ might: 10, endurance: 10, agility: 7 }), main: 'iron_mace' },
   'dual dagger': {
-    attributes: attrs({ agility: 10, precision: 10, vitality: 7 }),
+    attributes: attrs({ agility: 10, precision: 10, endurance: 7 }),
     main: 'rusty_dagger',
     off: 'rusty_dagger',
   },
-  bow: { attributes: attrs({ precision: 10, agility: 9, vitality: 8 }), main: 'hunting_bow' },
-  staff: { attributes: attrs({ arcana: 10, spirit: 9, vitality: 8 }), main: 'apprentice_staff' },
+  bow: { attributes: attrs({ precision: 10, agility: 9, endurance: 8 }), main: 'hunting_bow' },
+  staff: { attributes: attrs({ intellect: 10, will: 9, endurance: 8 }), main: 'apprentice_staff' },
+  wand: { attributes: attrs({ intellect: 10, precision: 10, endurance: 7 }), main: 'birch_wand' },
   'tome+talisman': {
-    attributes: attrs({ arcana: 9, precision: 8, spirit: 8, vitality: 7 }),
+    attributes: attrs({ intellect: 9, precision: 8, will: 8, endurance: 7 }),
     main: 'worn_tome',
     off: 'bone_talisman',
   },
 };
 
-function party(names: string[]): PartyMemberInput[] {
+function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
   return names.map((name, i) => {
     const build = BUILDS[name]!;
     const items: OwnedItem[] = [
@@ -70,14 +89,18 @@ function party(names: string[]): PartyMemberInput[] {
     ];
     const { stats, attributes } = computeStats(build.attributes, items);
     const abilityIds = availableAbilities(items).map((a) => a.ability.id);
-    const backline = ['aimed_shot', 'arcane_bolt', 'spark'].some((a) => abilityIds.includes(a));
+    const backline = ['aimed_shot', 'staff_strike', 'spark', 'wand_bolt'].some((a) =>
+      abilityIds.includes(a),
+    );
     return {
       characterId: `${name}-${i}`,
       name,
       appearance: { version: 1, color: '#c0392b', emblem: 'circle' } as const,
+      baseAttributes: asBaseAttributes(build.attributes),
       attributes,
       stats,
       abilityIds,
+      abilityMultipliers: {},
       hp: stats.maxHp,
       mana: stats.maxMana,
       slot: (backline ? [4, 5, 2, 3] : [0, 1, 2, 3])[i % 4]!,
@@ -89,7 +112,12 @@ const avg = (e: { min: number; max: number }) => (e.min + e.max) / 2;
 const has = (t: Combatant, id: string) => t.statuses.some((s) => s.id === id);
 
 /** Heuristic value of an ability against a target group, per Focus. */
-function score(a: AbilityDef, targets: Combatant[], canBlock: boolean): number {
+function score(
+  a: AbilityDef,
+  targets: Combatant[],
+  canBlock: boolean,
+  threatened: boolean,
+): number {
   let v = 0;
   for (const t of targets)
     for (const e of a.effects) {
@@ -102,82 +130,127 @@ function score(a: AbilityDef, targets: Combatant[], canBlock: boolean): number {
       if (e.kind === 'status' && !has(t, e.status) && t.hp >= t.maxHp * 0.35)
         v += e.status === 'mark' || e.status === 'weaken' ? 3 : (e.value ?? 0) * e.turns * 0.7;
       if (e.kind === 'heal' && t.hp < t.maxHp * 0.5) v += avg(e) * 3;
-      if (e.kind === 'block' && canBlock && t.block === 0)
-        v += avg(e) * (t.hp < t.maxHp * 0.6 ? 3 : 1.1);
+      if (e.kind === 'block' && canBlock && threatened)
+        v += avg(e) * (t.hp < t.maxHp * 0.6 ? 1.6 : 0.9);
     }
   return v / a.focusCost;
 }
 
-/** Greedy bot: best ability/target per Focus; blocks at most once per turn. */
-function bot(start: CombatState): CombatState {
-  let s = start;
-  let blockedTurn = '';
-  for (let guard = 0; guard < 800 && s.phase === 'party'; guard++) {
-    const me = s.combatants.find((c) => c.id === s.activeId)!;
-    const turn = `${me.id}:${s.round}`;
-    let best: { value: number; action: CombatAction; blocks: boolean } | null = null;
-    for (const id of me.abilityIds) {
-      const a = getAbility(id)!;
-      if (a.id === 'swap_position' || a.focusCost > me.focus || a.manaCost > me.mana) continue;
-      const options: Array<{ targets: Combatant[]; column?: CombatColumn; targetId?: string }> =
-        a.targeting.area === 'column'
-          ? targetColumns(s, me, a).map((c) => ({ targets: c.units, column: c.column }))
-          : a.targeting.area === 'all'
-            ? [{ targets: validTargets(s, me, a) }]
-            : validTargets(s, me, a).map((t) => ({ targets: [t], targetId: t.id }));
-      for (const o of options) {
-        const value = score(a, o.targets, turn !== blockedTurn);
-        if (value > 0 && (!best || value > best.value))
-          best = {
-            value,
-            action: {
-              type: 'ability',
-              abilityId: id,
-              targetId: o.targetId,
-              targetColumn: o.column,
-            },
-            blocks: a.effects.some((e) => e.kind === 'block'),
-          };
+/** Greedy planner: each player plans the best actions per Focus, then confirms. */
+function planRound(run: RunState): RunState {
+  let s = run;
+  const c = () => s.combat as CombatState;
+  for (const m of s.party) {
+    const id = `p:${m.characterId}`;
+    let blocks = 0;
+    for (let guard = 0; guard < 10; guard++) {
+      const me = c().combatants.find((u) => u.id === id);
+      if (!me || me.downed || me.stunned || c().phase !== 'planning') break;
+      const left = me.focus - reservedBy(c(), id).focus;
+      const mana = me.mana - reservedBy(c(), id).mana;
+      const threatened = c().combatants.some(
+        (e) => e.side === 'enemies' && e.intents.some((it) => it.targetIds.includes(id)),
+      );
+      let best: { value: number; action: PlanActionInput; block: boolean } | null = null;
+      for (const abilityId of me.abilityIds) {
+        const a = getAbility(abilityId)!;
+        if (a.id === 'swap_position' || a.focusCost > left || a.manaCost > mana) continue;
+        const options: Array<{ targets: Combatant[]; column?: CombatColumn; targetId?: string }> =
+          a.targeting.area === 'column'
+            ? targetColumns(c(), me, a).map((x) => ({ targets: x.units, column: x.column }))
+            : a.targeting.area === 'all'
+              ? [{ targets: validTargets(c(), me, a) }]
+              : validTargets(c(), me, a).map((t) => ({ targets: [t], targetId: t.id }));
+        for (const o of options) {
+          const value = score(a, o.targets, blocks < 2, threatened);
+          if (value > 0 && (!best || value > best.value))
+            best = {
+              value,
+              action: { type: 'plan', abilityId, targetId: o.targetId, targetColumn: o.column },
+              block: a.effects.some((e) => e.kind === 'block'),
+            };
+        }
       }
+      if (!best) break;
+      const r = combatAction(s, m.characterId, best.action);
+      if (!r.ok) break;
+      s = r.state;
+      if (best.block) blocks++;
     }
-    if (best?.blocks) blockedTurn = turn;
-    const r = best ? applyAction(s, me.id, best.action) : null;
-    if (r?.ok) s = r.state;
-    else {
-      const end = applyAction(s, me.id, { type: 'end_turn' });
-      if (!end.ok) break;
-      s = end.state;
-    }
+  }
+  for (const m of s.party) {
+    if (s.phase !== 'combat' || c().phase !== 'planning') break;
+    const r = combatAction(s, m.characterId, { type: 'ready' });
+    if (r.ok) s = r.state;
   }
   return s;
 }
 
 const rift = getRift('shattered_breach')!;
-function simulate(names: string[], runs = RUNS) {
-  const diedIn = rift.rooms.map(() => 0);
-  let wins = 0;
-  for (let seed = 1; seed <= runs; seed++) {
-    let s = createEncounter({
-      party: party(names),
-      room: rift.rooms[0]!,
-      roomIndex: 0,
-      isLastRoom: false,
-      seed,
-    });
-    let room = 0;
-    for (;;) {
-      s = bot(s);
-      if (s.phase !== 'room_cleared') break;
-      room++;
-      s = enterNextRoom(s, rift.rooms[room]!, room, room === rift.rooms.length - 1);
+
+/** One whole run; returns the outcome and the room type where it ended. */
+function playRun(names: string[], seed: number) {
+  let s = createRun({ rift, party: party(names), leaderId: `${names[0]}-0`, seed });
+  let rng = seed;
+  const rand = (n: number) => {
+    rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+    return rng % n;
+  };
+  let fights = 0;
+  for (let guard = 0; guard < 2000 && s.status === 'active'; guard++) {
+    if (s.phase === 'map') {
+      const options = availableRooms(s);
+      const pick = options[rand(options.length)]!;
+      for (const m of s.party) {
+        const r = vote(s, m.characterId, pick);
+        if (r.ok) s = r.state;
+      }
+      if (['combat', 'elite', 'boss'].includes(findNode(s.map, pick)!.type)) fights++;
+    } else if (s.phase === 'combat' && s.combat!.phase === 'planning') s = planRound(s);
+    else if (s.phase === 'event' && !s.event!.result) {
+      // Best odds approach with the best BASE stat in the party; else the safe one.
+      const ev = getEvent(s.event!.eventId)!;
+      let best = { id: decisionOptions(s)[0]!, tester: s.party[0]!.characterId, p: 0.5 };
+      for (const a of ev.approaches) {
+        if (!a.attribute) continue;
+        for (const m of s.party) {
+          const p = testChance(m.baseAttributes[a.attribute], a.difficulty!);
+          if (p > best.p) best = { id: a.id, tester: m.characterId, p };
+        }
+      }
+      if (best.p <= 0.5) best.id = ev.approaches.find((a) => !a.attribute)?.id ?? best.id;
+      for (const m of s.party) {
+        const r = vote(s, m.characterId, best.id, best.tester);
+        if (r.ok) s = r.state;
+      }
+    } else {
+      const r = continueRun(s);
+      if (!r.ok) break;
+      s = r.state;
     }
-    if (s.outcome === 'victory') wins++;
-    else diedIn[room]!++;
+  }
+  const where = s.currentId ? findNode(s.map, s.currentId)!.type : 'none';
+  return { won: s.status === 'victory', where, fights, rooms: s.roomsVisited };
+}
+
+function simulate(names: string[], runs = RUNS) {
+  let wins = 0;
+  let fights = 0;
+  const diedIn: Record<string, number> = {};
+  for (let seed = 1; seed <= runs; seed++) {
+    const r = playRun(names, seed);
+    fights += r.fights;
+    if (r.won) wins++;
+    else diedIn[r.where] = (diedIn[r.where] ?? 0) + 1;
   }
   const pct = (n: number) => `${Math.round((n / runs) * 100)}%`;
   return {
     win: wins / runs,
-    line: `win ${pct(wins).padStart(4)}  died per room ${diedIn.map(pct).join(' / ')}`,
+    line: `win ${pct(wins).padStart(4)}  fights/run ${(fights / runs).toFixed(1)}  died in ${Object.entries(
+      diedIn,
+    )
+      .map(([k, v]) => `${k} ${pct(v)}`)
+      .join(', ')}`,
   };
 }
 
@@ -190,7 +263,7 @@ console.log(`solo average ${Math.round((solo.reduce((a, b) => a + b, 0) / solo.l
 for (const group of [
   ['sword+shield', 'bow'],
   ['sword+shield', 'bow', 'staff'],
-  ['axe', 'dual dagger', 'tome+talisman'],
+  ['axe+shield', 'dual dagger', 'tome+talisman'],
 ]) {
-  console.log(group.join(' + ').padEnd(40), simulate(group, 150).line);
+  console.log(group.join(' + ').padEnd(40), simulate(group, 100).line);
 }

@@ -544,3 +544,76 @@ original placeholder SVG (`Landscape`) until real illustration exists.
 
 **Consequences.** Pages inside the shell render content only. Presence now
 covers the Rifts and Friends screens too. Tests navigate from the hub.
+
+## ADR-032 — The Rift: a dungeon as a run state machine around combat
+
+**Status:** accepted (request #31)
+
+**Context.** A Rift used to be a fixed list of combat rooms. The owner wants a
+Slay-the-Spire-style dungeon: a branching map with several room types,
+optional rooms, secret rooms, events with attribute tests, campsites and loot,
+playable solo or in a group of up to 6.
+
+**Decision.** A new pure module `game-core/src/rift` wraps the existing combat
+engine instead of replacing it. `RunState` (map, party, current room, combat
+state, event, votes, granted items) is stored in the existing
+`rift_runs.state` JSONB column with `version: 2`; the server keeps one row lock
+per action, as before. The map is generated from a data template with
+controlled rules and validated (regenerated deterministically when invalid).
+Group decisions are votes (owner); hidden secret rooms are never sent to
+clients. Exploration tests take a branded `BaseAttributes` type so only base
+stats can be used (owner's fundamental rule). Old active runs were closed by
+migration 0008. The map is drawn in SVG (React), not PixiJS: it is a static
+diagram with real buttons; the combat stage stays on PixiJS (ADR-029).
+
+**Consequences.** New room types, events and conditions are data. Fights
+reuse `createEncounter` with exploration conditions applied. Items found
+during a run go straight to the inventory (provisional, A43).
+
+## ADR-033 — Combat rounds: planning phase + alternating resolution
+
+**Status:** accepted (request #31, replaces the PvE turn order of D14)
+
+**Context.** The combat spec asks for a round structure where players plan
+first and actions resolve one at a time, alternating between teams, with team
+initiative (roll + Agility), Focus generated from Precision (min 3) and a
+1-Focus Block that stacks and resets every round.
+
+**Decision.** The engine keeps its pure `(state, action) → state` shape but the
+player actions became `plan`, `unplan` and `ready`. The party plan is one
+ordered list (owner: each team resolves in planned order); enemy intents are
+the enemy plan. `resolveRound` alternates the two queues; every action is
+re-validated against the current battlefield (downed/stunned actors skip, Focus
+re-checked, empty columns re-aim). Statuses count down per round. Focus carries
+over up to a cap (owner). All numbers live in `COMBAT_RULES`, `FOCUS_RULES`,
+`BASIC_ACTIONS` and `WEAPON_RULES`.
+
+**Consequences.** Group play no longer waits on each player in turn: everyone
+plans at the same time with one 60 s timer per round. The client replays the
+whole resolution from the log.
+
+## ADR-034 — Weapon catalogue with identical stats per type and level
+
+**Status:** accepted (request #31)
+
+**Decision.** `content/weapons.ts` defines each weapon type (hands, category,
+primary/secondary attribute, attack type, base damage, basic attack). Weapon
+ability scaling and basic attack damage are derived from it, so every weapon
+of a type shares them. Instances store `upgrade_level` (+N multiplies the
+weapon's ability values), `specials` (max 5) and `rune_slots` (2, locked).
+No random rolls. Runes, rune effects, specials content and the Runemaster are
+future features (data structure only).
+
+## ADR-035 — Dungeon Threat: evaluated, not implemented
+
+**Status:** proposed (request #31, optional system)
+
+**Evaluation.** It fits the current design cleanly: `RunState` could hold a
+`threat` number raised by failed event tests, elite rooms skipped/fought,
+time-outs or chosen risky approaches (event effect `{ kind: 'threat' }`), and
+`createEncounter` already accepts modifiers for the party; the boss room would
+read the threat and apply data-driven tiers (extra HP/power, an extra ability,
+a starting status on the party, an extra enemy). Nothing in the engine blocks
+it. **Open questions for the owner:** what raises (and lowers) Threat, whether
+players see it, the tiers and their effects, and whether it changes rewards.
+Not implemented until those are decided.

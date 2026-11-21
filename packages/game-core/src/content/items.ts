@@ -1,14 +1,17 @@
 import type { Attributes, EquipSlot, ItemKind } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
+import type { WeaponType } from './weapons.js';
+
+export type { WeaponType } from './weapons.js';
 
 /*
  * Item definitions (data). PROVISIONAL CONTENT. Weapons define how a
  * character attacks (D9); main hand + off hand abilities combine (D33).
  * Equipment may raise attributes (D21). Armor/resistance are ratings (D34).
+ * Weapon base stats come from the weapon catalogue (`weapons.ts`, request #31):
+ * every weapon of a type shares the same numbers and basic attack. The first
+ * ability of a weapon is its basic attack.
  */
-
-export type WeaponType =
-  'sword' | 'axe' | 'dagger' | 'bow' | 'staff' | 'tome' | 'shield' | 'talisman';
 
 export interface ItemDef {
   id: string;
@@ -41,10 +44,9 @@ export const ITEMS = {
   woodcutter_axe: item({
     id: 'woodcutter_axe',
     name: 'Woodcutter Axe',
-    description: 'Heavy hits. Scales with Might and Vitality. Needs both hands.',
+    description: 'Heavy hits. Scales with Might and Endurance. One hand.',
     kind: 'weapon',
     slots: ['mainHand'],
-    twoHanded: true,
     weaponType: 'axe',
     abilities: ['chop', 'sunder'],
   }),
@@ -70,17 +72,46 @@ export const ITEMS = {
   apprentice_staff: item({
     id: 'apprentice_staff',
     name: 'Apprentice Staff',
-    description: 'Spells and healing. Scales with Arcana and Spirit. Needs both hands.',
+    description: 'Magic and healing. Scales with Intellect and Will. Needs both hands.',
     kind: 'weapon',
     slots: ['mainHand'],
     twoHanded: true,
     weaponType: 'staff',
     abilities: ['staff_strike', 'arcane_bolt', 'firebolt', 'mend'],
   }),
+  ash_spear: item({
+    id: 'ash_spear',
+    name: 'Ash Spear',
+    description:
+      'Long reach: strikes the two nearest columns. Scales with Might and Precision. Needs both hands.',
+    kind: 'weapon',
+    slots: ['mainHand'],
+    twoHanded: true,
+    weaponType: 'spear',
+    abilities: ['thrust'],
+  }),
+  iron_mace: item({
+    id: 'iron_mace',
+    name: 'Iron Mace',
+    description: 'Blunt and steady. Scales with Might and Endurance. One hand.',
+    kind: 'weapon',
+    slots: ['mainHand'],
+    weaponType: 'mace',
+    abilities: ['crush'],
+  }),
+  birch_wand: item({
+    id: 'birch_wand',
+    name: 'Birch Wand',
+    description: 'Precise bolts at any enemy. Scales with Intellect and Precision. One hand.',
+    kind: 'weapon',
+    slots: ['mainHand'],
+    weaponType: 'wand',
+    abilities: ['wand_bolt'],
+  }),
   worn_tome: item({
     id: 'worn_tome',
     name: 'Worn Tome',
-    description: 'Curses and sparks. Scales with Arcana and Precision. One hand.',
+    description: 'Curses and sparks. Scales with Intellect and Precision. One hand.',
     kind: 'weapon',
     slots: ['mainHand'],
     weaponType: 'tome',
@@ -91,7 +122,7 @@ export const ITEMS = {
   wooden_shield: item({
     id: 'wooden_shield',
     name: 'Wooden Shield',
-    description: 'Block for yourself or a whole column. Scales with Might and Vitality.',
+    description: 'Block for yourself or a whole column. Scales with Might and Endurance.',
     kind: 'offhand',
     slots: ['offHand'],
     weaponType: 'shield',
@@ -101,7 +132,7 @@ export const ITEMS = {
   bone_talisman: item({
     id: 'bone_talisman',
     name: 'Bone Talisman',
-    description: 'Small heals and wards. Scales with Spirit.',
+    description: 'Small heals and wards. Scales with Will.',
     kind: 'offhand',
     slots: ['offHand'],
     weaponType: 'talisman',
@@ -142,7 +173,7 @@ export const ITEMS = {
     description: 'Hardens the body.',
     kind: 'accessory',
     slots: ACCESSORY,
-    bonuses: { vitality: 2 },
+    bonuses: { endurance: 2 },
   }),
   charm_of_focus: item({
     id: 'charm_of_focus',
@@ -150,7 +181,7 @@ export const ITEMS = {
     description: 'Sharpens the mind.',
     kind: 'accessory',
     slots: ACCESSORY,
-    bonuses: { arcana: 1, spirit: 1 },
+    bonuses: { intellect: 1, will: 1 },
   }),
   hawkeye_band: item({
     id: 'hawkeye_band',
@@ -181,8 +212,11 @@ export const STARTER_WEAPONS: ItemDefId[] = [
   'training_sword',
   'woodcutter_axe',
   'rusty_dagger',
+  'ash_spear',
+  'iron_mace',
   'hunting_bow',
   'apprentice_staff',
+  'birch_wand',
   'worn_tome',
 ];
 /** Optional off-hands at creation (only with one-handed weapons). */

@@ -10,18 +10,18 @@ export const ATTRIBUTE_NAMES: Record<AttributeKey, string> = {
   might: 'Might',
   agility: 'Agility',
   precision: 'Precision',
-  vitality: 'Vitality',
-  arcana: 'Arcana',
-  spirit: 'Spirit',
+  endurance: 'Endurance',
+  intellect: 'Intellect',
+  will: 'Will',
 };
 
 export const ATTRIBUTE_SUMMARIES: Record<AttributeKey, string> = {
-  might: 'Physical damage and shield Block',
-  agility: 'Turn order (initiative) and dodge',
-  precision: 'Critical chance and critical damage',
-  vitality: 'Health and healing received',
-  arcana: 'Magic damage and maximum mana',
-  spirit: 'Healing, magic resistance, mana recovery, status effects',
+  might: 'Physical strength, impact and heavy weapons',
+  agility: 'Initiative, evasion and speed',
+  precision: 'Accuracy, critical hits, exploiting weaknesses and Focus per round',
+  endurance: 'Health, physical resistance and defence',
+  intellect: 'Magical power, elemental effects and maximum Mana',
+  will: 'Support, healing, control and mental resistance',
 };
 
 export const ATTRIBUTE_RULES = {

@@ -154,7 +154,7 @@ function ActivityCard({ characterId }: { characterId: string }) {
   let action: { to: string; label: string };
   if (run) {
     title = `Inside ${run.riftName}`;
-    body = `Room ${run.roomIndex + 1} of ${run.rooms.length} — your party is waiting.`;
+    body = `${run.roomsVisited} rooms explored — your party is waiting.`;
     action = { to: `/rifts/runs/${run.id}`, label: 'Resume' };
   } else if (lobby) {
     title = `Lobby: ${lobby.riftName}`;

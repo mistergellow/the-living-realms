@@ -37,7 +37,7 @@ map, because combat is the core of the game.
 - [x] **M1 done:** six D&D attributes with point-buy; derived stats; items with quality/durability; equipment with 7 slots (two-handed rules, attribute bonuses); weapons grant abilities; learned-skills table; per-character reputation; starter weapon choice + starter kit; character sheet screen
 - [x] Data-driven definitions (items, abilities) so numbers can be tuned quickly
 
-## Phase 3 — Combat and Rifts 🔜 (M2 + Combat 2.0 + M3 done)
+## Phase 3 — Combat and Rifts 🔜 (M2 + Combat 2.0 + M3 + The Rift done)
 
 Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 **difficulty does not change** with the number of players.
@@ -50,6 +50,10 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **Formation fix (D38):** 3 columns (front, mid, back) × 2 lines per side, column-based reach and areas
 - [x] **M3 done:** friends (requests by character name, online status); lobbies up to 6 (public or invite-only, invites to friends, formation slots, ready check, kick, leader hand-over, leader starts for everyone); group combat (initiative across players, leaving penalises only the leaver); live refresh by polling
 - [x] Combat screen rendered with PixiJS (animated stage, layered characters, projectiles, effects; ADR-029)
+- [x] **The Rift (request #31):** dungeons with a procedural branching map (≥ 10 rooms, converging branches, optional rooms, hidden secret rooms, boss); Combat, Elite, Campsite, Random Event, Loot, Secret and Boss rooms; events with attribute tests on BASE stats; lasting debuffs/boons; group votes; rewards mostly after the boss
+- [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
+- [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
+- ❓ Dungeon Threat (ADR-035: evaluated, waiting for design decisions); Runemaster, runes and weapon specials content
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 

@@ -12,23 +12,32 @@ import {
   type RiftRun,
 } from '@realms/db';
 import {
-  applyAction,
+  combatAction,
   COMBAT_RULES,
-  createEncounter,
-  enterNextRoom,
+  continueRun,
+  createRun,
+  currentRoomType,
+  getEnemy,
+  getEvent,
   getItemDef,
   getRift,
-  leaveParty,
-  partyId,
+  hasDeadline,
+  leaveRun,
   qualityAfterDefeat,
+  riftDepth,
   Rng,
   RIFTS,
+  RUN_STATE_VERSION,
   seedFrom,
-  timeoutTurn,
+  timeoutRun,
   toCombatView,
-  type CombatState,
-  type PartyMemberInput,
+  toMapDto,
+  toRunMembers,
+  vote,
   type RiftDef,
+  type RunMember,
+  type RunResult,
+  type RunState,
 } from '@realms/game-core';
 import {
   ErrorCode,
@@ -48,21 +57,41 @@ import { riftsRepository as repo } from './rifts.repository.js';
 
 type ParticipantResult = { rewards?: RunRewardsDto; penalty?: RunPenaltyDto };
 
+/** Combat planning and group decisions both use the 60 s timer (D16). */
 const TURN_MS = COMBAT_RULES.turnSeconds * 1000;
 const MAX_CATCH_UP_TURNS = 50;
+
+const bossName = (r: RiftDef) =>
+  r.encounters.boss.enemies.map((e) => getEnemy(e.enemy)).find((e) => e?.isBoss)?.name ??
+  r.encounters.boss.name;
 
 export const toRiftDto = (r: RiftDef): RiftDto => ({
   id: r.id,
   name: r.name,
   description: r.description,
-  rooms: r.rooms.map((room) => ({ name: room.name, isBoss: !!room.isBoss })),
+  depth: riftDepth(r),
+  bossName: bossName(r),
 });
 
 /** Ranged and caster weapons start in the back column; everything else in front (A31). */
 export function startingSlot(abilityIds: string[]): number {
-  const backline = ['aimed_shot', 'arcane_bolt', 'spark'].some((a) => abilityIds.includes(a));
+  const backline = ['aimed_shot', 'arcane_bolt', 'spark', 'wand_bolt', 'staff_strike'].some((a) =>
+    abilityIds.includes(a),
+  );
   return backline ? 4 : 0;
 }
+
+/** Runs created before request #31 have no `version`; they were closed by migration 0008. */
+const runStateOf = (run: RiftRun): RunState => {
+  const state = run.state as RunState;
+  if (state.version !== RUN_STATE_VERSION)
+    throw new AppError(409, ErrorCode.INVALID_ACTION, 'This Rift run is from an older version.');
+  return state;
+};
+
+/** Identifies the current timed decision: a new one starts a fresh 60 s timer. */
+const decisionKey = (s: RunState) =>
+  `${s.phase}:${s.roomsVisited}:${s.combat?.round ?? 0}:${s.event?.result ? 'r' : ''}`;
 
 /** A character can only be in one active Rift run and one open lobby at a time. */
 export async function assertFreeForRift(
@@ -85,8 +114,7 @@ export async function assertFreeForRift(
     );
 }
 
-const statusOf = (state: CombatState): RunStatus =>
-  state.phase === 'ended' ? (state.outcome === 'victory' ? 'victory' : 'defeat') : 'active';
+const statusOf = (state: RunState): RunStatus => state.status;
 
 export class RiftsService {
   private readonly db: Database;
@@ -127,8 +155,9 @@ export class RiftsService {
     tx: DbOrTx,
     rift: RiftDef,
     members: Array<{ accountId: string; character: Character; slot?: number }>,
+    leaderId?: string,
   ): Promise<string> {
-    const party: PartyMemberInput[] = [];
+    const party: Array<Omit<RunMember, 'conditions' | 'left'>> = [];
     const used = new Set<number>();
     for (const m of members) {
       const profile = await this.sheets.combatProfile(tx, m.character);
@@ -139,19 +168,20 @@ export class RiftsService {
         characterId: m.character.id,
         name: m.character.name,
         appearance: profile.appearance,
+        baseAttributes: profile.baseAttributes,
         attributes: profile.attributes,
         stats: profile.stats,
         abilityIds: profile.abilityIds,
+        abilityMultipliers: profile.abilityMultipliers,
         hp: profile.stats.maxHp,
         mana: profile.stats.maxMana,
         slot,
       });
     }
-    const state = createEncounter({
+    const state = createRun({
+      rift,
       party,
-      room: rift.rooms[0]!,
-      roomIndex: 0,
-      isLastRoom: rift.rooms.length === 1,
+      leaderId: leaderId ?? members[0]!.character.id,
       seed: randomInt(2 ** 31),
     });
     const [run] = await tx
@@ -200,37 +230,35 @@ export class RiftsService {
         throw new AppError(409, ErrorCode.INVALID_ACTION, 'This Rift run has ended.');
       if ((await repo.participant(tx, run.id, characterId))?.leftAt)
         throw new AppError(409, ErrorCode.INVALID_ACTION, 'You left this Rift.');
-      const rift = getRift(run.riftId)!;
-      let state = run.state as CombatState;
-      let roomIndex = run.roomIndex;
+      let state = runStateOf(run);
 
       if (action.type === 'abandon') {
-        // A28: the leaver is penalised now; the others keep fighting.
+        // A28: the leaver is penalised now; the others keep going.
         await this.penalise(tx, run, characterId, true);
-        state = leaveParty(state, partyId(characterId));
-        return this.saveAndFinish(tx, run, state, roomIndex, characterId, statusOf(state));
+        state = leaveRun(state, characterId);
+        return this.saveAndFinish(tx, run, state, characterId);
       }
-      if (action.type === 'advance') {
-        if (state.phase !== 'room_cleared')
-          throw new AppError(400, ErrorCode.INVALID_ACTION, 'Clear the room first.');
-        roomIndex += 1;
-        state = enterNextRoom(
-          state,
-          rift.rooms[roomIndex]!,
-          roomIndex,
-          roomIndex === rift.rooms.length - 1,
+      let result: RunResult;
+      switch (action.type) {
+        case 'plan':
+        case 'unplan':
+        case 'ready':
+          result = combatAction(state, characterId, action);
+          break;
+        case 'vote':
+          result = vote(state, characterId, action.optionId, action.testerId);
+          break;
+        case 'continue':
+          result = continueRun(state);
+          break;
+      }
+      if (!result.ok)
+        throw new AppError(
+          result.code === 'NOT_YOUR_TURN' ? 409 : 400,
+          ErrorCode[result.code],
+          result.reason,
         );
-      } else {
-        const result = applyAction(state, partyId(characterId), action);
-        if (!result.ok)
-          throw new AppError(
-            result.code === 'NOT_YOUR_TURN' ? 409 : 400,
-            ErrorCode[result.code],
-            result.reason,
-          );
-        state = result.state;
-      }
-      return this.saveAndFinish(tx, run, state, roomIndex, characterId, statusOf(state));
+      return this.saveAndFinish(tx, run, result.state, characterId);
     });
   }
 
@@ -249,19 +277,20 @@ export class RiftsService {
     return run;
   }
 
-  /** Apply turn timeouts that expired while nobody was looking (D16). */
+  /** Apply decision/planning timeouts that expired while nobody was looking (D16). */
   private async catchUpTimers(tx: DbOrTx, run: RiftRun): Promise<RiftRun> {
     if (run.status !== 'active' || !run.turnDeadline) return run;
-    let state = run.state as CombatState;
+    let state = runStateOf(run);
     let deadline = run.turnDeadline.getTime();
     const now = Date.now();
     let changed = false;
-    for (let i = 0; i < MAX_CATCH_UP_TURNS && state.phase === 'party' && deadline <= now; i++) {
-      state = timeoutTurn(state);
+    for (let i = 0; i < MAX_CATCH_UP_TURNS && hasDeadline(state) && deadline <= now; i++) {
+      state = timeoutRun(state);
       deadline += TURN_MS;
       changed = true;
     }
     if (!changed) return run;
+    await this.grantItems(tx, run, state);
     const status = statusOf(state);
     if (status !== 'active') await this.finish(tx, run, status);
     const [updated] = await tx
@@ -269,8 +298,9 @@ export class RiftsService {
       .set({
         state,
         status,
+        roomIndex: state.roomsVisited,
         version: sql`${riftRuns.version} + 1`,
-        turnDeadline: state.phase === 'party' ? new Date(deadline) : null,
+        turnDeadline: hasDeadline(state) ? new Date(Math.max(deadline, now + 1000)) : null,
         endedAt: status === 'active' ? null : new Date(),
       })
       .where(eq(riftRuns.id, run.id))
@@ -281,27 +311,25 @@ export class RiftsService {
   private async saveAndFinish(
     tx: DbOrTx,
     run: RiftRun,
-    state: CombatState,
-    roomIndex: number,
+    state: RunState,
     characterId: string,
-    status: RunStatus,
   ): Promise<RunDto> {
-    const prev = run.state as CombatState;
-    // A new turn starts a fresh 60 s timer; otherwise the current one keeps running.
-    const turnChanged =
-      prev.activeId !== state.activeId || prev.round !== state.round || roomIndex !== run.roomIndex;
-    const turnDeadline =
-      state.phase !== 'party'
-        ? null
-        : turnChanged || !run.turnDeadline
-          ? new Date(Date.now() + TURN_MS)
-          : run.turnDeadline;
-    if (status !== 'active') await this.finish(tx, { ...run, roomIndex }, status);
+    const prev = run.state as RunState;
+    const status = statusOf(state);
+    // A new decision starts a fresh 60 s timer; otherwise the current one keeps running.
+    const turnDeadline = !hasDeadline(state)
+      ? null
+      : decisionKey(prev) !== decisionKey(state) || !run.turnDeadline
+        ? new Date(Date.now() + TURN_MS)
+        : run.turnDeadline;
+    await this.grantItems(tx, run, state);
+    if (status !== 'active')
+      await this.finish(tx, { ...run, roomIndex: state.roomsVisited }, status);
     const [updated] = await tx
       .update(riftRuns)
       .set({
         state,
-        roomIndex,
+        roomIndex: state.roomsVisited,
         status,
         version: sql`${riftRuns.version} + 1`,
         turnDeadline,
@@ -310,6 +338,30 @@ export class RiftsService {
       .where(eq(riftRuns.id, run.id))
       .returning();
     return this.toRunDto(tx, updated!, characterId);
+  }
+
+  /** Items found in Loot/Secret rooms and events go straight to the inventory (A-request #31). */
+  private async grantItems(tx: DbOrTx, run: RiftRun, state: RunState): Promise<void> {
+    for (const g of state.grants) {
+      await tx
+        .insert(items)
+        .values({ characterId: g.characterId, itemDefId: g.itemDefId, source: g.source });
+    }
+    if (state.grants.length) {
+      const p = await repo.participants(tx, run.id);
+      for (const g of state.grants) {
+        const who = p.find((x) => x.characterId === g.characterId);
+        if (!who) continue;
+        await tx.insert(worldEvents).values({
+          worldId: run.worldId,
+          type: 'rift.item_found',
+          actorAccountId: who.accountId,
+          actorCharacterId: g.characterId,
+          payload: { riftId: run.riftId, runId: run.id, itemDefId: g.itemDefId, source: g.source },
+        });
+      }
+    }
+    state.grants = [];
   }
 
   /** Rewards on victory (D20), equipment quality loss on defeat (D19/D30). */
@@ -420,25 +472,49 @@ export class RiftsService {
             : 'rift.failed',
       actorAccountId: accountId,
       actorCharacterId: characterId,
-      payload: { riftId: run.riftId, runId: run.id, status, roomIndex: run.roomIndex },
+      payload: { riftId: run.riftId, runId: run.id, status, roomsVisited: run.roomIndex },
     });
   }
 
   private async toRunDto(tx: DbOrTx, run: RiftRun, characterId: string): Promise<RunDto> {
     const rift = getRift(run.riftId)!;
+    const state = runStateOf(run);
     const me = await repo.participant(tx, run.id, characterId);
     const result = (me?.result ?? null) as ParticipantResult | null;
     // A player who left sees the run as over for them.
     const status: RunStatus = me?.leftAt ? 'abandoned' : (run.status as RunStatus);
+    const event = state.event ? getEvent(state.event.eventId) : undefined;
     return {
       id: run.id,
       riftId: run.riftId,
       riftName: rift.name,
       status,
-      roomIndex: run.roomIndex,
-      rooms: toRiftDto(rift).rooms,
-      combat: toCombatView(run.state as CombatState),
-      turnDeadline: run.turnDeadline?.toISOString() ?? null,
+      phase: state.phase,
+      roomsVisited: state.roomsVisited,
+      map: toMapDto(state),
+      roomType: currentRoomType(state),
+      party: toRunMembers(state),
+      leaderId: state.leaderId,
+      combat: state.combat ? toCombatView(state.combat) : null,
+      event:
+        state.event && event
+          ? {
+              eventId: event.id,
+              title: event.title,
+              text: event.text,
+              approaches: event.approaches.map((a) => ({
+                id: a.id,
+                label: a.label,
+                description: a.description,
+                attribute: a.attribute,
+                difficulty: a.difficulty,
+              })),
+              result: state.event.result,
+            }
+          : null,
+      outcome: state.outcome,
+      votes: state.votes,
+      deadline: run.turnDeadline?.toISOString() ?? null,
       rewards: status === 'active' ? null : (result?.rewards ?? null),
       penalty: status === 'active' ? null : (result?.penalty ?? null),
     };

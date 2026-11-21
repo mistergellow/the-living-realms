@@ -90,7 +90,6 @@ describe('combat timeline', () => {
   it('makes one step per ability, with its results attached', () => {
     const log: CombatLogEntry[] = [
       { t: 'round', round: 2 },
-      { t: 'turn', actorId: 'e:1' },
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'] },
       { t: 'damage', targetId: 'p:a', amount: 5, crit: false, blocked: 0 },
       { t: 'ability', actorId: 'e:2', abilityId: 'aimed_shot', targetIds: ['p:a'] },
@@ -112,7 +111,7 @@ describe('combat timeline', () => {
     const steps = buildTimeline([
       { t: 'ability', actorId: 'e:1', abilityId: 'slash', targetIds: ['p:a'], seq: 5 },
       { t: 'damage', targetId: 'p:a', amount: 2, crit: false, blocked: 0, seq: 6 },
-      { t: 'turn', actorId: 'e:2', seq: 7 },
+      { t: 'resolve', first: 'party', seq: 7 },
       { t: 'ability', actorId: 'e:2', abilityId: 'slash', targetIds: ['p:a'], seq: 8 },
       { t: 'dodge', targetId: 'p:a', seq: 9 },
     ]);

@@ -1,4 +1,5 @@
 import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/shared';
+import { WEAPON_RULES, WEAPON_TYPES, weaponScaling, type CatalogueWeaponType } from './weapons.js';
 
 /*
  * Ability definitions (data). PROVISIONAL CONTENT — names and numbers are
@@ -15,7 +16,8 @@ import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/
  */
 
 export type Column = CombatColumn;
-export type Reach = 'first' | 'any' | Column[];
+/** 'first2' = the two nearest occupied columns (spear reach). */
+export type Reach = 'first' | 'first2' | 'any' | Column[];
 export type DamageType = 'physical' | 'ranged' | 'magic';
 
 export interface AbilityTargeting {
@@ -57,14 +59,43 @@ const ENEMY_FIRST_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'first', ar
 const ENEMY_ANY_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'any', area: 'column' };
 const ALLY_ANY: AbilityTargeting = { side: 'ally', reach: 'any', area: 'single' };
 
-const SWORD = { might: 0.6, agility: 0.4 };
-const AXE = { might: 0.6, vitality: 0.4 };
-const DAGGER = { agility: 0.5, precision: 0.5 };
-const BOW = { precision: 0.6, agility: 0.4 };
-const STAFF = { arcana: 0.7, spirit: 0.3 };
-const TOME = { arcana: 0.5, precision: 0.5 };
-const SHIELD = { might: 0.5, vitality: 0.5 };
-const TALISMAN = { spirit: 1 };
+// Weapon scaling comes from the weapon catalogue (primary + secondary attribute).
+const SWORD = weaponScaling('sword');
+const AXE = weaponScaling('axe');
+const DAGGER = weaponScaling('dagger');
+const BOW = weaponScaling('bow');
+const STAFF = weaponScaling('staff');
+const TOME = weaponScaling('tome');
+const SHIELD = { might: 0.5, endurance: 0.5 };
+const TALISMAN = { will: 1 };
+
+/**
+ * Actions every character has (combat spec, request #31). Costs are confirmed
+ * by the owner (1 Focus each); the Block amount is PROVISIONAL.
+ */
+export const BASIC_ACTIONS = {
+  changePosition: { focusCost: 1 },
+  block: { focusCost: 1, amount: 5 },
+} as const;
+
+/**
+ * The basic attack of a weapon type: same for every weapon of that type.
+ * Damage = the type's base damage; cost = WEAPON_RULES.basicAttackFocusCost.
+ */
+function basicAttack(
+  type: CatalogueWeaponType,
+  a: Pick<AbilityDef, 'id' | 'name' | 'description' | 'targeting'>,
+): AbilityDef {
+  const w = WEAPON_TYPES[type];
+  return {
+    ...a,
+    source: 'weapon',
+    focusCost: WEAPON_RULES.basicAttackFocusCost,
+    manaCost: 0,
+    effects: [{ kind: 'damage', damageType: w.attackType, ...w.baseDamage }],
+    scaling: weaponScaling(type),
+  };
+}
 
 export const ABILITIES = {
   // ---- universal ----
@@ -74,10 +105,21 @@ export const ABILITIES = {
     description:
       'Move to another slot on your side. Swapping with another player costs Focus for both of you.',
     source: 'universal',
-    focusCost: 1,
+    focusCost: BASIC_ACTIONS.changePosition.focusCost,
     manaCost: 0,
     targeting: { side: 'ally', reach: 'any', area: 'single' },
     effects: [{ kind: 'swap' }],
+    scaling: {},
+  }),
+  block: ability({
+    id: 'block',
+    name: 'Block',
+    description: 'Brace yourself: gain Block until the end of the round. Stacks.',
+    source: 'universal',
+    focusCost: BASIC_ACTIONS.block.focusCost,
+    manaCost: 0,
+    targeting: { side: 'self', reach: 'any', area: 'single' },
+    effects: [{ kind: 'block', min: BASIC_ACTIONS.block.amount, max: BASIC_ACTIONS.block.amount }],
     scaling: {},
   }),
   unarmed_strike: ability({
@@ -93,16 +135,11 @@ export const ABILITIES = {
   }),
 
   // ---- sword: Might + Agility ----
-  slash: ability({
+  slash: basicAttack('sword', {
     id: 'slash',
     name: 'Slash',
-    description: 'A quick cut at the nearest foe.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
+    description: 'Basic sword attack: a quick cut at the nearest column.',
     targeting: ENEMY_FIRST_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 6, max: 8 }],
-    scaling: SWORD,
   }),
   cleave: ability({
     id: 'cleave',
@@ -130,17 +167,12 @@ export const ABILITIES = {
     scaling: SWORD,
   }),
 
-  // ---- axe: Might + Vitality (two-handed) ----
-  chop: ability({
+  // ---- axe: Might + Endurance (one-handed) ----
+  chop: basicAttack('axe', {
     id: 'chop',
     name: 'Chop',
-    description: 'A heavy blow.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
+    description: 'Basic axe attack: a heavy blow.',
     targeting: ENEMY_FIRST_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 7, max: 9 }],
-    scaling: AXE,
   }),
   sunder: ability({
     id: 'sunder',
@@ -158,16 +190,11 @@ export const ABILITIES = {
   }),
 
   // ---- dagger: Agility + Precision (one-handed, also off-hand) ----
-  stab: ability({
+  stab: basicAttack('dagger', {
     id: 'stab',
     name: 'Stab',
-    description: 'A fast thrust.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
+    description: 'Basic dagger attack: a fast thrust.',
     targeting: ENEMY_FIRST_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 8, max: 10 }],
-    scaling: DAGGER,
   }),
   puncture: ability({
     id: 'puncture',
@@ -206,7 +233,7 @@ export const ABILITIES = {
   shadowstep: ability({
     id: 'shadowstep',
     name: 'Shadowstep',
-    description: 'Slip out of reach: gain Block until your next turn.',
+    description: 'Slip out of reach: gain Block until the end of the round.',
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
@@ -215,17 +242,36 @@ export const ABILITIES = {
     scaling: DAGGER,
   }),
 
+  // ---- spear: Might + Precision (two-handed) ----
+  thrust: basicAttack('spear', {
+    id: 'thrust',
+    name: 'Thrust',
+    description: 'Basic spear attack: reaches either of the two nearest columns.',
+    targeting: { side: 'enemy', reach: 'first2', area: 'column' },
+  }),
+
+  // ---- mace: Might + Endurance (one-handed) ----
+  crush: basicAttack('mace', {
+    id: 'crush',
+    name: 'Crush',
+    description: 'Basic mace attack: a blunt, steady blow.',
+    targeting: ENEMY_FIRST_COLUMN,
+  }),
+
+  // ---- wand: Intellect + Precision (one-handed) ----
+  wand_bolt: basicAttack('wand', {
+    id: 'wand_bolt',
+    name: 'Wand Bolt',
+    description: 'Basic wand attack: a precise bolt at any column. Costs no mana.',
+    targeting: ENEMY_ANY_COLUMN,
+  }),
+
   // ---- bow: Precision + Agility (two-handed) ----
-  aimed_shot: ability({
+  aimed_shot: basicAttack('bow', {
     id: 'aimed_shot',
     name: 'Aimed Shot',
-    description: 'A precise arrow at any enemy.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
+    description: 'Basic bow attack: a precise arrow at any column.',
     targeting: ENEMY_ANY_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'ranged', min: 6, max: 7 }],
-    scaling: BOW,
   }),
   volley: ability({
     id: 'volley',
@@ -253,17 +299,12 @@ export const ABILITIES = {
     scaling: BOW,
   }),
 
-  // ---- staff: Arcana + Spirit (two-handed) ----
-  staff_strike: ability({
+  // ---- staff: Intellect + Will (two-handed) ----
+  staff_strike: basicAttack('staff', {
     id: 'staff_strike',
-    name: 'Staff Strike',
-    description: 'A blunt blow with the staff.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
-    targeting: ENEMY_FIRST_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'physical', min: 2, max: 4 }],
-    scaling: STAFF,
+    name: 'Staff Bolt',
+    description: 'Basic staff attack: a weak bolt of magic at any column. Costs no mana.',
+    targeting: ENEMY_ANY_COLUMN,
   }),
   arcane_bolt: ability({
     id: 'arcane_bolt',
@@ -299,20 +340,15 @@ export const ABILITIES = {
     manaCost: 5,
     targeting: ALLY_ANY,
     effects: [{ kind: 'heal', min: 3, max: 4 }],
-    scaling: { spirit: 0.7, arcana: 0.3 },
+    scaling: { will: 0.7, intellect: 0.3 },
   }),
 
-  // ---- tome: Arcana + Precision (one-handed) ----
-  spark: ability({
+  // ---- tome: Intellect + Precision (one-handed) ----
+  spark: basicAttack('tome', {
     id: 'spark',
     name: 'Spark',
-    description: 'A basic spell at any enemy. Costs no mana.',
-    source: 'weapon',
-    focusCost: 1,
-    manaCost: 0,
+    description: 'Basic tome attack: a spark at any column. Costs no mana.',
     targeting: ENEMY_ANY_COLUMN,
-    effects: [{ kind: 'damage', damageType: 'magic', min: 4, max: 6 }],
-    scaling: TOME,
   }),
   hex: ability({
     id: 'hex',
@@ -329,11 +365,11 @@ export const ABILITIES = {
     scaling: TOME,
   }),
 
-  // ---- shield (off-hand): Might + Vitality ----
+  // ---- shield (off-hand): Might + Endurance ----
   raise_shield: ability({
     id: 'raise_shield',
     name: 'Raise Shield',
-    description: 'Gain Block until your next turn.',
+    description: 'Gain Block until the end of the round.',
     source: 'weapon',
     focusCost: 1,
     manaCost: 0,
@@ -344,7 +380,7 @@ export const ABILITIES = {
   shield_wall: ability({
     id: 'shield_wall',
     name: 'Shield Wall',
-    description: 'Block for both allies in a column until your next turn.',
+    description: 'Block for both allies in a column until the end of the round.',
     source: 'weapon',
     focusCost: 2,
     manaCost: 0,
@@ -353,7 +389,7 @@ export const ABILITIES = {
     scaling: SHIELD,
   }),
 
-  // ---- talisman (off-hand): Spirit ----
+  // ---- talisman (off-hand): Will ----
   blessing: ability({
     id: 'blessing',
     name: 'Blessing',
@@ -464,7 +500,7 @@ export const ABILITIES = {
   warden_seal: ability({
     id: 'warden_seal',
     name: 'Seal',
-    description: 'Locks one foe in place: they lose their next turn.',
+    description: 'Locks one foe in place: they cannot act next round.',
     source: 'enemy',
     focusCost: 3,
     manaCost: 0,
@@ -483,7 +519,7 @@ export function getAbility(id: string): AbilityDef | undefined {
   return (ABILITIES as Record<string, AbilityDef>)[id];
 }
 
-export const UNIVERSAL_ABILITIES: AbilityId[] = ['swap_position'];
+export const UNIVERSAL_ABILITIES: AbilityId[] = ['block', 'swap_position'];
 export const UNARMED_ABILITIES: AbilityId[] = ['unarmed_strike'];
 
 export const STATUS_NAMES: Record<StatusId, string> = {
@@ -495,11 +531,11 @@ export const STATUS_NAMES: Record<StatusId, string> = {
 };
 
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
-  bleed: 'Takes damage at the start of each turn (ignores armor).',
-  burn: 'Takes damage at the start of each turn (ignores resistance).',
+  bleed: 'Takes damage at the start of each round (ignores armor).',
+  burn: 'Takes damage at the start of each round (ignores resistance).',
   mark: 'Takes 25% more damage.',
   weaken: 'Deals 25% less damage.',
-  stun: 'Loses the next turn.',
+  stun: 'Cannot act next round.',
 };
 
 export function describeTargeting(t: AbilityTargeting): string {
@@ -508,9 +544,11 @@ export function describeTargeting(t: AbilityTargeting): string {
   const where =
     t.reach === 'first'
       ? 'nearest column'
-      : t.reach === 'any'
-        ? 'any position'
-        : `${t.reach.join(' or ')} column`;
+      : t.reach === 'first2'
+        ? 'two nearest columns'
+        : t.reach === 'any'
+          ? 'any position'
+          : `${t.reach.join(' or ')} column`;
   if (t.area === 'all') return `All ${who === 'ally' ? 'allies' : 'enemies'}`;
   if (t.area === 'column') return `Whole ${who} column · ${where}`;
   return `One ${who} · ${where}`;
@@ -545,9 +583,9 @@ export function describeScaling(s: Partial<Attributes>): string {
     might: 'Might',
     agility: 'Agility',
     precision: 'Precision',
-    vitality: 'Vitality',
-    arcana: 'Arcana',
-    spirit: 'Spirit',
+    endurance: 'Endurance',
+    intellect: 'Intellect',
+    will: 'Will',
   };
   return Object.entries(s)
     .map(([k, w]) => `${names[k]} ${Math.round((w ?? 0) * 100)}%`)

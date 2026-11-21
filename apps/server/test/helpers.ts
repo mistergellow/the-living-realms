@@ -85,9 +85,9 @@ export const VALID_ATTRIBUTES = {
   might: 10,
   agility: 8,
   precision: 5,
-  vitality: 9,
-  arcana: 5,
-  spirit: 5,
+  endurance: 9,
+  intellect: 5,
+  will: 5,
 } as const; // 12 points
 export async function createCharacter(
   app: FastifyInstance,

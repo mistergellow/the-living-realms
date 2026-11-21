@@ -109,9 +109,10 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   const name = randomName('Archer');
   await page.getByLabel('Name').fill(name);
 
-  // Spend points: Agility 5 → 10 (max), Vitality 5 → 9. 3 points left unspent.
+  // Spend points: Agility 5 → 10 (max), Endurance 5 → 9. 3 points left unspent.
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
-  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Increase Vitality' }).click();
+  for (let i = 0; i < 4; i++)
+    await page.getByRole('button', { name: 'Increase Endurance' }).click();
   await expect(page.getByTestId('attr-agility')).toHaveText('10');
   await expect(page.getByTestId('points-remaining')).toContainText('3 / 12');
   await expect(page.getByRole('button', { name: 'Increase Agility' })).toBeDisabled();
@@ -141,11 +142,12 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 
-test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) => {
+test('Rift: map, plan, block, ready, resolution, abandon', async ({ page }) => {
   await register(page, `e2e-rift-${unique()}@example.com`);
   await page.getByLabel('Name').fill(randomName('Raider'));
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
-  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Increase Vitality' }).click();
+  for (let i = 0; i < 4; i++)
+    await page.getByRole('button', { name: 'Increase Endurance' }).click();
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
   await page.getByRole('button', { name: 'Wooden Shield' }).click();
   await page.getByRole('button', { name: 'Hair style long' }).click();
@@ -156,29 +158,31 @@ test('Rift combat: intents, attack, block, end turn, abandon', async ({ page }) 
   await expect(page.getByTestId('rift-card')).toContainText('Shattered Breach');
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
-  await expect(page.getByText('Your turn')).toBeVisible();
-  await expect(page.getByTestId('unit-enemies')).toHaveCount(3);
+  // The Rift map: branching paths; the first row is always a fight.
+  await expect(page.getByTestId('rift-map')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/06-rift-map.png' });
+  await page.getByTestId('room-combat').first().click();
+
+  // Planning phase: actions are planned first, then resolved together.
+  await expect(page.getByText('Plan your actions')).toBeVisible();
+  await expect(page.getByTestId('round')).toHaveText('Round 1');
   await expect(page.getByTestId('my-focus')).toHaveText('3');
   // Slay-the-Spire style intents: enemies show what they will do.
   await expect(page.getByTestId('intent').first()).toBeVisible();
 
-  // Only one column is in melee reach (the front), so Slash fires at once.
+  // Only the nearest column is in melee reach, so Slash is planned at once.
   await page.getByRole('button', { name: /^Slash/ }).click();
+  await expect(page.getByTestId('plan')).toContainText('Slash');
   await expect(page.getByTestId('my-focus')).toHaveText('2');
-  // D41: attacks hit the whole column — the Bulwark and the Husk in front.
-  await expect(page.getByTestId('combat-log')).toContainText(
-    'uses Slash on Rift Bulwark, Rift Husk',
-  );
-  await expect(page.getByTestId('intent').first()).toContainText('column');
-
-  await page.getByRole('button', { name: /^Raise Shield/ }).click();
+  await page.getByRole('button', { name: /^Block/ }).click();
   await expect(page.getByTestId('my-focus')).toHaveText('1');
-  await expect(page.getByTestId('combat-log')).toContainText('Block');
+  await expect(page.getByTestId('combat-log')).not.toContainText('uses Slash');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
 
-  await page.getByRole('button', { name: 'End turn' }).click();
-  // The enemy phase plays out on the canvas first (the text log keeps pace with it).
+  await page.getByRole('button', { name: 'Ready' }).click();
+  // The resolution plays out on the canvas first (the text log keeps pace with it).
+  await expect(page.getByTestId('combat-log')).toContainText('uses Slash', { timeout: 20_000 });
   await expect(page.getByTestId('combat-log')).toContainText('Round 2', { timeout: 20_000 });
 
   page.once('dialog', (d) => d.accept());
@@ -222,20 +226,22 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await b.getByRole('button', { name: "I'm ready" }).click();
   await a.screenshot({ path: 'test-results/screens/08-lobby.png', fullPage: true });
 
-  // A starts: both land in the same fight.
+  // A starts: both land on the Rift map and vote for the same first room.
   await a.getByRole('button', { name: 'Enter the Rift' }).click();
   await expect(a).toHaveURL(/\/rifts\/runs\//);
   await expect(b).toHaveURL(/\/rifts\/runs\//);
-  await expect(a.getByTestId('unit-party')).toHaveCount(2);
-  await expect(b.getByTestId('unit-party')).toHaveCount(2);
+  await a.getByTestId('room-combat').first().click();
+  await expect(a.getByText('Waiting for the others to vote')).toBeVisible();
+  await b.getByTestId('room-combat').first().click();
+  await expect(a.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
+  await expect(b.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
 
-  // Whoever acts first ends the turn; the other sees it's now their turn.
-  const aFirst = await a.getByText('Your turn').isVisible();
-  const [first, second] = aFirst ? [a, b] : [b, a];
-  await expect(second.getByTestId('waiting')).toContainText('Waiting for');
-  await first.getByRole('button', { name: 'End turn' }).click();
-  await expect(second.getByText('Your turn')).toBeVisible({ timeout: 10_000 });
-  await second.screenshot({ path: 'test-results/screens/09-group-combat.png' });
+  // Both plan at the same time; the round resolves once both are ready.
+  await a.getByRole('button', { name: 'Ready' }).click();
+  await expect(a.getByTestId('waiting')).toContainText(`Waiting for ${nameB}`);
+  await b.getByRole('button', { name: 'Ready' }).click();
+  await expect(b.getByTestId('round')).toHaveText('Round 2', { timeout: 20_000 });
+  await b.screenshot({ path: 'test-results/screens/09-group-combat.png' });
 
   // B leaves; A keeps fighting and sees it in the log.
   b.once('dialog', (d) => d.accept());
@@ -309,7 +315,16 @@ test('screens fit every screen size', async ({ page }) => {
   // Combat screen at every size (one run, re-rendered per viewport).
   await page.goto('/rifts');
   await page.getByRole('button', { name: 'Enter solo' }).click();
-  await expect(page.getByText('Your turn')).toBeVisible();
+  await expect(page.getByTestId('rift-map')).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await expect(page.getByTestId('rift-map')).toBeVisible();
+    await expectFitsViewport(page);
+    await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-rift-map.png` });
+  }
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.getByTestId('room-combat').first().click();
+  await expect(page.getByText('Plan your actions')).toBeVisible();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await expect(page.getByTestId('unit-enemies').first()).toBeVisible();

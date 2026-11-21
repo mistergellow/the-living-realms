@@ -698,7 +698,13 @@ export class CombatScene implements PixiScene {
       u.homeY = p.y;
       u.scale = p.scale;
       u.plateScale = ps;
-      u.active = combat.activeId === c.id && combat.phase === 'party';
+      // Players still choosing their actions this round are highlighted.
+      u.active =
+        combat.phase === 'planning' &&
+        c.side === 'party' &&
+        !c.downed &&
+        !c.stunned &&
+        !combat.ready.includes(c.id);
       const swappable = c.side === 'party' && (input.swapSlots?.has(c.slot) ?? false);
       u.targetable = input.targetIds.has(c.id) || swappable;
       u.hovered = input.hoverIds.has(c.id);

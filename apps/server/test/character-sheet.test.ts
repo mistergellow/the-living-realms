@@ -43,7 +43,7 @@ describe('character creation (attributes + starter kit)', () => {
   it('rejects overspent or out-of-range point-buy', async () => {
     const { cookie } = await registerUser(t.app);
     const over = await createCharacter(t.app, cookie, 'Greedy', {
-      attributes: { might: 10, agility: 10, precision: 10, vitality: 5, arcana: 5, spirit: 5 },
+      attributes: { might: 10, agility: 10, precision: 10, endurance: 5, intellect: 5, will: 5 },
     });
     expect(over.statusCode).toBe(400);
     expect(over.json().error.details[0].path).toBe('attributes');
@@ -76,12 +76,13 @@ describe('character creation (attributes + starter kit)', () => {
       'aimed_shot',
       'volley',
       'marking_shot',
+      'block',
       'swap_position',
     ]);
     expect(sheet.abilities[0]).toMatchObject({
       grantedBy: 'Hunting Bow',
       focusCost: 1,
-      effects: ['6–7 ranged damage'],
+      effects: ['4–6 ranged damage'],
       scaling: 'Precision 60% · Agility 40%',
     });
     expect(sheet.reputation).toBe(0);
@@ -109,7 +110,11 @@ describe('equipment', () => {
     const unarmed = off.json() as CharacterSheetDto;
     expect(unarmed.equipment.mainHand).toBeNull();
     expect(unarmed.inventory.map((i) => i.id)).toEqual([sword.id]);
-    expect(unarmed.abilities.map((a) => a.id)).toEqual(['unarmed_strike', 'swap_position']);
+    expect(unarmed.abilities.map((a) => a.id)).toEqual([
+      'unarmed_strike',
+      'block',
+      'swap_position',
+    ]);
 
     const on = await post(cookie, `/api/characters/${id}/equip`, {
       itemId: sword.id,
@@ -158,8 +163,8 @@ describe('equipment', () => {
       slot: 'accessory2',
     });
     const sheet = res.json() as CharacterSheetDto;
-    expect(sheet.baseAttributes.vitality).toBe(9);
-    expect(sheet.attributes.vitality).toBe(11);
+    expect(sheet.baseAttributes.endurance).toBe(9);
+    expect(sheet.attributes.endurance).toBe(11);
     expect(sheet.stats.maxHp).toBe(40 + 6 * 11);
   });
 
@@ -206,17 +211,17 @@ describe('creation off-hand and attribute points', () => {
   it('keeps unspent creation points and lets you spend them later', async () => {
     const { cookie } = await registerUser(t.app);
     const res = await createCharacter(t.app, cookie, 'Saver', {
-      attributes: { might: 7, agility: 5, precision: 5, vitality: 5, arcana: 5, spirit: 5 },
+      attributes: { might: 7, agility: 5, precision: 5, endurance: 5, intellect: 5, will: 5 },
     });
     const id = res.json().character.id;
     expect((await sheetOf(cookie, id)).attributePoints).toBe(10);
     const spend = await post(cookie, `/api/characters/${id}/attributes`, {
-      add: { vitality: 4, spirit: 3 },
+      add: { endurance: 4, will: 3 },
     });
     expect(spend.statusCode).toBe(200);
     const sheet = spend.json() as CharacterSheetDto;
     expect(sheet.attributePoints).toBe(3);
-    expect(sheet.baseAttributes).toMatchObject({ vitality: 9, spirit: 8 });
+    expect(sheet.baseAttributes).toMatchObject({ endurance: 9, will: 8 });
     const tooMuch = await post(cookie, `/api/characters/${id}/attributes`, { add: { might: 4 } });
     expect(tooMuch.statusCode).toBe(400);
   });

@@ -12,9 +12,9 @@ import { activeEquipment, type OwnedItem } from './equipment.js';
  */
 export const STAT_RULES = {
   hpBase: 40,
-  hpPerVitality: 6,
+  hpPerEndurance: 6,
   manaBase: 10,
-  manaPerArcana: 4,
+  manaPerIntellect: 4,
   dodgePerAgility: 2,
   maxDodge: 40,
   critBase: 5,
@@ -22,17 +22,37 @@ export const STAT_RULES = {
   maxCrit: 60,
   critDamageBase: 150,
   critDamagePerPrecision: 4,
-  healingPerSpirit: 3,
-  healingReceivedPerVitality: 2,
-  resistPerSpirit: 2,
+  healingPerWill: 3,
+  healingReceivedPerEndurance: 2,
+  resistPerWill: 2,
   manaRegenBase: 1,
-  spiritPerManaRegen: 5,
-  potencyPerSpirit: 5,
+  willPerManaRegen: 5,
+  potencyPerWill: 5,
   /** Rating that gives 50% reduction. */
   mitigationK: 50,
   /** Ability damage/heal/block multiplier per scaled attribute point (+8%). */
   scalingPerPoint: 0.08,
 } as const;
+
+/**
+ * Focus generated per round (combat spec, request #31): every character gets
+ * at least `minimum`; Precision above `basePrecision` adds 1 per
+ * `precisionPerFocus` points, up to `maxPerRound`. PROVISIONAL, configurable.
+ * Example: Precision 5 → 3, 7 → 4, 9 → 5, 11+ → 6.
+ */
+export const FOCUS_RULES = {
+  minimum: 3,
+  basePrecision: 5,
+  precisionPerFocus: 2,
+  maxPerRound: 6,
+} as const;
+
+export function focusPerRound(precision: number): number {
+  const extra = Math.floor(
+    Math.max(0, precision - FOCUS_RULES.basePrecision) / FOCUS_RULES.precisionPerFocus,
+  );
+  return Math.min(FOCUS_RULES.maxPerRound, FOCUS_RULES.minimum + extra);
+}
 
 export const reductionFromRating = (rating: number) =>
   rating <= 0 ? 0 : rating / (rating + STAT_RULES.mitigationK);
@@ -45,10 +65,10 @@ export function deriveStats(
   extraResist = 0,
 ): DerivedStatsDto {
   const a = attributes;
-  const magicResist = STAT_RULES.resistPerSpirit * a.spirit + extraResist;
+  const magicResist = STAT_RULES.resistPerWill * a.will + extraResist;
   return {
-    maxHp: STAT_RULES.hpBase + STAT_RULES.hpPerVitality * a.vitality,
-    maxMana: STAT_RULES.manaBase + STAT_RULES.manaPerArcana * a.arcana,
+    maxHp: STAT_RULES.hpBase + STAT_RULES.hpPerEndurance * a.endurance,
+    maxMana: STAT_RULES.manaBase + STAT_RULES.manaPerIntellect * a.intellect,
     armor,
     magicResist,
     physicalReduction: pct(reductionFromRating(armor)),
@@ -60,10 +80,11 @@ export function deriveStats(
       STAT_RULES.critBase + STAT_RULES.critPerPrecision * a.precision,
     ),
     critDamage: STAT_RULES.critDamageBase + STAT_RULES.critDamagePerPrecision * a.precision,
-    healingPower: STAT_RULES.healingPerSpirit * a.spirit,
-    healingReceived: STAT_RULES.healingReceivedPerVitality * a.vitality,
-    manaRegen: STAT_RULES.manaRegenBase + Math.floor(a.spirit / STAT_RULES.spiritPerManaRegen),
-    effectPotency: STAT_RULES.potencyPerSpirit * a.spirit,
+    healingPower: STAT_RULES.healingPerWill * a.will,
+    healingReceived: STAT_RULES.healingReceivedPerEndurance * a.endurance,
+    manaRegen: STAT_RULES.manaRegenBase + Math.floor(a.will / STAT_RULES.willPerManaRegen),
+    effectPotency: STAT_RULES.potencyPerWill * a.will,
+    focusPerRound: focusPerRound(a.precision),
   };
 }
 

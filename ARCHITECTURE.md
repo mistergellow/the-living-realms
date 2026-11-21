@@ -225,58 +225,96 @@ How future systems plug in (design intent, not implemented):
 If one tick loop becomes too heavy, the world is **partitioned by region**
 across several workers (one advisory lock per partition).
 
-## 7. Combat instances (Rift runs)
+## 7. Rift runs: dungeon exploration and combat
 
-Combat is separate from exploration on both sides:
+A Rift run (request #31, "The Rift") is a **dungeon**: a branching map of rooms
+(Slay-the-Spire style) ending with a mandatory boss. Combat is one kind of
+room, drawn on its own screen.
 
-- **Design goal (D36):** "Slay the Spire without cards + Darkest Dungeon":
-  Focus energy per turn, Block that expires at your next turn, statuses
-  (Bleed, Burn, Mark, Weaken, Stun) and **visible enemy intents**, on a
-  side-view battlefield with rows and positions.
-- **Engine (`game-core/combat`):** pure and deterministic, `(state, action) → state`.
-  The RNG state lives inside the combat state, so every fight can be replayed
-  and unit-tested. Rules: two rows of three slots per side; PvE rounds = party
-  members by initiative, then every enemy (simple greedy AI); Focus per turn
-  with carry-over; rooms → boss; HP/mana persist between rooms. Formation
-  (D38): per side 3 columns (front, mid, back) × 2 lines = 6 slots (0–1 front,
-  2–3 mid, 4–5 back); melee reaches the first occupied column, ranged/magic any
-  position. **Attacks pick a column, never a single unit** (D41): they hit both
-  units in it; support abilities still pick one ally. Enemies plan per column
-  and play the formation (a blocker shields its column while its partner
-  attacks, D42). Damage =
-  roll in range × attribute scaling (two attributes per weapon) × statuses ×
-  crit, reduced by rating/(rating+50), then absorbed by Block. Enemies plan
-  their turn at the start of each round (intents) and execute it, re-targeting
-  if a planned target fell.
-- **Server (`modules/rifts`):** each Rift run is a row in `rift_runs` holding the
-  whole `CombatState` as JSONB. Every action runs in a transaction that locks
-  the run row, applies the engine, and saves the new state (so a refresh,
-  reconnect or deploy never loses a fight). Rewards (reputation, drops) and
-  penalties (equipment quality) are applied in the same transaction that ends
-  the run.
-- **Turn timer (60 s):** stored as `turn_deadline`. Expired turns are applied
-  lazily whenever the run is read or acted upon (catch-up loop), and the client
-  re-fetches when its countdown hits zero. No background job is needed for solo
-  runs; lobbies (M3) add WebSocket push and a worker sweep.
-- **Transport:** HTTP for actions. Group runs and lobbies (M3) refresh by
-  polling (~1.5 s while waiting, ~4 s during your own turn); every read also
-  applies expired turn timers, so a player who disconnects simply times out.
-  A WebSocket push can replace polling later without API changes (ADR-025).
-- **Lobbies and friends:** `modules/rifts/lobbies.service.ts` (up to 6 members,
-  public or invite-only, formation slots, ready check, leader starts the run for
-  everyone) and `modules/social` (friend requests between characters, online
-  status). Leaving a group run penalises only the leaver; the others continue.
-- **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and a side-view
-  stage drawn with PixiJS (`features/rifts/combat-scene.ts`, ADR-029). New
-  combat log entries become animation steps (`combat-timeline.ts`) played one
-  action at a time; the text log, the controls during enemy actions and the
-  result overlays wait for the replay. Clicks go to DOM buttons placed over
-  the canvas from the same layout (`combat-layout.ts`, `CombatStage.tsx`).
-- **Art:** layered SVG characters (`features/avatar`) — provisional, see
-  ADR-021 — rasterised into Pixi textures per layer (`features/render`).
+### 7.1 Exploration (`game-core/src/rift`)
 
-Balance is checked with `pnpm sim` (`scripts/simulate-balance.ts`), which plays
-the test Rift many times with a heuristic bot for six typical builds.
+- **Map (`rift/map.ts`):** generated procedurally from a template (data in
+  `content/rifts.ts` → `MapTemplate`): `paths` walks from row 0 to the last
+  row, one lane step at a time, never crossing; walks that meet share rooms,
+  so branches split and converge. Each walk has a theme (safe, exploration,
+  loot, danger, mixed) whose weights choose room types under rules (fixed first
+  row = Combat, row before the boss = Campsite, no Elite before row 2, no two
+  Campsites/Elites/Loot rooms in a row). Secret rooms hang hidden from some
+  rooms and lead two rows ahead. Every map is validated (≥ 10 rooms, minimum
+  of each type, ≥ 2 entrances, a convergence, no dead ends) and regenerated
+  deterministically if invalid.
+- **Run state machine (`rift/run.ts`):** `map → (vote) → combat | event |
+room → (continue) → map … → boss`. Group decisions are votes (majority once
+  everyone voted or when the 60 s timer ends; the leader breaks ties); for
+  events the vote also names who attempts the approach. Room types and
+  conditions are data (`content/rooms.ts`), events are data
+  (`content/events.ts`). HP/Mana, slots and lasting conditions (debuffs and
+  boons from events, applied at the start of each fight) persist between rooms.
+- **BASE STATS rule (`rift/tests.ts`):** every exploration test (events,
+  secret searches, any roll in the Rift) is `roll 1..10 + BASE attribute ≥
+difficulty`. `BaseAttributes` is a branded type built only by
+  `asBaseAttributes` (the server's `baseAttributesOf`), so equipped totals
+  cannot be passed by mistake.
+- **Rewards:** fights give nothing; Loot/Secret rooms and some events grant
+  items at once (`grants`, inserted by the server); the main rewards come after
+  the boss.
+- **Hidden information:** hidden secret rooms are never sent to clients
+  (`toMapDto`).
+
+### 7.2 Combat (`game-core/src/combat`)
+
+- **Design goal (D36 + combat spec of request #31):** "Slay the Spire without
+  cards + Darkest Dungeon", with a **planning phase** and an **alternating
+  resolution**.
+- **Round:** (1) Block is reset, damage-over-time ticks, statuses count down,
+  every unit gains Focus from Precision (`focusPerRound`: min 3, unspent Focus
+  carries over to a cap) and team initiative is rolled (roll + Agility; each
+  team keeps its best). (2) Enemies plan (visible intents). (3) Players add
+  actions to the party plan (Focus/Mana are reserved) and confirm (`ready`).
+  (4) Actions resolve one at a time, alternating teams, starting with the
+  initiative winner; each team resolves its own actions in planned order; when
+  one team runs out the other finishes. Each action resolves completely
+  (damage → Block → HP → defeat) against the current battlefield; downed or
+  stunned units skip their actions; attacks whose column emptied re-aim.
+- **Engine:** pure and deterministic, `(state, action) → state`; the RNG state
+  lives inside the state. The AI (`planEnemyIntents`) only decides; the same
+  resolution code validates and applies both teams' actions. Formation (D38):
+  3 columns × 2 lines; attacks pick a column (D41); enemies play the formation
+  (D42). Damage = roll × attribute scaling × weapon upgrade × statuses × crit,
+  reduced by rating/(rating+50), then absorbed by Block.
+- **Weapons (`content/weapons.ts`):** a catalogue of weapon types (hands,
+  primary/secondary attribute, attack type, base damage, basic attack). Every
+  weapon of a type and upgrade level has identical numbers; upgrades multiply
+  the weapon's ability values. Items store upgrade level, specials (max 5) and
+  2 rune slots (locked; Runemaster = future).
+
+### 7.3 Server, timers and client
+
+- **Server (`modules/rifts`):** each run is a row in `rift_runs` holding the
+  whole `RunState` (map, party, current room, combat state, votes) as JSONB.
+  Every action runs in a transaction that locks the run row, applies the
+  game-core function, inserts granted items and saves the new state. Rewards
+  (reputation, drops) and penalties (equipment quality) are applied in the
+  transaction that ends the run.
+- **Timer (60 s):** `turn_deadline` holds the deadline of the current decision
+  (vote) or planning phase. Expired timers are applied lazily whenever the run
+  is read or acted upon (catch-up loop); the client re-fetches at zero.
+- **Transport:** HTTP for actions; group runs refresh by polling (~1.5 s, ~4 s
+  while you are still planning). A WebSocket push can replace polling later
+  without API changes (ADR-025).
+- **Lobbies and friends:** `modules/rifts/lobbies.service.ts` (up to 6, leader
+  starts the run; the lobby leader is the run leader) and `modules/social`.
+  Leaving a group run penalises only the leaver.
+- **Client:** `/rifts/runs/:runId` → `RunPage`: the exploration screen
+  (`RiftMap.tsx` SVG map, party panel, event/room panel) or the combat screen
+  (`CombatPage.tsx`: plan queue left, round + initiative top, enemy intents
+  right, battlefield centre drawn with PixiJS, character panel bottom-left,
+  ability bar + Ready bottom-right, following the owner's reference). New log
+  entries become animation steps; the controls wait for the replay.
+
+Balance is checked with `pnpm sim` (`scripts/simulate-balance.ts`): whole runs
+(random path, events with the best base stat, plan → ready fights) for ten
+typical builds, solo and in groups.
 
 ## 8. World map
 

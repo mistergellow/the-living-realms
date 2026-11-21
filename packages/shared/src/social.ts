@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { CharacterAppearance } from './api.js';
-import type { RiftRoomDto } from './combat.js';
 
 /* ---------------------------------------------------------------------------
  * Friends (A25: between characters) and Rift lobbies (up to 6 players).
@@ -48,7 +47,8 @@ export interface LobbyDto {
   id: string;
   riftId: string;
   riftName: string;
-  rooms: RiftRoomDto[];
+  /** Rooms on any path to the boss (boss included). */
+  depth: number;
   visibility: LobbyVisibility;
   status: LobbyStatus;
   leaderCharacterId: string;

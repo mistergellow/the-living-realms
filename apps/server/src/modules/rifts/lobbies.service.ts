@@ -274,6 +274,7 @@ export class LobbiesService {
           character: locked.find((c) => c.id === m.characterId)!,
           slot: m.slot,
         })),
+        lobby.leaderCharacterId,
       );
       await tx
         .update(riftLobbies)
@@ -398,7 +399,7 @@ export class LobbiesService {
       id: lobby.id,
       riftId: lobby.riftId,
       riftName: rift.name,
-      rooms: toRiftDto(rift).rooms,
+      depth: toRiftDto(rift).depth,
       visibility: lobby.visibility as LobbyVisibility,
       status: lobby.status as LobbyDto['status'],
       leaderCharacterId: lobby.leaderCharacterId,

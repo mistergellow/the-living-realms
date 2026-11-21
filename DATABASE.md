@@ -112,7 +112,10 @@ Items owned by a character. What an item _is_ lives in code
 | item_def_id            | text                           | id of the item definition in game-core content                                      |
 | quality                | smallint 0–100                 | durability; `CHECK` 0–100; 0 = broken and unusable; −25 per Rift defeat             |
 | equipped_slot          | text null                      | `EquipSlot` when equipped; unique per character (`where equipped_slot is not null`) |
-| source                 | text                           | `starter`, `drop`, …                                                                |
+| source                 | text                           | `starter`, `drop`, `loot_room`, `secret_room`, `event`, …                           |
+| upgrade_level          | smallint 0–10                  | weapons: +0, +1, … (same type + level = same stats); `CHECK` 0–10                   |
+| specials               | jsonb                          | weapons: special properties, max 5 (`[{ id, value? }]`); none yet                   |
+| rune_slots             | jsonb                          | weapons: 2 slots `{ unlocked, runeId }`, locked by default (Runemaster = future)    |
 | created_at, updated_at | timestamptz                    |                                                                                     |
 
 Migration `0002_starter_kit_for_existing_characters` gave characters created
@@ -120,6 +123,11 @@ before the character system a Training Sword and a Padded Tunic.
 
 Migrations `0004`–`0006` replaced the D&D attributes with the six attributes of
 D33; existing characters restarted at 5 in each with 12 points to spend.
+
+Migration `0008_rift_exploration_and_weapons` renamed `attr_vitality` →
+`attr_endurance`, `attr_arcana` → `attr_intellect`, `attr_spirit` → `attr_will`
+(request #31), added the weapon columns above and closed runs still active in
+the old format (no penalty).
 
 ### `character_skills`
 
@@ -131,8 +139,9 @@ D33; existing characters restarted at 5 in each with 12 points to spend.
 
 ### `rift_runs`
 
-One row per Rift run (a combat instance). The full combat state produced by the
-game-core engine is saved as JSONB after every action.
+One row per Rift run (a dungeon, request #31). The whole run state produced by
+game-core (`RunState` v2: map, party, current room, combat state, votes) is
+saved as JSONB after every action.
 
 | Column                 | Type             | Notes                                                     |
 | ---------------------- | ---------------- | --------------------------------------------------------- |
@@ -140,10 +149,10 @@ game-core engine is saved as JSONB after every action.
 | world_id               | uuid FK → worlds |                                                           |
 | rift_id                | text             | Rift definition id in game-core content                   |
 | status                 | text             | `active` \| `victory` \| `defeat` \| `abandoned`; indexed |
-| room_index             | smallint         | current room                                              |
-| state                  | jsonb            | `CombatState` (combatants, turn order, log, RNG state)    |
+| room_index             | smallint         | rooms entered so far                                      |
+| state                  | jsonb            | `RunState` v2 (map, party, combat, votes, RNG state)      |
 | version                | integer          | incremented on every saved action                         |
-| turn_deadline          | timestamptz null | end of the current 60 s player turn                       |
+| turn_deadline          | timestamptz null | end of the current 60 s vote or combat planning phase     |
 | created_at, updated_at | timestamptz      |                                                           |
 | ended_at               | timestamptz null |                                                           |
 
