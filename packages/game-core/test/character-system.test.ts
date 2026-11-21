@@ -143,7 +143,11 @@ describe('equipment and abilities', () => {
     expect(planLoadout(['firebolt'], empty.slice(1)).ok).toBe(false);
   });
   it('rings, pendant and boots go in their own slots', () => {
-    const items = [owned('r', 'ring_of_vigor'), owned('c', 'charm_of_focus'), owned('b', 'leather_boots')];
+    const items = [
+      owned('r', 'ring_of_vigor'),
+      owned('c', 'charm_of_focus'),
+      owned('b', 'leather_boots'),
+    ];
     expect(planEquip(items, 'r', 'ring2').ok).toBe(true);
     expect(planEquip(items, 'r', 'pendant').ok).toBe(false);
     expect(planEquip(items, 'c', 'pendant').ok).toBe(true);
