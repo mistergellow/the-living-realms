@@ -208,6 +208,8 @@ export interface RunMemberDto {
   baseAttributes: Attributes;
   conditions: ConditionView[];
   left: boolean;
+  /** PvP: 'party' = team A, 'enemies' = team B; null in a Rift. */
+  team: CombatSide | null;
 }
 
 export interface VoteView {
@@ -265,6 +267,16 @@ export interface RoomOutcomeView {
   search: TestRollView | null;
 }
 
+/** Dungeon Threat: raised by failures, it strengthens the boss (request #33). */
+export interface ThreatView {
+  value: number;
+  max: number;
+  /** Current tier, if any (what it does to the boss). */
+  tier: { name: string; description: string } | null;
+  /** Next tier and the Threat it needs. */
+  next: { name: string; description: string; at: number } | null;
+}
+
 export type RunPhase = 'map' | 'combat' | 'event' | 'room' | 'ended';
 export type RunStatus = 'active' | 'victory' | 'defeat' | 'abandoned';
 
@@ -282,6 +294,8 @@ export interface RunDto {
   id: string;
   riftId: string;
   riftName: string;
+  /** 'pvp' = arena match (test mode): one fight between two teams of players. */
+  mode: 'rift' | 'pvp';
   status: RunStatus;
   phase: RunPhase;
   /** Rooms entered so far. */
@@ -298,6 +312,7 @@ export interface RunDto {
   event: EventView | null;
   /** Campsite/Loot/Secret result, or what was found on entering a room. */
   outcome: RoomOutcomeView | null;
+  threat: ThreatView;
   /** Votes for the current decision (next room or event approach). */
   votes: VoteView[];
   /** ISO time the current decision or planning phase ends (60 s, D16). */

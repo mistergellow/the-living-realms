@@ -142,7 +142,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 
-test('Rift: map, plan, block, ready, resolution, abandon', async ({ page }) => {
+test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ page }) => {
   await register(page, `e2e-rift-${unique()}@example.com`);
   await page.getByLabel('Name').fill(randomName('Raider'));
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
@@ -163,26 +163,25 @@ test('Rift: map, plan, block, ready, resolution, abandon', async ({ page }) => {
   await page.screenshot({ path: 'test-results/screens/06-rift-map.png' });
   await page.getByTestId('room-combat').first().click();
 
-  // Planning phase: actions are planned first, then resolved together.
-  await expect(page.getByText('Plan your actions')).toBeVisible();
+  // PvE turn (Slay the Spire): actions happen at once, then the enemies act.
+  await expect(page.getByText('Your turn')).toBeVisible();
   await expect(page.getByTestId('round')).toHaveText('Round 1');
   await expect(page.getByTestId('my-focus')).toHaveText('3');
   // Slay-the-Spire style intents: enemies show what they will do.
   await expect(page.getByTestId('intent').first()).toBeVisible();
 
-  // Only the nearest column is in melee reach, so Slash is planned at once.
+  // Only the nearest column is in melee reach, so Slash happens at once.
   await page.getByRole('button', { name: /^Slash/ }).click();
-  await expect(page.getByTestId('plan')).toContainText('Slash');
-  await expect(page.getByTestId('my-focus')).toHaveText('2');
-  await page.getByRole('button', { name: /^Block/ }).click();
+  await expect(page.getByTestId('combat-log')).toContainText('uses Slash');
+  // A sword's basic attack costs 2 Focus (heavy weapons 3, daggers 1).
   await expect(page.getByTestId('my-focus')).toHaveText('1');
-  await expect(page.getByTestId('combat-log')).not.toContainText('uses Slash');
+  await page.getByRole('button', { name: /^Block/ }).click();
+  await expect(page.getByTestId('my-focus')).toHaveText('0');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
 
-  await page.getByRole('button', { name: 'Ready' }).click();
-  // The resolution plays out on the canvas first (the text log keeps pace with it).
-  await expect(page.getByTestId('combat-log')).toContainText('uses Slash', { timeout: 20_000 });
+  await page.getByRole('button', { name: 'End turn' }).click();
+  // The enemy phase plays out on the canvas first (the text log keeps pace with it).
   await expect(page.getByTestId('combat-log')).toContainText('Round 2', { timeout: 20_000 });
 
   page.once('dialog', (d) => d.accept());
@@ -236,10 +235,10 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await expect(a.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
   await expect(b.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
 
-  // Both plan at the same time; the round resolves once both are ready.
-  await a.getByRole('button', { name: 'Ready' }).click();
+  // Both act at the same time; the enemies act once both end their turn.
+  await a.getByRole('button', { name: 'End turn' }).click();
   await expect(a.getByTestId('waiting')).toContainText(`Waiting for ${nameB}`);
-  await b.getByRole('button', { name: 'Ready' }).click();
+  await b.getByRole('button', { name: 'End turn' }).click();
   await expect(b.getByTestId('round')).toHaveText('Round 2', { timeout: 20_000 });
   await b.screenshot({ path: 'test-results/screens/09-group-combat.png' });
 
@@ -251,6 +250,18 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
     timeout: 10_000,
   });
   await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`);
+});
+
+test('professions: practise fishing and gain XP', async ({ page }) => {
+  await register(page, `e2e-prof-${unique()}@example.com`);
+  await createCharacter(page, randomName('Angler'));
+  await page.getByRole('link', { name: 'Professions' }).click();
+  await expect(page.getByTestId('profession-fishing')).toContainText('Lv 0');
+  await page.getByTestId('profession-fishing').click();
+  await page.getByRole('button', { name: 'Fish', exact: true }).click();
+  await expect(page.getByTestId('activity-result')).toContainText('XP');
+  await expect(page.getByTestId('profession-level')).toContainText('busy');
+  await page.screenshot({ path: 'test-results/screens/10-professions.png' });
 });
 
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */
@@ -292,6 +303,7 @@ test('screens fit every screen size', async ({ page }) => {
     ['create', () => expect(page.getByLabel('Name')).toBeVisible()],
     ['sheet', () => expect(page.getByTestId('sheet-name')).toHaveText(name)],
     ['rifts', () => expect(page.getByTestId('rift-card').first()).toBeVisible()],
+    ['professions', () => expect(page.getByTestId('profession-detail')).toBeVisible()],
   ];
   const paths: Record<string, string> = {
     home: '/home',
@@ -300,6 +312,7 @@ test('screens fit every screen size', async ({ page }) => {
     create: '/characters/new',
     sheet: characterUrl!,
     rifts: '/rifts',
+    professions: '/professions',
   };
 
   for (const vp of VIEWPORTS) {
@@ -324,7 +337,7 @@ test('screens fit every screen size', async ({ page }) => {
   }
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.getByTestId('room-combat').first().click();
-  await expect(page.getByText('Plan your actions')).toBeVisible();
+  await expect(page.getByText('Your turn')).toBeVisible();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await expect(page.getByTestId('unit-enemies').first()).toBeVisible();

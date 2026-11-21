@@ -62,7 +62,12 @@ async function winFight(h: Hero, runId: string): Promise<RunDto> {
   await rig(runId);
   let run: RunDto | undefined;
   for (let i = 0; i < 20; i++) {
-    await act(h, runId, { type: 'plan', abilityId: 'cleave' });
+    // PvE: the attack happens at once; it may already win the fight.
+    const hit = await act(h, runId, { type: 'plan', abilityId: 'cleave' });
+    if (hit.statusCode === 200 && (hit.json() as RunDto).combat?.phase !== 'planning') {
+      run = hit.json();
+      break;
+    }
     const res = await act(h, runId, { type: 'ready' });
     expect(res.statusCode).toBe(200);
     run = res.json();
@@ -173,8 +178,10 @@ describe('Rifts', () => {
     await act(h, run.id, { type: 'vote', optionId: first.id });
     const wrong = await act(h, run.id, { type: 'plan', abilityId: 'arcane_bolt' });
     expect(wrong.json().error.code).toBe('INVALID_ACTION');
+    // PvE (Slay the Spire): the action happens at once.
     const planned = (await act(h, run.id, { type: 'plan', abilityId: 'block' })).json() as RunDto;
-    expect(planned.combat!.plan).toHaveLength(1);
+    expect(planned.combat!.plan).toHaveLength(0);
+    expect(planned.combat!.log.some((l) => l.t === 'block')).toBe(true);
     const next = (await act(h, run.id, { type: 'ready' })).json() as RunDto;
     expect(next.combat!.round).toBe(2);
     expect(next.combat!.log.some((l) => l.t === 'resolve')).toBe(true);
@@ -191,7 +198,8 @@ describe('Rifts', () => {
     expect(types.at(-1)).toBe('boss');
     expect(types.length).toBe(8);
     expect(run.rewards!.reputation).toBe(40);
-    expect(run.rewards!.items).toHaveLength(2);
+    // 2 boss drops + anything found on the way (Loot rooms, events).
+    expect(run.rewards!.items.length).toBeGreaterThanOrEqual(2);
 
     const sheet = (
       await t.app.inject({ url: `/api/characters/${h.characterId}`, headers: { cookie: h.cookie } })
@@ -206,31 +214,65 @@ describe('Rifts', () => {
     expect((await startRun(h)).statusCode).toBe(201);
   });
 
-  it('loot rooms put items in the inventory at once', async () => {
+  it('items found in Loot rooms are kept only if the party beats the Rift', async () => {
+    const lootRun = async (h: Hero) => {
+      const { id } = (await startRun(h)).json() as RunDto;
+      // Force Loot Rooms in front of the party (test-only).
+      const [row] = await t.dbHandle.sql`select state from rift_runs where id = ${id}`;
+      const state = row!.state as { map: { nodes: Array<{ row: number; type: string }> } };
+      for (const n of state.map.nodes) if (n.row === 0) n.type = 'loot';
+      await t.dbHandle
+        .sql`update rift_runs set state = ${JSON.stringify(state)}::jsonb where id = ${id}`;
+      const run = (
+        await t.app.inject({
+          url: `/api/rifts/runs/${id}?characterId=${h.characterId}`,
+          headers: { cookie: h.cookie },
+        })
+      ).json() as RunDto;
+      const loot = run.map.nodes.find((n) => n.available)!;
+      const after = (await act(h, id, { type: 'vote', optionId: loot.id })).json() as RunDto;
+      expect(after.phase).toBe('room');
+      expect(after.outcome!.items).toHaveLength(1);
+      return { id, found: after.outcome!.items[0]!.name };
+    };
+    const inventory = async (h: Hero) =>
+      (
+        await t.app.inject({
+          url: `/api/characters/${h.characterId}`,
+          headers: { cookie: h.cookie },
+        })
+      ).json().inventory as Array<{ name: string }>;
+
+    // Leaving (or a wipe) loses what was found.
+    const quitter = await hero();
+    const q = await lootRun(quitter);
+    expect(await inventory(quitter)).toEqual([]);
+    await act(quitter, q.id, { type: 'abandon' });
+    expect(await inventory(quitter)).toEqual([]);
+
+    // Beating the Rift hands it out with the boss rewards.
+    const winner = await hero();
+    const w = await lootRun(winner);
+    await act(winner, w.id, { type: 'continue' });
+    const { run } = await clearRift(winner, w.id);
+    expect(run.status).toBe('victory');
+    expect(run.rewards!.items.map((i) => i.name)).toContain(w.found);
+    expect((await inventory(winner)).map((i) => i.name)).toContain(w.found);
+  });
+
+  it('shows the Dungeon Threat; a timed-out vote raises it', async () => {
     const h = await hero();
-    const { id } = (await startRun(h)).json() as RunDto;
-    // Force a Loot Room in front of the party (test-only).
-    const [row] = await t.dbHandle.sql`select state from rift_runs where id = ${id}`;
-    const state = row!.state as { map: { nodes: Array<{ row: number; type: string }> } };
-    for (const n of state.map.nodes) if (n.row === 0) n.type = 'loot';
+    const { id, threat } = (await startRun(h)).json() as RunDto;
+    expect(threat).toMatchObject({ value: 0, tier: null });
     await t.dbHandle
-      .sql`update rift_runs set state = ${JSON.stringify(state)}::jsonb where id = ${id}`;
+      .sql`update rift_runs set turn_deadline = now() - interval '5 seconds' where id = ${id}`;
     const run = (
       await t.app.inject({
         url: `/api/rifts/runs/${id}?characterId=${h.characterId}`,
         headers: { cookie: h.cookie },
       })
     ).json() as RunDto;
-    const loot = run.map.nodes.find((n) => n.available)!;
-    const after = (await act(h, id, { type: 'vote', optionId: loot.id })).json() as RunDto;
-    expect(after.phase).toBe('room');
-    expect(after.outcome!.items).toHaveLength(1);
-    const sheet = (
-      await t.app.inject({ url: `/api/characters/${h.characterId}`, headers: { cookie: h.cookie } })
-    ).json();
-    expect(sheet.inventory.map((i: { name: string }) => i.name)).toContain(
-      after.outcome!.items[0]!.name,
-    );
+    expect(run.threat.value).toBe(1);
   });
 
   it('abandoning counts as a defeat: equipped items lose 25% quality', async () => {

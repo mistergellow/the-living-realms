@@ -53,7 +53,8 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **The Rift (request #31):** dungeons with a procedural branching map (≥ 10 rooms, converging branches, optional rooms, hidden secret rooms, boss); Combat, Elite, Campsite, Random Event, Loot, Secret and Boss rooms; events with attribute tests on BASE stats; lasting debuffs/boons; group votes; rewards mostly after the boss
 - [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
 - [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
-- ❓ Dungeon Threat (ADR-035: evaluated, waiting for design decisions); Runemaster, runes and weapon specials content
+- [x] **Request #33:** basic attack cost per weapon (heavy 3, dagger 1); a wiped party keeps no Rift loot; simple Dungeon Threat; PvP arena (test mode, lobby with two teams)
+- ❓ Full Dungeon Threat design (ADR-035); Runemaster, runes and weapon specials content; PvP rewards/ranking
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 
@@ -84,7 +85,10 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 - Nation membership, diplomatic states between nations
 - In-game languages and proficiency
 
-## Phase 7 — Economy and trade ⏳ ❓
+## Phase 7 — Economy, professions and trade ⏳ ❓
+
+- [x] **Professions (request #33):** 15 professions (gathering, crafting, service) with levels 0–10, materials that stack, crafting, repairs and weapon upgrades (+1); balance and time cost (AP) to be decided
+- Consumables usable in the Rift (food, draughts, bandages); runes from rune stones
 
 - ❓ Currency, resources, crafting/production, sinks and faucets
 - Items and inventories, double-entry ledger

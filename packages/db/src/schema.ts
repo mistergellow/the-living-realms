@@ -163,6 +163,8 @@ export const items = pgTable(
       .references(() => characters.id, { onDelete: 'cascade' }),
     itemDefId: text('item_def_id').notNull(),
     quality: smallint('quality').notNull().default(100),
+    /** Stack size: materials and consumables stack (request #33); gear is always 1. */
+    quantity: integer('quantity').notNull().default(1),
     /** EquipSlot when equipped, null when in the inventory. */
     equippedSlot: text('equipped_slot'),
     /** Where it came from: 'starter', 'drop', 'loot_room', 'secret_room', 'event', … */
@@ -189,6 +191,30 @@ export const items = pgTable(
       .where(sql`${t.equippedSlot} is not null`),
     check('items_quality_range', sql`${t.quality} between 0 and 100`),
     check('items_upgrade_level_range', sql`${t.upgradeLevel} between 0 and 10`),
+    check('items_quantity_positive', sql`${t.quantity} > 0`),
+  ],
+);
+
+// Profession levels per character (request #33). A row appears the first time
+// a profession is practised; no row = level 0.
+export const characterProfessions = pgTable(
+  'character_professions',
+  {
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    /** Profession id in game-core content (`PROFESSIONS`). */
+    professionId: text('profession_id').notNull(),
+    level: smallint('level').notNull().default(0),
+    /** XP towards the next level. */
+    xp: integer('xp').notNull().default(0),
+    /** The profession can be practised again from this moment (activity time cost). */
+    readyAt: timestamp('ready_at', { withTimezone: true }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.characterId, t.professionId] }),
+    check('character_professions_level_range', sql`${t.level} between 0 and 10`),
   ],
 );
 
@@ -393,6 +419,7 @@ export type Character = typeof characters.$inferSelect;
 export type WorldEvent = typeof worldEvents.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type CharacterSkill = typeof characterSkills.$inferSelect;
+export type CharacterProfession = typeof characterProfessions.$inferSelect;
 export type RiftRun = typeof riftRuns.$inferSelect;
 export type RiftRunParticipant = typeof riftRunParticipants.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;

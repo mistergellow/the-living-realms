@@ -215,3 +215,42 @@ describe('group combat', () => {
     expect((await act(a, runId, { type: 'continue' })).statusCode).toBe(409);
   });
 });
+
+describe('PvP arena (test mode)', () => {
+  it('a PvP lobby splits players in two teams; the match is one fight with hidden plans', async () => {
+    const a = await player();
+    const b = await player();
+    const lobby = (
+      await call(a, 'POST', '/api/rifts/lobbies', { riftId: 'pvp_arena', visibility: 'public' })
+    ).json() as LobbyDto;
+    expect(lobby).toMatchObject({ mode: 'pvp', maxMembers: 12 });
+    const joined = (
+      await call(b, 'POST', `/api/rifts/lobbies/${lobby.id}/join`)
+    ).json() as LobbyDto;
+    // The second player joins the smaller team (B = slots 6–11).
+    expect(joined.members.find((m) => m.name === b.name)!.slot).toBeGreaterThanOrEqual(6);
+    await call(b, 'POST', `/api/rifts/lobbies/${lobby.id}/ready`, { ready: true });
+    const { runId } = (
+      await call(a, 'POST', `/api/rifts/lobbies/${lobby.id}/start`)
+    ).json() as LobbyDto;
+
+    const act = (p: P, action: Record<string, unknown>) =>
+      call(p, 'POST', `/api/rifts/runs/${runId}/actions`, { action });
+    const run = (await call(a, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
+    expect(run).toMatchObject({ mode: 'pvp', phase: 'combat' });
+    expect(run.combat!.combatants.find((c) => c.characterId === b.id)!.side).toBe('enemies');
+
+    await act(a, { type: 'plan', abilityId: 'block' });
+    const seenByB = (await call(b, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
+    expect(seenByB.combat!.plan).toEqual([]); // A's plan is secret
+    await act(a, { type: 'ready' });
+    const done = (await act(b, { type: 'ready' })).json() as RunDto;
+    expect(done.combat!.round).toBe(2);
+
+    // Leaving ends it for the leaver's team; no equipment damage in PvP.
+    const left = (await act(b, { type: 'abandon' })).json() as RunDto;
+    expect(left.penalty!.damaged).toEqual([]);
+    const forA = (await call(a, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
+    expect(forA.status).toBe('victory');
+  });
+});

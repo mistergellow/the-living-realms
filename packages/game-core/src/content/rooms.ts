@@ -157,3 +157,60 @@ export type ConditionId = keyof typeof CONDITIONS;
 export function getCondition(id: string): ConditionDef | undefined {
   return (CONDITIONS as Record<string, ConditionDef>)[id];
 }
+
+/**
+ * Dungeon Threat (request #33: "simple, to test the mechanic"). Decisions and
+ * failures raise it; the boss gets stronger at each tier. PROVISIONAL.
+ */
+export interface ThreatTier {
+  min: number;
+  name: string;
+  description: string;
+  /** Boss room enemies. */
+  hpMultiplier: number;
+  powerMultiplier: number;
+  precisionBonus: number;
+}
+
+export const THREAT_RULES = {
+  /** A failed attribute test in a Random Event. */
+  failedTest: 1,
+  /** A vote that ran out of time (the Rift does not wait). */
+  timedOutDecision: 1,
+  /** Clearing an Elite room lowers the Threat (a reason to take the risk). */
+  eliteCleared: -1,
+  max: 10,
+  tiers: [
+    {
+      min: 2,
+      name: 'Stirring',
+      description: 'Boss enemies have +15% HP.',
+      hpMultiplier: 1.15,
+      powerMultiplier: 1,
+      precisionBonus: 0,
+    },
+    {
+      min: 4,
+      name: 'Restless',
+      description: 'Boss enemies have +30% HP and +15% damage.',
+      hpMultiplier: 1.3,
+      powerMultiplier: 1.15,
+      precisionBonus: 0,
+    },
+    {
+      min: 6,
+      name: 'Awakened',
+      description: 'Boss enemies have +45% HP, +30% damage and +1 Focus per round.',
+      hpMultiplier: 1.45,
+      powerMultiplier: 1.3,
+      precisionBonus: 2,
+    },
+  ] as ThreatTier[],
+} as const;
+
+/** The tier reached at a Threat value (null below the first tier). */
+export function threatTier(threat: number): ThreatTier | null {
+  let tier: ThreatTier | null = null;
+  for (const t of THREAT_RULES.tiers) if (threat >= t.min) tier = t;
+  return tier;
+}

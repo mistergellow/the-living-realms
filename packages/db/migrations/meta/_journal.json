@@ -64,6 +64,13 @@
       "when": 1795251003099,
       "tag": "0008_rift_exploration_and_weapons",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795253801082,
+      "tag": "0009_professions_and_stacks",
+      "breakpoints": true
     }
   ]
 }

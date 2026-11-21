@@ -1,4 +1,4 @@
-import type { LobbyVisibility } from '@realms/shared';
+import { PVP_ARENA_ID, type LobbyVisibility } from '@realms/shared';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -143,6 +143,32 @@ export function RiftsPage() {
             </article>
           ))}
         </div>
+
+        <article className="panel rift-card" data-testid="pvp-card">
+          <div className="stack" style={{ gap: 6, flex: 1 }}>
+            <h2 className="logo" style={{ fontSize: '1.4rem' }}>
+              PvP Arena (test)
+            </h2>
+            <span className="muted">
+              Two teams of players, same combat rules: plan, then actions alternate by team
+              initiative. No rewards and no equipment damage while it is a test.
+            </span>
+            <div className="row" style={{ flexWrap: 'wrap' }}>
+              <button
+                className="btn"
+                disabled={lobby.create.isPending || busy}
+                onClick={() =>
+                  lobby.create.mutate(
+                    { riftId: PVP_ARENA_ID, visibility },
+                    { onSuccess: (l) => goLobby(l.id) },
+                  )
+                }
+              >
+                Create PvP lobby
+              </button>
+            </div>
+          </div>
+        </article>
 
         <section className="panel" style={{ marginTop: 16 }}>
           <div className="panel-title">Public lobbies</div>

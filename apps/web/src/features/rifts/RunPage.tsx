@@ -104,6 +104,23 @@ function ExplorationScreen({
         <span className="muted">
           Rooms explored {run.roomsVisited} · {active.length} in the party
         </span>
+        <span
+          className="threat"
+          data-testid="threat"
+          data-tier={run.threat.tier?.name ?? 'calm'}
+          title={
+            (run.threat.tier
+              ? `${run.threat.tier.name}: ${run.threat.tier.description}`
+              : 'Calm: no effect yet.') +
+            (run.threat.next
+              ? ` Next at ${run.threat.next.at}: ${run.threat.next.description}`
+              : '') +
+            ' Failed tests and timed-out votes raise it; clearing an Elite lowers it.'
+          }
+        >
+          Threat {run.threat.value}
+          {run.threat.tier ? ` · ${run.threat.tier.name}` : ''}
+        </span>
         <span className="spacer" />
         {deciding && secondsLeft !== null && (
           <span className="timer" data-low={secondsLeft <= 10}>

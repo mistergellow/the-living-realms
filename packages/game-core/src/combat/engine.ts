@@ -18,6 +18,7 @@ import {
   columnOfSlot,
   type Combatant,
   type CombatState,
+  type EnemyModifiers,
   type PartyMemberInput,
 } from './state.js';
 
@@ -53,6 +54,7 @@ const fail = (code: 'NOT_YOUR_TURN' | 'INVALID_ACTION', reason: string): EngineR
 });
 
 const alive = (c: Combatant) => !c.downed;
+const isPvp = (s: CombatState) => s.mode === 'pvp';
 const on = (state: CombatState, side: Combatant['side']) =>
   state.combatants.filter((c) => c.side === side);
 const opposite = (side: CombatSide): CombatSide => (side === 'party' ? 'enemies' : 'party');
@@ -60,10 +62,13 @@ const get = (state: CombatState, id: string) => state.combatants.find((c) => c.i
 const hasStatus = (c: Combatant, id: StatusId) => c.statuses.some((s) => s.id === id);
 const roll = (rng: Rng, min: number, max: number) => min + rng.int(max - min + 1);
 
-/** Party members who still have to plan this round (alive, present, not stunned). */
+/**
+ * Players who still have to plan this round (alive, present, not stunned) —
+ * on both sides in PvP.
+ */
 export function activePartyIds(state: CombatState): string[] {
-  return on(state, 'party')
-    .filter((c) => alive(c) && !c.left && !c.stunned)
+  return state.combatants
+    .filter((c) => c.kind === 'player' && alive(c) && !c.left && !c.stunned)
     .map((c) => c.id);
 }
 
@@ -76,6 +81,7 @@ export function createEncounter(opts: {
   roomIndex: number;
   isLastRoom: boolean;
   seed: number;
+  enemyModifiers?: EnemyModifiers;
 }): CombatState {
   const state: CombatState = {
     round: 0,
@@ -83,7 +89,10 @@ export function createEncounter(opts: {
     initiative: null,
     plan: [],
     ready: [],
-    combatants: [...opts.party.map(partyCombatant), ...enemyCombatants(opts.room, opts.roomIndex)],
+    combatants: [
+      ...opts.party.map((p) => partyCombatant(p)),
+      ...enemyCombatants(opts.room, opts.roomIndex, opts.enemyModifiers),
+    ],
     outcome: null,
     log: [],
     logSeq: 0,
@@ -92,6 +101,7 @@ export function createEncounter(opts: {
     initiativeRolls: {},
     planSeq: 0,
     isLastRoom: opts.isLastRoom,
+    mode: 'pve',
   };
   const rng = new Rng(state.rng);
   for (const c of state.combatants) state.tiebreak[c.id] = rng.next();
@@ -109,12 +119,51 @@ export function createEncounter(opts: {
   return state;
 }
 
+/**
+ * PvP (request #33, test mode): two teams of players, same rules — both plan
+ * at the same time, team initiative decides who starts, actions alternate.
+ * Team B stands on the 'enemies' side.
+ */
+export function createPvpEncounter(opts: {
+  teamA: PartyMemberInput[];
+  teamB: PartyMemberInput[];
+  seed: number;
+}): CombatState {
+  const state: CombatState = {
+    round: 0,
+    phase: 'planning',
+    initiative: null,
+    plan: [],
+    ready: [],
+    combatants: [
+      ...opts.teamA.map((p) => partyCombatant(p, 'party')),
+      ...opts.teamB.map((p) => partyCombatant(p, 'enemies')),
+    ],
+    outcome: null,
+    log: [],
+    logSeq: 0,
+    rng: opts.seed,
+    tiebreak: {},
+    initiativeRolls: {},
+    planSeq: 0,
+    isLastRoom: true,
+    mode: 'pvp',
+  };
+  const rng = new Rng(state.rng);
+  for (const c of state.combatants) state.tiebreak[c.id] = rng.next();
+  state.rng = rng.state;
+  startRound(state);
+  return state;
+}
+
 function startRound(state: CombatState): void {
   state.round += 1;
   pushLog(state, { t: 'round', round: state.round });
   const units = state.combatants.filter((c) => alive(c) && !c.left);
-  // Block is temporary: whatever is left is removed when a new round begins.
-  for (const u of state.combatants) u.block = 0;
+  // Block is temporary. PvP: removed for everyone when a round begins. PvE
+  // (Slay the Spire): the party's Block goes now; the enemies' Block lasts
+  // through the party's turn and goes when the enemy phase begins.
+  for (const u of state.combatants) if (isPvp(state) || u.side === 'party') u.block = 0;
   for (const u of units) {
     for (const s of u.statuses) {
       if ((s.id === 'bleed' || s.id === 'burn') && !u.downed) {
@@ -132,7 +181,9 @@ function startRound(state: CombatState): void {
     u.mana = Math.min(u.maxMana, u.mana + u.stats.manaRegen);
   }
   if (checkEnd(state)) return;
-  rollInitiative(state);
+  // PvE: the party always acts first, then the enemies (no initiative roll).
+  if (isPvp(state)) rollInitiative(state);
+  else state.initiative = null;
   state.phase = 'planning';
   state.plan = [];
   state.ready = [];
@@ -368,6 +419,18 @@ function applyAbility(
 /** Returns true if the encounter ended (room cleared or party wiped). */
 function checkEnd(state: CombatState): boolean {
   if (state.phase !== 'planning') return true;
+  if (state.mode === 'pvp') {
+    // PvP (request #33): the last team standing wins; nobody gets back up.
+    const partyDown = on(state, 'party').every((p) => p.downed);
+    const enemiesDown = on(state, 'enemies').every((p) => p.downed);
+    if (!partyDown && !enemiesDown) return false;
+    pushLog(state, { t: 'room', outcome: partyDown ? 'wiped' : 'cleared' });
+    state.plan = [];
+    state.ready = [];
+    state.phase = 'ended';
+    state.outcome = partyDown ? 'defeat' : 'victory';
+    return true;
+  }
   if (on(state, 'enemies').every((e) => e.downed)) {
     for (const p of on(state, 'party')) {
       if (p.downed && !p.left) {
@@ -462,7 +525,7 @@ function bestMove(state: CombatState, enemy: Combatant, focus: number, rng: Rng)
  */
 function planEnemyIntents(state: CombatState): void {
   const rng = new Rng(state.rng);
-  for (const enemy of on(state, 'enemies')) {
+  for (const enemy of state.combatants.filter((c) => c.kind === 'enemy')) {
     enemy.intents = [];
     if (enemy.downed || enemy.stunned) continue;
     let focus = enemy.focus;
@@ -559,7 +622,12 @@ function validatePlan(state: CombatState, actor: Combatant, input: PlanActionInp
   return typeof targets === 'string' ? targets : null;
 }
 
-/** Add an action to the party plan (planning phase). Resolved later, in planned order. */
+/**
+ * A player's action.
+ * - PvE (owner, request #34 — Slay the Spire): it happens at once. When every
+ *   player ends the turn, the enemies carry out their intents.
+ * - PvP: it is added to the team plan and resolved later, alternating teams.
+ */
 export function planAction(
   prev: CombatState,
   actorId: string,
@@ -567,7 +635,7 @@ export function planAction(
 ): EngineResult {
   if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to plan right now.');
   const actor = get(prev, actorId);
-  if (!actor || actor.side !== 'party' || !activePartyIds(prev).includes(actorId))
+  if (!actor || actor.kind !== 'player' || !activePartyIds(prev).includes(actorId))
     return fail('NOT_YOUR_TURN', 'You cannot act this round.');
   if (prev.ready.includes(actorId))
     return fail('INVALID_ACTION', 'You already confirmed your actions.');
@@ -586,19 +654,28 @@ export function planAction(
     }
   }
   const planned: PlannedActionView = {
-    id: ++state.planSeq,
+    id: isPvp(state) ? ++state.planSeq : 0,
     actorId,
     abilityId: input.abilityId,
     ...(targetId !== undefined && ability.targeting.area === 'single' ? { targetId } : {}),
     ...(targetColumn !== undefined && ability.targeting.area === 'column' ? { targetColumn } : {}),
     ...(input.targetSlot !== undefined ? { targetSlot: input.targetSlot } : {}),
   };
+  if (!isPvp(state)) {
+    // PvE: it happens now.
+    const rng = new Rng(state.rng);
+    resolvePlanned(state, rng, planned);
+    state.rng = rng.state;
+    checkEnd(state);
+    return { ok: true, state };
+  }
   state.plan.push(planned);
   return { ok: true, state };
 }
 
 /** Remove one of your planned actions (before confirming). */
 export function unplanAction(prev: CombatState, actorId: string, planId: number): EngineResult {
+  if (!isPvp(prev)) return fail('INVALID_ACTION', 'Actions happen at once: nothing to undo.');
   if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to change right now.');
   if (prev.ready.includes(actorId))
     return fail('INVALID_ACTION', 'You already confirmed your actions.');
@@ -610,7 +687,10 @@ export function unplanAction(prev: CombatState, actorId: string, planId: number)
   return { ok: true, state };
 }
 
-/** Confirm your plan. When every active player is ready, the round resolves. */
+/**
+ * End your turn (PvE) / confirm your plan (PvP). When every active player is
+ * ready: PvE → the enemy phase; PvP → the alternating resolution.
+ */
 export function setReady(prev: CombatState, actorId: string): EngineResult {
   if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to confirm right now.');
   if (!activePartyIds(prev).includes(actorId))
@@ -641,34 +721,45 @@ export function timeoutTurn(prev: CombatState): CombatState {
 // Resolution (alternating between teams)
 // ---------------------------------------------------------------------------
 type QueuedAction =
-  | { side: 'party'; plan: PlannedActionView }
-  | { side: 'enemies'; actorId: string; intent: IntentView };
+  | { kind: 'plan'; plan: PlannedActionView }
+  | { kind: 'intent'; actorId: string; intent: IntentView };
 
 function resolveRound(state: CombatState): void {
   const rng = new Rng(state.rng);
-  const first = state.initiative?.first ?? 'party';
+  // PvE: only the enemies are left to act (the party already did, live); their
+  // Block from last round goes now. PvP: the initiative winner starts.
+  const first = isPvp(state) ? (state.initiative?.first ?? 'party') : 'enemies';
+  if (!isPvp(state)) for (const e of on(state, 'enemies')) e.block = 0;
   pushLog(state, { t: 'resolve', first });
 
-  const queues: Record<CombatSide, QueuedAction[]> = {
-    party: state.plan.map((plan) => ({ side: 'party', plan })),
-    // Enemies resolve in their planned order: by initiative, each enemy's intents in turn.
-    enemies: on(state, 'enemies')
-      .filter((e) => !e.downed)
+  // Each team: its players' actions in planned order, then its AI units'
+  // intents (by initiative, each unit's intents in turn). In PvE the party
+  // has only players and the enemies only AI; in PvP both sides are players.
+  const queueOf = (side: CombatSide): QueuedAction[] => [
+    ...state.plan
+      .filter((p) => get(state, p.actorId)?.side === side)
+      .map((plan) => ({ kind: 'plan' as const, plan })),
+    ...on(state, side)
+      .filter((e) => e.kind === 'enemy' && !e.downed)
       .sort(
         (a, b) =>
           (state.initiativeRolls[b.id] ?? 0) - (state.initiativeRolls[a.id] ?? 0) ||
           (state.tiebreak[b.id] ?? 0) - (state.tiebreak[a.id] ?? 0),
       )
       .flatMap((e) =>
-        e.intents.map((intent) => ({ side: 'enemies' as const, actorId: e.id, intent })),
+        e.intents.map((intent) => ({ kind: 'intent' as const, actorId: e.id, intent })),
       ),
+  ];
+  const queues: Record<CombatSide, QueuedAction[]> = {
+    party: queueOf('party'),
+    enemies: queueOf('enemies'),
   };
 
   let side: CombatSide = first;
   while (queues.party.length || queues.enemies.length) {
     if (!queues[side].length) side = opposite(side);
     const next = queues[side].shift()!;
-    if (next.side === 'party') resolvePlanned(state, rng, next.plan);
+    if (next.kind === 'plan') resolvePlanned(state, rng, next.plan);
     else resolveIntent(state, rng, next.actorId, next.intent);
     if (checkEnd(state)) {
       state.rng = rng.state;
@@ -771,10 +862,12 @@ export function leaveParty(prev: CombatState, actorId: string): CombatState {
 export function partyAfterCombat(
   state: CombatState,
 ): Array<{ characterId: string; hp: number; mana: number; slot: number }> {
-  return on(state, 'party').map((c) => ({
-    characterId: c.characterId!,
-    hp: c.hp,
-    mana: c.mana,
-    slot: c.slot,
-  }));
+  return state.combatants
+    .filter((c) => c.kind === 'player')
+    .map((c) => ({
+      characterId: c.characterId!,
+      hp: c.hp,
+      mana: c.mana,
+      slot: c.slot,
+    }));
 }

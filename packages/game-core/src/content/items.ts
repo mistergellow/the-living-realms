@@ -201,7 +201,7 @@ export const ITEMS = {
   }),
 } satisfies Record<string, ItemDef>;
 
-export type ItemDefId = keyof typeof ITEMS;
+export type ItemDefId = keyof typeof ITEMS | MaterialId;
 
 export function getItemDef(id: string): ItemDef | undefined {
   return (ITEMS as Record<string, ItemDef>)[id];
@@ -223,3 +223,57 @@ export const STARTER_WEAPONS: ItemDefId[] = [
 export const STARTER_OFFHANDS: ItemDefId[] = ['wooden_shield', 'bone_talisman', 'rusty_dagger'];
 /** Equipped automatically on every new character. */
 export const STARTER_ARMOR: ItemDefId[] = ['padded_tunic'];
+
+/*
+ * Materials and consumables (professions, request #33). They stack and cannot
+ * be equipped. Consumables cannot be used yet (future: recovery in the Rift).
+ * PROVISIONAL CONTENT.
+ */
+const material = (id: string, name: string, description: string): ItemDef => ({
+  id,
+  name,
+  description,
+  kind: 'material',
+  slots: [],
+});
+const consumable = (id: string, name: string, description: string): ItemDef => ({
+  id,
+  name,
+  description,
+  kind: 'consumable',
+  slots: [],
+});
+
+export const MATERIALS = {
+  raw_fish: material('raw_fish', 'Raw Fish', 'A fresh catch. Cook it before eating.'),
+  iron_ore: material('iron_ore', 'Iron Ore', 'Smelt it into ingots.'),
+  rough_gem: material('rough_gem', 'Rough Gem', 'An uncut stone with a faint glow.'),
+  iron_ingot: material('iron_ingot', 'Iron Ingot', 'Used to repair and improve gear.'),
+  log: material('log', 'Log', 'Raw timber.'),
+  plank: material('plank', 'Plank', 'Sawn wood for carpentry.'),
+  herb: material('herb', 'Rift Moss', 'A medicinal herb that grows near rifts.'),
+  raw_hide: material('raw_hide', 'Raw Hide', 'Needs curing before use.'),
+  leather: material('leather', 'Leather', 'Cured hide for leatherworking.'),
+  raw_meat: material('raw_meat', 'Raw Meat', 'Game meat. Cook it first.'),
+  grain: material('grain', 'Grain', 'A sack of grain.'),
+  flax: material('flax', 'Flax', 'Fibres for weaving.'),
+  linen: material('linen', 'Linen', 'Woven cloth.'),
+  cut_gem: material('cut_gem', 'Cut Gem', 'A polished gem for jewellery.'),
+  rune_stone: material(
+    'rune_stone',
+    'Rune Stone',
+    'A blank stone shaped by a runesmith. Runes come later.',
+  ),
+  grilled_fish: consumable('grilled_fish', 'Grilled Fish', 'A simple, filling meal.'),
+  hearty_stew: consumable('hearty_stew', 'Hearty Stew', 'A warming meal.'),
+  healing_draught: consumable('healing_draught', 'Healing Draught', 'Restores health.'),
+  mana_tonic: consumable('mana_tonic', 'Mana Tonic', 'Restores mana.'),
+  bandage: consumable('bandage', 'Bandage', 'Stops bleeding.'),
+} satisfies Record<string, ItemDef>;
+
+export type MaterialId = keyof typeof MATERIALS;
+Object.assign(ITEMS, MATERIALS);
+
+/** Materials and consumables stack in the inventory. */
+export const isStackable = (def: ItemDef | undefined) =>
+  def?.kind === 'material' || def?.kind === 'consumable';

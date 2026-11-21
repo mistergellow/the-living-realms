@@ -53,6 +53,11 @@ export interface WeaponTypeDef {
   baseDamage: { min: number; max: number };
   /** Ability id of the basic attack shared by every weapon of this type. */
   basicAttack: string;
+  /**
+   * Focus cost of the basic attack (owner, request #33): heavy, hard-hitting
+   * weapons cost 3, daggers 1; the others are provisional.
+   */
+  basicAttackCost: number;
 }
 
 export const WEAPON_RULES = {
@@ -64,8 +69,6 @@ export const WEAPON_RULES = {
   maxUpgradeLevel: 10,
   maxSpecials: 5,
   maxRuneSlots: 2,
-  /** Focus cost of every basic attack — NOT DECIDED YET (owner), provisional 1. */
-  basicAttackFocusCost: 1,
 } as const;
 
 const weapon = (w: WeaponTypeDef) => w;
@@ -82,8 +85,9 @@ export const WEAPON_TYPES = {
     attackType: 'physical',
     attackStyle: 'Balanced physical attack',
     identity: 'Versatile and reliable',
-    baseDamage: { min: 6, max: 8 },
+    baseDamage: { min: 13, max: 16 },
     basicAttack: 'slash',
+    basicAttackCost: 2,
   }),
   axe: weapon({
     type: 'axe',
@@ -95,8 +99,9 @@ export const WEAPON_TYPES = {
     attackType: 'physical',
     attackStyle: 'Heavy physical attack',
     identity: 'High impact',
-    baseDamage: { min: 5, max: 10 },
+    baseDamage: { min: 18, max: 28 },
     basicAttack: 'chop',
+    basicAttackCost: 3,
   }),
   dagger: weapon({
     type: 'dagger',
@@ -110,6 +115,7 @@ export const WEAPON_TYPES = {
     identity: 'Critical hits and precision',
     baseDamage: { min: 8, max: 10 },
     basicAttack: 'stab',
+    basicAttackCost: 1,
   }),
   spear: weapon({
     type: 'spear',
@@ -121,8 +127,9 @@ export const WEAPON_TYPES = {
     attackType: 'physical',
     attackStyle: 'Physical thrust',
     identity: 'Reach and positional control',
-    baseDamage: { min: 4, max: 6 },
+    baseDamage: { min: 8, max: 11 },
     basicAttack: 'thrust',
+    basicAttackCost: 2,
   }),
   mace: weapon({
     type: 'mace',
@@ -134,8 +141,9 @@ export const WEAPON_TYPES = {
     attackType: 'physical',
     attackStyle: 'Blunt physical attack',
     identity: 'Heavy impact',
-    baseDamage: { min: 7, max: 9 },
+    baseDamage: { min: 22, max: 26 },
     basicAttack: 'crush',
+    basicAttackCost: 3,
   }),
   bow: weapon({
     type: 'bow',
@@ -147,8 +155,9 @@ export const WEAPON_TYPES = {
     attackType: 'ranged',
     attackStyle: 'Ranged physical attack',
     identity: 'Accuracy and exploiting weaknesses',
-    baseDamage: { min: 4, max: 6 },
+    baseDamage: { min: 8, max: 10 },
     basicAttack: 'aimed_shot',
+    basicAttackCost: 2,
   }),
   staff: weapon({
     type: 'staff',
@@ -160,8 +169,9 @@ export const WEAPON_TYPES = {
     attackType: 'magic',
     attackStyle: 'Magical attack',
     identity: 'Magical power and elemental effects',
-    baseDamage: { min: 6, max: 8 },
+    baseDamage: { min: 11, max: 14 },
     basicAttack: 'staff_strike',
+    basicAttackCost: 2,
   }),
   wand: weapon({
     type: 'wand',
@@ -175,6 +185,7 @@ export const WEAPON_TYPES = {
     identity: 'Magical precision and control',
     baseDamage: { min: 4, max: 6 },
     basicAttack: 'wand_bolt',
+    basicAttackCost: 1,
   }),
   tome: weapon({
     type: 'tome',
@@ -188,6 +199,7 @@ export const WEAPON_TYPES = {
     identity: 'Curses and sparks',
     baseDamage: { min: 4, max: 6 },
     basicAttack: 'spark',
+    basicAttackCost: 1,
   }),
 } satisfies Partial<Record<WeaponType, WeaponTypeDef>>;
 
@@ -266,6 +278,7 @@ export function weaponInfo(
     identity: def.identity,
     baseDamage: weaponDamage(def.type as CatalogueWeaponType, n.upgradeLevel),
     basicAttackId: def.basicAttack,
+    basicAttackCost: def.basicAttackCost,
     upgradeLevel: n.upgradeLevel,
     specials: n.specials,
     maxSpecials: WEAPON_RULES.maxSpecials,

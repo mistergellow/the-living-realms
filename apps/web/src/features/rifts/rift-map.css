@@ -228,3 +228,22 @@
     max-height: 40dvh;
   }
 }
+
+.threat {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.1rem 0.6rem;
+  border-radius: 1rem;
+  border: 1px solid var(--frame);
+  color: var(--text-muted);
+}
+.threat[data-tier='Stirring'] {
+  color: #f0a040;
+  border-color: #f0a040;
+}
+.threat[data-tier='Restless'],
+.threat[data-tier='Awakened'] {
+  color: var(--danger);
+  border-color: var(--danger);
+}

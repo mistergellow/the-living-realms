@@ -1,5 +1,5 @@
 import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/shared';
-import { WEAPON_RULES, WEAPON_TYPES, weaponScaling, type CatalogueWeaponType } from './weapons.js';
+import { WEAPON_TYPES, weaponScaling, type CatalogueWeaponType } from './weapons.js';
 
 /*
  * Ability definitions (data). PROVISIONAL CONTENT — names and numbers are
@@ -80,7 +80,7 @@ export const BASIC_ACTIONS = {
 
 /**
  * The basic attack of a weapon type: same for every weapon of that type.
- * Damage = the type's base damage; cost = WEAPON_RULES.basicAttackFocusCost.
+ * Damage = the type's base damage; cost = the type's basicAttackCost (heavy 3, dagger 1).
  */
 function basicAttack(
   type: CatalogueWeaponType,
@@ -90,7 +90,7 @@ function basicAttack(
   return {
     ...a,
     source: 'weapon',
-    focusCost: WEAPON_RULES.basicAttackFocusCost,
+    focusCost: w.basicAttackCost,
     manaCost: 0,
     effects: [{ kind: 'damage', damageType: w.attackType, ...w.baseDamage }],
     scaling: weaponScaling(type),

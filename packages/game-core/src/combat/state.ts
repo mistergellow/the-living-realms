@@ -45,6 +45,8 @@ export interface CombatState extends Omit<CombatView, 'log'> {
   initiativeRolls: Record<string, number>;
   planSeq: number;
   isLastRoom: boolean;
+  /** 'pvp': both sides are players; no revive, last team standing wins. */
+  mode?: 'pve' | 'pvp';
 }
 
 export interface PartyMemberInput {
@@ -90,10 +92,10 @@ function enemyStats(e: EnemyDef, precision: number): DerivedStatsDto {
   };
 }
 
-export function partyCombatant(p: PartyMemberInput): Combatant {
+export function partyCombatant(p: PartyMemberInput, side: Combatant['side'] = 'party'): Combatant {
   return {
     id: partyId(p.characterId),
-    side: 'party',
+    side,
     kind: 'player',
     name: p.name,
     characterId: p.characterId,
@@ -121,11 +123,25 @@ export function partyCombatant(p: PartyMemberInput): Combatant {
   };
 }
 
-export function enemyCombatants(room: RiftRoomDef, roomIndex: number): Combatant[] {
+/** Extra strength for a fight (e.g. the boss under Dungeon Threat). */
+export interface EnemyModifiers {
+  hpMultiplier?: number;
+  powerMultiplier?: number;
+  precisionBonus?: number;
+}
+
+export function enemyCombatants(
+  room: RiftRoomDef,
+  roomIndex: number,
+  mods: EnemyModifiers = {},
+): Combatant[] {
   return room.enemies.map(({ enemy, slot, elite }, i) => {
     const def = getEnemy(enemy)!;
-    const precision = (def.precision ?? 5) + (elite ? ELITE_RULES.precisionBonus : 0);
-    const maxHp = Math.round(def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1));
+    const precision =
+      (def.precision ?? 5) + (elite ? ELITE_RULES.precisionBonus : 0) + (mods.precisionBonus ?? 0);
+    const maxHp = Math.round(
+      def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1) * (mods.hpMultiplier ?? 1),
+    );
     const stats = { ...enemyStats(def, precision), maxHp };
     return {
       id: `e:${roomIndex}:${i}`,
@@ -147,7 +163,7 @@ export function enemyCombatants(room: RiftRoomDef, roomIndex: number): Combatant
       stunned: false,
       statuses: [],
       attributes: null,
-      power: def.power * (elite ? ELITE_RULES.powerMultiplier : 1),
+      power: def.power * (elite ? ELITE_RULES.powerMultiplier : 1) * (mods.powerMultiplier ?? 1),
       abilityMultipliers: {},
       intents: [],
       downed: false,

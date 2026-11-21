@@ -21,3 +21,5 @@ export * from './content/events.js';
 export * from './rift/map.js';
 export * from './rift/tests.js';
 export * from './rift/run.js';
+export * from './content/professions.js';
+export * from './professions.js';

@@ -1,0 +1,101 @@
+/* Professions screen (request #33). */
+.professions {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.prof-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 100%;
+  overflow-y: auto;
+}
+.prof-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prof-row[data-active='true'] {
+  border-color: var(--frame);
+  background: rgb(232 189 95 / 0.08);
+}
+.prof-level {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+.prof-xp {
+  grid-column: 1 / -1;
+  height: 0.25rem;
+  background: rgb(0 0 0 / 0.5);
+  border-radius: 0.2rem;
+  overflow: hidden;
+}
+.prof-xp i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.prof-detail h2 {
+  margin: 0;
+}
+.activities {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-2);
+}
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: var(--space-2);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 0.3);
+}
+.activity[data-locked='true'] {
+  opacity: 0.55;
+}
+.activity h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.activity p {
+  margin: 0;
+}
+.activity [data-short='true'] {
+  color: var(--danger);
+}
+.prof-result {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--frame);
+}
+.prof-result[data-success='true'] {
+  border-color: #2f7a3a;
+}
+.prof-result[data-success='false'] {
+  border-color: #8f2a1f;
+}
+.small {
+  font-size: 0.78rem;
+}
+@media (max-width: 56.25em) {
+  .professions {
+    grid-template-columns: 1fr;
+  }
+  .prof-list {
+    max-height: 12rem;
+  }
+}

@@ -233,7 +233,8 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Regras e números: `packages/game-core/src/combat/state.ts` (`COMBAT_RULES`: Focus por turno/máximo, crítico, 60 s, reviver com 1 HP)
 - Motor: `packages/game-core/src/combat/engine.ts` (`createEncounter`, `applyAction`, `validTargets`, IA dos inimigos, `enterNextRoom`, `timeoutTurn`), `rng.ts` (aleatoriedade determinística)
-- Ronda (D47–D50): `startRound` (Block reset, estados, Focus, `rollInitiative`), `planAction`/`unplanAction`/`setReady`/`timeoutTurn`, `resolveRound` (alternância), `resolvePlanned`/`resolveIntent`, `absorbWithBlock`, `reservedBy` (Focus/Mana reservados)
+- **PvE (D59, Slay the Spire):** `planAction` resolve logo (`resolvePlanned`); `setReady` = End turn → `resolveRound` só com as intenções dos inimigos; `isPvp`; Block do grupo no início da ronda, dos inimigos no início da fase deles; ecrã: `pvp ? … : …` em `CombatPage.tsx` (`useReplayState.resolving` espera pela entrada `resolve`)
+- Ronda PvP (D47–D50): `startRound` (Block reset, estados, Focus, `rollInitiative`), `planAction`/`unplanAction`/`setReady`/`timeoutTurn`, `resolveRound` (alternância), `resolvePlanned`/`resolveIntent`, `absorbWithBlock`, `reservedBy` (Focus/Mana reservados)
 - Números: `COMBAT_RULES` (state.ts), `FOCUS_RULES` (stats.ts), `BASIC_ACTIONS` (abilities.ts: Block e mudar de posição), `WEAPON_RULES` (weapons.ts)
 - Contrato: `packages/shared/src/combat.ts` (`CombatView` com `plan`/`ready`/`initiative`, `CombatantView` com `focusPerRound`/`stunned`/`abilityMultipliers`, `PlannedActionView`, `CombatLogEntry` (`initiative`, `resolve`, `skipped`), `combatActionSchema`: `plan`/`unplan`/`ready`)
 - Ecrã: `apps/web/src/features/rifts/CombatPage.tsx` (`CombatScreen`: fila do plano à esquerda, ronda/iniciativa em cima, intenções à direita, painel do personagem e barra em baixo; `useReplayState`), `RunPage.tsx` (escolhe combate ou exploração), `EndOverlay.tsx`, `CombatStage.tsx` (canvas + botões DOM por cima), `combat-scene.ts` (desenho e animações em PixiJS, `stepMs`), `combat-timeline.ts` (log → passos de animação), `combat-layout.ts` (posição de cada slot no ecrã), `combat.css`, `combat-text.ts` (texto do log)
@@ -265,7 +266,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Servidor: `apps/server/src/modules/rifts/` (`rifts.service.ts`: começar, agir, avançar, abandonar, temporizador, recompensas/penalização; `rifts.routes.ts`; `rifts.repository.ts`)
 - Bloqueios durante um Rift: `assertNotInRift` em `characters/sheet.service.ts` (equipar/desequipar) e `characters.service.ts` (apagar); erro `IN_RIFT`
 - Recompensas/penalização: `finish()` em `rifts.service.ts`; durabilidade em `game-core/equipment.ts` (`qualityAfterDefeat`)
-- Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`, `rift.left`, `rift.item_found`
+- Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`, `rift.left`; PvP: `pvp.entered`, `pvp.finished`
 - Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `RunPage.tsx`, `CombatPage.tsx`, `RiftMap.tsx`, `api.ts`); `HomePage.tsx` (cartão "Inside…"), `LobbyPage.tsx` (`depth`); rotas em `router.tsx`
 - Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts` — **tabela nova = acrescentar lá**), `e2e`
 - Futuro: lobby (M3), entrada pelo mapa (Fase 4)
@@ -368,6 +369,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Armas (catálogo, pedido #31)
 
 - Catálogo: `packages/game-core/src/content/weapons.ts` (`WEAPON_TYPES`, `WEAPON_RULES`: pesos 60/40, upgrade por nível, máx. especiais/runas, custo do ataque básico; `weaponScaling`, `weaponDamage`, `upgradeMultiplier`, `normalizeWeaponInstance`, `weaponInfo`)
+- Custo do ataque básico **por tipo** (D54): `basicAttackCost` em `WEAPON_TYPES`; mostrado na ficha (`ItemDto.weapon.basicAttackCost`, `ItemLine` em `CharacterSheetPage.tsx`)
 - Ataques básicos: `basicAttack()` em `content/abilities.ts` (slash, chop, stab, thrust, crush, aimed_shot, staff_strike, wand_bolt, spark)
 - Itens: `content/items.ts` (`weaponType`, `twoHanded` tem de bater com `hands`); upgrades → `abilityMultipliers` (`equipment.ts`) → `PartyMemberInput.abilityMultipliers` → `valueMultiplier` no motor
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
@@ -377,3 +379,36 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas, especiais (só a estrutura existe)
+
+## Loot do Rift (D55)
+
+- Itens encontrados (Loot/Secret/eventos): `RunState.grants` (`rift/run.ts`) → entregues só na vitória, a quem não saiu: `finish()` (`rifts.service.ts`), juntos com os drops do boss em `RunRewardsDto.items`
+- Testes: `apps/server/test/rifts.test.ts` ("kept only if the party beats the Rift")
+
+## Dungeon Threat (simples, D56)
+
+- Regras: `THREAT_RULES`, `threatTier` (`content/rooms.ts`); `RunState.threat`, `addThreat`, `toThreatView` (`rift/run.ts`); fontes: `resolveEvent` (teste falhado), `timeoutRun` (voto sem decisão), `continueRun` (Elite limpa)
+- Efeito no boss: `createEncounter({ enemyModifiers })` → `enemyCombatants(..., mods)` (`combat/state.ts`)
+- Contrato: `ThreatView`, `RunDto.threat` (`shared/combat.ts`); servidor: `toRunDto`
+- Web: `.threat` em `RunPage.tsx` + `rift-map.css`; cabeçalho do boss em `CombatPage.tsx`
+- Testes: `game-core/test/rift.test.ts` ("Dungeon Threat"), `rifts.test.ts`
+
+## PvP (teste, D57)
+
+- Motor: `createPvpEncounter`, `CombatState.mode`, `checkEnd` (ramo pvp), `activePartyIds` (jogadores dos dois lados), `resolveRound` (`queueOf` por lado), `partyCombatant(p, side)`
+- Corrida: `createPvpRun`, `PVP_ARENA_ID`, `PVP_ARENA_NAME`, `RunMember.team`, `RunState.winner` (`rift/run.ts`)
+- Lobbies: `PVP_ARENA_ID`, `PVP_MAX_MEMBERS`, `PVP_TEAM_B_OFFSET`, `LobbyDto.mode` (`shared/social.ts`); `isPvp`, `preferredSlot`, `start` (`lobbies.service.ts`)
+- Servidor: `createPvpRun`, `finish` (sem recompensas), `penalise` (sem perda de qualidade), `toRunDto` (estado por equipa; plano da outra equipa escondido)
+- Web: cartão "PvP Arena (test)" em `RiftsPage.tsx`; equipas A/B em `LobbyPage.tsx`; `CombatPage.tsx` (`mySide`, "Other team")
+- Testes: `game-core/test/combat.test.ts` ("PvP"), `apps/server/test/lobbies.test.ts` ("PvP arena")
+
+## Profissões (D58)
+
+- Conteúdo: `packages/game-core/src/content/professions.ts` (`PROFESSIONS`, atividades, receitas, `PROFESSION_RULES`); materiais/consumíveis em `content/items.ts` (`MATERIALS`, `isStackable`)
+- Regras puras: `packages/game-core/src/professions.ts` (`xpToNext`, `addProfessionXp`, `activityChance`, `repairAmount`, `resolveActivity`)
+- Contrato: `packages/shared/src/professions.ts`; `ItemKind` (`material`, `consumable`), `ItemDto.quantity` (`api.ts`)
+- BD: `character_professions`, `items.quantity` (migração 0009); **TRUNCATE** em `helpers.ts` e `worker.test.ts`
+- Servidor: `apps/server/src/modules/professions/` (`professions.service.ts`: nível, materiais, cooldown, pilhas, reparar/melhorar; `professions.routes.ts` em `/api/characters/:id/professions`), registado em `app.ts`
+- Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx`, `api.ts`, `professions.css`), rota `/professions` no `GameShell`, botão no Hub (`HomePage.tsx`); quantidades na ficha
+- **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS` se precisar)
+- Testes: `game-core/test/professions.test.ts`, `apps/server/test/professions.test.ts`, `e2e` ("professions")

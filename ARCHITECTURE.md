@@ -266,7 +266,11 @@ difficulty`. `BaseAttributes` is a branded type built only by
 - **Design goal (D36 + combat spec of request #31):** "Slay the Spire without
   cards + Darkest Dungeon", with a **planning phase** and an **alternating
   resolution**.
-- **Round:** (1) Block is reset, damage-over-time ticks, statuses count down,
+- **PvE turn (request #34, Slay the Spire):** each player action resolves at
+  once; when every player ends the turn, the enemies carry out their intents
+  (by initiative) and a new round begins. The party's Block resets at the start
+  of the round, the enemies' Block at the start of their phase.
+- **PvP round:** (1) Block is reset, damage-over-time ticks, statuses count down,
   every unit gains Focus from Precision (`focusPerRound`: min 3, unspent Focus
   carries over to a cap) and team initiative is rolled (roll + Agility; each
   team keeps its best). (2) Enemies plan (visible intents). (3) Players add
@@ -288,7 +292,14 @@ difficulty`. `BaseAttributes` is a branded type built only by
   the weapon's ability values. Items store upgrade level, specials (max 5) and
   2 rune slots (locked; Runemaster = future).
 
-### 7.3 Server, timers and client
+### 7.3 PvP arena (test mode, request #33)
+
+`createPvpEncounter` puts two teams of players on the two sides; both plan at
+the same time and the normal resolution alternates by team initiative. Matches
+start from a lobby with `riftId = 'pvp_arena'` and are stored like runs
+(`RunState.mode = 'pvp'`); the server hides the other team's plan (ADR-037).
+
+### 7.4 Server, timers and client
 
 - **Server (`modules/rifts`):** each run is a row in `rift_runs` holding the
   whole `RunState` (map, party, current room, combat state, votes) as JSONB.
@@ -315,6 +326,14 @@ difficulty`. `BaseAttributes` is a branded type built only by
 Balance is checked with `pnpm sim` (`scripts/simulate-balance.ts`): whole runs
 (random path, events with the best base stat, plan → ready fights) for ten
 typical builds, solo and in groups.
+
+## 7b. Professions (request #33)
+
+Data in `game-core/src/content/professions.ts` (professions, activities,
+recipes) and pure rules in `game-core/src/professions.ts` (chance, yield, XP,
+repairs, upgrades). The server module `modules/professions` checks level,
+materials and cooldown, rolls with a server seed, consumes/creates items
+(stacks) and stores levels in `character_professions`. Screen: `/professions`.
 
 ## 8. World map
 

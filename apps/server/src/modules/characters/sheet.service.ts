@@ -67,6 +67,7 @@ function toItemDto(i: Item): ItemDto {
     kind: def?.kind ?? 'accessory',
     description: def?.description ?? '',
     quality: i.quality,
+    quantity: i.quantity,
     broken: isBroken(i.quality),
     equippedSlot: i.equippedSlot as EquipSlot | null,
     slots: def?.slots ?? [],
