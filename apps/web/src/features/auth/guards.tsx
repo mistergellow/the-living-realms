@@ -1,12 +1,16 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
+import { useCustomContent } from '../admin/api';
 import { useMe } from './api';
 
 /** Only for logged-in accounts; otherwise redirect to /login. */
 export function RequireAuth() {
   const me = useMe();
   const location = useLocation();
-  if (me.isPending) return <FullPageMessage>Loading…</FullPageMessage>;
+  // Admin-made items/abilities (request #32) must be known before any game screen renders.
+  const custom = useCustomContent(!!me.data);
+  if (me.isPending || (me.data && custom.isPending))
+    return <FullPageMessage>Loading…</FullPageMessage>;
   if (me.isError)
     return (
       <FullPageMessage spinner={false}>

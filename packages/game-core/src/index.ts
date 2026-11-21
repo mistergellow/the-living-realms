@@ -13,6 +13,8 @@ export * from './stats.js';
 export * from './content/abilities.js';
 export * from './content/items.js';
 export * from './content/weapons.js';
+export * from './content/custom.js';
+export * from './content/custom-rules.js';
 export * from './content/enemies.js';
 export * from './content/rifts.js';
 export * from './combat/index.js';

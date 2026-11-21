@@ -226,7 +226,16 @@ export class RealtimeGateway {
     }
   }
 
+  /** Set by app.ts: reloads admin-made content when another instance changed it (request #32). */
+  onContentChanged: (() => Promise<void>) | null = null;
+
   private onControl(msg: ControlMessage): void {
+    if (msg.kind === 'content.changed') {
+      void this.onContentChanged?.().catch((err: unknown) =>
+        this.log.error({ err }, 'reloading custom content failed'),
+      );
+      return;
+    }
     for (const c of this.connections.values()) {
       if (
         msg.kind === 'account.replace' &&

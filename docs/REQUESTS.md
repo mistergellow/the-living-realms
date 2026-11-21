@@ -553,3 +553,41 @@ ações dentro da equipa = ordem planeada (D49); decisões de grupo por votaçã
   `pnpm sim` refeito para corridas completas.
 - Docs: CHANGE_MAP, DECISIONS (ADR-032–035), ARCHITECTURE §7, DATABASE,
   ROADMAP, CLAUDE.md.
+
+### #32 — 2026-11-21 — Controlo de "admin" para testar
+
+**Pedido:** "Cria uma forma de admin control. O user conseguir criar armas /
+adicionar poderes etc. para testar. Eu sou o único admin."
+**Decisões (técnicas, ADR-036):**
+
+- Admin = contas cujo email está na variável `ADMIN_EMAILS` do servidor (não
+  há forma de alguém se tornar admin pelo jogo). **No Railway, o dono tem de
+  acrescentar `ADMIN_EMAILS=<o seu email>` ao serviço `server`.**
+- Armas e habilidades criadas pelo admin ficam na base de dados
+  (`custom_content`) e entram num registo do game-core; funcionam no combate,
+  na ficha, na barra de habilidades e na arte (pelo tipo de arma) sem deploy.
+- Uma arma personalizada escolhe um tipo do catálogo, que lhe dá o ataque
+  básico (sempre o primeiro), as mãos e a arte — respeita o ADR-034.
+- Definições editam-se mas não se apagam (itens e corridas podem usá-las).
+- Mudanças feitas durante um Rift contam a partir da próxima corrida.
+
+**Resultado:**
+
+- Página `/admin` (link "Admin" no ecrã de personagens, só para o admin) com 3
+  separadores:
+  - **Characters:** qualquer personagem de qualquer conta — dar itens (com
+    upgrade +0–+10 e qualidade), mudar qualidade/upgrade, remover itens,
+    ensinar/esquecer habilidades (incluindo as de inimigos e as personalizadas),
+    mudar atributos base, pontos por gastar e reputação.
+  - **Items & weapons:** criar/editar armas (tipo, uma/duas mãos, mão
+    secundária), mãos secundárias (escudo/talismã), armaduras e acessórios, com
+    habilidades concedidas, bónus de atributos, armadura e resistência mágica.
+  - **Abilities:** criar/editar habilidades (skill ou de arma): custos de
+    Focus/Mana, alvo (inimigos/aliados/próprio, alcance, área), até 6 efeitos
+    (dano, cura, Block, estado, bónus contra estado) e escala por atributo, com
+    pré-visualização do texto.
+- Todas as ações do admin ficam em `world_events` (`admin.*`).
+- Testes: 6 unitários (game-core), 5 de integração (servidor), 2 e2e.
+- Docs: CHANGE_MAP ("Admin e conteúdo personalizado"), DECISIONS ADR-036,
+  DATABASE, ARCHITECTURE §9, ROADMAP, DEPLOY_RAILWAY, `.env.example`.
+

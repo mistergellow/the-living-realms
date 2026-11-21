@@ -1,0 +1,214 @@
+/* Admin tools (request #32): functional, compact, consistent with the game theme. */
+.adm-tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.adm-split {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) 1fr;
+  gap: var(--hud-gap);
+  align-items: start;
+}
+@media (max-width: 48rem) {
+  .adm-split {
+    grid-template-columns: 1fr;
+  }
+}
+.adm-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+}
+.adm-list ul,
+.adm-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.adm-pick {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.adm-pick span {
+  font-size: 0.8rem;
+}
+.adm-pick:hover,
+.adm-pick.is-active {
+  border-color: var(--accent);
+  background: var(--surface-hi);
+}
+.adm-detail {
+  min-width: 0;
+}
+.adm-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.adm-head h2 {
+  margin: 0;
+}
+.adm-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.adm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.adm-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.adm-field > span {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.adm-wide {
+  grid-column: span 2;
+}
+.adm-field input,
+.adm-field select,
+.adm-field textarea,
+.adm-filter,
+.adm-table input {
+  min-height: 2.2rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+}
+.adm-field textarea {
+  padding: var(--space-2);
+  resize: vertical;
+}
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.adm-table th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: var(--space-1);
+}
+.adm-table td {
+  padding: var(--space-1);
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.adm-table input {
+  width: 4.5rem;
+}
+.adm-id {
+  display: block;
+  font-size: 0.7rem;
+}
+.adm-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+.adm-note {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.adm-chips {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.adm-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.adm-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+.adm-ability-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-ability-pick fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.adm-ability-pick legend {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-bottom: var(--space-1);
+}
+.adm-effect {
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-effect .adm-field input {
+  width: 5.5rem;
+}
+.adm-preview {
+  line-height: 1.5;
+}
+.adm-card > .btn {
+  align-self: flex-start;
+}
+.adm-table input:disabled {
+  opacity: 0.4;
+}

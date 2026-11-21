@@ -14,9 +14,9 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Conta (account)
 
-- Contrato: `packages/shared/src/api.ts` (`emailSchema`, `passwordSchema`, `registerRequestSchema`, `loginRequestSchema`, `AccountDto`, `MeResponse`)
+- Contrato: `packages/shared/src/api.ts` (`emailSchema`, `passwordSchema`, `registerRequestSchema`, `loginRequestSchema`, `AccountDto` com `isAdmin`, `MeResponse`)
 - BD: `packages/db/src/schema.ts` → `accounts` (+ nova migração `pnpm db:generate`)
-- Servidor: `apps/server/src/modules/auth/accounts.repository.ts`, `auth.service.ts`, `auth.routes.ts` (`toAccountDto`)
+- Servidor: `apps/server/src/modules/auth/accounts.repository.ts`, `auth.service.ts`, `auth.routes.ts` (`toAccountDto`, `isAdmin` a partir de `ADMIN_EMAILS`)
 - Web: `apps/web/src/features/auth/api.ts`, `LoginPage.tsx`, `RegisterPage.tsx`, `guards.tsx`
 - Testes: `apps/server/test/auth.test.ts`, `apps/server/test/helpers.ts` (`registerUser`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → accounts
@@ -79,6 +79,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
 - Web: `CharacterSheetPage.tsx` (Equipment, Inventory, `QualityBar`), `api.ts` (`useEquipment`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
+- Itens feitos pelo admin: ver "Admin e conteúdo personalizado" (`getItemDef` procura primeiro em `ITEMS`, depois no registo)
 - **Item novo:** acrescentar em `content/items.ts`; se for arma, o tipo tem de existir em `content/weapons.ts` (a 1.ª habilidade é o ataque básico do tipo) e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts` (`MAIN`, `artFromAbilities`); se for de kit inicial, rever a migração de dados para personagens antigos e `startingSlot`/`BUILDS` do simulador; se puder cair de Rifts, `content/rifts.ts` (`rewards.loot`, `lootRoom`, `secretRoom`)
 - **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS` (`CharacterSheetPage.tsx`), itens que o usam
 
@@ -86,6 +87,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
 - Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + aprendidas + universais)
+- Habilidades feitas pelo admin: ver "Admin e conteúdo personalizado" (`getAbility` procura primeiro em `ABILITIES`, depois no registo); **campo novo em `AbilityDef`/`AbilityEffect`** → acrescentar também a `customAbilityInputSchema` (`shared/src/admin.ts`), `toCustomAbilityDef` e ao formulário `AbilityEditor.tsx`
 - Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto)
 - BD: `character_skills` (skills aprendidas por drops; as de arma não se guardam)
 - Servidor: `sheet.service.ts` (`abilities`)
@@ -200,7 +202,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Validação: `apps/server/src/config.ts` e/ou `apps/worker/src/config.ts`
 - `.env.example` (com comentário) e o `.env` local
 - `infra/docker-compose.prod.yml`, `.github/workflows/ci.yml`, `playwright.config.ts` (se for relevante nesses ambientes)
-- `apps/server/test/helpers.ts` (valores de teste)
+- `apps/server/test/helpers.ts` (valores de teste); `ADMIN_EMAILS` também em `apps/server/test/admin.test.ts`
 - **Railway (produção):** as variáveis vivem no painel do Railway, não no código. Atualizar a lista em `docs/DEPLOY_RAILWAY.md` e avisar o dono para a acrescentar no serviço certo (`server` e/ou `worker`)
 
 ## Ecrã / rota nova no frontend
@@ -377,3 +379,18 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas, especiais (só a estrutura existe)
+
+## Admin e conteúdo personalizado (pedido #32, ADR-036)
+
+- Quem é admin: variável `ADMIN_EMAILS` (`apps/server/src/config.ts`, `.env.example`, `playwright.config.ts`, `docs/DEPLOY_RAILWAY.md`) → `isAdminEmail`/`requireAdmin` (`apps/server/src/plugins/auth.ts`) → `AccountDto.isAdmin` (`auth.routes.ts`)
+- Contrato: `packages/shared/src/admin.ts` (`customItemInputSchema`, `customAbilityInputSchema`, `customAbilityEffectSchema`, `CustomContentDto`, `AdminCharacterDto`, pedidos `adminGrantItemSchema`/`adminUpdateItemSchema`/`adminTeachSkillSchema`/`adminUpdateCharacterSchema`)
+- Regras: `packages/game-core/src/content/custom.ts` (registo: `setCustomContent`, `customItemDef`, `customAbilityDef`, `toCustomItemDef`, `toCustomAbilityDef`), `content/custom-rules.ts` (`validateCustomItem`: espaços por tipo, ataque básico primeiro, duas mãos; `validateCustomAbility`; `customIdFor`); ligações em `getItemDef` (`items.ts`) e `getAbility` (`abilities.ts`)
+- BD: `custom_content` (migração 0009); cópias em `items` (`source = 'admin'`) e `character_skills`
+- Servidor: `apps/server/src/modules/admin/` (`custom-content.service.ts`: carregar/criar/editar + `content.changed`; `admin.service.ts`: ferramentas de personagem + eventos `admin.*`; `admin.routes.ts`: `/api/admin/*` e `GET /api/content/custom`); `app.ts` (carrega o registo no arranque); `sheet.service.ts` (`sheetOf`)
+- Tempo real: `ControlMessage` `content.changed` (`packages/server-kit/src/bus.ts`) → `RealtimeGateway.onContentChanged` (`gateway.ts`)
+- Web: `apps/web/src/features/admin/` (`api.ts` com `useCustomContent`, `AdminPage.tsx`, `CharacterTools.tsx`, `ItemEditor.tsx`, `AbilityEditor.tsx`, `catalog.ts`, `fields.tsx`, `admin.css`); `auth/guards.tsx` (`RequireAuth` carrega o conteúdo antes dos ecrãs); rota `/admin` em `router.tsx`; link "Admin" em `CharacterSelectPage.tsx`
+- Testes: `game-core/test/custom-content.test.ts`, `apps/server/test/admin.test.ts`, `e2e/admin.spec.ts`; TRUNCATE de `custom_content` em `helpers.ts` e `worker.test.ts`
+- Docs: `DATABASE.md` (custom_content, eventos `admin.*`), `DECISIONS.md` ADR-036, `ARCHITECTURE.md` §9
+- **Tipo de arma novo / espaço novo / tipo de item novo:** rever `validateCustomItem` (`SLOTS_BY_KIND`, `OFFHAND_TYPES`) e os selects de `ItemEditor.tsx`
+- **Estado novo (`STATUS_IDS`):** aparece sozinho nos formulários (vêm de `STATUS_IDS`/`STATUS_NAMES`)
+

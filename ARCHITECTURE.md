@@ -333,7 +333,11 @@ DATABASE.md).
 - **Routing:** `/login`, `/register` (guests) → `/characters`, `/characters/new`
   (account area) → the in-game shell (`GameShell`, ADR-031): `/home` (hub),
   `/world` (map), `/rifts`, `/friends` → `/rifts/lobbies/:id`, `/rifts/runs/:id`
-  (combat, own screen).
+  (combat, own screen). `/admin` (ADR-036): admin tools, only for accounts in
+  `ADMIN_EMAILS`.
+- **Custom content (ADR-036):** after login, `RequireAuth` loads
+  `GET /api/content/custom` into the game-core content registry, so admin-made
+  items and abilities work everywhere `getItemDef`/`getAbility` are used.
 - **State:**
   - _Server state_ (REST): TanStack Query (`features/*/api.ts`).
   - _Real-time state:_ a Zustand store fed by the WebSocket through a **pure

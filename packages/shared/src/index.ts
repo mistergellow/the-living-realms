@@ -3,3 +3,4 @@ export * from './api.js';
 export * from './protocol.js';
 export * from './combat.js';
 export * from './social.js';
+export * from './admin.js';

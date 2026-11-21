@@ -617,3 +617,37 @@ a starting status on the party, an extra enemy). Nothing in the engine blocks
 it. **Open questions for the owner:** what raises (and lowers) Threat, whether
 players see it, the tiers and their effects, and whether it changes rewards.
 Not implemented until those are decided.
+
+## ADR-036 — Admin tools and custom content in a registry
+
+**Status:** accepted (request #32)
+
+**Context.** The owner wants to create weapons and abilities and give them to
+characters to test the game, without a deploy for each change. Content lives
+in code (`game-core/content/*`) and is used by the server (combat engine,
+sheets) and by the browser (ability bar, combat log, art).
+
+**Decision.**
+
+- **Who is admin:** the server variable `ADMIN_EMAILS` (comma-separated). No
+  database flag, so nobody can grant themselves admin through the game; the
+  owner changes it in Railway. `AccountDto.isAdmin` tells the client to show
+  the `/admin` link; every `/api/admin` route checks it again (`requireAdmin`).
+- **Custom content:** admin-made items and abilities are stored in
+  `custom_content` (JSONB definitions validated by zod in `@realms/shared` and
+  by the same equipment/weapon rules as built-in content in
+  `game-core/content/custom-rules.ts`). They are loaded into an in-memory
+  registry (`game-core/content/custom.ts`); `getItemDef`/`getAbility` fall back
+  to it, so the engine and the UI need no other change. Built-in ids always
+  win; custom ids start with `custom_`.
+- **Sync:** the server loads the registry at start-up and after every admin
+  change, and publishes `content.changed` on the control bus so other server
+  instances reload. Clients load `GET /api/content/custom` after login.
+- **Character tools:** give items (any upgrade/quality), change or remove
+  them, teach/forget abilities, overwrite base attributes, unspent points and
+  reputation. Every change is a `world_events` row (`admin.*`).
+- Definitions can be edited but not deleted (items and run logs may reference
+  them). A custom weapon always starts with its type's basic attack (ADR-034).
+
+**Consequences.** game-core keeps no I/O: the registry is filled by the caller.
+A Rift in progress keeps the combat profile it started with.

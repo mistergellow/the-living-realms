@@ -27,7 +27,9 @@ export type ControlMessage =
   /** An account entered the world on `keepConnectionId`; drop its other in-world connections. */
   | { kind: 'account.replace'; accountId: string; keepConnectionId: string }
   /** A session was revoked (logout); close every connection opened with it. */
-  | { kind: 'session.revoked'; sessionId: string };
+  | { kind: 'session.revoked'; sessionId: string }
+  /** Admin-made content changed (request #32); reload the game-core content registry. */
+  | { kind: 'content.changed' };
 
 export async function publishToWorld(
   redis: Redis,

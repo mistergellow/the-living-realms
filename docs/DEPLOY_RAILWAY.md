@@ -45,7 +45,12 @@ variáveis abaixo usam-nos.
    WEB_ORIGIN=https://${{RAILWAY_PUBLIC_DOMAIN}}
    COOKIE_SECURE=true
    TRUST_PROXY=true
+   ADMIN_EMAILS=o-teu-email@exemplo.com
    ```
+
+   `ADMIN_EMAILS` (pedido #32): o email da conta com acesso ao painel `/admin`
+   (criar armas e habilidades, dar itens). Vários emails separados por vírgula.
+   Sem esta variável ninguém é admin.
 
 4. Guarda e clica em **Deploy** (ou **Apply changes**).
 

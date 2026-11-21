@@ -1,4 +1,5 @@
 import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/shared';
+import { customAbilityDef } from './custom.js';
 import { WEAPON_RULES, WEAPON_TYPES, weaponScaling, type CatalogueWeaponType } from './weapons.js';
 
 /*
@@ -516,7 +517,10 @@ export const ABILITIES = {
 export type AbilityId = keyof typeof ABILITIES;
 
 export function getAbility(id: string): AbilityDef | undefined {
-  return (ABILITIES as Record<string, AbilityDef>)[id];
+  // Built-in content first; then admin-made abilities (request #32).
+  return Object.hasOwn(ABILITIES, id)
+    ? (ABILITIES as Record<string, AbilityDef>)[id]
+    : customAbilityDef(id);
 }
 
 export const UNIVERSAL_ABILITIES: AbilityId[] = ['block', 'swap_position'];

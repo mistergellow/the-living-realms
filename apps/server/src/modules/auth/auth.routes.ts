@@ -3,21 +3,21 @@ import { loginRequestSchema, registerRequestSchema, type MeResponse } from '@rea
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { AppContext } from '../../context.js';
 import { parse } from '../../lib/errors.js';
-import { requireAuth } from '../../plugins/auth.js';
+import { isAdminEmail, requireAuth } from '../../plugins/auth.js';
 import { AuthService } from './auth.service.js';
 import { SESSION_COOKIE, type SessionService } from './session.service.js';
-
-const toAccountDto = (a: { id: string; email: string; createdAt: Date }) => ({
-  id: a.id,
-  email: a.email,
-  createdAt: a.createdAt.toISOString(),
-});
 
 export async function authRoutes(
   app: FastifyInstance,
   { ctx, sessions }: { ctx: AppContext; sessions: SessionService },
 ) {
   const auth = new AuthService(ctx.db);
+  const toAccountDto = (a: { id: string; email: string; createdAt: Date }) => ({
+    id: a.id,
+    email: a.email,
+    createdAt: a.createdAt.toISOString(),
+    isAdmin: isAdminEmail(ctx.config.ADMIN_EMAILS, a.email),
+  });
   const authRateLimit = { rateLimit: { max: ctx.config.AUTH_RATE_LIMIT, timeWindow: '1 minute' } };
 
   const setSessionCookie = (reply: FastifyReply, token: string) =>

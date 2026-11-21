@@ -13,6 +13,7 @@ import { FriendsPage } from '../features/social/FriendsPage';
 import { Screen } from '../shared/ui/Screen';
 import { GameShell } from '../features/game/GameShell';
 import { HomePage } from '../features/game/HomePage';
+import { AdminPage } from '../features/admin/AdminPage';
 
 /*
  * Route map
@@ -26,6 +27,7 @@ import { HomePage } from '../features/game/HomePage';
  *   /rifts/runs/:runId       a Rift run: map/exploration screen, combat screen for fights
  *   /rifts/lobbies/:lobbyId  group lobby (up to 6)
  *   /friends                 friends list and requests (in GameShell)
+ *   /admin                   admin tools (ADMIN_EMAILS only): characters, custom items/abilities
  */
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/characters" replace /> },
@@ -42,6 +44,7 @@ export const router = createBrowserRouter([
       { path: '/characters', element: <CharacterSelectPage /> },
       { path: '/characters/new', element: <CharacterCreatePage /> },
       { path: '/characters/:id', element: <CharacterSheetPage /> },
+      { path: '/admin', element: <AdminPage /> },
       {
         // In-game frame: world connection, top bar, bottom navigation.
         element: <GameShell />,
