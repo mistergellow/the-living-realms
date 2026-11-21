@@ -30,6 +30,10 @@ export type WeaponArt =
   | 'morningstar'
   | 'lance'
   | 'crossbow'
+  | 'scepter'
+  | 'chakram'
+  | 'scythe'
+  | 'sling'
   | null;
 export type OffhandArt = 'shield' | 'talisman' | 'dagger' | 'handaxe' | null;
 
@@ -312,6 +316,55 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
           />
           <line x1="116" y1="72" x2="116" y2="110" stroke="#e8e2d0" strokeWidth="1.2" />
           <rect x="94" y="94" width="5" height="14" rx="2" fill="#5e4226" />
+        </g>
+      );
+    // ---- request #46 ----
+    case 'scepter':
+      return (
+        <g className="av-weapon">
+          <rect x="96" y="80" width="4" height="44" rx="2" fill="#c9a24a" />
+          <circle cx="98" cy="74" r="7" fill="#fff1a8" className="av-orb" />
+          <path
+            d="M98 62 L98 68 M92 74 L86 74 M104 74 L110 74"
+            stroke="#fff1a8"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </g>
+      );
+    case 'chakram':
+      return (
+        <g className="av-weapon">
+          <circle cx="100" cy="104" r="11" fill="none" stroke="#cfd6e0" strokeWidth="4" />
+          <circle
+            cx="100"
+            cy="104"
+            r="11"
+            fill="none"
+            stroke="#b28df0"
+            strokeWidth="1.5"
+            className="av-orb"
+          />
+        </g>
+      );
+    case 'scythe':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="34" width="4.5" height="110" rx="2" fill="#4a3424" />
+          <path
+            d="M98 36 C84 26 64 30 58 44 C70 38 84 40 97 46 Z"
+            fill="#cfd6e0"
+            stroke="#7d8896"
+          />
+        </g>
+      );
+    case 'sling':
+      return (
+        <g className="av-weapon">
+          <path d="M96 96 C100 110 104 118 100 128" stroke="#8a5a2e" strokeWidth="2" fill="none" />
+          <path d="M96 96 C92 110 94 120 100 128" stroke="#8a5a2e" strokeWidth="2" fill="none" />
+          <ellipse cx="100" cy="129" rx="4" ry="3" fill="#6b4a2a" />
+          <circle cx="100" cy="127" r="2.2" fill="#9aa0a8" />
         </g>
       );
     default:

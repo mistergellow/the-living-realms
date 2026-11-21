@@ -22,24 +22,17 @@ describe('weapon catalogue', () => {
       expect(types).toContain(t);
     expect(WEAPON_TYPES.sword).toMatchObject({ hands: 1, primary: 'might', secondary: 'agility' });
     expect(WEAPON_TYPES.axe).toMatchObject({ hands: 1, primary: 'might', secondary: 'endurance' });
-    expect(WEAPON_TYPES.dagger).toMatchObject({
-      hands: 1,
-      primary: 'agility',
-      secondary: 'precision',
-    });
+    // Request #46: dagger, mace and wand are single-attribute weapons now.
+    expect(WEAPON_TYPES.dagger).toMatchObject({ hands: 1, primary: 'agility', secondary: null });
     expect(WEAPON_TYPES.spear).toMatchObject({
       hands: 2,
       primary: 'might',
       secondary: 'precision',
     });
-    expect(WEAPON_TYPES.mace).toMatchObject({ hands: 1, primary: 'might', secondary: 'endurance' });
+    expect(WEAPON_TYPES.mace).toMatchObject({ hands: 1, primary: 'endurance', secondary: null });
     expect(WEAPON_TYPES.bow).toMatchObject({ hands: 2, primary: 'precision', category: 'ranged' });
     expect(WEAPON_TYPES.staff).toMatchObject({ hands: 2, primary: 'intellect', secondary: 'will' });
-    expect(WEAPON_TYPES.wand).toMatchObject({
-      hands: 1,
-      primary: 'intellect',
-      secondary: 'precision',
-    });
+    expect(WEAPON_TYPES.wand).toMatchObject({ hands: 1, primary: 'intellect', secondary: null });
   });
 
   it('every weapon type defines its basic attack, using its base damage and scaling', () => {
@@ -126,5 +119,32 @@ describe('more weapon types (request #45)', () => {
     const bolt = getAbility('piercing_bolt')!;
     const dmg = bolt.effects.find((e) => e.kind === 'damage');
     expect(dmg && dmg.kind === 'damage' && dmg.bonusVsBlock).toBe(2);
+  });
+});
+
+describe('one weapon per attribute and per pair of attributes (request #46)', () => {
+  const ATTRS = ['might', 'agility', 'precision', 'endurance', 'intellect', 'will'] as const;
+  const keyOf = (a: string, b: string | null) => (b ? [a, b].sort().join('+') : a);
+
+  it('21 weapon types: 6 single-attribute + 15 two-attribute, each combination exactly once', () => {
+    const types = Object.values(WEAPON_TYPES);
+    expect(types).toHaveLength(21);
+    const keys = types.map((w) => keyOf(w.primary, w.secondary));
+    expect(new Set(keys).size).toBe(21);
+    for (const a of ATTRS) expect(keys).toContain(a);
+    for (let i = 0; i < ATTRS.length; i++)
+      for (let j = i + 1; j < ATTRS.length; j++)
+        expect(keys).toContain(keyOf(ATTRS[i]!, ATTRS[j]!));
+  });
+
+  it('every weapon type has an item with exactly 2 abilities: its basic attack and one power', () => {
+    for (const w of Object.values(WEAPON_TYPES)) {
+      const items = Object.values(ITEMS).filter((i) => i.weaponType === w.type);
+      expect(items.length, w.type).toBeGreaterThan(0);
+      for (const it of items) {
+        expect(it.abilities, it.id).toHaveLength(2);
+        expect(it.abilities![0]).toBe(w.basicAttack);
+      }
+    }
   });
 });

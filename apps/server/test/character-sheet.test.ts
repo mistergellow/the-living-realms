@@ -74,7 +74,6 @@ describe('character creation (attributes + starter kit)', () => {
     expect(sheet.inventory).toEqual([]);
     expect(sheet.abilities.map((a) => a.id)).toEqual([
       'aimed_shot',
-      'volley',
       'marking_shot',
       'block',
       'swap_position',
@@ -82,7 +81,7 @@ describe('character creation (attributes + starter kit)', () => {
     expect(sheet.abilities[0]).toMatchObject({
       grantedBy: 'Hunting Bow',
       focusCost: 2,
-      effects: ['8–10 ranged damage'],
+      effects: ['7–9 ranged damage'],
       scaling: 'Precision 60% · Agility 40%',
     });
     expect(sheet.reputation).toBe(0);

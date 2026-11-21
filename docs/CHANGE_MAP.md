@@ -485,6 +485,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - BD: `items.upgrade_level`, `items.specials`, `items.rune_slots` (migração 0008)
 - Servidor: `toItemDto` e `combatProfile` (`sheet.service.ts`)
 - Arte: `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`) — todos os tipos têm desenho (pedido #45)
+- **Regra (pedido #46):** 21 tipos = 1 por atributo + 1 por cada par; cada item de arma tem 2 habilidades (básico + 1 poder) — `weapons.test.ts` verifica. Mudar atributos de um tipo obriga a rever a descrição do item.
 - **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + arte (`CharacterAvatar.tsx`, `weapon-art.ts`) + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
