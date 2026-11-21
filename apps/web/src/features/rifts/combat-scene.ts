@@ -62,6 +62,11 @@ const STATUS_COLORS: Record<StatusId, number> = {
   mark: 0xe8c45a,
   weaken: 0x9b7bff,
   stun: 0xd6dbe4,
+  strength: 0xff6b4a,
+  thorns: 0x8fd16a,
+  intangible: 0xbfe8ff,
+  ritual: 0xd06bff,
+  fuse: 0xff5d5d,
 };
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -908,6 +913,11 @@ export class CombatScene implements PixiScene {
           u.shownHp = Math.min(u.view.maxHp, u.shownHp + e.amount);
           this.rise(c.x, u.y, 0x7ee2a8, 16);
           this.float(u.x, fy, `+${e.amount}`, COLORS.heal, 22);
+          break;
+        case 'explode':
+          // Request #44: a Volatile Mite's fuse ran out.
+          this.burst(u.x, u.y - u.artHeight * 0.5, 0xff7a3d, 28, 1.2);
+          this.float(u.x, fy, 'BOOM!', COLORS.status, 24);
           break;
         case 'downed':
           u.shownHp = 0;

@@ -1,5 +1,6 @@
 import {
   COMBAT_COLUMNS,
+  SLOTS_PER_SIDE,
   type CombatColumn,
   type CombatSide,
   type IntentView,
@@ -8,12 +9,18 @@ import {
   type StatusId,
 } from '@realms/shared';
 import { AFFIX_RULES } from '../content/affixes.js';
-import { getAbility, type AbilityDef, type AbilityEffect } from '../content/abilities.js';
+import {
+  BASIC_ACTIONS,
+  getAbility,
+  type AbilityDef,
+  type AbilityEffect,
+} from '../content/abilities.js';
 import type { RiftRoomDef } from '../content/rifts.js';
 import { reductionFromRating, scalingMultiplier } from '../stats.js';
 import { Rng } from './rng.js';
 import {
   COMBAT_RULES,
+  enemyCombatant,
   enemyCombatants,
   partyCombatant,
   pushLog,
@@ -167,6 +174,12 @@ function startRound(state: CombatState): void {
   // through the party's turn and goes when the enemy phase begins.
   for (const u of state.combatants) if (isPvp(state) || u.side === 'party') u.block = 0;
   for (const u of units) {
+    // Ritual (request #44): permanent Strength that grows every round.
+    const ritual = u.statuses.find((s) => s.id === 'ritual');
+    if (ritual && !u.downed) addStrength(state, u, ritual.value);
+    // Fuse (request #44): when the counter runs out, the unit explodes.
+    const fuse = u.statuses.find((s) => s.id === 'fuse');
+    if (fuse && fuse.turns <= 1 && !u.downed) explode(state, u, fuse.value);
     for (const s of u.statuses) {
       if ((s.id === 'bleed' || s.id === 'burn') && !u.downed) {
         const amount = Math.min(u.hp, s.value);
@@ -397,6 +410,8 @@ function applyEffect(
       if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
       if (effect.bonusVs && hasStatus(target, effect.bonusVs.status))
         dmg *= effect.bonusVs.multiplier;
+      // Strength (request #44): flat extra damage per hit.
+      dmg += statusValue(actor, 'strength');
       // Gear effects (request #37): +% damage, +% vs bosses.
       if (actor.gear)
         dmg *= 1 + (actor.gear.damagePct + (target.isBoss ? actor.gear.bossDamagePct : 0)) / 100;
@@ -407,12 +422,30 @@ function applyEffect(
       // 2. Block absorbs. 3. The rest comes off HP.
       const { toHp, blocked, blockLeft } = absorbWithBlock(dmg, target.block);
       target.block = blockLeft;
-      const amount = Math.min(target.hp, toHp);
+      // Intangible (request #44): every hit deals at most 1.
+      const capped = hasStatus(target, 'intangible') ? Math.min(1, toHp) : toHp;
+      const amount = Math.min(target.hp, capped);
       target.hp -= amount;
       pushLog(state, { t: 'damage', targetId: target.id, amount, crit, blocked });
       // 4–5. Status update and defeat check.
       if (target.hp <= 0) knockDown(state, target);
       gearOnHit(state, rng, actor, target, amount);
+      // Drain (request #44): heals the attacker for the damage dealt.
+      if (effect.drain && amount > 0 && !actor.downed) {
+        const healed = Math.min(actor.maxHp - actor.hp, amount);
+        if (healed > 0) {
+          actor.hp += healed;
+          pushLog(state, { t: 'heal', targetId: actor.id, amount: healed });
+        }
+      }
+      // Thorns (request #44): hitting it hurts.
+      const thorns = statusValue(target, 'thorns');
+      if (thorns > 0 && actor.side !== target.side && !actor.downed) {
+        const back = Math.min(actor.hp, thorns);
+        actor.hp -= back;
+        pushLog(state, { t: 'damage', targetId: actor.id, amount: back, crit: false, blocked: 0 });
+        if (actor.hp <= 0) knockDown(state, actor);
+      }
       return true;
     }
     case 'heal': {
@@ -424,8 +457,13 @@ function applyEffect(
       return true;
     }
     case 'block': {
-      // Block stacks (combat spec §7.2).
-      const amount = Math.max(1, Math.round(roll(rng, effect.min, effect.max) * mult));
+      // Block stacks (combat spec §7.2). The Dodge action (id 'block') grows
+      // with Agility (request #44).
+      const agility =
+        ability.id === 'block' && actor.attributes
+          ? Math.floor(actor.attributes.agility * BASIC_ACTIONS.block.perAgility)
+          : 0;
+      const amount = Math.max(1, Math.round(roll(rng, effect.min, effect.max) * mult) + agility);
       target.block += amount;
       pushLog(state, { t: 'block', targetId: target.id, amount });
       return true;
@@ -438,7 +476,51 @@ function applyEffect(
     }
     case 'swap':
       return true;
+    case 'summon':
+      summon(state, actor, effect.enemy);
+      return true;
   }
+}
+
+const statusValue = (c: Combatant, id: StatusId) => c.statuses.find((s) => s.id === id)?.value ?? 0;
+
+/** Ritual: Strength that never runs out and keeps growing. */
+function addStrength(state: CombatState, u: Combatant, n: number): void {
+  const s = u.statuses.find((x) => x.id === 'strength');
+  if (s) {
+    s.value += n;
+    s.turns = Math.max(s.turns, 99);
+  } else u.statuses.push({ id: 'strength', turns: 99, value: n });
+  pushLog(state, { t: 'status', targetId: u.id, status: 'strength', turns: 99 });
+}
+
+/** Fuse ran out: damage every unit of the other side, then the unit is gone. */
+function explode(state: CombatState, u: Combatant, damage: number): void {
+  pushLog(state, { t: 'explode', actorId: u.id });
+  for (const t of state.combatants) {
+    if (t.side === u.side || !alive(t) || t.left) continue;
+    const { toHp, blocked, blockLeft } = absorbWithBlock(damage, t.block);
+    t.block = blockLeft;
+    const amount = Math.min(t.hp, toHp);
+    t.hp -= amount;
+    pushLog(state, { t: 'damage', targetId: t.id, amount, crit: false, blocked });
+    if (t.hp <= 0) knockDown(state, t);
+  }
+  knockDown(state, u);
+}
+
+/** Summon (request #44): a new enemy in the first empty position of the actor's side. */
+function summon(state: CombatState, actor: Combatant, enemyId: string): void {
+  const taken = new Set(
+    state.combatants.filter((c) => c.side === actor.side && alive(c) && !c.left).map((c) => c.slot),
+  );
+  const slot = Array.from({ length: SLOTS_PER_SIDE }, (_, i) => i).find((i) => !taken.has(i));
+  if (slot === undefined) return;
+  state.summonSeq = (state.summonSeq ?? 0) + 1;
+  const unit = enemyCombatant(enemyId, `${actor.id}:s${state.summonSeq}`, slot);
+  // Summons act from the next round.
+  state.combatants.push(unit);
+  pushLog(state, { t: 'summon', actorId: actor.id, unitId: unit.id });
 }
 
 function applyAbility(
@@ -527,6 +609,7 @@ function expectedValue(a: AbilityDef, targets: Combatant[]): number {
       // Blocking pays off more when the column is shared (D42: one blocks, one attacks).
       if (e.kind === 'block' && t.block === 0) v += avg * (targets.length > 1 ? 0.8 : 0.3);
       if (e.kind === 'heal' && t.hp < t.maxHp * 0.6) v += avg;
+      if (e.kind === 'summon') v += 6;
     }
   }
   return v;

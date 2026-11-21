@@ -96,3 +96,32 @@ describe('world boss (request #43)', () => {
     expect(new Date(boss.nextMoveAt).getTime()).toBeGreaterThan(Date.now());
   });
 });
+
+describe('world boss season reward (request #44)', () => {
+  it('when the season ends, the party with the most damage gets the reward, once', async () => {
+    const winner = await fighter();
+    const other = await fighter();
+    await view(winner);
+    await t.dbHandle.sql`
+      insert into world_boss_attempts (id, boss_id, party_key, members, damage, finished_at)
+      select gen_random_uuid(), id, ${winner.id}, ${JSON.stringify([{ characterId: winner.id, name: winner.name }])}::jsonb, 5000, now() from world_bosses`;
+    await t.dbHandle.sql`
+      insert into world_boss_attempts (id, boss_id, party_key, members, damage, finished_at)
+      select gen_random_uuid(), id, ${other.id}, ${JSON.stringify([{ characterId: other.id, name: other.name }])}::jsonb, 100, now() from world_bosses`;
+    // The boss falls: the season is over.
+    await t.dbHandle.sql`update world_bosses set hp = 0, defeated_at = now()`;
+    const boss = (await view(winner)).json() as WorldBossDto;
+    expect(boss.seasonOver).toBe(true);
+    expect(boss.rewardedAt).not.toBeNull();
+    await view(other); // read again: no second reward
+    const rows = await t.dbHandle.sql`
+      select c.id, c.reputation, count(i.id)::int as hearts from characters c
+      left join items i on i.character_id = c.id and i.item_def_id = ${CURRENT_WORLD_BOSS_SEASON.reward.item}
+      group by c.id`;
+    const of = (id: string) => rows.find((r) => r.id === id)!;
+    expect(Number(of(winner.id).reputation)).toBe(CURRENT_WORLD_BOSS_SEASON.reward.reputation);
+    expect(of(winner.id).hearts).toBe(1);
+    expect(Number(of(other.id).reputation)).toBe(0);
+    expect((await fight(winner)).statusCode).toBe(409);
+  });
+});

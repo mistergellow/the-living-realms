@@ -443,6 +443,8 @@ export const worldBosses = pgTable(
     hexR: integer('hex_r').notNull(),
     nextMoveAt: timestamp('next_move_at', { withTimezone: true }).notNull(),
     defeatedAt: timestamp('defeated_at', { withTimezone: true }),
+    /** When the season's reward went to the top party (request #44); null = not yet. */
+    rewardedAt: timestamp('rewarded_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

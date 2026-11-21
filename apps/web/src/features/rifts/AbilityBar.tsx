@@ -1,4 +1,5 @@
 import { describeEffects, describeScaling, describeTargeting, getAbility } from '@realms/game-core';
+import { AbilityEffects } from '../../shared/ui/EffectIcon';
 import { useEffect, useId, useRef } from 'react';
 import { AbilityIcon, abilitySchool } from './AbilityIcon';
 
@@ -101,6 +102,9 @@ function AbilitySlot(props: {
           )}
         </span>
         <span className="slot-name">{a.name}</span>
+        <span className="slot-fx">
+          <AbilityEffects abilityId={a.id} />
+        </span>
       </button>
       <div className="ability-tooltip" role="tooltip" id={tipId}>
         <div className={`tip-name school-${abilitySchool(a.id)}`}>{a.name}</div>
@@ -109,6 +113,7 @@ function AbilitySlot(props: {
           {a.manaCost > 0 && <span className="tip-mana">{a.manaCost} Mana</span>}
           <span className="tip-target">{describeTargeting(a.targeting)}</span>
         </div>
+        <AbilityEffects abilityId={a.id} />
         <ul className="tip-effects">
           {describeEffects(a).map((e) => (
             <li key={e}>{e}</li>

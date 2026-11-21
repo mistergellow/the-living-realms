@@ -19,7 +19,8 @@ export type FxEvent =
   | { t: 'stunned'; targetId: string }
   | { t: 'heal'; targetId: string; amount: number }
   | { t: 'downed'; targetId: string }
-  | { t: 'revived'; targetId: string; hp: number };
+  | { t: 'revived'; targetId: string; hp: number }
+  | { t: 'explode'; targetId: string };
 
 export interface FxStep {
   actorId: string | null;
@@ -130,6 +131,9 @@ export function buildTimeline(entries: ReadonlyArray<CombatLogEntry & { seq?: nu
         break;
       case 'revived':
         current().events.push({ t: 'revived', targetId: e.targetId, hp: e.hp });
+        break;
+      case 'explode':
+        current().events.push({ t: 'explode', targetId: e.actorId });
         break;
       default:
         break; // round, turn, timeout, room: no animation

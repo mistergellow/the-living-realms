@@ -1,5 +1,6 @@
-import { describeEffects, getAbility, STATUS_DESCRIPTIONS, STATUS_NAMES } from '@realms/game-core';
+import { describeEffects, getAbility } from '@realms/game-core';
 import type { CombatantView, IntentView } from '@realms/shared';
+import { EffectIcon, StatusIcon, type EffectKind } from '../../shared/ui/EffectIcon';
 
 /*
  * Per-unit chips shown over the combat canvas (DOM, so they keep tooltips):
@@ -41,17 +42,43 @@ export function IntentChips({
             : a.targeting.area === 'column'
               ? `${it.column ?? ''} (${names})`
               : names;
-        const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
+        // Slay-the-Spire intents (request #44): one icon for what it will do.
+        const kind: EffectKind = dmg
+          ? dmg.damageType === 'magic'
+            ? 'magic'
+            : dmg.damageType === 'ranged'
+              ? 'ranged'
+              : 'attack'
+          : a.effects.some((e) => e.kind === 'summon')
+            ? 'summon'
+            : a.effects.some((e) => e.kind === 'heal')
+              ? 'heal'
+              : a.effects.some((e) => e.kind === 'block')
+                ? 'dodge'
+                : a.targeting.side === 'enemy'
+                  ? 'debuff'
+                  : 'buff';
+        const extra = dmg && a.effects.some((e) => e.kind === 'status');
         return (
           <span
             key={i}
             className="intent"
+            data-kind={kind}
             title={`${a.name}${it.count > 1 ? ` ×${it.count}` : ''}: ${describeEffects(a).join(', ')} → ${targets}`}
           >
-            <i>{dmg ? '⚔' : '✦'}</i>
-            {value}
-            {it.count > 1 ? ` ×${it.count}` : ''}
-            {extra} <em>→ {a.targeting.area === 'all' ? 'all' : (it.column ?? names)}</em>
+            <EffectIcon
+              kind={kind}
+              value={
+                dmg
+                  ? `${value}${it.count > 1 ? `×${it.count}` : ''}`
+                  : it.count > 1
+                    ? `×${it.count}`
+                    : null
+              }
+              title={`${a.name}: ${describeEffects(a).join(', ')}`}
+            />
+            {extra && <EffectIcon kind="debuff" size="sm" title="Also applies a status" />}
+            <em>→ {a.targeting.area === 'all' ? 'all' : (it.column ?? names)}</em>
           </span>
         );
       })}
@@ -62,20 +89,16 @@ export function IntentChips({
 export function StatusChips({ unit }: { unit: CombatantView }) {
   if (unit.downed || (unit.statuses.length === 0 && unit.block === 0)) return null;
   return (
-    <span className="statuses">
+    <span className="statuses" data-testid="statuses">
       {unit.block > 0 && (
-        <span
-          className="status status-block"
-          title="Dodge: avoids that much damage until this unit's next turn"
-        >
-          ⛨ {unit.block}
-        </span>
+        <EffectIcon
+          kind="dodge"
+          value={unit.block}
+          title={`Dodge ${unit.block}: avoids that much damage until this unit's next turn`}
+        />
       )}
       {unit.statuses.map((st) => (
-        <span key={st.id} className={`status status-${st.id}`} title={STATUS_DESCRIPTIONS[st.id]}>
-          {STATUS_NAMES[st.id]}
-          {st.value ? ` ${st.value}` : ''} · {st.turns}
-        </span>
+        <StatusIcon key={st.id} id={st.id} value={st.value} turns={st.turns} />
       ))}
     </span>
   );

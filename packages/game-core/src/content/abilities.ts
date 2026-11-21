@@ -36,12 +36,16 @@ export type AbilityEffect =
       max: number;
       /** Extra damage against targets with a status (synergies). */
       bonusVs?: { status: StatusId; multiplier: number };
+      /** Heals the attacker for the damage dealt (request #44). */
+      drain?: boolean;
     }
   | { kind: 'heal'; min: number; max: number }
   | { kind: 'block'; min: number; max: number }
   /** value = damage per turn for bleed/burn (scaled), unused for others. */
   | { kind: 'status'; status: StatusId; turns: number; value?: number }
-  | { kind: 'swap' };
+  | { kind: 'swap' }
+  /** Calls an enemy into the first empty position of the actor's side (request #44). */
+  | { kind: 'summon'; enemy: string };
 
 export interface AbilityDef {
   id: string;
@@ -77,7 +81,8 @@ const TALISMAN = { will: 1 };
  */
 export const BASIC_ACTIONS = {
   changePosition: { focusCost: 1 },
-  block: { focusCost: 1, amount: 5 },
+  /** Dodge action: 5 + 1 per 2 Agility (request #44, PROVISIONAL). */
+  block: { focusCost: 1, amount: 5, perAgility: 0.5 },
 } as const;
 
 /**
@@ -116,7 +121,8 @@ export const ABILITIES = {
   block: ability({
     id: 'block',
     name: 'Dodge',
-    description: 'Get ready to evade: gain Dodge until the end of the round. Stacks.',
+    description:
+      'Get ready to evade: gain Dodge until the end of the round (+1 per 2 Agility). Stacks.',
     source: 'universal',
     focusCost: BASIC_ACTIONS.block.focusCost,
     manaCost: 0,
@@ -515,6 +521,131 @@ export const ABILITIES = {
     ],
     scaling: {},
   }),
+  // ---- request #44: enemies with their own mechanics ----
+  leech_drain: ability({
+    id: 'leech_drain',
+    name: 'Drain',
+    description: 'Bites and drinks: heals for the damage it deals.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 5, drain: true }],
+    scaling: {},
+  }),
+  thorn_lash: ability({
+    id: 'thorn_lash',
+    name: 'Thorn Lash',
+    description: 'A whip of barbed vines at the two nearest foes.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
+    effects: [{ kind: 'damage', damageType: 'physical', min: 3, max: 4 }],
+    scaling: {},
+  }),
+  shaman_empower: ability({
+    id: 'shaman_empower',
+    name: 'Empower',
+    description: 'Fills an ally with rift-fury: +3 Strength for 2 rounds.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: ALLY_ANY,
+    effects: [{ kind: 'status', status: 'strength', turns: 2, value: 3 }],
+    scaling: {},
+  }),
+  shaman_mend: ability({
+    id: 'shaman_mend',
+    name: 'Dark Mend',
+    description: 'Knits an ally back together.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ALLY_ANY,
+    effects: [{ kind: 'heal', min: 7, max: 9 }],
+    scaling: {},
+  }),
+  brood_spawn: ability({
+    id: 'brood_spawn',
+    name: 'Spawn Mite',
+    description: 'Calls a Volatile Mite into an empty position.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: { side: 'self', reach: 'any', area: 'single' },
+    effects: [{ kind: 'summon', enemy: 'volatile_mite' }],
+    scaling: {},
+  }),
+  brood_slam: ability({
+    id: 'brood_slam',
+    name: 'Brood Slam',
+    description: 'A heavy body slam at the nearest foe.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'physical', min: 4, max: 6 }],
+    scaling: {},
+  }),
+  mite_fuse: ability({
+    id: 'mite_fuse',
+    name: 'Light Fuse',
+    description: 'Starts to glow: explodes in 2 rounds unless killed.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: { side: 'self', reach: 'any', area: 'single' },
+    effects: [{ kind: 'status', status: 'fuse', turns: 3, value: 8 }],
+    scaling: {},
+  }),
+  stalker_phase: ability({
+    id: 'stalker_phase',
+    name: 'Phase Shift',
+    description: 'Slips half out of this world: Intangible until its next turn.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: { side: 'self', reach: 'any', area: 'single' },
+    effects: [{ kind: 'status', status: 'intangible', turns: 2 }],
+    scaling: {},
+  }),
+  stalker_strike: ability({
+    id: 'stalker_strike',
+    name: 'Shadow Strike',
+    description: 'Strikes any foe from nowhere and marks it.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 5, max: 7 },
+      { kind: 'status', status: 'mark', turns: 2 },
+    ],
+    scaling: {},
+  }),
+  zealot_ritual: ability({
+    id: 'zealot_ritual',
+    name: 'Dark Ritual',
+    description: 'Begins a ritual: gains 2 Strength at the start of every round.',
+    source: 'enemy',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: { side: 'self', reach: 'any', area: 'single' },
+    effects: [{ kind: 'status', status: 'ritual', turns: 99, value: 2 }],
+    scaling: {},
+  }),
+  zealot_strike: ability({
+    id: 'zealot_strike',
+    name: 'Zealous Strike',
+    description: 'A frenzied blow at any foe.',
+    source: 'enemy',
+    focusCost: 1,
+    manaCost: 0,
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'magic', min: 3, max: 4 }],
+    scaling: {},
+  }),
   warden_seal: ability({
     id: 'warden_seal',
     name: 'Seal',
@@ -549,6 +680,11 @@ export const STATUS_NAMES: Record<StatusId, string> = {
   mark: 'Marked',
   weaken: 'Weakened',
   stun: 'Stunned',
+  strength: 'Strength',
+  thorns: 'Thorns',
+  intangible: 'Intangible',
+  ritual: 'Ritual',
+  fuse: 'Fuse',
 };
 
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
@@ -557,6 +693,11 @@ export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
   mark: 'Takes 25% more damage.',
   weaken: 'Deals 25% less damage.',
   stun: 'Cannot act next round.',
+  strength: 'Deals that much extra damage with every hit.',
+  thorns: 'Attackers that hit it take that much damage.',
+  intangible: 'Every hit deals at most 1 damage.',
+  ritual: 'Gains that much Strength at the start of every round.',
+  fuse: 'Explodes when the counter runs out, hurting every foe. Kill it first!',
 };
 
 export function describeTargeting(t: AbilityTargeting): string {
@@ -586,7 +727,8 @@ export function describeEffects(a: AbilityDef): string[] {
           `${e.min}–${e.max} ${e.damageType} damage` +
             (e.bonusVs
               ? ` (×${e.bonusVs.multiplier} vs ${STATUS_NAMES[e.bonusVs.status].toLowerCase()})`
-              : ''),
+              : '') +
+            (e.drain ? ', heals for the damage' : ''),
         ];
       case 'heal':
         return [`Heal ${e.min}–${e.max}`];
@@ -598,6 +740,8 @@ export function describeEffects(a: AbilityDef): string[] {
         ];
       case 'swap':
         return [];
+      case 'summon':
+        return [`Summon ${e.enemy.replace(/_/g, ' ')}`];
     }
   });
 }

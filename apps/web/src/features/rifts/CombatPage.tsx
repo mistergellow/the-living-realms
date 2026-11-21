@@ -1,5 +1,7 @@
+import { StatusIcon } from '../../shared/ui/EffectIcon';
 import {
   getAbility,
+  getEnemy,
   reservedBy,
   targetColumns,
   validTargets,
@@ -286,6 +288,18 @@ export function CombatScreen({
               <span className="muted small">
                 {e.hp}/{e.maxHp} HP{e.block ? ` · ${e.block} Dodge` : ''}
               </span>
+              {e.enemyDefId && getEnemy(e.enemyDefId)?.mechanic && (
+                <span className="enemy-mechanic small" data-testid="enemy-mechanic">
+                  {getEnemy(e.enemyDefId)!.mechanic}
+                </span>
+              )}
+              {e.statuses.length > 0 && (
+                <span className="fx-row">
+                  {e.statuses.map((st) => (
+                    <StatusIcon key={st.id} id={st.id} value={st.value} turns={st.turns} />
+                  ))}
+                </span>
+              )}
               <span className="intent-icons">
                 {e.intents.map((it, i) => (
                   <span key={i} title={getAbility(it.abilityId)?.name}>

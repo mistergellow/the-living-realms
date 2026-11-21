@@ -99,6 +99,13 @@
       "when": 1795289522119,
       "tag": "0013_nations_ap_world_boss",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795292482903,
+      "tag": "0014_world_boss_reward",
+      "breakpoints": true
     }
   ]
 }

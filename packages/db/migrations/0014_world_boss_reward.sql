@@ -1,0 +1,1 @@
+ALTER TABLE "world_bosses" ADD COLUMN "rewarded_at" timestamp with time zone;
