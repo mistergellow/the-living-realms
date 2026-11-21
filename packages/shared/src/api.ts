@@ -247,6 +247,53 @@ export interface ItemDto {
   magicResist: number;
   /** Weapons only (request #31): type, base stats, upgrades, specials, rune slots. */
   weapon: WeaponInfoDto | null;
+  /** Rarity = number of bonus effects (request #37): 0 common … 5 mythic. */
+  rarity: ItemRarity;
+  /** Bonus effects (max 5), with their text for the item card. */
+  affixes: ItemAffixDto[];
+  /** BASE attributes needed to equip it; `met` is for the character viewing it. */
+  requirements: ItemRequirementDto[];
+  /** Unlocked rune slots (`used` of `total`); null when the item has none unlocked. */
+  runeSlots: { used: number; total: number } | null;
+}
+
+export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
+export type ItemRarity = (typeof ITEM_RARITIES)[number];
+
+export type AffixGroup = 'attribute' | 'stat' | 'offense' | 'combat';
+
+/** A bonus effect on a piece of gear (request #37). */
+export interface ItemAffixDto {
+  id: string;
+  value: number;
+  group: AffixGroup;
+  /** Player-facing text, e.g. "Might +2", "Bleed on hit: 15%". */
+  label: string;
+  /** Formatted value, e.g. "+2", "+15%". */
+  display: string;
+}
+
+export interface ItemRequirementDto {
+  attribute: AttributeKey;
+  value: number;
+  met: boolean;
+}
+
+/**
+ * Combat bonuses from gear (request #37), carried by player combatants.
+ * Percentages are whole numbers (15 = 15%).
+ */
+export interface GearCombatEffects {
+  /** +% to all damage dealt. */
+  damagePct: number;
+  /** +% damage against bosses. */
+  bossDamagePct: number;
+  /** % of damage dealt to HP healed back. */
+  lifestealPct: number;
+  /** Damage returned to an attacker that hits this unit. */
+  thorns: number;
+  /** Chance to apply a status when dealing damage. */
+  onHit: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
 }
 
 /** A special property on a weapon (max 5). Catalogue of specials: future. */

@@ -1,4 +1,12 @@
-import { EQUIP_SLOTS, type EquipSlot } from '@realms/shared';
+import {
+  ATTRIBUTE_KEYS,
+  EQUIP_SLOTS,
+  type Attributes,
+  type EquipSlot,
+  type ItemRequirementDto,
+  type WeaponSpecial,
+} from '@realms/shared';
+import { ATTRIBUTE_NAMES } from './attributes.js';
 import {
   getAbility,
   UNARMED_ABILITIES,
@@ -6,7 +14,7 @@ import {
   type AbilityDef,
 } from './content/abilities.js';
 import { getItemDef, type ItemDef } from './content/items.js';
-import { upgradeMultiplier } from './content/weapons.js';
+import { getWeaponType, upgradeMultiplier } from './content/weapons.js';
 
 /*
  * Equipment rules. Items are referenced by an instance id (owned item) and a
@@ -25,6 +33,38 @@ export interface OwnedItem {
   equippedSlot: EquipSlot | null;
   /** Weapons: +0, +1, … (request #31). */
   upgradeLevel?: number;
+  /** Bonus effects (request #37), already normalised. */
+  affixes?: WeaponSpecial[];
+}
+
+/*
+ * Requirements to equip an item (request #37): BASE attributes only, like the
+ * exploration tests (D44). They belong to the item itself and never change
+ * with upgrades (+0…+10 only raise the weapon's base stats — owner, request
+ * #38). PROVISIONAL: weapons ask for their primary attribute at
+ * `weaponPrimaryBase` unless the definition sets its own `requirements`.
+ */
+export const REQUIREMENT_RULES = {
+  weaponPrimaryBase: 5,
+} as const;
+
+export function itemRequirements(def: ItemDef): Partial<Attributes> {
+  const out: Partial<Attributes> = { ...(def.requirements ?? {}) };
+  const w = getWeaponType(def.weaponType);
+  if (w && def.kind === 'weapon' && out[w.primary] === undefined)
+    out[w.primary] = REQUIREMENT_RULES.weaponPrimaryBase;
+  return out;
+}
+
+export function checkRequirements(
+  reqs: Partial<Attributes>,
+  base: Attributes | undefined,
+): ItemRequirementDto[] {
+  return ATTRIBUTE_KEYS.filter((k) => reqs[k] !== undefined).map((k) => ({
+    attribute: k,
+    value: reqs[k]!,
+    met: !base || base[k] >= reqs[k]!,
+  }));
 }
 
 export const isBroken = (quality: number) => quality <= 0;
@@ -42,7 +82,12 @@ export type EquipPlan =
  * be unequipped (whatever occupies the slot; the off-hand for two-handed
  * weapons; a two-handed main hand when equipping the off-hand).
  */
-export function planEquip(items: OwnedItem[], itemId: string, slot: EquipSlot): EquipPlan {
+export function planEquip(
+  items: OwnedItem[],
+  itemId: string,
+  slot: EquipSlot,
+  baseAttributes?: Attributes,
+): EquipPlan {
   const target = items.find((i) => i.id === itemId);
   if (!target) return { ok: false, reason: 'You do not own that item.' };
   const def = getItemDef(target.defId);
@@ -51,6 +96,12 @@ export function planEquip(items: OwnedItem[], itemId: string, slot: EquipSlot): 
     return { ok: false, reason: `${def.name} is broken and cannot be used.` };
   if (!def.slots.includes(slot))
     return { ok: false, reason: `${def.name} cannot be equipped there.` };
+  const unmet = checkRequirements(itemRequirements(def), baseAttributes).filter((r) => !r.met);
+  if (unmet.length)
+    return {
+      ok: false,
+      reason: `${def.name} requires ${unmet.map((r) => `${ATTRIBUTE_NAMES[r.attribute]} ${r.value}`).join(', ')}.`,
+    };
 
   const equippedIn = (s: EquipSlot) => items.find((i) => i.equippedSlot === s && i.id !== itemId);
   const unequip = new Set<string>();

@@ -25,9 +25,12 @@ import {
   getItemDef,
   getRift,
   hasDeadline,
+  isGear,
   leaveRun,
   qualityAfterDefeat,
   riftDepth,
+  rollAffixCount,
+  rollAffixes,
   Rng,
   RIFTS,
   RUN_STATE_VERSION,
@@ -121,6 +124,12 @@ export async function assertFreeForRift(
 
 const statusOf = (state: RunState): RunStatus => state.status;
 
+/** Bonus effects of a new piece of gear (request #37); materials get none. */
+const rollDropAffixes = (rng: Rng, defId: string) => {
+  const kind = getItemDef(defId)?.kind;
+  return isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng)) : [];
+};
+
 export class RiftsService {
   private readonly db: Database;
   constructor(
@@ -170,6 +179,7 @@ export class RiftsService {
         stats: profile.stats,
         abilityIds: profile.abilityIds,
         abilityMultipliers: profile.abilityMultipliers,
+        gear: profile.gear,
         hp: profile.stats.maxHp,
         mana: profile.stats.maxMana,
         slot: m.slot,
@@ -233,6 +243,7 @@ export class RiftsService {
         stats: profile.stats,
         abilityIds: profile.abilityIds,
         abilityMultipliers: profile.abilityMultipliers,
+        gear: profile.gear,
         hp: profile.stats.maxHp,
         mana: profile.stats.maxMana,
         slot,
@@ -436,7 +447,12 @@ export class RiftsService {
           rift.rewards.loot.find((l) => (roll -= l.weight) < 0) ?? rift.rewards.loot[0]!;
         const [row] = await tx
           .insert(items)
-          .values({ characterId: p.characterId, itemDefId: entry.item, source: 'drop' })
+          .values({
+            characterId: p.characterId,
+            itemDefId: entry.item,
+            source: 'drop',
+            specials: rollDropAffixes(rng, entry.item),
+          })
           .returning({ id: items.id });
         dropped.push({ id: row!.id, name: getItemDef(entry.item)?.name ?? entry.item });
       }
@@ -447,7 +463,12 @@ export class RiftsService {
       for (const g of stayed ? state.grants.filter((x) => x.characterId === p.characterId) : []) {
         const [row] = await tx
           .insert(items)
-          .values({ characterId: g.characterId, itemDefId: g.itemDefId, source: g.source })
+          .values({
+            characterId: g.characterId,
+            itemDefId: g.itemDefId,
+            source: g.source,
+            specials: rollDropAffixes(rng, g.itemDefId),
+          })
           .returning({ id: items.id });
         dropped.push({ id: row!.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
       }

@@ -3,7 +3,9 @@ import {
   abilityMultipliers,
   asBaseAttributes,
   availableAbilities,
+  checkRequirements,
   computeStats,
+  describeAffix,
   describeEffects,
   describeScaling,
   describeTargeting,
@@ -11,7 +13,11 @@ import {
   emptyEquipment,
   getItemDef,
   isBroken,
+  isGear,
+  itemRequirements,
+  normalizeAffixes,
   planEquip,
+  rarityOf,
   weaponInfo,
   type BaseAttributes,
   type OwnedItem,
@@ -22,6 +28,7 @@ import {
   type CharacterAppearance,
   type CharacterSheetDto,
   type EquipSlot,
+  type ItemAffixDto,
   type ItemDto,
 } from '@realms/shared';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -56,10 +63,22 @@ const toOwned = (i: Item): OwnedItem => ({
   quality: i.quality,
   equippedSlot: i.equippedSlot as EquipSlot | null,
   upgradeLevel: i.upgradeLevel,
+  affixes: isGear(getItemDef(i.itemDefId)?.kind) ? normalizeAffixes(i.specials) : [],
 });
 
-function toItemDto(i: Item): ItemDto {
+/** `base`: the viewer's BASE attributes, to mark which requirements are met. */
+export function toItemDto(i: Item, base?: Attributes): ItemDto {
   const def = getItemDef(i.itemDefId);
+  const gear = isGear(def?.kind);
+  const affixes = gear
+    ? normalizeAffixes(i.specials)
+        .map(describeAffix)
+        .filter((a): a is ItemAffixDto => !!a)
+    : [];
+  const slots = Array.isArray(i.runeSlots)
+    ? (i.runeSlots as Array<{ unlocked?: boolean; runeId?: string | null }>)
+    : [];
+  const unlocked = slots.filter((r) => r?.unlocked);
   return {
     id: i.id,
     defId: i.itemDefId,
@@ -80,6 +99,13 @@ function toItemDto(i: Item): ItemDto {
       specials: i.specials,
       runeSlots: i.runeSlots,
     }),
+    rarity: rarityOf(affixes.length),
+    affixes,
+    requirements: def ? checkRequirements(itemRequirements(def), base) : [],
+    runeSlots:
+      gear && unlocked.length > 0
+        ? { used: unlocked.filter((r) => !!r.runeId).length, total: unlocked.length }
+        : null,
   };
 }
 
@@ -96,7 +122,7 @@ export class CharacterSheetService {
       const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
       await assertNotInRift(tx, c.id);
       const owned = (await itemsRepository.listByCharacter(tx, c.id)).map(toOwned);
-      const plan = planEquip(owned, itemId, slot);
+      const plan = planEquip(owned, itemId, slot, baseAttributesOf(c));
       if (!plan.ok) throw new AppError(400, ErrorCode.INVALID_EQUIPMENT, plan.reason);
       // Free the slots first (unique slot index), then place the item.
       await itemsRepository.unequip(tx, plan.unequip);
@@ -192,7 +218,7 @@ export class CharacterSheetService {
     const equipment = emptyEquipment<ItemDto>();
     const inventory: ItemDto[] = [];
     for (const row of rows) {
-      const dto = toItemDto(row);
+      const dto = toItemDto(row, base);
       if (dto.equippedSlot) equipment[dto.equippedSlot] = dto;
       else inventory.push(dto);
     }

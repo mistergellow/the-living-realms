@@ -71,6 +71,12 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D59 | **PvE é como Slay the Spire:** as ações dos jogadores acontecem logo (em tempo real); quando todos terminam o turno, os inimigos fazem as ações deles. Mais fácil e fluido. **O PvP mantém** o planeamento + resolução alternada (substitui D47 no PvE)                                                                | 2026-11-21 | `planAction`/`resolveRound` (`combat/engine.ts`), `CombatPage.tsx`, ADR-038                           |
 | D60 | **Formação em linha:** 4 posições por lado numa só linha (frente, 2.ª, 3.ª, trás), como na imagem de referência; grupo/lobby de **4** (PvP 4 contra 4). Substitui D38 (3 × 2) e D18 (lobby de 6); D41 (ataque à coluna) passa a ser ataque a uma posição                                                               | 2026-11-21 | `SLOTS_PER_SIDE`, `COMBAT_COLUMNS`, `LOBBY_MAX_MEMBERS`, `combat-layout.ts`, `LobbyPage.tsx`, ADR-039 |
 | D61 | **Mapa = um continente em 4 zonas:** um país a oeste, um a este, um a norte; no meio, a área neutra infetada pelos Rifts. Hexágonos com a cor do país; 1 hexágono de capital por país (tudo placeholder). A seguir: sistema de AP = tempo das atividades (mover entre hexágonos gasta AP; ganha-se X AP por hora real) | 2026-11-21 | `content/world-map.ts`, `map-scene.ts` (`REGION_COLORS`), `WorldPage.tsx` (`HexInfo`), ADR-040        |
+| D62 | **Cartão do item** ao estilo da imagem de referência: efeito base, nome, tipo, requisitos para usar; secção de efeitos bónus (até 5); "Rune slots [usados/total]" só aparece se o item tiver slots desbloqueados                                                                                                       | 2026-11-21 | `ItemCard.tsx`, `ItemDto` (`affixes`, `requirements`, `runeSlots`), ADR-041                           |
+| D63 | **Cor/raridade = número de efeitos bónus:** 0 Common (cinza), 1 Uncommon (verde), 2 Rare (azul), 3 Epic (roxo), 4 Legendary (laranja), 5 Mythic (vermelho)                                                                                                                                                             | 2026-11-21 | `rarityOf`, `RARITY_NAMES`, `--rarity-*` (`tokens.css`)                                               |
+| D64 | **Requisitos para usar = atributos base** (como a regra dos BASE STATS)                                                                                                                                                                                                                                                | 2026-11-21 | `itemRequirements`, `checkRequirements`, `planEquip`                                                  |
+| D65 | **Efeitos bónus variados, em todo o equipamento** (armas, mão secundária, armadura, acessórios): atributos, stats derivados, ofensivos em %, efeitos de combate                                                                                                                                                        | 2026-11-21 | `content/affixes.ts` (`AFFIXES`)                                                                      |
+| D66 | **Upgrades +0 a +10 só melhoram os stats base da arma** (dano/valores das habilidades); não mudam requisitos nem efeitos                                                                                                                                                                                               | 2026-11-21 | `upgradeMultiplier`, `itemRequirements` (sem nível)                                                   |
+| D67 | **Efeitos bónus = pool:** cada efeito tem um intervalo (ex.: roubo de vida 3–8%); quando aparece num item, o valor é sorteado dentro do intervalo. Os intervalos atuais são aleatórios, por definir (A67)                                                                                                              | 2026-11-21 | `AFFIXES` (`min`/`max`), `rollAffixes`                                                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -142,6 +148,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A64 | Mapa (placeholder): nomes, cores, tamanho e forma               | "Kingdom of the West/East/North", "The Riftlands"; capitais "West/East/North Capital"; azul/vermelho/verde/roxo; continente oval ~44 × 32 hexágonos (1 114 hexágonos: ~290 por país, ~300 Riftlands); capitais em (−14, 2), (12, 2), (5, −10)                                                                                                                                                             | `content/world-map.ts`, `REGION_COLORS` (`map-scene.ts`)   |
 | A65 | Onde nascem os personagens                                      | continua em (0, 0) = Riftlands (centro do mapa); por decidir se passa a ser uma capital (ex.: escolher país na criação)                                                                                                                                                                                                                                                                                   | `worlds.spawn_q/spawn_r`, `characters.service.ts`          |
 | A66 | Sistema de AP (próximo passo)                                   | por definir: AP máximo, AP ganho por hora real, custo por hexágono e por atividade                                                                                                                                                                                                                                                                                                                        | ROADMAP Fase 4                                             |
+| A67 | Catálogo de efeitos bónus (pedido #37)                          | atributos +1–3; Health +5–20, Mana +4–12, Armor/Magic Resist +2–8, Initiative +1–3, Dodge +1–5%, Focus por ronda +1; Damage +3–10%, Critical chance +2–6%, Critical damage +10–25%, Damage vs bosses +5–15%; Bleed/Burn on hit 5–15%, Stun on hit 2–5%, Life steal 3–8%, Thorns 2–6. Sangrar/queimar on hit: 3 por ronda, 2 rondas; atordoar 1 ronda. Cada efeito só pode rolar em certos tipos de item   | `AFFIXES`, `AFFIX_RULES`                                   |
+| A68 | Quantos efeitos traz um drop                                    | 0: 50%, 1: 28%, 2: 13%, 3: 6%, 4: 2,5%, 5: 0,5% (drops do boss e itens encontrados no Rift; itens fabricados e o kit inicial vêm sem efeitos)                                                                                                                                                                                                                                                             | `AFFIX_RULES.dropAffixWeights`, `rollDropAffixes`          |
+| A69 | Requisitos das armas                                            | atributo principal da arma ≥ 5 (por agora sempre cumprido); **não mudam com o upgrade** (D66). Armaduras e acessórios: sem requisitos (campo `requirements` pronto para itens que peçam mais)                                                                                                                                                                                                             | `REQUIREMENT_RULES`, `ItemDef.requirements`                |
+| A70 | Efeitos que já existem nos itens                                | o campo `items.specials` passa a guardar os efeitos bónus de qualquer equipamento; ids desconhecidos são ignorados                                                                                                                                                                                                                                                                                        | `normalizeAffixes`                                         |
 
 ---
 
@@ -667,3 +677,52 @@ AP" (tempo das atividades; mover gasta AP; ganha-se X AP por hora real).
 - Testes: 81 unitários (+6 do mapa), 65 de integração, 18 web, 9 e2e (o e2e
   verifica a região do hexágono inicial e tira captura do continente).
 - Docs: CHANGE_MAP, DECISIONS (ADR-040), ROADMAP, ARCHITECTURE.
+
+### #37 — 2026-11-21 — Cartão do item, efeitos bónus, raridade, requisitos e runas
+
+**Pedido:** os equipamentos devem parecer-se com a imagem enviada (cartão da
+"Dawn Sword"): efeito base, nome, tipo de item e os requisitos base para usar.
+A cor indica quantos efeitos bónus tem (verde = 1). A secção "Stat" passa a ser
+a dos efeitos bónus, até 5. Onde diz "Warrior Set" deve dizer
+"Rune slot 0/2" se o item tiver slots de runa; se não tiver, nem aparece. Os
+efeitos bónus são variados.
+**Perguntas ao dono (respondidas):** escala de cores (cinza → verde → azul →
+roxo → laranja → vermelho), requisitos = atributos base, tipos de efeitos
+(atributos, stats derivados, ofensivos em %, efeitos de combate), em todo o
+equipamento.
+**Decisões:** D62–D65; valores provisórios A67–A70.
+**Resultado:**
+
+- game-core: `content/affixes.ts` (catálogo de 24 efeitos, raridade,
+  `rollAffixes`, `gearTotals`); `computeStats` soma os efeitos do equipamento
+  (atributos, HP, mana, armadura, resistência, iniciativa, esquiva, crítico,
+  Focus); requisitos (`itemRequirements`, `checkRequirements`) e `planEquip`
+  recusa equipar sem os atributos base.
+- Combate: `CombatantView.gear` (+% dano, +% contra bosses, roubo de vida,
+  espinhos, sangrar/queimar/atordoar ao acertar), passado pelo `combatProfile`
+  → `RunMember.gear` → `PartyMemberInput.gear`.
+- Servidor: `ItemDto` ganha `rarity`, `affixes`, `requirements` (com `met`
+  para o personagem) e `runeSlots`; drops e itens encontrados no Rift rolam
+  efeitos (A68). Sem migração (usa `items.specials` e `items.rune_slots`).
+- Interface: `ItemCard.tsx` — cabeçalho com a cor da raridade, "+N" do
+  upgrade, tipo, efeito base grande (dano ou armadura), requisitos (vermelho se
+  não cumpridos), "Bonus effects [n/5]", "Rune slots [usados/total]"; inventário
+  em grelha de cartões; clicar num item equipado abre o cartão.
+- Testes: 84 unitários (9 novos), 67 de integração (2 novos), e2e da ficha com
+  o cartão.
+- Docs: CHANGE_MAP ("Cartão do item e efeitos bónus"), DECISIONS (ADR-041).
+
+### #38 — 2026-11-21 — Upgrades só mudam os stats base; efeitos são uma pool
+
+**Pedido:** "O efeito de +0 até +10 não muda nada sem ser os stats base da
+arma. O resto é uma pool: por exemplo, roubo de vida pode ser de 3% a 8% e,
+quando o bónus aparece, é uma % entre esses valores (valores aleatórios, não
+pensados). Assim como todos."
+**Decisões:** D66, D67; A69 atualizado.
+**Resultado:**
+
+- Requisitos já não sobem com o upgrade (`itemRequirements(def)` sem nível);
+  o upgrade continua a mudar só o dano base e os valores das habilidades da arma.
+- Pool de efeitos: já funcionava assim (`rollAffixes` sorteia o valor entre
+  `min` e `max` de cada efeito); fica registado como decisão.
+- Testes atualizados (game-core e servidor).

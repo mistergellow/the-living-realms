@@ -1,7 +1,6 @@
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
-  type AttributeKey,
   type Attributes,
   type CharacterSheetDto,
   type EquipSlot,
@@ -17,6 +16,7 @@ import { Screen } from '../../shared/ui/Screen';
 import { useActiveCharacter } from './active-character';
 import { useAllocateAttributes, useCharacterSheet, useEquipment } from './api';
 import { CharacterToken } from './CharacterToken';
+import { ItemCard } from './ItemCard';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
 
@@ -68,14 +68,28 @@ function SlotTile(props: {
   item: ItemDto | null;
   busy: boolean;
   onUnequip: () => void;
+  onInspect: () => void;
 }) {
   const { slot, item } = props;
   return (
-    <div className="slot-tile" data-empty={!item} data-broken={item?.broken ?? false}>
+    <div
+      className="slot-tile"
+      data-empty={!item}
+      data-broken={item?.broken ?? false}
+      data-rarity={item?.rarity}
+    >
       <span className="slot-label">{SLOT_LABELS[slot]}</span>
       {item ? (
         <>
-          <strong className="slot-item">{item.name}</strong>
+          <button
+            type="button"
+            className="slot-item rarity-text"
+            data-rarity={item.rarity}
+            onClick={props.onInspect}
+            title="Show item card"
+          >
+            {item.name}
+          </button>
           <QualityBar quality={item.quality} />
           <button
             className="btn btn-ghost btn-sm"
@@ -109,40 +123,6 @@ function QualityBar({ quality }: { quality: number }) {
   );
 }
 
-function ItemLine({ item }: { item: ItemDto }) {
-  const extras = [
-    item.armor ? `Armor +${item.armor}` : null,
-    item.magicResist ? `Resist +${item.magicResist}` : null,
-    ...Object.entries(item.bonuses).map(
-      ([k, v]) => `${ATTRIBUTE_NAMES[k as AttributeKey]} ${fmt(v ?? 0)}`,
-    ),
-    item.twoHanded ? 'Two-handed' : null,
-    // Weapon catalogue (request #31/#33): type, basic attack cost, specials, runes.
-    item.weapon
-      ? `${item.weapon.typeName} · ${item.weapon.baseDamage.min}–${item.weapon.baseDamage.max} ${item.weapon.attackType} · basic attack ${item.weapon.basicAttackCost} Focus · specials ${item.weapon.specials.length}/${item.weapon.maxSpecials} · runes ${item.weapon.runeSlots.filter((r) => r.unlocked).length}/${item.weapon.runeSlots.length} unlocked`
-      : null,
-  ].filter(Boolean);
-  return (
-    <div className="item-line">
-      <div className="row" style={{ gap: '0.5rem' }}>
-        <strong
-          style={
-            item.broken ? { color: 'var(--danger)', textDecoration: 'line-through' } : undefined
-          }
-        >
-          {item.name}
-          {item.quantity > 1 ? ` ×${item.quantity}` : ''}
-        </strong>
-        {item.broken && <span className="field-error">Broken</span>}
-      </div>
-      <div className="row" style={{ gap: '0.5rem' }}>
-        <QualityBar quality={item.quality} />
-        <span className="field-hint">{extras.join(' · ') || item.description}</span>
-      </div>
-    </div>
-  );
-}
-
 export function CharacterSheetPage() {
   const { id = '' } = useParams();
   const sheet = useCharacterSheet(id);
@@ -150,11 +130,15 @@ export function CharacterSheetPage() {
   const allocate = useAllocateAttributes(id);
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
+  const [inspect, setInspect] = useState<string | null>(null);
 
   if (sheet.isPending) return <FullPageMessage>Loading character…</FullPageMessage>;
   if (sheet.isError) return <FullPageMessage spinner={false}>Character not found.</FullPageMessage>;
   const s = sheet.data;
   const busy = equip.isPending || unequip.isPending;
+  const inspected = inspect
+    ? (Object.values(s.equipment).find((i) => i?.id === inspect) ?? null)
+    : null;
 
   return (
     <Screen>
@@ -198,6 +182,7 @@ export function CharacterSheetPage() {
                     item={s.equipment[slot]}
                     busy={busy}
                     onUnequip={() => unequip.mutate({ slot })}
+                    onInspect={() => setInspect(s.equipment[slot]?.id ?? null)}
                   />
                 ))}
               </div>
@@ -242,6 +227,7 @@ export function CharacterSheetPage() {
                     item={s.equipment[slot]}
                     busy={busy}
                     onUnequip={() => unequip.mutate({ slot })}
+                    onInspect={() => setInspect(s.equipment[slot]?.id ?? null)}
                   />
                 ))}
               </div>
@@ -345,20 +331,28 @@ export function CharacterSheetPage() {
                   No unequipped items. Rifts will drop loot.
                 </p>
               ) : (
-                <ul className="slot-list" data-testid="inventory">
+                <ul className="item-grid" data-testid="inventory">
                   {s.inventory.map((item) => {
                     const slot = targetSlot(item, s);
+                    const unmet = item.requirements.some((r) => !r.met);
                     return (
                       <li key={item.id}>
-                        <ItemLine item={item} />
-                        <button
-                          className="btn btn-sm"
-                          disabled={busy || item.broken || !slot}
-                          onClick={() => slot && equip.mutate({ itemId: item.id, slot })}
-                          aria-label={`Equip ${item.name}`}
-                        >
-                          Equip
-                        </button>
+                        <ItemCard
+                          item={item}
+                          actions={
+                            item.slots.length > 0 && (
+                              <button
+                                className="btn btn-sm"
+                                disabled={busy || item.broken || unmet || !slot}
+                                onClick={() => slot && equip.mutate({ itemId: item.id, slot })}
+                                aria-label={`Equip ${item.name}`}
+                                title={unmet ? 'Requirements not met' : undefined}
+                              >
+                                Equip
+                              </button>
+                            )
+                          }
+                        />
                       </li>
                     );
                   })}
@@ -394,6 +388,25 @@ export function CharacterSheetPage() {
           </div>
         </div>
       </main>
+      {inspected && (
+        <div
+          className="item-modal"
+          role="dialog"
+          aria-label={inspected.name}
+          onClick={() => setInspect(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <ItemCard
+              item={inspected}
+              actions={
+                <button className="btn btn-ghost btn-sm" onClick={() => setInspect(null)}>
+                  Close
+                </button>
+              }
+            />
+          </div>
+        </div>
+      )}
     </Screen>
   );
 }

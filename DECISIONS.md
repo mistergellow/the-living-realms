@@ -692,3 +692,26 @@ heart (weighted so the neutral land is the middle and touches every nation).
 **Later.** When hexes need per-hex mutable state (terrain changes, ownership,
 Rift spawns), move the static part to a `map_hexes` table seeded from this
 generator (DATABASE.md), keeping `mapHexAt` as the read API.
+
+## ADR-041 — Item cards, bonus effects (affixes), rarity and requirements
+
+**Status:** accepted (request #37)
+
+**Decision.** Every piece of gear can carry up to 5 bonus effects, stored as
+`{ id, value }` in the existing `items.specials` column (no migration). The
+catalogue lives in `game-core/src/content/affixes.ts`; each effect has a
+group (attribute, derived stat, offensive %, combat effect), a value range and
+the gear kinds it can roll on. Rarity is not stored: it is the number of
+effects (0 common … 5 mythic). Equipped effects are folded into
+`computeStats`; combat-only effects travel as `GearCombatEffects` on the
+combatant (`gear`) and are applied in the engine (`gearOnHit`). Requirements to
+equip use BASE attributes only (consistent with D44); weapons derive theirs
+from the primary attribute; upgrades (+0…+10) never change them — they only
+raise the weapon's base stats (D66). Each effect is a range; the value is
+rolled within it when the effect appears (D67). The item card shows rune slots
+only when some are unlocked.
+
+**Why.** Reusing `specials` avoids a migration and keeps old rows valid
+(unknown ids are ignored by `normalizeAffixes`). Deriving rarity from the
+effect count keeps a single source of truth. All numbers are provisional
+(A67–A69) and data-only.

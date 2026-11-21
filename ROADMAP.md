@@ -54,7 +54,8 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
 - [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
 - [x] **Request #33:** basic attack cost per weapon (heavy 3, dagger 1); a wiped party keeps no Rift loot; simple Dungeon Threat; PvP arena (test mode, lobby with two teams)
-- ❓ Full Dungeon Threat design (ADR-035); Runemaster, runes and weapon specials content; PvP rewards/ranking
+- [x] **Item cards (request #37):** bonus effects on all gear (up to 5; attributes, derived stats, offensive %, combat effects), rarity by effect count, BASE-attribute requirements, rune slots shown when unlocked; drops roll effects (ADR-041)
+- ❓ Full Dungeon Threat design (ADR-035); Runemaster and runes content; bonus-effect balance (A67–A69); PvP rewards/ranking
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 

@@ -1670,3 +1670,198 @@ fieldset.field {
   white-space: nowrap;
   border: 0;
 }
+
+/* item card (request #37): colour = rarity = number of bonus effects */
+[data-rarity='common'] {
+  --rarity: var(--rarity-common);
+}
+[data-rarity='uncommon'] {
+  --rarity: var(--rarity-uncommon);
+}
+[data-rarity='rare'] {
+  --rarity: var(--rarity-rare);
+}
+[data-rarity='epic'] {
+  --rarity: var(--rarity-epic);
+}
+[data-rarity='legendary'] {
+  --rarity: var(--rarity-legendary);
+}
+[data-rarity='mythic'] {
+  --rarity: var(--rarity-mythic);
+}
+.rarity-text {
+  color: var(--rarity, var(--text));
+}
+.slot-tile button.slot-item {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-family: var(--font-display);
+  color: var(--rarity, var(--text));
+}
+.slot-tile button.slot-item:hover,
+.slot-tile button.slot-item:focus-visible {
+  text-decoration: underline;
+}
+.slot-tile[data-rarity]:not([data-rarity='common']) {
+  border-color: color-mix(in srgb, var(--rarity) 55%, var(--border-strong));
+}
+.item-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+}
+.item-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid color-mix(in srgb, var(--rarity) 45%, var(--border-strong));
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #1b1a22, #121118);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+.item-card[data-broken='true'] {
+  filter: grayscale(0.7);
+}
+.item-card-head {
+  position: relative;
+  padding: var(--space-3);
+  background:
+    radial-gradient(
+      ellipse at 85% 30%,
+      color-mix(in srgb, var(--rarity) 35%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(160deg, color-mix(in srgb, var(--rarity) 30%, #15141d), #15141d 75%);
+  border-bottom: 1px solid color-mix(in srgb, var(--rarity) 35%, transparent);
+}
+.item-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.item-card-title h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--rarity);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+.item-card-upgrade {
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.6rem;
+  background: rgb(0 0 0 / 0.55);
+  border: 1px solid color-mix(in srgb, var(--rarity) 60%, transparent);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.item-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+.item-card-kind,
+.item-card-rarity {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.05rem 0.5rem;
+  border-radius: 0.6rem;
+}
+.item-card-kind {
+  background: color-mix(in srgb, var(--rarity) 30%, transparent);
+  color: var(--text);
+}
+.item-card-rarity {
+  color: var(--rarity);
+  border: 1px solid color-mix(in srgb, var(--rarity) 50%, transparent);
+}
+.item-card-base {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+}
+.item-card-base span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.item-card-base strong {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+.item-card-section {
+  padding: var(--space-2) var(--space-3) 0;
+}
+.item-card-section h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.item-card-lines {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.item-card-section .item-card-lines {
+  padding: 0;
+}
+.item-card-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.item-card-lines li[data-met='false'] {
+  color: var(--danger);
+}
+.item-card-affixes li {
+  color: #b9a8f5;
+}
+.item-card-affixes li::before {
+  content: '◆';
+  font-size: 0.55rem;
+  margin-right: 0.4rem;
+  align-self: center;
+}
+.item-card-affixes li span:first-child {
+  flex: 1;
+}
+.item-card-foot {
+  margin-top: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.item-card-foot .field-hint {
+  flex-basis: 100%;
+}
+.item-card-quality {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-right: auto;
+}
+.item-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.6);
+}
+.item-modal > div {
+  width: min(100%, 20rem);
+}

@@ -1,5 +1,6 @@
-import type { Attributes, DerivedStatsDto } from '@realms/shared';
+import type { Attributes, DerivedStatsDto, GearCombatEffects } from '@realms/shared';
 import { addAttributes } from './attributes.js';
+import { gearTotals } from './content/affixes.js';
 import { activeEquipment, type OwnedItem } from './equipment.js';
 
 /*
@@ -91,14 +92,30 @@ export function deriveStats(
 export interface CharacterStats {
   attributes: Attributes;
   stats: DerivedStatsDto;
+  /** Combat bonuses from gear effects (request #37). */
+  gear: GearCombatEffects;
 }
 
 export function computeStats(base: Attributes, items: OwnedItem[] = []): CharacterStats {
   const equipped = activeEquipment(items);
-  const attributes = addAttributes(base, ...equipped.map((i) => i.def.bonuses ?? {}));
-  const armor = equipped.reduce((sum, i) => sum + (i.def.armor ?? 0), 0);
-  const resist = equipped.reduce((sum, i) => sum + (i.def.magicResist ?? 0), 0);
-  return { attributes, stats: deriveStats(attributes, armor, resist) };
+  // Bonus effects of every equipped item (request #37).
+  const g = gearTotals(equipped.flatMap((i) => i.affixes ?? []));
+  const attributes = addAttributes(base, ...equipped.map((i) => i.def.bonuses ?? {}), g.attributes);
+  const armor = equipped.reduce((sum, i) => sum + (i.def.armor ?? 0), 0) + g.stats.armor;
+  const resist =
+    equipped.reduce((sum, i) => sum + (i.def.magicResist ?? 0), 0) + g.stats.magicResist;
+  const d = deriveStats(attributes, armor, resist);
+  const stats: DerivedStatsDto = {
+    ...d,
+    maxHp: d.maxHp + g.stats.maxHp,
+    maxMana: d.maxMana + g.stats.maxMana,
+    initiative: d.initiative + g.stats.initiative,
+    dodgeChance: Math.min(STAT_RULES.maxDodge, d.dodgeChance + g.stats.dodgeChance),
+    critChance: Math.min(STAT_RULES.maxCrit, d.critChance + g.stats.critChance),
+    critDamage: d.critDamage + g.stats.critDamage,
+    focusPerRound: Math.min(FOCUS_RULES.maxPerRound, d.focusPerRound + g.stats.focusPerRound),
+  };
+  return { attributes, stats, gear: g.combat };
 }
 
 /** Damage/heal/block multiplier for an ability's attribute scaling. */
