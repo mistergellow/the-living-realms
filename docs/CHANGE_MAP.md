@@ -170,11 +170,60 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `game-core/test/hex.test.ts`, `characters.test.ts` (posição inicial), `apps/web/test/map-camera.test.ts`
 - Futuro (AP, terreno): `ARCHITECTURE.md` §8, `DATABASE.md` → map_hexes
 
+## País de origem, kits iniciais e criação curta (pedido #43)
+
+- Contrato: `NATION_IDS`, `STARTER_KIT_IDS`, `createCharacterRequestSchema` (`nation` obrigatório, `starterKit`, `attributes` opcional), `CharacterDto.nation` (`api.ts`)
+- Regras/dados: `STARTER_KITS`, `getStarterKit` (`content/items.ts`), habilidade `fireball` (`content/abilities.ts`), `capitalOf` (`world-map.ts`)
+- BD: `characters.nation` (migração 0013)
+- Servidor: `characters.service.ts` (`create`: capital, kit, Fireball preparada)
+- Web: `CharacterCreatePage.tsx` (`choice-card`), cores dos países em `world/region-colors.ts`
+- Testes: `characters.test.ts`, `helpers.ts` (`createCharacter` envia `nation`), `e2e/foundation.spec.ts` (`createCharacter` clica país e kit)
+
+## Action Points (AP) e viajar (pedido #43)
+
+- Regras: `packages/game-core/src/ap.ts` (`AP_RULES`: máx., por hora, custo por hexágono; `currentAp`, `apFullAt`, `checkMove`)
+- Contrato: `ApDto`, `CharacterDto.ap`, `moveRequestSchema` (`api.ts`); mensagem WS `player.moved` (`protocol.ts`); `ControlMessage` `character.moved` (`server-kit/src/bus.ts`)
+- BD: `characters.ap`, `characters.ap_updated_at`
+- Servidor: `characters.service.ts` (`move`, `toCharacterDto`), rota `POST /api/characters/:id/move`, `gateway.ts` (`onControl` → `character.moved`)
+- Web: `world/ap.ts` (`liveAp`, `fullIn`), `world/api.ts` (`useTravel`), `world-store.ts` (`updateSelf`), `world-state.ts` (`player.moved`), `GameShell.tsx` (`ApPill`), `WorldPage.tsx` (`HexInfo`: "Travel here")
+- Testes: `game-core/test/world-systems.test.ts`, `characters.test.ts` ("travels"), `web/test/world-state.test.ts`, e2e (viagem no mapa)
+- **Atividade nova que custe AP:** usar `currentAp`/gravar `ap` + `ap_updated_at` como em `move`
+
+## Terreno, entradas de Rift e dificuldade por profundidade (pedido #43)
+
+- Mapa: `world-map.ts` (`TERRAINS`, `TERRAIN_NAMES`, `MapHex.terrain/riftDepth/rift`, `carveRivers`, `placeRifts`, `RIFT_TIERS`, `RIFT_SITE_COUNT`, `riftSites`, `riftSiteById`)
+- Rifts: `content/rifts.ts` (`RIFT_TIER_RULES`, `riftTierModifiers`, `getRift` resolve `rift_q_r`), `rift/run.ts` (Threat inicial, modificadores por tier), `RiftDto.tier/site` (`combat.ts`)
+- Servidor: `rifts.service.ts` (`list` = entradas, `assertAtRift`), `lobbies.service.ts` (criar/começar no hexágono); erro `NOT_HERE` (`errors.ts`)
+- Profissões: `GATHERING_TERRAIN`, `professionTerrains` (`content/professions.ts`), `professions.service.ts` (terreno), `ProfessionDto.terrains/availableHere`, `ProfessionsPage.tsx`
+- Locais: `content/locations.ts` (capital, terreno, Rift, world boss) → `HomePage.tsx`
+- Web: `map-scene.ts` (`terrainTint`, `drawTerrainGlyph`, `riftMarker`), `RiftsPage.tsx` (Rift no teu hexágono + lista)
+- Testes: `world-systems.test.ts`, `locations.test.ts`, `rifts.test.ts` / `lobbies.test.ts` / `professions.test.ts` (`placeCharacter`, `firstRiftSite`), e2e (`travel`)
+
+## World boss (pedido #43)
+
+- Conteúdo: `content/world-boss.ts` (`WORLD_BOSS_SEASONS`, `WORLD_BOSS_RULES`, `nextBossHex`, `partyKeyOf`), inimigo `hollow_colossus` (`enemies.ts`), `createWorldBossRun`/`worldBossDamage` (`rift/run.ts`, `RunState.mode = 'worldboss'`)
+- **Época nova:** acrescentar a `WORLD_BOSS_SEASONS` (+ inimigo e arte em `EnemyAvatar.tsx`); a linha da BD cria-se sozinha
+- BD: `world_bosses`, `world_boss_attempts` (migração 0013); TRUNCATE em `helpers.ts` e `worker.test.ts`
+- Contrato: `WorldBossDto`, `worldBossFightSchema` (`world-boss.ts`), `RunDto.mode/worldBoss`, erro `NO_ATTEMPTS_LEFT`
+- Servidor: `modules/worldboss/` (`worldboss.service.ts`, `worldboss.repository.ts` → `settleWorldBossFight`, rotas `/api/world-boss`), `rifts.service.ts` (`createWorldBossRun`, `finish`), `lobbies.service.ts` (`riftId = 'world_boss'`)
+- Web: `features/worldboss/WorldBossPage.tsx` (rota `/world-boss`), `world/api.ts` (`useWorldBoss`, `useWorldBossFight`), `map-scene.ts` (`placeBoss`), `CombatPage.tsx`/`EndOverlay.tsx` (dano)
+- Testes: `apps/server/test/world-boss.test.ts`, `world-systems.test.ts`
+
+## Combate sem Dodge aleatório; Block chama-se Dodge (pedido #43)
+
+- Regras: `engine.ts` (`applyEffect` sem esquiva), `stats.ts` (sem `dodgeChance`), `affixes.ts` (sem o efeito "dodge"), `enemies.ts`
+- Contrato: `DerivedStatsDto` sem `dodgeChance`; `CombatLogEntry` sem `dodge`
+- Textos ("Dodge" = o antigo Block): `abilities.ts` (nome/descrições, `describeEffects`), `combat-text.ts`, `combat-scene.ts`, `UnitChips.tsx`, `CombatPage.tsx`, `AbilitiesTab.tsx`, `AbilityEditor.tsx`, `rooms.ts`, `items.ts`. O código continua a chamar-lhe `block`.
+
+## Sensação de jogo (pedido #43)
+
+- `apps/web/src/lib/app-feel.ts` (sem menu do botão direito fora dos campos de texto, sem arrastar imagens/links), `main.tsx`, `global.css` (`.app-feel`)
+
 ## Mapa do mundo: continente, regiões (países + Riftlands), capitais
 
 - Dados/regras (puros, determinísticos): `packages/game-core/src/content/world-map.ts` (`REGIONS` com nome, tipo e capital; `CONTINENT_HALF_WIDTH/HEIGHT`, `RIFTLANDS_CENTER`, `RIFTLANDS_WEIGHT`; `worldMapHexes`, `mapHexAt`, `regionAt`)
 - Web: `map-scene.ts` (`REGION_COLORS` — **região nova precisa de cor aqui**; fronteiras/costa, `capitalMarker`, nomes das regiões, `MAP_BOUNDS` para a câmara), `WorldPage.tsx` (`HexInfo` mostra região/capital)
-- Spawn: `worlds.spawn_q/spawn_r` tem de cair em terra (hoje (0, 0) = Riftlands)
+- Spawn: na capital do país (`capitalOf`, pedido #43); `worlds.spawn_q/spawn_r` já não é usado na criação
 - Testes: `game-core/test/world-map.test.ts` (forma, capitais, ligação, fronteiras), `e2e/foundation.spec.ts` ("The Riftlands" no hexágono inicial)
 - Mudar a forma ou as capitais muda que hexágonos existem: rever personagens guardados fora de terra e o teste do spawn
 

@@ -59,7 +59,7 @@ describe('character creation (attributes + starter kit)', () => {
       startingWeapon: 'ring_of_vigor',
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error.details[0].path).toBe('startingWeapon');
+    expect(res.json().error.details[0].path).toBe('starterKit');
   });
 
   it('builds the sheet: attributes, derived stats, starter kit and weapon abilities', async () => {

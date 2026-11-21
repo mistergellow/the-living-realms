@@ -23,6 +23,10 @@ export const ErrorCode = {
   INVALID_ACTION: 'INVALID_ACTION',
   NOT_YOUR_TURN: 'NOT_YOUR_TURN',
   RATE_LIMITED: 'RATE_LIMITED',
+  /** You must stand on a certain hex (a Rift entrance, the world boss — request #43). */
+  NOT_HERE: 'NOT_HERE',
+  /** The world boss allows one fight per character per day (request #43). */
+  NO_ATTEMPTS_LEFT: 'NO_ATTEMPTS_LEFT',
   INTERNAL: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

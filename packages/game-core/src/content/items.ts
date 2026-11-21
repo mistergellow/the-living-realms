@@ -1,4 +1,4 @@
-import type { Attributes, EquipSlot, ItemKind } from '@realms/shared';
+import type { Attributes, EquipSlot, ItemKind, StarterKitId } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
 import { customItemDef } from './custom.js';
@@ -126,7 +126,7 @@ export const ITEMS = {
   wooden_shield: item({
     id: 'wooden_shield',
     name: 'Wooden Shield',
-    description: 'Block for yourself or a whole column. Scales with Might and Endurance.',
+    description: 'Dodge for yourself or a whole column. Scales with Might and Endurance.',
     kind: 'offhand',
     slots: ['offHand'],
     weaponType: 'shield',
@@ -228,6 +228,23 @@ export const STARTER_WEAPONS: ItemDefId[] = [
 export const STARTER_OFFHANDS: ItemDefId[] = ['wooden_shield', 'bone_talisman', 'rusty_dagger'];
 /** Equipped automatically on every new character. */
 export const STARTER_ARMOR: ItemDefId[] = ['padded_tunic'];
+
+/**
+ * Starting kits (request #43): the only choice of gear at creation. The
+ * Fireball kit starts with a wand and the Fireball spell learned and prepared.
+ */
+export const STARTER_KITS = [
+  { id: 'sword', name: 'Sword', weapon: 'training_sword', skills: [] },
+  { id: 'bow', name: 'Bow', weapon: 'hunting_bow', skills: [] },
+  { id: 'dagger', name: 'Dagger', weapon: 'rusty_dagger', skills: [] },
+  { id: 'fireball', name: 'Fireball', weapon: 'birch_wand', skills: ['fireball'] },
+] as const satisfies ReadonlyArray<{
+  id: StarterKitId;
+  name: string;
+  weapon: ItemDefId;
+  skills: readonly string[];
+}>;
+export const getStarterKit = (id: string) => STARTER_KITS.find((k) => k.id === id);
 
 /*
  * Materials and consumables (professions, request #33). They stack and cannot

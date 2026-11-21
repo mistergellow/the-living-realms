@@ -375,7 +375,11 @@ function gearOnHit(
   }
 }
 
-/** Returns false if the target dodged (the rest of the ability misses it too). */
+/**
+ * Applies one effect. Characters never dodge at random (request #43): an
+ * ability lands unless its own rules say otherwise. Returns false to stop the
+ * rest of the ability on this target.
+ */
 function applyEffect(
   state: CombatState,
   rng: Rng,
@@ -387,10 +391,6 @@ function applyEffect(
   const mult = valueMultiplier(actor, ability);
   switch (effect.kind) {
     case 'damage': {
-      if (effect.damageType !== 'magic' && rng.chance(target.stats.dodgeChance)) {
-        pushLog(state, { t: 'dodge', targetId: target.id });
-        return false;
-      }
       // 1. Incoming damage.
       let dmg = roll(rng, effect.min, effect.max) * mult;
       if (hasStatus(actor, 'weaken')) dmg *= COMBAT_RULES.weakenMultiplier;

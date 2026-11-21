@@ -279,7 +279,7 @@ function EffectRow(props: {
       >
         <option value="damage">Damage</option>
         <option value="heal">Heal</option>
-        <option value="block">Block</option>
+        <option value="block">Dodge</option>
         <option value="status">Status</option>
       </Select>
       {e.kind === 'damage' && (

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { hexDistance, REGIONS, riftSites, worldMapHexes } from '../packages/game-core/src/index.js';
 
 const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const PASSWORD = 'correct horse battery';
@@ -10,6 +11,31 @@ const randomName = (prefix: string) =>
     '',
   );
 
+const WEST_CAPITAL = REGIONS.west.capital!.hex;
+
+/**
+ * Travel (request #43) through the API to the nearest tier-1 Rift entrance or
+ * river from the West capital. The page follows through the world connection.
+ */
+async function travel(page: Page, name: string, to: 'rift' | 'river') {
+  const { characters } = (await (await page.request.get('/api/characters')).json()) as {
+    characters: Array<{ id: string; name: string }>;
+  };
+  const id = characters.find((c) => c.name === name)!.id;
+  const candidates =
+    to === 'rift'
+      ? riftSites().filter((s) => s.rift!.tier === 1)
+      : worldMapHexes().filter((h) => h.terrain === 'river');
+  const dest = [...candidates].sort(
+    (a, b) => hexDistance(WEST_CAPITAL, a) - hexDistance(WEST_CAPITAL, b),
+  )[0]!;
+  const res = await page.request.post(`/api/characters/${id}/move`, {
+    data: { to: { q: dest.q, r: dest.r } },
+  });
+  expect(res.status()).toBe(200);
+  return { q: dest.q, r: dest.r };
+}
+
 async function register(page: Page, email: string) {
   await page.goto('/register');
   await page.getByLabel('Email').fill(email);
@@ -19,8 +45,17 @@ async function register(page: Page, email: string) {
   await expect(page).toHaveURL(/\/characters\/new$/);
 }
 
-async function createCharacter(page: Page, name: string) {
+async function createCharacter(page: Page, name: string, kit = 'Sword') {
   await page.getByLabel('Name').fill(name);
+  // Request #43: nation of origin (start in its capital) and a starting kit.
+  await page
+    .getByTestId('nations')
+    .getByRole('button', { name: /Kingdom of the West/ })
+    .click();
+  await page
+    .getByTestId('starter-kits')
+    .getByRole('button', { name: new RegExp(`^${kit}`) })
+    .click();
   await page.getByRole('button', { name: 'Hair style spiky' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page).toHaveURL(/\/home$/);
@@ -35,20 +70,29 @@ test('register → create character → enter the world → log out → log in',
   await page.screenshot({ path: 'test-results/screens/01-create.png' });
   await createCharacter(page, name);
 
-  // The hex you stand on: the starting town, its actions and the hex chat.
+  // The hex you stand on: the capital of your nation (request #43), its actions and the hex chat.
   await expect(page.getByTestId('connection-status')).toContainText('Online');
-  await expect(page.getByTestId('place-name')).toHaveText('Emberhold');
+  await expect(page.getByTestId('place-name')).toHaveText(REGIONS.west.capital!.name);
+  await expect(page.getByTestId('top-ap')).toHaveText('120/120');
   await page.screenshot({ path: 'test-results/screens/02-home.png' });
-  await page.getByRole('link', { name: 'Leave', exact: true }).click();
+  await page.getByRole('link', { name: 'Travel', exact: true }).click();
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
-  // The continent: the spawn hex (centre of the view) lies in the neutral Riftlands.
+  // The continent: you stand in the West capital (centre of the view).
+  const canvas = page.locator('.world-map canvas');
   await expect(async () => {
-    await page.locator('.world-map canvas').click(); // the scene may still be loading
-    await expect(page.getByTestId('hex-info')).toContainText('The Riftlands', { timeout: 500 });
+    await canvas.click(); // the scene may still be loading
+    await expect(page.getByTestId('hex-info')).toContainText('West Capital', { timeout: 500 });
   }).toPass();
   await page.screenshot({ path: 'test-results/screens/02-world.png' });
+  // Travel (request #43): select a hex to the right and pay AP to go there.
+  const box = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: box.width / 2 + 140, y: box.height / 2 } });
+  await expect(page.getByTestId('travel')).toContainText('AP');
+  await page.getByTestId('travel').click();
+  await expect(page.getByTestId('hex-info')).toContainText('0 away');
+  await expect(page.getByTestId('top-ap')).not.toHaveText('120/120');
   for (let i = 0; i < 8; i++) await page.keyboard.press('-');
   await page.screenshot({ path: 'test-results/screens/02-world-continent.png' });
 
@@ -127,24 +171,22 @@ test('one active character per account: a second tab takes over', async ({ brows
 test('character system: attributes, starting weapon, sheet and equipment', async ({ page }) => {
   await register(page, `e2e-sheet-${unique()}@example.com`);
   const name = randomName('Archer');
-  await page.getByLabel('Name').fill(name);
-
-  // Spend points: Agility 5 → 10 (max), Endurance 5 → 9. 3 points left unspent.
-  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
-  for (let i = 0; i < 4; i++)
-    await page.getByRole('button', { name: 'Increase Endurance' }).click();
-  await expect(page.getByTestId('attr-agility')).toHaveText('10');
-  await expect(page.getByTestId('points-remaining')).toContainText('3 / 12');
-  await expect(page.getByRole('button', { name: 'Increase Agility' })).toBeDisabled();
-
-  await page.getByRole('button', { name: /Hunting Bow/ }).click();
-  await page.screenshot({ path: 'test-results/screens/05-create-attributes.png', fullPage: true });
-  await page.getByRole('button', { name: 'Create and enter the world' }).click();
-  await expect(page.getByTestId('self-name')).toHaveText(name);
+  await page.screenshot({ path: 'test-results/screens/05-create.png', fullPage: true });
+  await createCharacter(page, name, 'Bow');
 
   await page.getByRole('link', { name: 'Character', exact: true }).click();
   await expect(page.getByTestId('sheet-name')).toHaveText(name);
+  // Request #43: creation is short; all 12 points are spent here, on the sheet.
+  const allocate = page.getByTestId('allocate');
+  await expect(allocate).toContainText('12 / 12 points left');
+  for (let i = 0; i < 5; i++)
+    await allocate.getByRole('button', { name: 'Increase Agility' }).click();
+  for (let i = 0; i < 4; i++)
+    await allocate.getByRole('button', { name: 'Increase Endurance' }).click();
+  await allocate.getByRole('button', { name: 'Increase Precision' }).click();
+  await page.getByRole('button', { name: 'Confirm attributes' }).click();
   await expect(page.getByTestId('sheet-attr-agility')).toHaveText('10');
+  await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
   await expect(page.getByTestId('stat-hp')).toHaveText(String(40 + 6 * 9));
   await page.screenshot({ path: 'test-results/screens/06-sheet.png', fullPage: true });
 
@@ -158,13 +200,6 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await page.getByRole('tab', { name: /Professions/ }).click();
   await expect(page.getByTestId('profession-fishing')).toBeVisible();
   await page.getByRole('tab', { name: /Equipment/ }).click();
-
-  // The 3 unspent points can be distributed later on the sheet.
-  const allocate = page.getByTestId('allocate');
-  await expect(allocate).toContainText('3 / 3 points left');
-  await allocate.getByRole('button', { name: 'Increase Precision' }).click();
-  await page.getByRole('button', { name: 'Confirm attributes' }).click();
-  await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
 
   // Drag and drop: the bow goes to the bag and back to the main hand.
   await page
@@ -188,18 +223,13 @@ test('character system: attributes, starting weapon, sheet and equipment', async
 
 test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ page }) => {
   await register(page, `e2e-rift-${unique()}@example.com`);
-  await page.getByLabel('Name').fill(randomName('Raider'));
-  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
-  for (let i = 0; i < 4; i++)
-    await page.getByRole('button', { name: 'Increase Endurance' }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
-  await page.getByRole('button', { name: 'Wooden Shield' }).click();
-  await page.getByRole('button', { name: 'Hair style long' }).click();
-  await page.getByRole('button', { name: 'Create and enter the world' }).click();
-  await expect(page.getByTestId('self-name')).toBeVisible();
-
+  const raider = randomName('Raider');
+  await createCharacter(page, raider);
+  // Rifts open on certain hexes (request #43): none in the capital.
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Rifts' }).click();
-  await expect(page.getByTestId('rift-card')).toContainText('Shattered Breach');
+  await expect(page.getByTestId('no-rift-here')).toBeVisible();
+  await travel(page, raider, 'rift');
+  await expect(page.getByTestId('rift-card')).toContainText('Tier 1');
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
   // The Rift map: branching paths; the first row is always a fight.
@@ -219,7 +249,7 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   await expect(page.getByTestId('combat-log')).toContainText('uses Slash');
   // A sword's basic attack costs 2 Focus (heavy weapons 3, daggers 1).
   await expect(page.getByTestId('my-focus')).toHaveText('1');
-  await page.getByRole('button', { name: /^Block/ }).click();
+  await page.getByRole('button', { name: /^Dodge/ }).click();
   await expect(page.getByTestId('my-focus')).toHaveText('0');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
@@ -231,7 +261,8 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Abandon' }).click();
   await expect(page.getByTestId('run-result')).toContainText('You fled the Rift');
-  await expect(page.getByTestId('run-result')).toContainText('Wooden Shield');
+  // Request #43: a lost Rift costs every equipped item 1–3% durability.
+  await expect(page.getByTestId('run-result')).toContainText(/Training Sword: quality 9[789]/);
 });
 
 test('friends + private lobby + group Rift with two players', async ({ browser }) => {
@@ -244,6 +275,9 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await createCharacter(a, nameA);
   await register(b, `e2e-lb-${unique()}@example.com`);
   await createCharacter(b, nameB);
+  // Both travel to the same Rift entrance (request #43).
+  await travel(a, nameA, 'rift');
+  await travel(b, nameB, 'rift');
 
   // A sends a friend request; B accepts.
   await a.getByTestId('friends-link').click();
@@ -304,8 +338,12 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
 
 test('professions: practise fishing and gain XP', async ({ page }) => {
   await register(page, `e2e-prof-${unique()}@example.com`);
-  await createCharacter(page, randomName('Angler'));
-  await page.getByRole('link', { name: 'Workshop', exact: true }).click();
+  const angler = randomName('Angler');
+  await createCharacter(page, angler);
+  // Fishing needs a river (request #43).
+  await travel(page, angler, 'river');
+  await expect(page.getByTestId('place-name')).toContainText('River');
+  await page.getByRole('link', { name: 'Professions', exact: true }).click();
   await expect(page.getByTestId('profession-fishing')).toContainText('Lv 0');
   await page.getByTestId('profession-fishing').click();
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
@@ -352,7 +390,8 @@ test('screens fit every screen size', async ({ page }) => {
     ['select', () => expect(page.getByTestId('character-card')).toContainText(name)],
     ['create', () => expect(page.getByLabel('Name')).toBeVisible()],
     ['sheet', () => expect(page.getByTestId('sheet-name')).toHaveText(name)],
-    ['rifts', () => expect(page.getByTestId('rift-card').first()).toBeVisible()],
+    ['rifts', () => expect(page.getByTestId('rift-sites')).toBeVisible()],
+    ['worldboss', () => expect(page.getByTestId('world-boss')).toBeVisible()],
     ['professions', () => expect(page.getByTestId('profession-detail')).toBeVisible()],
   ];
   const paths: Record<string, string> = {
@@ -360,6 +399,7 @@ test('screens fit every screen size', async ({ page }) => {
     world: '/world',
     select: '/characters',
     create: '/characters/new',
+    worldboss: '/world-boss',
     sheet: characterUrl!,
     rifts: '/rifts',
     professions: '/professions',
@@ -376,6 +416,7 @@ test('screens fit every screen size', async ({ page }) => {
   }
 
   // Combat screen at every size (one run, re-rendered per viewport).
+  await travel(page, name, 'rift');
   await page.goto('/rifts');
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page.getByTestId('rift-map')).toBeVisible();

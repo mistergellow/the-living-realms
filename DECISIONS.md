@@ -787,3 +787,33 @@ sheets) and by the browser (ability bar, combat log, art).
 
 **Consequences.** game-core keeps no I/O: the registry is filled by the caller.
 A Rift in progress keeps the combat profile it started with.
+
+## ADR-045 — Action Points as a stored value plus real-time regeneration
+
+**Status:** accepted (request #43)
+
+**Decision.** A character stores `ap` (double) and `ap_updated_at`. The
+current AP is `min(120, ap + hours since ap_updated_at × 10)`
+(`currentAp` in game-core); spending AP writes the new value and the time.
+Nothing runs on a timer, so no worker job is needed and the value is exact at
+any moment. The client derives the live value from `fullAt` without polling.
+Travel is a single request (`POST /characters/:id/move`) that pays
+`distance × AP per hex` and moves at once; the gateway hears it through the
+bus (`character.moved`) to keep presence and hex chat in step, and every
+player sees `player.moved`.
+
+## ADR-046 — Map content (terrain, Rift sites) in game-core; world boss in the database
+
+**Status:** accepted (request #43)
+
+**Decision.** Terrain and Rift entrances extend the deterministic map of
+ADR-040: a Rift entrance id (`rift_q_r`) resolves through `getRift` to the
+template Rift scaled by its tier, so runs, lobbies and the client need no new
+table. Server rules check the character stands on the right hex (Rifts,
+gathering professions, the world boss). The world boss is mutable shared state,
+so it lives in `world_bosses` (one row per world and season) and
+`world_boss_attempts` (one per fight, damage written when it ends). The boss
+roams lazily: whoever reads it after `next_move_at` moves it (guarded so only
+one reader wins). A fight is a run with `mode: 'worldboss'` whose single enemy
+starts with the pool's current HP; the damage dealt comes off the pool when
+the fight ends. The leaderboard groups attempts by party (sorted character ids).

@@ -9,7 +9,13 @@ import {
   type DbOrTx,
   type RiftLobby,
 } from '@realms/db';
-import { getItemDef, getRift, PVP_ARENA_NAME } from '@realms/game-core';
+import {
+  CURRENT_WORLD_BOSS_SEASON,
+  getItemDef,
+  getRift,
+  PVP_ARENA_NAME,
+  WORLD_BOSS_ID,
+} from '@realms/game-core';
 import {
   ErrorCode,
   LOBBY_MAX_MEMBERS,
@@ -26,12 +32,25 @@ import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
 import type { FriendsService } from '../social/friends.service.js';
-import { assertFreeForRift, startingSlot, toRiftDto, type RiftsService } from './rifts.service.js';
+import type { WorldBossService } from '../worldboss/worldboss.service.js';
+import {
+  assertAtRift,
+  assertFreeForRift,
+  startingSlot,
+  toRiftDto,
+  type RiftsService,
+} from './rifts.service.js';
 
 /** PvP arena lobbies (request #33) use the same tables, with riftId = 'pvp_arena'. */
 const isPvp = (riftId: string) => riftId === PVP_ARENA_ID;
+/** World boss lobbies (request #43): riftId = 'world_boss'. */
+const isBoss = (riftId: string) => riftId === WORLD_BOSS_ID;
 const lobbyName = (riftId: string) =>
-  isPvp(riftId) ? PVP_ARENA_NAME : (getRift(riftId)?.name ?? riftId);
+  isPvp(riftId)
+    ? PVP_ARENA_NAME
+    : isBoss(riftId)
+      ? CURRENT_WORLD_BOSS_SEASON.name
+      : (getRift(riftId)?.name ?? riftId);
 const maxMembers = (riftId: string) => (isPvp(riftId) ? PVP_MAX_MEMBERS : LOBBY_MAX_MEMBERS);
 
 const notLeader = () =>
@@ -49,6 +68,7 @@ export class LobbiesService {
     private readonly sheets: CharacterSheetService,
     private readonly rifts: RiftsService,
     private readonly friends: FriendsService,
+    private readonly worldBoss: WorldBossService,
   ) {
     this.db = ctx.db;
   }
@@ -115,10 +135,12 @@ export class LobbiesService {
     riftId: string,
     visibility: LobbyVisibility,
   ) {
-    if (!isPvp(riftId) && !getRift(riftId)) throw errors.notFound('Rift');
+    const rift = isPvp(riftId) || isBoss(riftId) ? undefined : getRift(riftId);
+    if (!isPvp(riftId) && !isBoss(riftId) && !rift) throw errors.notFound('Rift');
     const lobbyId = await this.db.transaction(async (tx) => {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertFreeForRift(tx, c.id);
+      if (rift) assertAtRift(rift, [c]);
       const [lobby] = await tx
         .insert(riftLobbies)
         .values({ worldId: this.ctx.world.id, riftId, leaderCharacterId: c.id, visibility })
@@ -298,7 +320,25 @@ export class LobbiesService {
         await tx.delete(riftLobbyInvites).where(eq(riftLobbyInvites.lobbyId, lobby.id));
         return pvpId;
       }
+      if (isBoss(lobby.riftId)) {
+        const bossRunId = await this.worldBoss.startFight(
+          tx,
+          members.map((m) => ({
+            accountId: m.accountId,
+            character: locked.find((c) => c.id === m.characterId)!,
+            slot: m.slot,
+          })),
+          lobby.leaderCharacterId,
+        );
+        await tx
+          .update(riftLobbies)
+          .set({ status: 'started', runId: bossRunId })
+          .where(eq(riftLobbies.id, lobby.id));
+        await tx.delete(riftLobbyInvites).where(eq(riftLobbyInvites.lobbyId, lobby.id));
+        return bossRunId;
+      }
       const rift = getRift(lobby.riftId)!;
+      assertAtRift(rift, locked);
       const runId = await this.rifts.createRun(
         tx,
         rift,

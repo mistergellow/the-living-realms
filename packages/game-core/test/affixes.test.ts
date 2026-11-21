@@ -137,7 +137,7 @@ describe('gear effects in combat (request #37)', () => {
       name: 'a',
       appearance,
       attributes: base,
-      stats: { ...stats, ...over, dodgeChance: 0, critChance: 0 },
+      stats: { ...stats, ...over, critChance: 0 },
       abilityIds: ['stab'],
       gear,
       hp: 20,
@@ -152,7 +152,7 @@ describe('gear effects in combat (request #37)', () => {
       isLastRoom: false,
       seed: 1,
     });
-    for (const c of s.combatants) c.stats = { ...c.stats, dodgeChance: 0, critChance: 0 };
+    for (const c of s.combatants) c.stats = { ...c.stats, critChance: 0 };
     return s;
   };
   const stab = (s: CombatState) => {

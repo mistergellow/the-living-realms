@@ -7,6 +7,10 @@ import {
   type Item,
 } from '@realms/db';
 import {
+  mapHexAt,
+  professionTerrains,
+  TERRAIN_NAMES,
+  type Terrain,
   activityChance,
   addProfessionXp,
   getItemDef,
@@ -49,6 +53,10 @@ function have(rows: Item[], defId: string): number {
  * Rift. Each attempt has a time cost (cooldown per profession) until Action
  * Points exist.
  */
+/** Terrain of the hex a character stands on ('plains' off the map, for safety). */
+const terrainAt = (c: { hexQ: number; hexR: number }): Terrain =>
+  mapHexAt({ q: c.hexQ, r: c.hexR })?.terrain ?? 'plains';
+
 export class ProfessionsService {
   private readonly db: Database;
   constructor(
@@ -59,14 +67,15 @@ export class ProfessionsService {
   }
 
   async list(accountId: string, characterId: string): Promise<ProfessionsDto> {
-    await this.sheets.getOwnedCharacter(this.db, accountId, characterId);
+    const c = await this.sheets.getOwnedCharacter(this.db, accountId, characterId);
+    const terrain = terrainAt(c);
     const [rows, owned] = await Promise.all([
       this.rows(this.db, characterId),
       this.items(this.db, characterId),
     ]);
     return {
       professions: Object.values(PROFESSIONS).map((p) =>
-        this.toDto(p, rows.get(p.id) ?? NEW, owned),
+        this.toDto(p, rows.get(p.id) ?? NEW, owned, terrain),
       ),
     };
   }
@@ -85,6 +94,12 @@ export class ProfessionsService {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertNotInRift(tx, c.id);
       const row = (await this.rows(tx, c.id)).get(prof.id) ?? NEW;
+      // Gathering needs the right terrain under your feet (request #43).
+      const needs = professionTerrains(prof.id);
+      if (needs && !needs.includes(terrainAt(c)))
+        throw this.invalid(
+          `${prof.name} needs a ${needs.map((t) => TERRAIN_NAMES[t].toLowerCase()).join(' or ')} hex. Travel to one first.`,
+        );
       if (row.level < activity.minLevel)
         throw this.invalid(`${activity.name} needs ${prof.name} level ${activity.minLevel}.`);
       if (row.readyAt && row.readyAt.getTime() > Date.now()) {
@@ -178,6 +193,7 @@ export class ProfessionsService {
           prof,
           { level: next.level, xp: next.xp, readyAt },
           await this.items(tx, c.id),
+          terrainAt(c),
         ),
       };
     });
@@ -242,7 +258,8 @@ export class ProfessionsService {
     }
   }
 
-  private toDto(p: ProfessionDef, row: Row, owned: Item[]): ProfessionDto {
+  private toDto(p: ProfessionDef, row: Row, owned: Item[], terrain: Terrain): ProfessionDto {
+    const needs = professionTerrains(p.id);
     const ready =
       row.readyAt && row.readyAt.getTime() > Date.now() ? row.readyAt.toISOString() : null;
     return {
@@ -278,6 +295,8 @@ export class ProfessionsService {
         })),
         effect: a.effect ?? null,
       })),
+      terrains: needs ? needs.map((t) => TERRAIN_NAMES[t]) : null,
+      availableHere: !needs || needs.includes(terrain),
     };
   }
 }

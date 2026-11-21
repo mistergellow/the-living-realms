@@ -119,7 +119,6 @@ describe('custom content (admin tools, request #41)', () => {
       isLastRoom: false,
       seed: 7,
     });
-    for (const c of s.combatants) c.stats = { ...c.stats, dodgeChance: 0 };
     const planned = planAction(s, 'p:a', { type: 'plan', abilityId: 'custom_nova_1' });
     expect(planned.ok).toBe(true);
     if (!planned.ok) return;

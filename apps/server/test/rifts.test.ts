@@ -1,4 +1,4 @@
-import type { RunDto } from '@realms/shared';
+import type { RunDto, RiftDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   createCharacter,
@@ -6,6 +6,8 @@ import {
   registerUser,
   resetState,
   type TestApp,
+  firstRiftSite,
+  placeCharacter,
 } from './helpers.js';
 
 let t: TestApp;
@@ -13,18 +15,22 @@ beforeAll(async () => (t = await createTestApp()));
 beforeEach(() => resetState(t));
 afterAll(() => t.close());
 
+const SITE = firstRiftSite();
+
 let seq = 0;
 async function hero(weapon = 'training_sword') {
   const user = await registerUser(t.app);
   const name = `Hero${String.fromCharCode(97 + (seq % 26))}${String.fromCharCode(97 + Math.floor(seq++ / 26))}`;
   const res = await createCharacter(t.app, user.cookie, name, { startingWeapon: weapon });
-  return { ...user, characterId: res.json().character.id as string };
+  const characterId = res.json().character.id as string;
+  await placeCharacter(t, characterId, SITE.hex); // Rifts are entered from their hex (#43)
+  return { ...user, characterId };
 }
 
 const startRun = (h: { cookie: string; characterId: string }) =>
   t.app.inject({
     method: 'POST',
-    url: '/api/rifts/shattered_breach/runs',
+    url: `/api/rifts/${SITE.id}/runs`,
     headers: { cookie: h.cookie },
     payload: { characterId: h.characterId },
   });
@@ -47,8 +53,7 @@ async function rig(runId: string) {
   const state = row!.state as { combat: RunDto['combat'] };
   if (!state.combat) return;
   for (const c of state.combat.combatants) {
-    if (c.side === 'enemies')
-      Object.assign(c, { hp: 1, stats: { ...c.stats, dodgeChance: 0, armor: 0 } });
+    if (c.side === 'enemies') Object.assign(c, { hp: 1, stats: { ...c.stats, armor: 0 } });
     else Object.assign(c, { stats: { ...c.stats, critChance: 0 } });
   }
   await t.dbHandle
@@ -105,11 +110,29 @@ describe('Rifts', () => {
   it('lists Rifts', async () => {
     const h = await hero();
     const res = await t.app.inject({ url: '/api/rifts', headers: { cookie: h.cookie } });
-    expect(res.json().rifts[0]).toMatchObject({
-      id: 'shattered_breach',
+    // Request #43: the Rift entrances on the map, each with a tier and a hex.
+    const rifts = res.json().rifts as RiftDto[];
+    expect(rifts.length).toBeGreaterThan(5);
+    expect(rifts.find((r) => r.id === SITE.id)).toMatchObject({
       depth: 8,
       bossName: 'Rift Warden',
+      site: SITE.hex,
     });
+    expect(rifts.every((r) => r.tier! >= 1 && r.tier! <= 5)).toBe(true);
+  });
+
+  it('can only be entered from its hex', async () => {
+    const h = await hero();
+    await placeCharacter(t, h.characterId, { q: SITE.hex.q + 1, r: SITE.hex.r });
+    const res = await startRun(h);
+    expect(res.json().error.code).toBe('NOT_HERE');
+    const template = await t.app.inject({
+      method: 'POST',
+      url: '/api/rifts/shattered_breach/runs',
+      headers: { cookie: h.cookie },
+      payload: { characterId: h.characterId },
+    });
+    expect(template.json().error.code).toBe('NOT_HERE');
   });
 
   it('starts a solo run on the map: choose the first room; one run per character', async () => {
@@ -281,11 +304,19 @@ describe('Rifts', () => {
     const run = (await act(h, id, { type: 'abandon' })).json() as RunDto;
     expect(run.status).toBe('abandoned');
     expect(run.rewards).toBeNull();
-    expect(run.penalty!.damaged.map((d) => d.quality)).toEqual([75, 75]);
+    // Request #43: each equipped item loses 1–3% durability.
+    const lost = run.penalty!.damaged.map((d) => d.quality);
+    expect(lost).toHaveLength(2);
+    for (const q of lost) {
+      expect(q).toBeGreaterThanOrEqual(97);
+      expect(q).toBeLessThanOrEqual(99);
+    }
     const sheet = (
       await t.app.inject({ url: `/api/characters/${h.characterId}`, headers: { cookie: h.cookie } })
     ).json();
-    expect(sheet.equipment.mainHand.quality).toBe(75);
+    expect(sheet.equipment.mainHand.quality).toBe(
+      run.penalty!.damaged.find((d) => d.id === sheet.equipment.mainHand.id)!.quality,
+    );
     const after = await act(h, id, { type: 'continue' });
     expect(after.statusCode).toBe(409);
   });

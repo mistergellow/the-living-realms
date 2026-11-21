@@ -24,8 +24,8 @@ import { getWeaponType, upgradeMultiplier } from './content/weapons.js';
  */
 
 export const MAX_QUALITY = 100;
-/** Quality lost by every equipped item when a Rift is lost (decision D30, provisional). */
-export const DEFEAT_QUALITY_LOSS = 25;
+/** Durability lost by each equipped item when a Rift is lost (request #43): 1–3%. */
+export const DEFEAT_QUALITY_LOSS = { min: 1, max: 3 } as const;
 
 export interface OwnedItem {
   id: string;
@@ -70,8 +70,11 @@ export function checkRequirements(
 
 export const isBroken = (quality: number) => quality <= 0;
 
-export function qualityAfterDefeat(quality: number): number {
-  return Math.max(0, quality - DEFEAT_QUALITY_LOSS);
+/** `roll` in [0, 1) picks the loss between min and max (inject randomness). */
+export function qualityAfterDefeat(quality: number, roll: number): number {
+  const { min, max } = DEFEAT_QUALITY_LOSS;
+  const loss = min + Math.min(max - min, Math.floor(roll * (max - min + 1)));
+  return Math.max(0, quality - loss);
 }
 
 export type EquipPlan =

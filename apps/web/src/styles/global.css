@@ -919,12 +919,14 @@ fieldset.field {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.weapon-grid {
+.weapon-grid,
+.choice-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   gap: var(--space-2);
 }
-.weapon-card {
+.weapon-card,
+.choice-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -940,19 +942,26 @@ fieldset.field {
     box-shadow 0.15s,
     transform 0.15s;
 }
-.weapon-card:hover {
+.weapon-card:hover,
+.choice-card:hover {
   border-color: var(--frame-hi);
   transform: translateY(-1px);
 }
-.weapon-card strong {
+.weapon-card strong,
+.choice-card strong {
   font-family: var(--font-display);
 }
-.weapon-card[aria-pressed='true'] {
+.weapon-card[aria-pressed='true'],
+.choice-card[aria-pressed='true'] {
   border-color: var(--accent-strong);
   box-shadow:
     0 0 0 1px var(--accent),
     0 0 1rem var(--frame-glow);
   background: linear-gradient(180deg, rgb(70 55 25 / 0.55), rgb(20 17 14 / 0.95));
+}
+/* nation cards (request #43): a stripe in the nation's colour */
+.choice-card[style*='--swatch'] {
+  border-left: 0.35rem solid var(--swatch);
 }
 .ability-mini {
   margin: var(--space-1) 0 0;
@@ -1593,4 +1602,86 @@ fieldset.field {
 .school-utility {
   --c1: #8b93a3;
   --c2: #262a33;
+}
+
+/* Game feel (request #43): no text selection except in text fields and the chat/log. */
+.app-feel body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.app-feel input,
+.app-feel textarea,
+.app-feel [contenteditable='true'] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Hex info + travel (request #43) */
+.hex-info {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hex-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.6rem;
+  border: 1px solid currentColor;
+}
+.hex-tag.rift {
+  color: #c77dff;
+}
+.hex-tag.boss {
+  color: #ff6b6b;
+}
+
+/* World boss (request #43) */
+.boss-card {
+  border-color: color-mix(in srgb, #ff4d4d 45%, var(--border-strong));
+}
+.boss-hp {
+  height: 0.9rem;
+  border-radius: 0.5rem;
+  background: rgb(0 0 0 / 0.5);
+  border: 1px solid rgb(255 77 77 / 0.5);
+  overflow: hidden;
+}
+.boss-hp span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #8b1010, #ff4d4d);
+}
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.leaderboard li {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+.leaderboard .rank {
+  font-family: var(--font-display);
+  color: var(--accent);
+}
+.rift-sites {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.rift-sites li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }

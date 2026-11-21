@@ -1,6 +1,20 @@
-import { accounts, worldEvents, type Character, type Database } from '@realms/db';
 import {
+  accounts,
+  characters,
+  characterSkills,
+  worldEvents,
+  type Character,
+  type Database,
+} from '@realms/db';
+import {
+  AP_RULES,
+  apFullAt,
+  checkMove,
+  BASE_ATTRIBUTES,
+  capitalOf,
+  currentAp,
   getItemDef,
+  getStarterKit,
   STARTER_ARMOR,
   STARTER_OFFHANDS,
   STARTER_WEAPONS,
@@ -11,21 +25,33 @@ import {
   ErrorCode,
   type CharacterAppearance,
   type CharacterDto,
+  MAX_PREPARED_SKILLS,
   type CreateCharacterRequest,
+  type HexCoord,
+  type NationId,
 } from '@realms/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
+import { publishControl, publishToWorld } from '@realms/server-kit';
 import type { AppContext } from '../../context.js';
 import { AppError, errors, isUniqueViolation } from '../../lib/errors.js';
 import { charactersRepository as repo } from './characters.repository.js';
 import { itemsRepository } from './items.repository.js';
 import { assertNotInRift } from './sheet.service.js';
 
-export function toCharacterDto(c: Character): CharacterDto {
+export function toCharacterDto(c: Character, now: Date = new Date()): CharacterDto {
+  const ap = currentAp(c.ap, c.apUpdatedAt, now);
   return {
     id: c.id,
     name: c.name,
     appearance: c.appearance as CharacterAppearance,
     position: { q: c.hexQ, r: c.hexR },
+    nation: (c.nation as NationId | null) ?? null,
+    ap: {
+      current: Math.floor(ap),
+      max: AP_RULES.max,
+      perHour: AP_RULES.perHour,
+      fullAt: apFullAt(ap, now)?.toISOString() ?? null,
+    },
     createdAt: c.createdAt.toISOString(),
     lastPlayedAt: c.lastPlayedAt?.toISOString() ?? null,
   };
@@ -55,17 +81,23 @@ export class CharactersService {
     const name = validateCharacterName(input.name);
     if (!name.ok) throw errors.validation(name.reason, [{ path: 'name', message: name.reason }]);
 
-    const attrs = validateCreationAttributes(input.attributes);
+    // Request #43: points may stay unspent at creation (spend them on the sheet).
+    const attrs = validateCreationAttributes(input.attributes ?? BASE_ATTRIBUTES);
     if (!attrs.ok)
       throw errors.validation(attrs.reason, [{ path: 'attributes', message: attrs.reason }]);
-    if (!(STARTER_WEAPONS as string[]).includes(input.startingWeapon))
-      throw errors.validation('Choose one of the starting weapons.', [
-        { path: 'startingWeapon', message: 'Choose one of the starting weapons.' },
+    // Request #43: a starting kit (sword, bow, dagger, or wand + Fireball);
+    // `startingWeapon` is the older form, still accepted.
+    const kit = input.starterKit ? getStarterKit(input.starterKit) : undefined;
+    const startingWeapon = kit?.weapon ?? input.startingWeapon;
+    const skills: readonly string[] = kit?.skills ?? [];
+    if (!startingWeapon || !(STARTER_WEAPONS as string[]).includes(startingWeapon))
+      throw errors.validation('Choose one of the starting kits.', [
+        { path: 'starterKit', message: 'Choose one of the starting kits.' },
       ]);
     if (input.startingOffhand) {
       const offhandOk =
         (STARTER_OFFHANDS as string[]).includes(input.startingOffhand) &&
-        !getItemDef(input.startingWeapon)!.twoHanded;
+        !getItemDef(startingWeapon)!.twoHanded;
       if (!offhandOk)
         throw errors.validation('That off-hand cannot be used with this weapon.', [
           { path: 'startingOffhand', message: 'That off-hand cannot be used with this weapon.' },
@@ -73,7 +105,9 @@ export class CharactersService {
     }
 
     const { world } = this.ctx;
-    const a = input.attributes;
+    const a = input.attributes ?? BASE_ATTRIBUTES;
+    // Request #43: you start in the capital of your nation.
+    const spawn = capitalOf(input.nation);
     try {
       return await this.db.transaction(async (tx) => {
         // Lock the account row: serializes concurrent creations so the limit can't be raced.
@@ -94,8 +128,9 @@ export class CharactersService {
           worldId: world.id,
           name: name.name,
           appearance: input.appearance,
-          hexQ: world.spawnQ,
-          hexR: world.spawnR,
+          hexQ: spawn.q,
+          hexR: spawn.r,
+          nation: input.nation,
           attrMight: a.might,
           attrAgility: a.agility,
           attrPrecision: a.precision,
@@ -106,7 +141,7 @@ export class CharactersService {
         });
         // Starter kit: the chosen weapon + basic armor, equipped.
         const kit: Array<{ defId: string; slot: string }> = [
-          { defId: input.startingWeapon, slot: 'mainHand' },
+          { defId: startingWeapon, slot: 'mainHand' },
           ...(input.startingOffhand ? [{ defId: input.startingOffhand, slot: 'offHand' }] : []),
           ...STARTER_ARMOR.map((defId) => ({ defId, slot: getItemDef(defId)!.slots[0]! })),
         ];
@@ -119,6 +154,15 @@ export class CharactersService {
             source: 'starter',
           })),
         );
+        // Starting spells (the Fireball kit): learned and prepared.
+        if (skills.length)
+          await tx.insert(characterSkills).values(
+            skills.slice(0, MAX_PREPARED_SKILLS).map((skillId, i) => ({
+              characterId: character.id,
+              skillId,
+              loadoutSlot: i,
+            })),
+          );
         await tx.insert(worldEvents).values({
           worldId: world.id,
           type: 'character.created',
@@ -126,7 +170,9 @@ export class CharactersService {
           actorCharacterId: character.id,
           payload: {
             name: character.name,
-            startingWeapon: input.startingWeapon,
+            nation: input.nation,
+            starterKit: input.starterKit ?? null,
+            startingWeapon,
             startingOffhand: input.startingOffhand ?? null,
           },
         });
@@ -137,6 +183,48 @@ export class CharactersService {
         throw new AppError(409, ErrorCode.CHARACTER_NAME_TAKEN, 'That name is already taken.');
       throw err;
     }
+  }
+
+  /**
+   * Travel (request #43): straight to any land hex, paying AP per hex. The
+   * position changes at once; the other players see it through the bus.
+   */
+  async move(accountId: string, id: string, to: HexCoord): Promise<Character> {
+    const moved = await this.db.transaction(async (tx) => {
+      const [c] = await tx
+        .select()
+        .from(characters)
+        .where(
+          and(
+            eq(characters.id, id),
+            eq(characters.accountId, accountId),
+            isNull(characters.deletedAt),
+          ),
+        )
+        .for('update');
+      if (!c) throw errors.notFound('Character');
+      await assertNotInRift(tx, c.id);
+      const now = new Date();
+      const ap = currentAp(c.ap, c.apUpdatedAt, now);
+      const check = checkMove({ q: c.hexQ, r: c.hexR }, to, ap);
+      if (!check.ok) throw errors.validation(check.reason, [{ path: 'to', message: check.reason }]);
+      const [row] = await tx
+        .update(characters)
+        .set({ hexQ: to.q, hexR: to.r, ap: ap - check.cost, apUpdatedAt: now })
+        .where(eq(characters.id, c.id))
+        .returning();
+      return row!;
+    });
+    const position = { q: moved.hexQ, r: moved.hexR };
+    await publishControl(this.ctx.redis, {
+      kind: 'character.moved',
+      characterId: moved.id,
+      position,
+    });
+    await publishToWorld(this.ctx.redis, this.ctx.world.id, {
+      message: { type: 'player.moved', data: { characterId: moved.id, position } },
+    });
+    return moved;
   }
 
   async delete(accountId: string, id: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { locationAt, type LocationActionId } from '@realms/game-core';
+import { locationAt, type LocationActionId, type LocationKind } from '@realms/game-core';
 import { CHAT_MAX_LENGTH, type HexCoord } from '@realms/shared';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -7,6 +7,7 @@ import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { useActiveRun } from '../rifts/api';
 import { useLobbyOverview } from '../rifts/lobby-api';
+import { useWorldBoss } from '../world/api';
 import { useWorldStore } from '../world/world-store';
 import { LocationScene } from './LocationScene';
 
@@ -16,11 +17,20 @@ const ACTION_ICON: Record<LocationActionId, IconName> = {
   rifts: 'portal',
   workshop: 'gear',
   map: 'compass',
+  worldboss: 'skull',
 };
 const ACTION_TO: Partial<Record<LocationActionId, string>> = {
   rifts: '/rifts',
   workshop: '/professions',
   map: '/world',
+  worldboss: '/world-boss',
+};
+
+const KIND_LABEL: Record<LocationKind, string> = {
+  town: 'Capital',
+  wilds: 'Wilderness',
+  rift: 'Rift entrance',
+  sea: 'Sea',
 };
 
 /**
@@ -33,7 +43,13 @@ export function HomePage() {
   const characterId = useActiveCharacter((s) => s.characterId)!;
   const self = useWorldStore((s) => s.self);
   const position = self?.position ?? { q: 0, r: 0 };
-  const place = locationAt(position);
+  const boss = useWorldBoss(characterId);
+  const bossHere =
+    !!boss.data &&
+    !boss.data.defeatedAt &&
+    boss.data.position.q === position.q &&
+    boss.data.position.r === position.r;
+  const place = locationAt(position, { worldBossHere: bossHere });
 
   return (
     <div className="place" data-testid="place">
@@ -42,7 +58,8 @@ export function HomePage() {
           <LocationScene scene={place.scene} />
           <div className="place-caption">
             <span className="place-kind">
-              {place.kind === 'town' ? 'Town' : 'Wilderness'} · hex ({position.q}, {position.r})
+              {KIND_LABEL[place.kind]}
+              {place.region ? ` · ${place.region}` : ''} · hex ({position.q}, {position.r})
             </span>
             <h1 data-testid="place-name">{place.name}</h1>
           </div>

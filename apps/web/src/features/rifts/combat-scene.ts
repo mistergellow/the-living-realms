@@ -50,7 +50,6 @@ const COLORS = {
   damage: '#ff8a7a',
   crit: '#ffd166',
   heal: '#7ee2a8',
-  dodge: '#cfd6e0',
   block: '#8fb0f5',
   status: '#f2d27a',
   tick: '#ff9f6b',
@@ -105,7 +104,7 @@ class UnitView {
   readonly root = new Container();
   readonly ring = new Graphics();
   readonly shadow = new Graphics();
-  /** Moves for lunges, dodges and knock-back. */
+  /** Moves for lunges and knock-back. */
   readonly body = new Container();
   /** The scaled artwork; rotates when the unit falls. */
   readonly figure = new Container();
@@ -887,7 +886,7 @@ export class CombatScene implements PixiScene {
         case 'block':
           this.glowAt(c.x, c.y, 0x6f9cff, 1.1);
           this.rise(c.x, u.y, 0x8fb0f5, 10);
-          this.float(u.x, fy, `+${e.amount} Block`, COLORS.block, 16);
+          this.float(u.x, fy, `+${e.amount} Dodge`, COLORS.block, 16);
           break;
         case 'status': {
           const name = e.status[0]!.toUpperCase() + e.status.slice(1);
@@ -910,12 +909,6 @@ export class CombatScene implements PixiScene {
           this.rise(c.x, u.y, 0x7ee2a8, 16);
           this.float(u.x, fy, `+${e.amount}`, COLORS.heal, 22);
           break;
-        case 'dodge': {
-          const side = -u.dir * 22;
-          this.tween(this.stepMs * 0.45, (p) => (u.offX = side * Math.sin(p * Math.PI)));
-          this.float(u.x, fy, 'Dodge', COLORS.dodge, 16);
-          break;
-        }
         case 'downed':
           u.shownHp = 0;
           this.setDowned(u, true);

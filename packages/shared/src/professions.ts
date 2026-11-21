@@ -33,6 +33,10 @@ export interface ProfessionDto {
   /** ISO time from which the profession can be practised again (null = now). */
   readyAt: string | null;
   activities: ActivityDto[];
+  /** Terrains this profession needs (request #43); null = anywhere. */
+  terrains: string[] | null;
+  /** Whether the hex you stand on allows it. */
+  availableHere: boolean;
 }
 
 export interface ProfessionsDto {

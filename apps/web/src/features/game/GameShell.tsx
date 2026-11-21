@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
@@ -8,6 +9,7 @@ import { useCharacterSheet } from '../characters/api';
 import { CharacterToken } from '../characters/CharacterToken';
 import { useFriends } from '../social/api';
 import { useWorldConnection } from '../world/useWorldConnection';
+import { fullIn, liveAp } from '../world/ap';
 import { useWorldStore } from '../world/world-store';
 import './game.css';
 
@@ -136,6 +138,7 @@ function TopBar(props: {
         <Icon name="star" />
         <strong data-testid="top-reputation">{sheet.data?.reputation ?? '—'}</strong>
       </div>
+      <ApPill />
       <div className="res-pill" title="Characters in the world right now">
         <Icon name="friends" />
         <strong>{props.online}</strong>
@@ -205,5 +208,28 @@ function BottomNav({ characterId }: { characterId: string }) {
         </NavLink>
       ))}
     </nav>
+  );
+}
+
+/** Action Points (request #43): spent to travel; +10 per real hour up to 120. */
+function ApPill() {
+  const ap = useWorldStore((s) => s.self?.ap ?? null);
+  const [, setNow] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!ap) return null;
+  const full = fullIn(ap);
+  return (
+    <div
+      className="res-pill"
+      title={`Action Points: travel costs AP. +${ap.perHour} per hour${full ? `, full in ${full}` : ' (full)'}.`}
+    >
+      <Icon name="bolt" />
+      <strong data-testid="top-ap">
+        {liveAp(ap)}/{ap.max}
+      </strong>
+    </div>
   );
 }

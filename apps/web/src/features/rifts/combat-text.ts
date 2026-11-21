@@ -23,9 +23,9 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
         : `${name(e.actorId)} uses ${a}.`;
     }
     case 'damage':
-      return `${name(e.targetId)} takes ${e.amount} damage${e.crit ? ' (critical!)' : ''}${e.blocked ? ` (${e.blocked} blocked)` : ''}.`;
+      return `${name(e.targetId)} takes ${e.amount} damage${e.crit ? ' (critical!)' : ''}${e.blocked ? ` (${e.blocked} dodged)` : ''}.`;
     case 'block':
-      return `${name(e.targetId)} gains ${e.amount} Block.`;
+      return `${name(e.targetId)} gains ${e.amount} Dodge.`;
     case 'status':
       return `${name(e.targetId)} is ${STATUS_NAMES[e.status].toLowerCase()} for ${e.turns} round${e.turns > 1 ? 's' : ''}.`;
     case 'tick':
@@ -34,8 +34,6 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
       return `${name(e.actorId)} left the Rift.`;
     case 'stunned':
       return `${name(e.targetId)} is stunned this round.`;
-    case 'dodge':
-      return `${name(e.targetId)} dodges.`;
     case 'heal':
       return `${name(e.targetId)} recovers ${e.amount} HP.`;
     case 'swap':

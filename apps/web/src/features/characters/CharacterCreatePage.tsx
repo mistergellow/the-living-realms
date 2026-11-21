@@ -5,16 +5,20 @@ import {
   CHARACTER_NAME_MIN,
   computeStats,
   describeEffects,
-  describeScaling,
   getAbility,
   getItemDef,
-  STARTER_OFFHANDS,
-  STARTER_WEAPONS,
+  REGIONS,
+  STARTER_KITS,
   validateCharacterName,
-  validateCreationAttributes,
   type OwnedItem,
 } from '@realms/game-core';
-import { DEFAULT_APPEARANCE, type AppearanceV2, type Attributes } from '@realms/shared';
+import {
+  DEFAULT_APPEARANCE,
+  NATION_IDS,
+  type AppearanceV2,
+  type NationId,
+  type StarterKitId,
+} from '@realms/shared';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { fieldErrors } from '../../lib/api';
@@ -22,51 +26,55 @@ import { Field } from '../../shared/ui/Field';
 import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from './active-character';
 import { useCreateCharacter } from './api';
-import { AttributePicker } from './AttributePicker';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
-import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
+import { weaponArtFor } from '../avatar/weapon-art';
 import { AppearanceEditor } from './AppearanceEditor';
 import { Icon } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
+import { cssColor, REGION_COLORS } from '../world/region-colors';
 
+/** What each kit fights with: the weapon's abilities plus any starting spell. */
+function kitAbilities(kit: (typeof STARTER_KITS)[number]) {
+  const ids = [...(getItemDef(kit.weapon)?.abilities ?? []), ...kit.skills];
+  return ids.flatMap((id) => {
+    const a = getAbility(id);
+    return a ? [a] : [];
+  });
+}
+
+/**
+ * Character creation (request #43, shorter): name, nation of origin (you start
+ * in its capital), a starting kit and the look. Attribute points are spent
+ * later on the character sheet.
+ */
 export function CharacterCreatePage() {
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [appearance, setAppearance] = useState<AppearanceV2>(DEFAULT_APPEARANCE);
-  const [attributes, setAttributes] = useState<Attributes>(BASE_ATTRIBUTES);
-  const [weapon, setWeapon] = useState<string>(STARTER_WEAPONS[0]!);
-  const [offhand, setOffhand] = useState<string | null>(null);
-  const twoHanded = !!getItemDef(weapon)?.twoHanded;
-  const chosenOffhand = twoHanded ? null : offhand;
+  const [nation, setNation] = useState<NationId | null>(null);
+  const [kitId, setKitId] = useState<StarterKitId>('sword');
+  const kit = STARTER_KITS.find((k) => k.id === kitId)!;
   const create = useCreateCharacter();
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
 
-  // Live preview using the same rules as the server (starter kit equipped).
-  const kit: OwnedItem[] = [
-    { id: 'w', defId: weapon, quality: 100, equippedSlot: 'mainHand' },
+  const owned: OwnedItem[] = [
+    { id: 'w', defId: kit.weapon, quality: 100, equippedSlot: 'mainHand' },
     { id: 't', defId: 'padded_tunic', quality: 100, equippedSlot: 'body' },
-    ...(chosenOffhand
-      ? [{ id: 'o', defId: chosenOffhand, quality: 100, equippedSlot: 'offHand' as const }]
-      : []),
   ];
-  const preview = computeStats(attributes, kit).stats;
+  const preview = computeStats(BASE_ATTRIBUTES, owned).stats;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     const v = validateCharacterName(name);
-    const pb = validateCreationAttributes(attributes);
-    const next = { name: v.ok ? undefined : v.reason, attributes: pb.ok ? undefined : pb.reason };
+    const next = {
+      name: v.ok ? undefined : v.reason,
+      nation: nation ? undefined : 'Choose the nation you come from.',
+    };
     setErrors(next);
-    if (!v.ok || !pb.ok) return;
+    if (!v.ok || !nation) return;
     create.mutate(
-      {
-        name: v.name,
-        appearance,
-        attributes,
-        startingWeapon: weapon,
-        ...(chosenOffhand ? { startingOffhand: chosenOffhand } : {}),
-      },
+      { name: v.name, appearance, nation, starterKit: kitId },
       {
         onSuccess: (c) => {
           select(c.id);
@@ -103,18 +111,33 @@ export function CharacterCreatePage() {
                 maxLength={CHARACTER_NAME_MAX + 10}
                 autoComplete="off"
                 error={errors.name}
-                hint={`${CHARACTER_NAME_MIN}–${CHARACTER_NAME_MAX} letters. Spaces, apostrophes and hyphens allowed. Must be unique.`}
+                hint={`${CHARACTER_NAME_MIN}–${CHARACTER_NAME_MAX} letters. Must be unique.`}
                 onChange={(e) => setName(e.target.value)}
               />
             </section>
             <section className="panel">
-              <AttributePicker
-                value={attributes}
-                onChange={setAttributes}
-                floor={BASE_ATTRIBUTES}
-                points={ATTRIBUTE_RULES.creationPoints}
-              />
-              {errors.attributes && <p className="field-error">{errors.attributes}</p>}
+              <fieldset className="field">
+                <legend className="legend">Nation of origin — you start in its capital</legend>
+                <div className="choice-grid" data-testid="nations">
+                  {NATION_IDS.map((id) => {
+                    const r = REGIONS[id];
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className="choice-card"
+                        aria-pressed={nation === id}
+                        onClick={() => setNation(id)}
+                        style={{ ['--swatch' as string]: cssColor(REGION_COLORS[id]) }}
+                      >
+                        <strong>{r.name}</strong>
+                        <span className="field-hint">Capital: {r.capital!.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.nation && <p className="field-error">{errors.nation}</p>}
+              </fieldset>
             </section>
           </div>
 
@@ -122,16 +145,18 @@ export function CharacterCreatePage() {
             <div className="pedestal">
               <CharacterAvatar
                 appearance={appearance}
-                weapon={weaponArtFor(weapon)}
-                offhand={offhandArtFor(chosenOffhand)}
+                weapon={weaponArtFor(kit.weapon)}
+                offhand={null}
                 size={320}
                 title="Preview"
               />
             </div>
             <span className="hero-name">{name.trim() || 'Unnamed'}</span>
             <span className="gold">
-              {getItemDef(weapon)?.name}
-              {chosenOffhand ? ` + ${getItemDef(chosenOffhand)?.name}` : ''}
+              {getItemDef(kit.weapon)?.name}
+              {kit.skills.length
+                ? ` + ${kit.skills.map((id) => getAbility(id)?.name).join(', ')}`
+                : ''}
             </span>
             <dl className="stat-list">
               <div>
@@ -143,104 +168,36 @@ export function CharacterCreatePage() {
                 <dd>{preview.maxMana}</dd>
               </div>
               <div>
-                <dt>Armor</dt>
-                <dd>−{preview.physicalReduction}%</dd>
-              </div>
-              <div>
                 <dt>Initiative</dt>
                 <dd>{preview.initiative}</dd>
               </div>
-              <div>
-                <dt>Dodge</dt>
-                <dd>{preview.dodgeChance}%</dd>
-              </div>
-              <div>
-                <dt>Crit</dt>
-                <dd>
-                  {preview.critChance}% ×{preview.critDamage}%
-                </dd>
-              </div>
             </dl>
             <span className="muted" style={{ fontSize: '0.8rem' }}>
-              Includes your starter kit. Placeholder art.
+              Placeholder art.
             </span>
           </aside>
 
           <div className="create-col right">
             <section className="panel">
               <fieldset className="field">
-                <legend className="legend">
-                  Starting weapon — your weapon defines how you fight
-                </legend>
-                <div className="weapon-grid">
-                  {STARTER_WEAPONS.map((id) => {
-                    const def = getItemDef(id)!;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        className="weapon-card"
-                        aria-pressed={weapon === id}
-                        onClick={() => setWeapon(id)}
-                      >
-                        <strong>{def.name}</strong>
-                        <span className="field-hint">{def.description}</span>
-                        <span className="field-hint">
-                          Scales with {describeScaling(getAbility(def.abilities![0]!)!.scaling)}
-                        </span>
-                        <ul className="ability-mini">
-                          {def.abilities?.map((aid) => {
-                            const a = getAbility(aid)!;
-                            return (
-                              <li key={aid}>
-                                {a.name}{' '}
-                                <span className="muted">
-                                  · {a.focusCost} Focus{a.manaCost ? ` + ${a.manaCost} Mana` : ''} ·{' '}
-                                  {describeEffects(a).join(', ')}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            </section>
-            <section className="panel">
-              <fieldset className="field">
-                <legend className="legend">
-                  Off-hand {twoHanded ? '— not available with a two-handed weapon' : '(optional)'}
-                </legend>
-                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    data-active={!chosenOffhand}
-                    aria-pressed={!chosenOffhand}
-                    disabled={twoHanded}
-                    onClick={() => setOffhand(null)}
-                  >
-                    None
-                  </button>
-                  {STARTER_OFFHANDS.map((id) => {
-                    const def = getItemDef(id)!;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        className="btn btn-sm"
-                        data-active={chosenOffhand === id}
-                        aria-pressed={chosenOffhand === id}
-                        disabled={twoHanded}
-                        title={def.description}
-                        onClick={() => setOffhand(id)}
-                      >
-                        {def.name}
-                      </button>
-                    );
-                  })}
+                <legend className="legend">Start with</legend>
+                <div className="choice-grid" data-testid="starter-kits">
+                  {STARTER_KITS.map((k) => (
+                    <button
+                      key={k.id}
+                      type="button"
+                      className="choice-card"
+                      aria-pressed={kitId === k.id}
+                      onClick={() => setKitId(k.id)}
+                    >
+                      <strong>{k.name}</strong>
+                      <span className="field-hint">
+                        {kitAbilities(k)
+                          .map((a) => `${a.name} (${describeEffects(a).join(', ')})`)
+                          .join(' · ')}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </fieldset>
             </section>
@@ -254,7 +211,8 @@ export function CharacterCreatePage() {
         </div>
         <footer className="create-footer">
           <span className="muted" style={{ fontSize: '0.85rem' }}>
-            Choose a name, spend your points and pick a weapon.
+            Your {ATTRIBUTE_RULES.creationPoints} attribute points are spent later, on your
+            character sheet.
           </span>
           <span className="spacer" />
           <button className="btn btn-primary btn-lg" type="submit" disabled={create.isPending}>

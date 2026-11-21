@@ -145,7 +145,7 @@ export const CONDITIONS = {
   warded: condition({
     id: 'warded',
     name: 'Warded',
-    description: 'Start every fight with 6 Block (2 rooms).',
+    description: 'Start every fight with 6 Dodge (2 rooms).',
     kind: 'boon',
     rooms: 2,
     combat: { firstRoundBlock: 6 },

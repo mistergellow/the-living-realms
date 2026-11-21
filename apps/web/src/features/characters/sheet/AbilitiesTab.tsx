@@ -171,7 +171,7 @@ export function AbilitiesTab({
         </div>
         <p className="doll-hint">
           Drag a skill from your library onto a slot, or click it to prepare it. In combat you also
-          have your weapon abilities, Block and Swap Position.
+          have your weapon abilities, Dodge and Swap Position.
         </p>
       </section>
 

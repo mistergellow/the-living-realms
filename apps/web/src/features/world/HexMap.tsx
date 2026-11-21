@@ -8,6 +8,7 @@ interface HexMapProps {
   players: PresencePlayer[];
   selfId: string | null;
   selected: HexCoord | null;
+  boss?: HexCoord | null;
   onSelect: (h: HexCoord) => void;
   onHover?: (h: HexCoord | null) => void;
 }
@@ -15,9 +16,17 @@ interface HexMapProps {
 /**
  * Exploration map: a PixiJS canvas (map-scene.ts) with drag to pan, wheel or
  * pinch to zoom, keyboard (arrows, + / −, 0) and on-screen zoom buttons.
- * Terrain, fog of war and movement (AP cost per hex) arrive in Phase 4.
+ * Terrain, Rift entrances and the world boss are drawn; select a hex to travel (request #43).
  */
-export function HexMap({ center, players, selfId, selected, onSelect, onHover }: HexMapProps) {
+export function HexMap({
+  center,
+  players,
+  selfId,
+  selected,
+  boss = null,
+  onSelect,
+  onHover,
+}: HexMapProps) {
   const cb = useRef({ onSelect, onHover });
   useEffect(() => {
     cb.current = { onSelect, onHover };
@@ -38,8 +47,8 @@ export function HexMap({ center, players, selfId, selected, onSelect, onHover }:
   });
 
   useEffect(() => {
-    scene?.setData({ center, players, selfId, selected });
-  }, [scene, center, players, selfId, selected]);
+    scene?.setData({ center, players, selfId, selected, boss });
+  }, [scene, center, players, selfId, selected, boss]);
 
   return (
     <div className="hex-map">

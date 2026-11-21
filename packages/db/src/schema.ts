@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -132,6 +133,14 @@ export const characters = pgTable(
     /** Axial hex coordinates of the character on the world map. */
     hexQ: integer('hex_q').notNull(),
     hexR: integer('hex_r').notNull(),
+    /** Nation of origin (request #43): 'west' | 'east' | 'north'; null for older characters. */
+    nation: text('nation'),
+    /**
+     * Action Points (request #43): the value at `ap_updated_at`; the current
+     * value adds what regenerated since (game-core `currentAp`).
+     */
+    ap: doublePrecision('ap').notNull().default(120),
+    apUpdatedAt: timestamp('ap_updated_at', { withTimezone: true }).notNull().defaultNow(),
     lastPlayedAt: timestamp('last_played_at', { withTimezone: true }),
     /** Soft delete: the world's history may still reference this character. */
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -412,6 +421,53 @@ export const customContent = pgTable(
   (t) => [
     check('custom_content_kind_ck', sql`${t.kind} in ('item', 'ability')`),
     index('custom_content_kind_idx').on(t.kind, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// World boss (request #43): one per season, roaming the Riftlands with a huge
+// shared HP pool. Every fight is an attempt; the leaderboard ranks parties by
+// the damage they dealt.
+// ---------------------------------------------------------------------------
+export const worldBosses = pgTable(
+  'world_bosses',
+  {
+    id: id(),
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    hp: bigint('hp', { mode: 'number' }).notNull(),
+    maxHp: bigint('max_hp', { mode: 'number' }).notNull(),
+    hexQ: integer('hex_q').notNull(),
+    hexR: integer('hex_r').notNull(),
+    nextMoveAt: timestamp('next_move_at', { withTimezone: true }).notNull(),
+    defeatedAt: timestamp('defeated_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('world_bosses_world_season_uq').on(t.worldId, t.season)],
+);
+
+export const worldBossAttempts = pgTable(
+  'world_boss_attempts',
+  {
+    id: id(),
+    bossId: uuid('boss_id')
+      .notNull()
+      .references(() => worldBosses.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id').references(() => riftRuns.id, { onDelete: 'set null' }),
+    /** Sorted character ids of the party: the leaderboard groups by it. */
+    partyKey: text('party_key').notNull(),
+    /** [{ characterId, name }] at the time of the fight. */
+    members: jsonb('members').notNull(),
+    damage: bigint('damage', { mode: 'number' }).notNull().default(0),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('world_boss_attempts_boss_idx').on(t.bossId, t.partyKey),
+    index('world_boss_attempts_run_idx').on(t.runId),
   ],
 );
 

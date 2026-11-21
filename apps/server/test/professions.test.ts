@@ -1,12 +1,18 @@
 import type { ActivityResultDto, ProfessionsDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { worldMapHexes } from '@realms/game-core';
 import {
   createCharacter,
+  firstRiftSite,
+  placeCharacter,
   createTestApp,
   registerUser,
   resetState,
   type TestApp,
 } from './helpers.js';
+
+const river = worldMapHexes().find((h) => h.terrain === 'river')!;
+const RIVER = { q: river.q, r: river.r };
 
 let t: TestApp;
 beforeAll(async () => (t = await createTestApp()));
@@ -18,7 +24,9 @@ async function hero() {
   const res = await createCharacter(t.app, user.cookie, 'Crafter', {
     startingWeapon: 'training_sword',
   });
-  return { ...user, id: res.json().character.id as string };
+  const id = res.json().character.id as string;
+  await placeCharacter(t, id, RIVER); // fishing needs a river (#43)
+  return { ...user, id };
 }
 type H = Awaited<ReturnType<typeof hero>>;
 
@@ -98,9 +106,10 @@ describe('professions', () => {
 
   it('is not possible inside a Rift', async () => {
     const h = await hero();
+    await placeCharacter(t, h.id, firstRiftSite().hex);
     await t.app.inject({
       method: 'POST',
-      url: '/api/rifts/shattered_breach/runs',
+      url: `/api/rifts/${firstRiftSite().id}/runs`,
       headers: { cookie: h.cookie },
       payload: { characterId: h.id },
     });
