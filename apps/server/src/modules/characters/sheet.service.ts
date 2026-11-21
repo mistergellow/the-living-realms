@@ -163,7 +163,7 @@ export class CharacterSheetService {
     });
   }
 
-  /** Choose which learned skills are prepared for combat (request #36). */
+  /** Choose which learned skills are prepared for combat (request #39). */
   async setLoadout(accountId: string, characterId: string, slots: Array<string | null>) {
     return this.db.transaction(async (tx) => {
       const c = await this.getOwnedCharacter(tx, accountId, characterId, true);

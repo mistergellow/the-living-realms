@@ -86,7 +86,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 ## Habilidades (armas, skills aprendidas, universais)
 
 - Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
-- Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + skills **preparadas** + universais, D62), `planLoadout` (8 espaços, só skills aprendidas, sem repetidas)
+- Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + skills **preparadas** + universais, D69), `planLoadout` (8 espaços, só skills aprendidas, sem repetidas)
 - Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto), `MAX_PREPARED_SKILLS`, `CharacterSheetDto.learnedSkills`/`loadout`, `loadoutRequestSchema`
 - BD: `character_skills` (skills aprendidas por livros; `loadout_slot` 0–7 = preparada; as de arma não se guardam)
 - Servidor: `sheet.service.ts` (`abilities`, `learnedSkills`, `loadout`, `setLoadout`, `combatProfile` usa só as preparadas), `items.repository.ts` (`learnedSkills`, `setLoadout`), `characters.routes.ts` (`PUT /:id/loadout`)
@@ -95,7 +95,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `character-system.test.ts`, `character-sheet.test.ts` (loadout), `e2e` (tab Abilities)
 - Futuro: execução em combate no motor M2
 
-## Ficha do personagem (tabs, pedido #36)
+## Ficha do personagem (tabs, pedido #39)
 
 - `apps/web/src/features/characters/CharacterSheetPage.tsx` (`TABS`, `?tab=`), `sheet/EquipmentTab.tsx`, `sheet/AbilitiesTab.tsx`, `professions/ProfessionsPage.tsx` (`ProfessionsPanel`, também usado na tab Professions), `sheet/sheet.css`
 - Testes: `e2e/foundation.spec.ts` (character system: tabs, drag and drop, tooltip)

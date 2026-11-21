@@ -83,7 +83,7 @@ export interface GrantedAbility {
 
 /**
  * Abilities available in combat: from equipped weapons, plus the PREPARED
- * skills (request #36: up to MAX_PREPARED_SKILLS of the learned ones), plus
+ * skills (request #39: up to MAX_PREPARED_SKILLS of the learned ones), plus
  * the universal actions (Block, Swap). Without a usable weapon: unarmed.
  */
 export function availableAbilities(
@@ -133,7 +133,7 @@ export function emptyEquipment<T>(): Record<EquipSlot, T | null> {
 export type LoadoutPlan = { ok: true; slots: Array<string | null> } | { ok: false; reason: string };
 
 /**
- * Validate a new skill loadout (request #36): exactly MAX_PREPARED_SKILLS
+ * Validate a new skill loadout (request #39): exactly MAX_PREPARED_SKILLS
  * entries, each a learned skill or empty, no skill twice.
  */
 export function planLoadout(learnedSkillIds: string[], slots: Array<string | null>): LoadoutPlan {

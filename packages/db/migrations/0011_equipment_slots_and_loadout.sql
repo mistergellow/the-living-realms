@@ -1,7 +1,7 @@
 ALTER TABLE "character_skills" ADD COLUMN "loadout_slot" smallint;--> statement-breakpoint
 CREATE UNIQUE INDEX "character_skills_loadout_uq" ON "character_skills" USING btree ("character_id","loadout_slot") WHERE "character_skills"."loadout_slot" is not null;--> statement-breakpoint
 ALTER TABLE "character_skills" ADD CONSTRAINT "character_skills_loadout_range" CHECK ("character_skills"."loadout_slot" between 0 and 7);--> statement-breakpoint
--- Request #36: skills already learned stay usable — the first 8 are prepared.
+-- Request #39: skills already learned stay usable — the first 8 are prepared.
 UPDATE "character_skills" cs SET "loadout_slot" = r.n - 1
   FROM (SELECT "character_id", "skill_id",
                row_number() OVER (PARTITION BY "character_id" ORDER BY "learned_at", "skill_id") AS n

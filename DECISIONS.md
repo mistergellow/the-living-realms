@@ -673,9 +673,9 @@ keeps its "column" vocabulary: a column is now one position
 unit and reach `first`/`first2` mean the nearest one/two positions. Abilities
 that used to hit a whole column use `reach: 'first2', area: 'all'`.
 
-## ADR-040 — Equipment slots, skill loadout and a tabbed character sheet
+## ADR-042 — Equipment slots, skill loadout and a tabbed character sheet
 
-**Status:** accepted (request #36; replaces D23 "all skills in combat" and D25 slots)
+**Status:** accepted (request #39; replaces D23 "all skills in combat" and D25 slots)
 
 **Decision.** Equipment slots are `mainHand`, `offHand`, `head`, `body`,
 `feet`, `ring1`, `ring2`, `pendant`. Learned skills stay in

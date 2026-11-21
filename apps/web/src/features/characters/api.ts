@@ -73,7 +73,7 @@ export function useAllocateAttributes(id: string) {
   });
 }
 
-/** Prepared skills (request #36); the server returns the updated sheet. */
+/** Prepared skills (request #39); the server returns the updated sheet. */
 export function useLoadout(id: string) {
   const qc = useQueryClient();
   return useMutation({

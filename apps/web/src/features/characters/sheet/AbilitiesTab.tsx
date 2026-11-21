@@ -6,7 +6,7 @@ import { useLoadout } from '../api';
 import { DragGhost, Tooltip, useDragAndDrop, useHover } from './drag';
 
 /*
- * Abilities tab (request #36). Weapon abilities, Block and Swap are always
+ * Abilities tab (request #39). Weapon abilities, Block and Swap are always
  * there; skills come from books and up to MAX_PREPARED_SKILLS are prepared
  * for combat. Prepare by dragging a skill onto a slot or by clicking it.
  */

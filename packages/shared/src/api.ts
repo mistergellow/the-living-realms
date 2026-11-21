@@ -213,7 +213,7 @@ export interface CharacterListResponse {
 }
 
 // ---- Character sheet: equipment, items, abilities, derived stats ----
-/** Equipment slots (request #36): hands, head, body, boots, two rings, pendant. */
+/** Equipment slots (request #39): hands, head, body, boots, two rings, pendant. */
 export const EQUIP_SLOTS = [
   'mainHand',
   'offHand',
@@ -229,7 +229,7 @@ export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 /** 'material' and 'consumable' come from professions (request #33); they stack. */
 export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable';
 
-/** Skills prepared for combat (request #36): 8, plus weapon abilities, Block and Swap. */
+/** Skills prepared for combat (request #39): 8, plus weapon abilities, Block and Swap. */
 export const MAX_PREPARED_SKILLS = 8;
 
 export interface ItemDto {

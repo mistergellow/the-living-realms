@@ -167,7 +167,7 @@ export const ITEMS = {
     armor: 4,
   }),
 
-  // ---- accessories (drops): rings and pendants (request #36) ----
+  // ---- accessories (drops): rings and pendants (request #39) ----
   ring_of_vigor: item({
     id: 'ring_of_vigor',
     name: 'Ring of Vigor',

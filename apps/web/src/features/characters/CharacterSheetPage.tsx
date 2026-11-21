@@ -12,7 +12,7 @@ import { EquipmentTab } from './sheet/EquipmentTab';
 import './sheet/sheet.css';
 
 /*
- * Character sheet (request #36): three tabs — Equipment (paper doll, bag with
+ * Character sheet (request #39): three tabs — Equipment (paper doll, bag with
  * drag and drop, stats), Abilities (prepared skills, library, weapon
  * abilities) and Professions. The tab lives in the URL (?tab=…).
  */

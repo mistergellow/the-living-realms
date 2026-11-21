@@ -18,7 +18,7 @@ function slotsText(slots: EquipSlot[]): string {
   return names.join(' or ');
 }
 
-/** Everything about an item, for the hover tooltip (request #36). */
+/** Everything about an item, for the hover tooltip (request #39). */
 export function ItemTooltipBody({ item }: { item: ItemDto }) {
   const w = item.weapon;
   const bonuses = Object.entries(item.bonuses).filter(([, v]) => v);

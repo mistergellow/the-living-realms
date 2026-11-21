@@ -220,7 +220,7 @@ export const characterProfessions = pgTable(
 
 // Skills learned by a character (from books). Weapon abilities are not stored:
 // they come from the equipped weapon. `loadout_slot` 0–7 = prepared for combat
-// (request #36: 8 prepared skills); null = learned but not prepared.
+// (request #39: 8 prepared skills); null = learned but not prepared.
 export const characterSkills = pgTable(
   'character_skills',
   {

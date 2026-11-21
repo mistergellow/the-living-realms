@@ -1,7 +1,7 @@
 import type { EquipSlot, ItemDto } from '@realms/shared';
 
 /*
- * PLACEHOLDER item icons (request #36): a simple stroke glyph per kind of item
+ * PLACEHOLDER item icons (request #39): a simple stroke glyph per kind of item
  * on a tinted tile. Real item art can replace `GLYPHS` entries later without
  * touching the inventory or the tooltips.
  */

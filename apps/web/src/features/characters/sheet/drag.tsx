@@ -11,7 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 
 /*
- * Pointer-based drag and drop (request #36). Works with mouse, pen and touch
+ * Pointer-based drag and drop (request #39). Works with mouse, pen and touch
  * (HTML5 drag events do not fire on touch screens). Drop targets are marked
  * with `data-drop="<key>"`; the key under the pointer on release is passed to
  * `onDrop`. A short move (> 5 px) starts the drag, so clicks still work.
