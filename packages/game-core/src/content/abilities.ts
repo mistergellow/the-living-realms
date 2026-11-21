@@ -38,6 +38,8 @@ export type AbilityEffect =
       bonusVs?: { status: StatusId; multiplier: number };
       /** Heals the attacker for the damage dealt (request #44). */
       drain?: boolean;
+      /** Damage multiplier against a target that has Dodge (request #45, crossbow). */
+      bonusVsBlock?: number;
     }
   | { kind: 'heal'; min: number; max: number }
   | { kind: 'block'; min: number; max: number }
@@ -264,6 +266,173 @@ export const ABILITIES = {
     name: 'Crush',
     description: 'Basic mace attack: a blunt, steady blow.',
     targeting: ENEMY_FIRST_COLUMN,
+  }),
+
+  // ---- request #45: new weapon types ----
+  great_swing: basicAttack('greatsword', {
+    id: 'great_swing',
+    name: 'Great Swing',
+    description: 'Basic greatsword attack: a wide swing at the two nearest enemies.',
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
+  }),
+  executioner: ability({
+    id: 'executioner',
+    name: 'Executioner',
+    description: 'A heavy overhead cut; double damage against a marked enemy.',
+    source: 'weapon',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [
+      {
+        kind: 'damage',
+        damageType: 'physical',
+        min: 12,
+        max: 15,
+        bonusVs: { status: 'mark', multiplier: 2 },
+      },
+    ],
+    scaling: weaponScaling('greatsword'),
+  }),
+  great_chop: basicAttack('greataxe', {
+    id: 'great_chop',
+    name: 'Great Chop',
+    description: 'Basic greataxe attack: one enormous blow.',
+    targeting: ENEMY_FIRST_COLUMN,
+  }),
+  rampage: ability({
+    id: 'rampage',
+    name: 'Rampage',
+    description: 'A savage cut that leaves a deep, bleeding wound.',
+    source: 'weapon',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 10, max: 13 },
+      { kind: 'status', status: 'bleed', turns: 3, value: 4 },
+    ],
+    scaling: weaponScaling('greataxe'),
+  }),
+  hack: basicAttack('handaxe', {
+    id: 'hack',
+    name: 'Hack',
+    description: 'Basic hand axe attack: a quick hack at the nearest enemy.',
+    targeting: ENEMY_FIRST_COLUMN,
+  }),
+  throw_axe: ability({
+    id: 'throw_axe',
+    name: 'Throw Axe',
+    description: 'Hurl the axe at any enemy.',
+    source: 'weapon',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'ranged', min: 11, max: 13 }],
+    scaling: weaponScaling('handaxe'),
+  }),
+  hammer_blow: basicAttack('hammer', {
+    id: 'hammer_blow',
+    name: 'Hammer Blow',
+    description: 'Basic hammer attack: a crushing blow.',
+    targeting: ENEMY_FIRST_COLUMN,
+  }),
+  concuss: ability({
+    id: 'concuss',
+    name: 'Concuss',
+    description: 'A blow to the head: the enemy cannot act next round.',
+    source: 'weapon',
+    focusCost: 3,
+    manaCost: 0,
+    targeting: ENEMY_FIRST_COLUMN,
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 6, max: 8 },
+      { kind: 'status', status: 'stun', turns: 1 },
+    ],
+    scaling: weaponScaling('hammer'),
+  }),
+  great_smash: basicAttack('greathammer', {
+    id: 'great_smash',
+    name: 'Great Smash',
+    description: 'Basic great hammer attack: a ground-shaking smash.',
+    targeting: ENEMY_FIRST_COLUMN,
+  }),
+  earthshaker: ability({
+    id: 'earthshaker',
+    name: 'Earthshaker',
+    description: 'Strikes the ground: the two nearest enemies are hit and Weakened.',
+    source: 'weapon',
+    focusCost: 3,
+    manaCost: 0,
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 8, max: 10 },
+      { kind: 'status', status: 'weaken', turns: 2 },
+    ],
+    scaling: weaponScaling('greathammer'),
+  }),
+  spiked_blow: ability({
+    ...basicAttack('morningstar', {
+      id: 'spiked_blow',
+      name: 'Spiked Blow',
+      description: 'Basic morning star attack: the spikes make it bleed.',
+      targeting: ENEMY_FIRST_COLUMN,
+    }),
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 10, max: 13 },
+      { kind: 'status', status: 'bleed', turns: 2, value: 2 },
+    ],
+  }),
+  flail_spin: ability({
+    id: 'flail_spin',
+    name: 'Flail Spin',
+    description: 'Whirls the spiked head through the two nearest enemies.',
+    source: 'weapon',
+    focusCost: 3,
+    manaCost: 0,
+    targeting: { side: 'enemy', reach: 'first2', area: 'all' },
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 6, max: 8 },
+      { kind: 'status', status: 'bleed', turns: 2, value: 2 },
+    ],
+    scaling: weaponScaling('morningstar'),
+  }),
+  lance_thrust: basicAttack('lance', {
+    id: 'lance_thrust',
+    name: 'Lance Thrust',
+    description: 'Basic lance attack: reaches either of the two nearest enemies.',
+    targeting: { side: 'enemy', reach: 'first2', area: 'column' },
+  }),
+  charge: ability({
+    id: 'charge',
+    name: 'Charge',
+    description: 'A running thrust that marks the enemy (+25% damage taken).',
+    source: 'weapon',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: { side: 'enemy', reach: 'first2', area: 'column' },
+    effects: [
+      { kind: 'damage', damageType: 'physical', min: 11, max: 13 },
+      { kind: 'status', status: 'mark', turns: 2 },
+    ],
+    scaling: weaponScaling('lance'),
+  }),
+  bolt_shot: basicAttack('crossbow', {
+    id: 'bolt_shot',
+    name: 'Bolt Shot',
+    description: 'Basic crossbow attack: a heavy bolt at any enemy.',
+    targeting: ENEMY_ANY_COLUMN,
+  }),
+  piercing_bolt: ability({
+    id: 'piercing_bolt',
+    name: 'Piercing Bolt',
+    description: 'A bolt that punches through: double damage against an enemy with Dodge.',
+    source: 'weapon',
+    focusCost: 2,
+    manaCost: 0,
+    targeting: ENEMY_ANY_COLUMN,
+    effects: [{ kind: 'damage', damageType: 'ranged', min: 9, max: 11, bonusVsBlock: 2 }],
+    scaling: weaponScaling('crossbow'),
   }),
 
   // ---- wand: Intellect + Precision (one-handed) ----
@@ -728,7 +897,8 @@ export function describeEffects(a: AbilityDef): string[] {
             (e.bonusVs
               ? ` (×${e.bonusVs.multiplier} vs ${STATUS_NAMES[e.bonusVs.status].toLowerCase()})`
               : '') +
-            (e.drain ? ', heals for the damage' : ''),
+            (e.drain ? ', heals for the damage' : '') +
+            (e.bonusVsBlock ? ` (×${e.bonusVsBlock} vs Dodge)` : ''),
         ];
       case 'heal':
         return [`Heal ${e.min}–${e.max}`];

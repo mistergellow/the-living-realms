@@ -11,8 +11,27 @@ import './avatar.css';
  * viewBox 0 0 120 160 — feet at y≈150, head centre (60, 60).
  */
 
-export type WeaponArt = 'sword' | 'axe' | 'dagger' | 'bow' | 'staff' | 'tome' | null;
-export type OffhandArt = 'shield' | 'talisman' | 'dagger' | null;
+export type WeaponArt =
+  | 'sword'
+  | 'axe'
+  | 'dagger'
+  | 'bow'
+  | 'staff'
+  | 'tome'
+  // request #45 (and the types that had no drawing yet)
+  | 'spear'
+  | 'mace'
+  | 'wand'
+  | 'greatsword'
+  | 'greataxe'
+  | 'handaxe'
+  | 'hammer'
+  | 'greathammer'
+  | 'morningstar'
+  | 'lance'
+  | 'crossbow'
+  | null;
+export type OffhandArt = 'shield' | 'talisman' | 'dagger' | 'handaxe' | null;
 
 /**
  * Which layers to draw. `full` is the whole figure; the others are the layers
@@ -190,6 +209,111 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
           <circle cx="95" cy="51" r="2.5" fill="#ffffff" opacity="0.8" />
         </g>
       );
+    // ---- request #45: PROVISIONAL drawings ----
+    case 'spear':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="44" width="4" height="100" rx="2" fill="#7a5530" />
+          <path d="M97.5 30 L102 46 L93 46 Z" fill="#cfd6e0" stroke="#7d8896" />
+        </g>
+      );
+    case 'mace':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="80" width="5" height="44" rx="2" fill="#6b4a2a" />
+          <circle cx="98" cy="76" r="9" fill="#8d96a3" stroke="#59616c" strokeWidth="2" />
+        </g>
+      );
+    case 'wand':
+      return (
+        <g className="av-weapon">
+          <rect x="96" y="92" width="4" height="30" rx="2" fill="#d8c9a3" />
+          <circle cx="98" cy="90" r="3.5" fill="#b28df0" className="av-orb" />
+        </g>
+      );
+    case 'greatsword':
+      return (
+        <g className="av-weapon">
+          <path d="M94 30 L102 30 L102 104 L94 104 Z" fill="#d6dde6" stroke="#7d8896" />
+          <path d="M98 22 L102 30 L94 30 Z" fill="#d6dde6" stroke="#7d8896" />
+          <rect x="84" y="102" width="28" height="6" rx="2" fill="#8a6a3a" />
+          <rect x="95" y="108" width="6" height="20" rx="2" fill="#5a4026" />
+        </g>
+      );
+    case 'greataxe':
+      return (
+        <g className="av-weapon">
+          <rect x="95" y="44" width="6" height="96" rx="2" fill="#6b4a2a" />
+          <path d="M101 46 C126 40 128 82 101 78 Z" fill="#b8c2cf" stroke="#6f7a88" />
+          <path d="M95 50 C80 50 80 72 95 72 Z" fill="#a3adba" stroke="#6f7a88" />
+        </g>
+      );
+    case 'handaxe':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="78" width="4.5" height="44" rx="2" fill="#7a5530" />
+          <path d="M100 78 C110 76 111 92 100 92 Z" fill="#b8c2cf" stroke="#6f7a88" />
+        </g>
+      );
+    case 'hammer':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="78" width="5" height="46" rx="2" fill="#6b4a2a" />
+          <rect x="86" y="68" width="24" height="12" rx="2" fill="#8d96a3" stroke="#59616c" />
+        </g>
+      );
+    case 'greathammer':
+      return (
+        <g className="av-weapon">
+          <rect x="95" y="52" width="6" height="92" rx="2" fill="#5e4226" />
+          <rect
+            x="80"
+            y="36"
+            width="36"
+            height="20"
+            rx="3"
+            fill="#7d8796"
+            stroke="#4d5560"
+            strokeWidth="2"
+          />
+        </g>
+      );
+    case 'morningstar':
+      return (
+        <g className="av-weapon">
+          <rect x="95.5" y="82" width="5" height="42" rx="2" fill="#6b4a2a" />
+          <circle cx="98" cy="76" r="8" fill="#8d96a3" stroke="#59616c" strokeWidth="1.5" />
+          <path
+            d="M98 64 L98 68 M98 84 L98 88 M86 76 L90 76 M106 76 L110 76 M90 68 L92.5 70.5 M106 68 L103.5 70.5 M90 84 L92.5 81.5 M106 84 L103.5 81.5"
+            stroke="#cfd6e0"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+        </g>
+      );
+    case 'lance':
+      return (
+        <g className="av-weapon">
+          <path d="M98 16 L104 96 L92 96 Z" fill="#cfd6e0" stroke="#7d8896" />
+          <path d="M88 96 L108 96 L104 106 L92 106 Z" fill="#8a2a2a" />
+          <rect x="95.5" y="106" width="5" height="34" rx="2" fill="#6b4a2a" />
+        </g>
+      );
+    case 'crossbow':
+      return (
+        <g className="av-weapon">
+          <rect x="94" y="88" width="30" height="6" rx="2" fill="#7a5530" />
+          <path
+            d="M116 72 C124 82 124 100 116 110"
+            stroke="#5e4226"
+            strokeWidth="4"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <line x1="116" y1="72" x2="116" y2="110" stroke="#e8e2d0" strokeWidth="1.2" />
+          <rect x="94" y="94" width="5" height="14" rx="2" fill="#5e4226" />
+        </g>
+      );
     default:
       return null;
   }
@@ -222,6 +346,13 @@ function Offhand({ offhand }: { offhand: OffhandArt }) {
         <g className="av-offhand">
           <path d="M21 86 L24 86 L25 108 L20 108 Z" fill="#cfd6e0" stroke="#7d8896" />
           <rect x="17" y="107" width="11" height="4" rx="1.5" fill="#8a6a3a" />
+        </g>
+      );
+    case 'handaxe':
+      return (
+        <g className="av-offhand">
+          <rect x="19" y="90" width="4" height="40" rx="2" fill="#7a5530" />
+          <path d="M19 90 C9 88 8 104 19 104 Z" fill="#b8c2cf" stroke="#6f7a88" />
         </g>
       );
     default:

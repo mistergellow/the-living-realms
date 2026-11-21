@@ -109,9 +109,14 @@ export function assertAtRift(
 
 /** Ranged and caster weapons start at the back of the line; everything else in front (A31). */
 export function startingSlot(abilityIds: string[]): number {
-  const backline = ['aimed_shot', 'arcane_bolt', 'spark', 'wand_bolt', 'staff_strike'].some((a) =>
-    abilityIds.includes(a),
-  );
+  const backline = [
+    'aimed_shot',
+    'arcane_bolt',
+    'spark',
+    'wand_bolt',
+    'staff_strike',
+    'bolt_shot',
+  ].some((a) => abilityIds.includes(a));
   return backline ? SLOTS_PER_SIDE - 1 : 0;
 }
 

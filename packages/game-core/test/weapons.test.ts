@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   abilityMultipliers,
   getAbility,
+  getWeaponType,
   ITEMS,
   normalizeWeaponInstance,
   upgradeMultiplier,
@@ -95,5 +96,35 @@ describe('weapon catalogue', () => {
     ]);
     expect(weaponInfo('sword', {})).toMatchObject({ basicAttackId: 'slash', upgradeLevel: 0 });
     expect(weaponInfo('shield', {})).toBeNull();
+  });
+});
+
+describe('more weapon types (request #45)', () => {
+  it('each new type has an item, a basic attack and a signature ability', () => {
+    const types = [
+      'greatsword',
+      'greataxe',
+      'handaxe',
+      'hammer',
+      'greathammer',
+      'morningstar',
+      'lance',
+      'crossbow',
+    ] as const;
+    for (const type of types) {
+      const w = getWeaponType(type)!;
+      const def = Object.values(ITEMS).find((i) => i.weaponType === type)!;
+      expect(def, type).toBeDefined();
+      expect(!!def.twoHanded).toBe(w.hands === 2);
+      expect(def.abilities![0]).toBe(w.basicAttack);
+      expect(def.abilities!.length).toBeGreaterThanOrEqual(2);
+      for (const id of def.abilities!) expect(getAbility(id), id).toBeDefined();
+    }
+  });
+
+  it('crossbow bolts pierce Dodge: double damage against a target with Dodge', () => {
+    const bolt = getAbility('piercing_bolt')!;
+    const dmg = bolt.effects.find((e) => e.kind === 'damage');
+    expect(dmg && dmg.kind === 'damage' && dmg.bonusVsBlock).toBe(2);
   });
 });
