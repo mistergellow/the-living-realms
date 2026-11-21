@@ -17,6 +17,8 @@ import { charactersRoutes } from './modules/characters/characters.routes.js';
 import { CharactersService } from './modules/characters/characters.service.js';
 import { CharacterSheetService } from './modules/characters/sheet.service.js';
 import { riftsRoutes } from './modules/rifts/rifts.routes.js';
+import { professionsRoutes } from './modules/professions/professions.routes.js';
+import { ProfessionsService } from './modules/professions/professions.service.js';
 import { RiftsService } from './modules/rifts/rifts.service.js';
 import { lobbiesRoutes } from './modules/rifts/lobbies.routes.js';
 import { LobbiesService } from './modules/rifts/lobbies.service.js';
@@ -76,6 +78,10 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
         prefix: '/characters',
         service: characters,
         sheets,
+      });
+      await api.register(professionsRoutes, {
+        prefix: '/characters',
+        service: new ProfessionsService(ctx, sheets),
       });
       const rifts = new RiftsService(ctx, sheets);
       const friends = new FriendsService(ctx, sheets);

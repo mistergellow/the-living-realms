@@ -43,6 +43,7 @@ export function HomePage() {
 
       <nav className="hub-side hub-right" aria-label="Hero">
         <SideButton icon="hero" label="Hero" to={`/characters/${characterId}`} />
+        <SideButton icon="gear" label="Professions" to="/professions" />
         <SideButton icon="bag" label="Inventory" to={`/characters/${characterId}#inventory`} />
         <SideButton
           icon="friends"

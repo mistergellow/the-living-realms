@@ -46,7 +46,7 @@ describe('weapon catalogue', () => {
       const w = WEAPON_TYPES[t];
       const a = getAbility(w.basicAttack)!;
       expect(a).toBeDefined();
-      expect(a.focusCost).toBe(WEAPON_RULES.basicAttackFocusCost);
+      expect(a.focusCost).toBe(w.basicAttackCost);
       expect(a.effects[0]).toMatchObject({
         kind: 'damage',
         damageType: w.attackType,
@@ -64,6 +64,12 @@ describe('weapon catalogue', () => {
       expect(item.abilities?.[0]).toBe(w.basicAttack);
       expect(!!('twoHanded' in item && item.twoHanded)).toBe(w.hands === 2);
     }
+  });
+
+  it('heavy weapons cost 3 Focus per basic attack, daggers 1', () => {
+    expect(WEAPON_TYPES.axe.basicAttackCost).toBe(3);
+    expect(WEAPON_TYPES.mace.basicAttackCost).toBe(3);
+    expect(WEAPON_TYPES.dagger.basicAttackCost).toBe(1);
   });
 
   it('upgrades improve numbers predictably (no random rolls)', () => {

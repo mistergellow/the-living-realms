@@ -288,7 +288,14 @@ difficulty`. `BaseAttributes` is a branded type built only by
   the weapon's ability values. Items store upgrade level, specials (max 5) and
   2 rune slots (locked; Runemaster = future).
 
-### 7.3 Server, timers and client
+### 7.3 PvP arena (test mode, request #33)
+
+`createPvpEncounter` puts two teams of players on the two sides; both plan at
+the same time and the normal resolution alternates by team initiative. Matches
+start from a lobby with `riftId = 'pvp_arena'` and are stored like runs
+(`RunState.mode = 'pvp'`); the server hides the other team's plan (ADR-037).
+
+### 7.4 Server, timers and client
 
 - **Server (`modules/rifts`):** each run is a row in `rift_runs` holding the
   whole `RunState` (map, party, current room, combat state, votes) as JSONB.
@@ -315,6 +322,14 @@ difficulty`. `BaseAttributes` is a branded type built only by
 Balance is checked with `pnpm sim` (`scripts/simulate-balance.ts`): whole runs
 (random path, events with the best base stat, plan → ready fights) for ten
 typical builds, solo and in groups.
+
+## 7b. Professions (request #33)
+
+Data in `game-core/src/content/professions.ts` (professions, activities,
+recipes) and pure rules in `game-core/src/professions.ts` (chance, yield, XP,
+repairs, upgrades). The server module `modules/professions` checks level,
+materials and cooldown, rolls with a server seed, consumes/creates items
+(stacks) and stores levels in `character_professions`. Screen: `/professions`.
 
 ## 8. World map
 

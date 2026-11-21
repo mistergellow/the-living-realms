@@ -12,6 +12,7 @@ import type {
   RunPhase,
   StatusView,
   TestRollView,
+  ThreatView,
   VoteView,
 } from '@realms/shared';
 import { getEvent, type EventEffect, type EventTarget } from '../content/events.js';
@@ -22,10 +23,13 @@ import {
   EXPLORATION_RULES,
   getCondition,
   ROOM_TYPE_INFO,
+  THREAT_RULES,
+  threatTier,
   type ConditionId,
 } from '../content/rooms.js';
 import {
   createEncounter,
+  createPvpEncounter,
   leaveParty,
   partyAfterCombat,
   planAction,
@@ -56,6 +60,9 @@ import { attributeTest, type BaseAttributes } from './tests.js';
  */
 
 export const RUN_STATE_VERSION = 2;
+/** Id used for PvP arena matches in `rift_runs.rift_id` and lobbies. */
+export const PVP_ARENA_ID = 'pvp_arena';
+export const PVP_ARENA_NAME = 'PvP Arena (test)';
 
 export interface RunCondition {
   id: ConditionId;
@@ -79,6 +86,8 @@ export interface RunMember {
   slot: number;
   conditions: RunCondition[];
   left: boolean;
+  /** PvP: which side this player fights on ('party' = team A, 'enemies' = team B). */
+  team?: 'party' | 'enemies';
 }
 
 export interface ItemGrant {
@@ -89,6 +98,10 @@ export interface ItemGrant {
 
 export interface RunState {
   version: typeof RUN_STATE_VERSION;
+  /** 'pvp' = an arena match (request #33): one fight, two teams of players, no map. */
+  mode?: 'rift' | 'pvp';
+  /** PvP: the winning team ('party' = team A, 'enemies' = team B). */
+  winner?: 'party' | 'enemies' | null;
   riftId: string;
   rng: number;
   map: RiftMap;
@@ -105,7 +118,13 @@ export interface RunState {
   outcome: RoomOutcomeView | null;
   votes: VoteView[];
   roomsVisited: number;
-  /** Items the server must create (drained after each save). */
+  /** Dungeon Threat (request #33): raised by failures, it strengthens the boss. */
+  threat: number;
+  /**
+   * Items found in Loot/Secret rooms and events. They are only handed out if
+   * the party beats the Rift (owner, request #33): a wiped party loses them,
+   * and so does anyone who left early.
+   */
   grants: ItemGrant[];
 }
 
@@ -163,6 +182,49 @@ export function createRun(opts: {
     outcome: null,
     votes: [],
     roomsVisited: 0,
+    threat: 0,
+    grants: [],
+  };
+}
+
+/**
+ * PvP arena match (request #33, test mode): no map, one fight between two
+ * teams of players with the normal combat rules. No rewards, no penalty.
+ */
+export function createPvpRun(opts: {
+  teamA: Array<Omit<RunMember, 'conditions' | 'left' | 'team'>>;
+  teamB: Array<Omit<RunMember, 'conditions' | 'left' | 'team'>>;
+  leaderId: string;
+  seed: number;
+}): RunState {
+  const party: RunMember[] = [
+    ...opts.teamA.map((m) => ({ ...m, conditions: [], left: false, team: 'party' as const })),
+    ...opts.teamB.map((m) => ({ ...m, conditions: [], left: false, team: 'enemies' as const })),
+  ];
+  return {
+    version: RUN_STATE_VERSION,
+    mode: 'pvp',
+    winner: null,
+    riftId: PVP_ARENA_ID,
+    rng: (opts.seed * 2654435761) | 0,
+    map: { rows: 0, cols: 0, nodes: [], edges: [], bossId: '' },
+    currentId: null,
+    visited: [],
+    revealed: [],
+    phase: 'combat',
+    status: 'active',
+    party,
+    leaderId: opts.leaderId,
+    combat: createPvpEncounter({
+      teamA: party.filter((m) => m.team === 'party').map(toPartyInput),
+      teamB: party.filter((m) => m.team === 'enemies').map(toPartyInput),
+      seed: opts.seed,
+    }),
+    event: null,
+    outcome: null,
+    votes: [],
+    roomsVisited: 1,
+    threat: 0,
     grants: [],
   };
 }
@@ -383,12 +445,14 @@ function enterRoom(s: RunState, nodeId: string): void {
         node.type === 'boss'
           ? rift.encounters.boss
           : rift.encounters[node.type][node.encounter ?? 0]!;
+      const tier = node.type === 'boss' ? threatTier(s.threat) : null;
       s.combat = createEncounter({
         party: s.party.map(toPartyInput),
         room,
         roomIndex: s.roomsVisited,
         isLastRoom: node.type === 'boss',
         seed: rng.int(2 ** 31),
+        enemyModifiers: tier ?? undefined,
       });
       // Exploration conditions with combat effects were applied; anything the
       // combat statuses carry is visible on the fighters.
@@ -450,8 +514,8 @@ function enterRoom(s: RunState, nodeId: string): void {
         type: node.type,
         title: secret ? 'Secret Room' : 'Treasure',
         text: secret
-          ? 'A forgotten chamber, untouched for ages. Rare treasures wait inside.'
-          : 'A cache of supplies and gear. There is something for everyone.',
+          ? 'A forgotten chamber, untouched for ages. Rare treasures wait inside — they are yours if the party beats the Rift.'
+          : 'A cache of supplies and gear, something for everyone — kept only if the party beats the Rift.',
         effects: [],
         items,
         search,
@@ -555,6 +619,10 @@ function resolveEvent(s: RunState, approachId: string, testerId: string | undefi
   }
   const outcome = !test || test.success ? approach.success : (approach.failure ?? approach.success);
   const effects: string[] = [];
+  if (test && !test.success) {
+    addThreat(s, THREAT_RULES.failedTest);
+    effects.push(`Threat +${THREAT_RULES.failedTest}`);
+  }
   for (const e of outcome.effects) applyEventEffect(s, rng, e, testerId, effects);
   s.event!.result = { approachId, test, text: outcome.text, effects };
   s.rng = rng.state;
@@ -563,6 +631,10 @@ function resolveEvent(s: RunState, approachId: string, testerId: string | undefi
 // ---------------------------------------------------------------------------
 // Combat passthrough
 // ---------------------------------------------------------------------------
+export function addThreat(s: RunState, n: number): void {
+  s.threat = Math.max(0, Math.min(THREAT_RULES.max, (s.threat ?? 0) + n));
+}
+
 function syncFromCombat(s: RunState): void {
   if (!s.combat) return;
   for (const p of partyAfterCombat(s.combat)) {
@@ -572,7 +644,10 @@ function syncFromCombat(s: RunState): void {
     m.mana = p.mana;
     m.slot = p.slot;
   }
-  if (s.combat.phase === 'ended') s.status = s.combat.outcome === 'victory' ? 'victory' : 'defeat';
+  if (s.combat.phase === 'ended') {
+    s.status = s.combat.outcome === 'victory' ? 'victory' : 'defeat';
+    if (s.mode === 'pvp') s.winner = s.combat.outcome === 'victory' ? 'party' : 'enemies';
+  }
   if (s.status !== 'active') s.phase = 'ended';
 }
 
@@ -606,6 +681,8 @@ export function continueRun(prev: RunState): RunResult {
   if (!done) return fail('Finish this room first.');
   const s: RunState = structuredClone(prev);
   syncFromCombat(s);
+  if (prev.phase === 'combat' && currentRoomType(prev) === 'elite')
+    addThreat(s, THREAT_RULES.eliteCleared);
   s.combat = null;
   s.event = null;
   s.outcome = null;
@@ -653,7 +730,10 @@ export function timeoutRun(prev: RunState): RunState {
   if (s.phase === 'combat' && s.combat) {
     s.combat = timeoutTurn(s.combat);
     syncFromCombat(s);
-  } else resolveDecision(s);
+  } else {
+    addThreat(s, THREAT_RULES.timedOutDecision);
+    resolveDecision(s);
+  }
   return s;
 }
 
@@ -696,7 +776,20 @@ export function toRunMembers(s: RunState): RunMemberDto[] {
     baseAttributes: { ...m.baseAttributes },
     conditions: m.conditions.map(conditionView),
     left: m.left,
+    team: m.team ?? null,
   }));
+}
+
+export function toThreatView(s: RunState): ThreatView {
+  const value = s.threat ?? 0;
+  const tier = threatTier(value);
+  const next = THREAT_RULES.tiers.find((t) => t.min > value) ?? null;
+  return {
+    value,
+    max: THREAT_RULES.max,
+    tier: tier ? { name: tier.name, description: tier.description } : null,
+    next: next ? { name: next.name, description: next.description, at: next.min } : null,
+  };
 }
 
 export const currentRoomType = (s: RunState): RoomType | null =>

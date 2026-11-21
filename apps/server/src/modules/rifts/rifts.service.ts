@@ -15,7 +15,10 @@ import {
   combatAction,
   COMBAT_RULES,
   continueRun,
+  createPvpRun,
   createRun,
+  PVP_ARENA_ID,
+  PVP_ARENA_NAME,
   currentRoomType,
   getEnemy,
   getEvent,
@@ -33,6 +36,7 @@ import {
   toCombatView,
   toMapDto,
   toRunMembers,
+  toThreatView,
   vote,
   type RiftDef,
   type RunMember,
@@ -145,6 +149,60 @@ export class RiftsService {
       return this.createRun(tx, rift, [{ accountId, character: c }]);
     });
     return this.get(accountId, runId, characterId);
+  }
+
+  /** PvP arena match (request #33, test mode) for two teams from a lobby. */
+  async createPvpRun(
+    tx: DbOrTx,
+    teamA: Array<{ accountId: string; character: Character; slot: number }>,
+    teamB: Array<{ accountId: string; character: Character; slot: number }>,
+    leaderId: string,
+  ): Promise<string> {
+    const toMember = async (m: { character: Character; slot: number }) => {
+      const profile = await this.sheets.combatProfile(tx, m.character);
+      return {
+        characterId: m.character.id,
+        name: m.character.name,
+        appearance: profile.appearance,
+        baseAttributes: profile.baseAttributes,
+        attributes: profile.attributes,
+        stats: profile.stats,
+        abilityIds: profile.abilityIds,
+        abilityMultipliers: profile.abilityMultipliers,
+        hp: profile.stats.maxHp,
+        mana: profile.stats.maxMana,
+        slot: m.slot,
+      };
+    };
+    const state = createPvpRun({
+      teamA: await Promise.all(teamA.map(toMember)),
+      teamB: await Promise.all(teamB.map(toMember)),
+      leaderId,
+      seed: randomInt(2 ** 31),
+    });
+    const [run] = await tx
+      .insert(riftRuns)
+      .values({
+        worldId: this.ctx.world.id,
+        riftId: PVP_ARENA_ID,
+        state,
+        roomIndex: 1,
+        turnDeadline: new Date(Date.now() + TURN_MS),
+      })
+      .returning({ id: riftRuns.id });
+    for (const m of [...teamA, ...teamB]) {
+      await tx
+        .insert(riftRunParticipants)
+        .values({ runId: run!.id, characterId: m.character.id, accountId: m.accountId });
+      await tx.insert(worldEvents).values({
+        worldId: this.ctx.world.id,
+        type: 'pvp.entered',
+        actorAccountId: m.accountId,
+        actorCharacterId: m.character.id,
+        payload: { runId: run!.id, teamA: teamA.length, teamB: teamB.length },
+      });
+    }
+    return run!.id;
   }
 
   /**
@@ -290,9 +348,8 @@ export class RiftsService {
       changed = true;
     }
     if (!changed) return run;
-    await this.grantItems(tx, run, state);
     const status = statusOf(state);
-    if (status !== 'active') await this.finish(tx, run, status);
+    if (status !== 'active') await this.finish(tx, { ...run, state }, status);
     const [updated] = await tx
       .update(riftRuns)
       .set({
@@ -322,9 +379,8 @@ export class RiftsService {
       : decisionKey(prev) !== decisionKey(state) || !run.turnDeadline
         ? new Date(Date.now() + TURN_MS)
         : run.turnDeadline;
-    await this.grantItems(tx, run, state);
     if (status !== 'active')
-      await this.finish(tx, { ...run, roomIndex: state.roomsVisited }, status);
+      await this.finish(tx, { ...run, state, roomIndex: state.roomsVisited }, status);
     const [updated] = await tx
       .update(riftRuns)
       .set({
@@ -340,32 +396,28 @@ export class RiftsService {
     return this.toRunDto(tx, updated!, characterId);
   }
 
-  /** Items found in Loot/Secret rooms and events go straight to the inventory (A-request #31). */
-  private async grantItems(tx: DbOrTx, run: RiftRun, state: RunState): Promise<void> {
-    for (const g of state.grants) {
-      await tx
-        .insert(items)
-        .values({ characterId: g.characterId, itemDefId: g.itemDefId, source: g.source });
-    }
-    if (state.grants.length) {
-      const p = await repo.participants(tx, run.id);
-      for (const g of state.grants) {
-        const who = p.find((x) => x.characterId === g.characterId);
-        if (!who) continue;
-        await tx.insert(worldEvents).values({
-          worldId: run.worldId,
-          type: 'rift.item_found',
-          actorAccountId: who.accountId,
-          actorCharacterId: g.characterId,
-          payload: { riftId: run.riftId, runId: run.id, itemDefId: g.itemDefId, source: g.source },
-        });
-      }
-    }
-    state.grants = [];
-  }
-
-  /** Rewards on victory (D20), equipment quality loss on defeat (D19/D30). */
+  /**
+   * Rewards on victory (D20): reputation, boss drops and the items found on the
+   * way; equipment quality loss on defeat (D19/D30) — a wiped party keeps nothing.
+   */
   private async finish(tx: DbOrTx, run: RiftRun, status: RunStatus): Promise<void> {
+    if (run.riftId === PVP_ARENA_ID) {
+      // PvP test mode: no rewards, no equipment damage — just the result.
+      const state = run.state as RunState;
+      for (const p of await repo.participants(tx, run.id)) {
+        if (p.leftAt) continue;
+        const team = state.party.find((m) => m.characterId === p.characterId)?.team;
+        await this.recordResult(
+          tx,
+          run,
+          p.characterId,
+          p.accountId,
+          {},
+          team === state.winner ? 'victory' : 'defeat',
+        );
+      }
+      return;
+    }
     const rift = getRift(run.riftId)!;
     for (const p of await repo.participants(tx, run.id)) {
       if (p.leftAt) continue; // already penalised when they left
@@ -385,6 +437,17 @@ export class RiftsService {
           .values({ characterId: p.characterId, itemDefId: entry.item, source: 'drop' })
           .returning({ id: items.id });
         dropped.push({ id: row!.id, name: getItemDef(entry.item)?.name ?? entry.item });
+      }
+      // Items found on the way (Loot/Secret rooms, events) are only kept on
+      // victory, by those still in the party (request #33).
+      const state = run.state as RunState;
+      const stayed = state.party.some((m) => m.characterId === p.characterId && !m.left);
+      for (const g of stayed ? state.grants.filter((x) => x.characterId === p.characterId) : []) {
+        const [row] = await tx
+          .insert(items)
+          .values({ characterId: g.characterId, itemDefId: g.itemDefId, source: g.source })
+          .returning({ id: items.id });
+        dropped.push({ id: row!.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
       }
       await tx
         .update(characters)
@@ -410,10 +473,14 @@ export class RiftsService {
   ): Promise<void> {
     const p = await repo.participant(tx, run.id, characterId);
     if (!p || p.leftAt) return;
-    const equipped = await tx
-      .select()
-      .from(items)
-      .where(and(eq(items.characterId, characterId), isNotNull(items.equippedSlot)));
+    // PvP test mode: leaving or losing never damages equipment.
+    const equipped =
+      run.riftId === PVP_ARENA_ID
+        ? []
+        : await tx
+            .select()
+            .from(items)
+            .where(and(eq(items.characterId, characterId), isNotNull(items.equippedSlot)));
     const damaged: RunPenaltyDto['damaged'] = [];
     for (const it of equipped) {
       const quality = qualityAfterDefeat(it.quality);
@@ -465,11 +532,13 @@ export class RiftsService {
     await tx.insert(worldEvents).values({
       worldId: run.worldId,
       type:
-        status === 'victory'
-          ? 'rift.completed'
-          : status === 'abandoned'
-            ? 'rift.left'
-            : 'rift.failed',
+        run.riftId === PVP_ARENA_ID
+          ? 'pvp.finished'
+          : status === 'victory'
+            ? 'rift.completed'
+            : status === 'abandoned'
+              ? 'rift.left'
+              : 'rift.failed',
       actorAccountId: accountId,
       actorCharacterId: characterId,
       payload: { riftId: run.riftId, runId: run.id, status, roomsVisited: run.roomIndex },
@@ -477,17 +546,31 @@ export class RiftsService {
   }
 
   private async toRunDto(tx: DbOrTx, run: RiftRun, characterId: string): Promise<RunDto> {
-    const rift = getRift(run.riftId)!;
     const state = runStateOf(run);
+    const pvp = state.mode === 'pvp';
     const me = await repo.participant(tx, run.id, characterId);
     const result = (me?.result ?? null) as ParticipantResult | null;
-    // A player who left sees the run as over for them.
-    const status: RunStatus = me?.leftAt ? 'abandoned' : (run.status as RunStatus);
+    const myTeam = state.party.find((m) => m.characterId === characterId)?.team ?? 'party';
+    // A player who left sees the run as over for them; in PvP the result is per team.
+    const status: RunStatus = me?.leftAt
+      ? 'abandoned'
+      : pvp && run.status !== 'active'
+        ? state.winner === myTeam
+          ? 'victory'
+          : 'defeat'
+        : (run.status as RunStatus);
+    const combat = state.combat ? toCombatView(state.combat) : null;
+    // PvP: the other team's plan stays secret until it resolves.
+    if (combat && pvp)
+      combat.plan = combat.plan.filter(
+        (p) => combat.combatants.find((c) => c.id === p.actorId)?.side === myTeam,
+      );
     const event = state.event ? getEvent(state.event.eventId) : undefined;
     return {
       id: run.id,
       riftId: run.riftId,
-      riftName: rift.name,
+      riftName: pvp ? PVP_ARENA_NAME : (getRift(run.riftId)?.name ?? run.riftId),
+      mode: pvp ? 'pvp' : 'rift',
       status,
       phase: state.phase,
       roomsVisited: state.roomsVisited,
@@ -495,7 +578,7 @@ export class RiftsService {
       roomType: currentRoomType(state),
       party: toRunMembers(state),
       leaderId: state.leaderId,
-      combat: state.combat ? toCombatView(state.combat) : null,
+      combat,
       event:
         state.event && event
           ? {
@@ -513,6 +596,7 @@ export class RiftsService {
             }
           : null,
       outcome: state.outcome,
+      threat: toThreatView(state),
       votes: state.votes,
       deadline: run.turnDeadline?.toISOString() ?? null,
       rewards: status === 'active' ? null : (result?.rewards ?? null),

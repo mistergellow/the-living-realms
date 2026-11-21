@@ -1,4 +1,4 @@
-import type { LobbyMemberDto } from '@realms/shared';
+import { PVP_TEAM_B_OFFSET, type LobbyMemberDto } from '@realms/shared';
 import { useEffect } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -121,8 +121,23 @@ export function LobbyPage() {
             with the number of players.
           </p>
 
+          {l.mode === 'pvp' && (
+            <p className="muted" style={{ margin: 0 }} data-testid="pvp-note">
+              PvP arena (test): team A on the left, team B on the right. Click a slot on the other
+              side to change teams. No rewards and no equipment damage.
+            </p>
+          )}
           <section className="panel lobby-formation" data-testid="lobby-formation">
-            {COLUMNS.map((c) => (
+            {(l.mode === 'pvp'
+              ? [
+                  ...COLUMNS.map((c) => ({ ...c, label: `A · ${c.label}` })),
+                  ...[...COLUMNS].reverse().map((c) => ({
+                    label: `B · ${c.label}`,
+                    slots: c.slots.map((s) => s + PVP_TEAM_B_OFFSET),
+                  })),
+                ]
+              : COLUMNS
+            ).map((c) => (
               <div key={c.label} className="lobby-column">
                 <div className="panel-title">{c.label}</div>
                 {c.slots.map((slot) => {
@@ -146,9 +161,11 @@ export function LobbyPage() {
                 })}
               </div>
             ))}
-            <div className="lobby-enemy-side" aria-hidden>
-              <div className="rift-portal" />
-            </div>
+            {l.mode !== 'pvp' && (
+              <div className="lobby-enemy-side" aria-hidden>
+                <div className="rift-portal" />
+              </div>
+            )}
           </section>
 
           <div className="row" style={{ margin: '16px 0', flexWrap: 'wrap' }}>

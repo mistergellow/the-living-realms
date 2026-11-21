@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addThreat,
+  createEncounter,
+  THREAT_RULES,
+  threatTier,
+  toThreatView,
   allPaths,
   asBaseAttributes,
   attributeTest,
@@ -267,5 +272,45 @@ describe('exploration run', () => {
     expect(s.status).toBe('active');
     s = leaveRun(s, 'b');
     expect(s.status).toBe('defeat');
+  });
+});
+
+describe('Dungeon Threat (simple, request #33)', () => {
+  it('failed tests and timed-out votes raise it; clearing an Elite lowers it; the boss gets stronger', () => {
+    const s = createRun({ rift, party: [hero('a')], leaderId: 'a', seed: 5 });
+    expect(toThreatView(s)).toMatchObject({ value: 0, tier: null });
+    const t = timeoutRun(s); // nobody voted
+    expect(t.threat).toBe(THREAT_RULES.timedOutDecision);
+    addThreat(t, 5);
+    expect(toThreatView(t).tier?.name).toBe(threatTier(6)!.name);
+    // Boss fight under Threat: stronger enemies.
+    const boss = rift.encounters.boss;
+    const calm = createEncounter({
+      party: [],
+      room: boss,
+      roomIndex: 0,
+      isLastRoom: true,
+      seed: 1,
+    });
+    const tier = threatTier(6)!;
+    const angry = createEncounter({
+      party: [],
+      room: boss,
+      roomIndex: 0,
+      isLastRoom: true,
+      seed: 1,
+      enemyModifiers: tier,
+    });
+    expect(angry.combatants[0]!.maxHp).toBeGreaterThan(calm.combatants[0]!.maxHp);
+    expect(angry.combatants[0]!.power).toBeGreaterThan(calm.combatants[0]!.power);
+  });
+
+  it('items found on the way stay in the run (handed out only on victory)', () => {
+    let s = runAt('loot');
+    const loot = childrenOf(s.map, 'start').find((id) => findNode(s.map, id)!.type === 'loot')!;
+    s = ok(vote(s, 'a', loot));
+    s = ok(vote(s, 'b', loot));
+    s = ok(continueRun(s));
+    expect(s.grants).toHaveLength(2);
   });
 });

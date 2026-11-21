@@ -224,7 +224,8 @@ export const EQUIP_SLOTS = [
 ] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
-export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory';
+/** 'material' and 'consumable' come from professions (request #33); they stack. */
+export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable';
 
 export interface ItemDto {
   id: string;
@@ -234,6 +235,8 @@ export interface ItemDto {
   description: string;
   /** Item quality/durability, 0–100. At 0 the item is broken and unusable. */
   quality: number;
+  /** Stack size (materials and consumables; 1 for gear). */
+  quantity: number;
   broken: boolean;
   equippedSlot: EquipSlot | null;
   /** Slots this item can be equipped in. */
@@ -271,6 +274,8 @@ export interface WeaponInfoDto {
   /** Basic attack damage at this upgrade level (before attribute scaling). */
   baseDamage: { min: number; max: number };
   basicAttackId: string;
+  /** Focus cost of the basic attack (heavy weapons 3, daggers 1). */
+  basicAttackCost: number;
   /** +0, +1, +2 … */
   upgradeLevel: number;
   specials: WeaponSpecial[];

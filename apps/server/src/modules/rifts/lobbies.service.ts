@@ -9,10 +9,13 @@ import {
   type DbOrTx,
   type RiftLobby,
 } from '@realms/db';
-import { getItemDef, getRift } from '@realms/game-core';
+import { getItemDef, getRift, PVP_ARENA_NAME } from '@realms/game-core';
 import {
   ErrorCode,
   LOBBY_MAX_MEMBERS,
+  PVP_ARENA_ID,
+  PVP_MAX_MEMBERS,
+  PVP_TEAM_B_OFFSET,
   type CharacterAppearance,
   type LobbyDto,
   type LobbyOverviewDto,
@@ -24,6 +27,12 @@ import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
 import type { FriendsService } from '../social/friends.service.js';
 import { assertFreeForRift, startingSlot, toRiftDto, type RiftsService } from './rifts.service.js';
+
+/** PvP arena lobbies (request #33) use the same tables, with riftId = 'pvp_arena'. */
+const isPvp = (riftId: string) => riftId === PVP_ARENA_ID;
+const lobbyName = (riftId: string) =>
+  isPvp(riftId) ? PVP_ARENA_NAME : (getRift(riftId)?.name ?? riftId);
+const maxMembers = (riftId: string) => (isPvp(riftId) ? PVP_MAX_MEMBERS : LOBBY_MAX_MEMBERS);
 
 const notLeader = () =>
   new AppError(403, ErrorCode.NOT_LEADER, 'Only the lobby leader can do that.');
@@ -75,18 +84,18 @@ export class LobbiesService {
       mine: mineId ? await this.toDto(this.db, mineId) : null,
       invites: invites.map((i) => ({
         lobbyId: i.lobbyId,
-        riftName: getRift(i.riftId)?.name ?? i.riftId,
+        riftName: lobbyName(i.riftId),
         from: i.from,
         memberCount: counts.get(i.lobbyId) ?? 0,
       })),
       publicLobbies: open
-        .filter((l) => l.id !== mineId && (counts.get(l.id) ?? 0) < LOBBY_MAX_MEMBERS)
+        .filter((l) => l.id !== mineId && (counts.get(l.id) ?? 0) < maxMembers(l.riftId))
         .map((l) => ({
           id: l.id,
-          riftName: getRift(l.riftId)?.name ?? l.riftId,
+          riftName: lobbyName(l.riftId),
           leaderName: l.leader,
           memberCount: counts.get(l.id) ?? 0,
-          maxMembers: LOBBY_MAX_MEMBERS,
+          maxMembers: maxMembers(l.riftId),
         })),
     };
   }
@@ -106,8 +115,7 @@ export class LobbiesService {
     riftId: string,
     visibility: LobbyVisibility,
   ) {
-    const rift = getRift(riftId);
-    if (!rift) throw errors.notFound('Rift');
+    if (!isPvp(riftId) && !getRift(riftId)) throw errors.notFound('Rift');
     const lobbyId = await this.db.transaction(async (tx) => {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertFreeForRift(tx, c.id);
@@ -119,7 +127,7 @@ export class LobbiesService {
         lobbyId: lobby!.id,
         characterId: c.id,
         accountId,
-        slot: await this.preferredSlot(tx, c, []),
+        slot: await this.preferredSlot(tx, c, [], riftId),
       });
       return lobby!.id;
     });
@@ -139,12 +147,13 @@ export class LobbiesService {
         .where(and(eq(riftLobbyInvites.lobbyId, lobby.id), eq(riftLobbyInvites.characterId, c.id)));
       if (lobby.visibility === 'private' && !invite)
         throw errors.forbidden('This lobby is invite only.');
-      if (members.length >= LOBBY_MAX_MEMBERS)
+      if (members.length >= maxMembers(lobby.riftId))
         throw new AppError(409, ErrorCode.LOBBY_FULL, 'The lobby is full.');
       const slot = await this.preferredSlot(
         tx,
         c,
         members.map((m) => m.slot),
+        lobby.riftId,
       );
       await tx
         .insert(riftLobbyMembers)
@@ -191,6 +200,7 @@ export class LobbiesService {
     await this.db.transaction(async (tx) => {
       await this.sheets.getOwnedCharacter(tx, accountId, characterId);
       const lobby = await this.lockOpenLobby(tx, lobbyId);
+      if (slot >= maxMembers(lobby.riftId)) throw errors.validation('That slot does not exist.');
       const members = await this.members(tx, lobby.id);
       const me = members.find((m) => m.characterId === characterId);
       if (!me) throw errors.notFound('Lobby');
@@ -265,6 +275,29 @@ export class LobbiesService {
         .orderBy(asc(characters.id))
         .for('update');
       for (const m of members) await assertFreeForRift(tx, m.characterId, lobby.id);
+      const toMember = (m: (typeof members)[number]) => ({
+        accountId: m.accountId,
+        character: locked.find((c) => c.id === m.characterId)!,
+        slot: m.slot % PVP_TEAM_B_OFFSET,
+      });
+      if (isPvp(lobby.riftId)) {
+        const teamA = members.filter((m) => m.slot < PVP_TEAM_B_OFFSET);
+        const teamB = members.filter((m) => m.slot >= PVP_TEAM_B_OFFSET);
+        if (!teamA.length || !teamB.length)
+          throw new AppError(409, ErrorCode.NOT_READY, 'Both teams need at least one player.');
+        const pvpId = await this.rifts.createPvpRun(
+          tx,
+          teamA.map(toMember),
+          teamB.map(toMember),
+          lobby.leaderCharacterId,
+        );
+        await tx
+          .update(riftLobbies)
+          .set({ status: 'started', runId: pvpId })
+          .where(eq(riftLobbies.id, lobby.id));
+        await tx.delete(riftLobbyInvites).where(eq(riftLobbyInvites.lobbyId, lobby.id));
+        return pvpId;
+      }
       const rift = getRift(lobby.riftId)!;
       const runId = await this.rifts.createRun(
         tx,
@@ -348,9 +381,23 @@ export class LobbiesService {
   }
 
   /** Weapon-based preferred slot, or the first free one. */
-  private async preferredSlot(db: DbOrTx, c: Character, taken: number[]): Promise<number> {
+  private async preferredSlot(
+    db: DbOrTx,
+    c: Character,
+    taken: number[],
+    riftId: string,
+  ): Promise<number> {
     const profile = await this.sheets.combatProfile(db, c);
     const preferred = startingSlot(profile.abilityIds);
+    if (isPvp(riftId)) {
+      // PvP: join the smaller team, at the weapon's preferred column.
+      const inA = taken.filter((s) => s < PVP_TEAM_B_OFFSET).length;
+      const inB = taken.length - inA;
+      const base = inB < inA ? PVP_TEAM_B_OFFSET : 0;
+      const order = (preferred < 2 ? [0, 1, 2, 3, 4, 5] : [4, 5, 2, 3, 0, 1]).map((s) => s + base);
+      const other = order.map((s) => (s + PVP_TEAM_B_OFFSET) % PVP_MAX_MEMBERS);
+      return [...order, ...other].find((s) => !taken.includes(s)) ?? base;
+    }
     // Front fighters fill front → mid → back; ranged/casters back → mid → front.
     const row = preferred < 2 ? [0, 1, 2, 3, 4, 5] : [4, 5, 2, 3, 0, 1];
     return row.find((s) => !taken.includes(s)) ?? preferred;
@@ -370,7 +417,7 @@ export class LobbiesService {
   private async toDto(db: DbOrTx, lobbyId: string): Promise<LobbyDto> {
     const [lobby] = await db.select().from(riftLobbies).where(eq(riftLobbies.id, lobbyId));
     if (!lobby) throw errors.notFound('Lobby');
-    const rift = getRift(lobby.riftId)!;
+    const rift = getRift(lobby.riftId);
     const members = await this.members(db, lobby.id);
     const ids = members.map((m) => m.characterId);
     const chars = ids.length
@@ -398,12 +445,13 @@ export class LobbiesService {
     return {
       id: lobby.id,
       riftId: lobby.riftId,
-      riftName: rift.name,
-      depth: toRiftDto(rift).depth,
+      mode: isPvp(lobby.riftId) ? 'pvp' : 'rift',
+      riftName: lobbyName(lobby.riftId),
+      depth: rift ? toRiftDto(rift).depth : 1,
       visibility: lobby.visibility as LobbyVisibility,
       status: lobby.status as LobbyDto['status'],
       leaderCharacterId: lobby.leaderCharacterId,
-      maxMembers: LOBBY_MAX_MEMBERS,
+      maxMembers: maxMembers(lobby.riftId),
       runId: lobby.runId,
       members: members.map((m) => {
         const c = chars.find((x) => x.id === m.characterId)!;

@@ -32,6 +32,11 @@ export const friendRequestSchema = z.object({
 
 // ---- Lobbies ----
 export const LOBBY_MAX_MEMBERS = 6;
+/** PvP arena lobbies (request #33, test mode): two teams of up to 6. */
+export const PVP_ARENA_ID = 'pvp_arena';
+export const PVP_MAX_MEMBERS = 12;
+/** PvP slots: 0–5 = team A formation, 6–11 = team B formation (slot − 6). */
+export const PVP_TEAM_B_OFFSET = 6;
 export type LobbyVisibility = 'public' | 'private';
 export type LobbyStatus = 'open' | 'started' | 'closed';
 
@@ -46,6 +51,8 @@ export interface LobbyMemberDto extends Omit<CharacterRefDto, 'online'> {
 export interface LobbyDto {
   id: string;
   riftId: string;
+  /** 'pvp' = arena lobby: members split into team A (slots 0–5) and B (6–11). */
+  mode: 'rift' | 'pvp';
   riftName: string;
   /** Rooms on any path to the boss (boss included). */
   depth: number;
@@ -89,7 +96,11 @@ export const createLobbySchema = z.object({
 export const lobbyInviteSchema = z.object({ characterId: z.uuid(), friendCharacterId: z.uuid() });
 export const lobbySlotSchema = z.object({
   characterId: z.uuid(),
-  slot: z.number().int().min(0).max(5),
+  slot: z
+    .number()
+    .int()
+    .min(0)
+    .max(PVP_MAX_MEMBERS - 1),
 });
 export const lobbyReadySchema = z.object({ characterId: z.uuid(), ready: z.boolean() });
 export const lobbyKickSchema = z.object({ characterId: z.uuid(), targetCharacterId: z.uuid() });

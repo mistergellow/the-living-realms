@@ -606,7 +606,12 @@ future features (data structure only).
 
 ## ADR-035 — Dungeon Threat: evaluated, not implemented
 
-**Status:** proposed (request #31, optional system)
+**Status:** superseded in part — a simple version was implemented in request
+#33 (`THREAT_RULES`: failed event tests and timed-out votes raise it, clearing
+an Elite lowers it; tiers strengthen the boss through `enemyModifiers`). The
+open questions below still apply to the full design.
+
+**Original status:** proposed (request #31, optional system)
 
 **Evaluation.** It fits the current design cleanly: `RunState` could hold a
 `threat` number raised by failed event tests, elite rooms skipped/fought,
@@ -617,3 +622,30 @@ a starting status on the party, an extra enemy). Nothing in the engine blocks
 it. **Open questions for the owner:** what raises (and lowers) Threat, whether
 players see it, the tiers and their effects, and whether it changes rewards.
 Not implemented until those are decided.
+
+## ADR-036 — Professions: data-driven activities with levels
+
+**Status:** accepted (request #33)
+
+**Decision.** Professions and their activities are data
+(`game-core/src/content/professions.ts`); the pure rules (`professions.ts`)
+compute chance, yield, repairs, upgrades and XP from the level and a seed.
+Levels live in `character_professions` (one row per practised profession).
+Materials and consumables are items with `kind` `material`/`consumable` that
+stack through `items.quantity`. Until Action Points exist, each attempt puts
+the profession on a short cooldown (`ready_at`). Not available inside a Rift.
+
+**Consequences.** New professions/activities/recipes are data only. Consumables
+cannot be used yet; runes are only blank stones. Balance is provisional.
+
+## ADR-037 — PvP test mode through lobbies
+
+**Status:** accepted (request #33, test mode)
+
+**Decision.** PvP reuses the combat engine: `createPvpEncounter` puts team B
+on the `enemies` side as players; both teams plan at the same time; the queue
+of each side holds its players' actions in planned order (and AI intents in
+PvE). No revive; last team standing wins. Matches are created from a lobby
+whose `riftId` is `pvp_arena` (slots 0–5 team A, 6–11 team B) and stored in
+`rift_runs` as a `RunState` with `mode: 'pvp'`. The server hides the other
+team's plan. No rewards and no equipment damage while it is a test.

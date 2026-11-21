@@ -173,9 +173,10 @@ test('Rift: map, plan, block, ready, resolution, abandon', async ({ page }) => {
   // Only the nearest column is in melee reach, so Slash is planned at once.
   await page.getByRole('button', { name: /^Slash/ }).click();
   await expect(page.getByTestId('plan')).toContainText('Slash');
-  await expect(page.getByTestId('my-focus')).toHaveText('2');
-  await page.getByRole('button', { name: /^Block/ }).click();
+  // A sword's basic attack costs 2 Focus (heavy weapons 3, daggers 1).
   await expect(page.getByTestId('my-focus')).toHaveText('1');
+  await page.getByRole('button', { name: /^Block/ }).click();
+  await expect(page.getByTestId('my-focus')).toHaveText('0');
   await expect(page.getByTestId('combat-log')).not.toContainText('uses Slash');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'test-results/screens/07-combat.png' });
@@ -253,6 +254,18 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`);
 });
 
+test('professions: practise fishing and gain XP', async ({ page }) => {
+  await register(page, `e2e-prof-${unique()}@example.com`);
+  await createCharacter(page, randomName('Angler'));
+  await page.getByRole('link', { name: 'Professions' }).click();
+  await expect(page.getByTestId('profession-fishing')).toContainText('Lv 0');
+  await page.getByTestId('profession-fishing').click();
+  await page.getByRole('button', { name: 'Fish', exact: true }).click();
+  await expect(page.getByTestId('activity-result')).toContainText('XP');
+  await expect(page.getByTestId('profession-level')).toContainText('busy');
+  await page.screenshot({ path: 'test-results/screens/10-professions.png' });
+});
+
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */
 const VIEWPORTS = [
   { name: 'phone', width: 390, height: 844 },
@@ -292,6 +305,7 @@ test('screens fit every screen size', async ({ page }) => {
     ['create', () => expect(page.getByLabel('Name')).toBeVisible()],
     ['sheet', () => expect(page.getByTestId('sheet-name')).toHaveText(name)],
     ['rifts', () => expect(page.getByTestId('rift-card').first()).toBeVisible()],
+    ['professions', () => expect(page.getByTestId('profession-detail')).toBeVisible()],
   ];
   const paths: Record<string, string> = {
     home: '/home',
@@ -300,6 +314,7 @@ test('screens fit every screen size', async ({ page }) => {
     create: '/characters/new',
     sheet: characterUrl!,
     rifts: '/rifts',
+    professions: '/professions',
   };
 
   for (const vp of VIEWPORTS) {

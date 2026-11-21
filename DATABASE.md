@@ -113,6 +113,7 @@ Items owned by a character. What an item _is_ lives in code
 | quality                | smallint 0–100                 | durability; `CHECK` 0–100; 0 = broken and unusable; −25 per Rift defeat             |
 | equipped_slot          | text null                      | `EquipSlot` when equipped; unique per character (`where equipped_slot is not null`) |
 | source                 | text                           | `starter`, `drop`, `loot_room`, `secret_room`, `event`, …                           |
+| quantity               | integer > 0                    | stack size: materials and consumables stack (request #33); gear is always 1         |
 | upgrade_level          | smallint 0–10                  | weapons: +0, +1, … (same type + level = same stats); `CHECK` 0–10                   |
 | specials               | jsonb                          | weapons: special properties, max 5 (`[{ id, value? }]`); none yet                   |
 | rune_slots             | jsonb                          | weapons: 2 slots `{ unlocked, runeId }`, locked by default (Runemaster = future)    |
@@ -137,9 +138,23 @@ the old format (no penalty).
 | skill_id     | text                           | ability id in game-core content; PK part                    |
 | learned_at   | timestamptz                    | weapon abilities are not stored (they come from the weapon) |
 
+### `character_professions`
+
+Profession levels (request #33). A row is created the first time a profession
+is practised; no row means level 0.
+
+| Column        | Type                           | Notes                                                  |
+| ------------- | ------------------------------ | ------------------------------------------------------ |
+| character_id  | uuid FK → characters (cascade) | PK part                                                |
+| profession_id | text                           | PK part; id in `game-core/src/content/professions.ts`  |
+| level         | smallint 0–10                  | `CHECK` 0–10                                           |
+| xp            | integer                        | XP towards the next level                              |
+| ready_at      | timestamptz null               | the profession can be practised again from this moment |
+| updated_at    | timestamptz                    |                                                        |
+
 ### `rift_runs`
 
-One row per Rift run (a dungeon, request #31). The whole run state produced by
+One row per Rift run (a dungeon, request #31) or PvP arena match (`rift_id` = `pvp_arena`, request #33). The whole run state produced by
 game-core (`RunState` v2: map, party, current room, combat state, votes) is
 saved as JSONB after every action.
 

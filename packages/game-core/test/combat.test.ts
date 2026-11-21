@@ -6,6 +6,7 @@ import {
   COMBAT_RULES,
   computeStats,
   createEncounter,
+  createPvpEncounter,
   focusPerRound,
   FOCUS_RULES,
   getAbility,
@@ -30,7 +31,7 @@ function member(
   id: string,
   slot: number,
   over: Partial<DerivedStatsDto> = {},
-  abilityIds = ['slash', 'cleave', 'block', 'swap_position'],
+  abilityIds = ['slash', 'stab', 'cleave', 'block', 'swap_position'],
 ): PartyMemberInput {
   const stats = { ...baseStats, ...over };
   return {
@@ -109,9 +110,9 @@ describe('planning phase', () => {
   it('players plan actions first; nothing resolves until everyone is ready', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
     expect(s.phase).toBe('planning');
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     expect(s.plan).toHaveLength(1);
-    expect(s.plan[0]).toMatchObject({ actorId: 'p:a', abilityId: 'slash', targetColumn: 'front' });
+    expect(s.plan[0]).toMatchObject({ actorId: 'p:a', abilityId: 'stab', targetColumn: 'front' });
     expect(s.log.some((l) => l.t === 'ability')).toBe(false);
     s = ok(setReady(s, 'p:a'));
     expect(s.round).toBe(1);
@@ -129,7 +130,7 @@ describe('planning phase', () => {
     expect(reservedBy(s, 'p:a').focus).toBe(2);
     const poor = planAction(s, 'p:a', { type: 'plan', abilityId: 'cleave' });
     expect(poor).toMatchObject({ ok: false, reason: 'Not enough Focus.' });
-    s = plan(s, 'p:a', { abilityId: 'slash' }); // 1 → 3 used
+    s = plan(s, 'p:a', { abilityId: 'stab' }); // 1 → 3 used
     expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(false);
     // Removing a planned action frees its Focus.
     s = ok(unplanAction(s, 'p:a', s.plan[0]!.id));
@@ -138,7 +139,7 @@ describe('planning phase', () => {
 
   it('a confirmed plan cannot be changed; others cannot remove your actions', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     expect(unplanAction(s, 'p:b', s.plan[0]!.id).ok).toBe(false);
     s = ok(setReady(s, 'p:a'));
     expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(false);
@@ -146,7 +147,7 @@ describe('planning phase', () => {
 
   it('the planning timer resolves whatever was planned', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     const t = timeoutTurn(s);
     expect(t.round).toBe(2);
     expect(t.log.some((l) => l.t === 'timeout')).toBe(true);
@@ -181,9 +182,9 @@ describe('initiative and alternating resolution', () => {
     const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
     warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
     // Planned order: b, a, a — not initiative order.
-    s = plan(s, 'p:b', { abilityId: 'slash' });
-    s = plan(s, 'p:a', { abilityId: 'slash' });
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:b', { abilityId: 'stab' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     const seq = s.logSeq;
     s = ok(setReady(s, 'p:a'));
     s = ok(setReady(s, 'p:b'));
@@ -199,7 +200,7 @@ describe('initiative and alternating resolution', () => {
     s = calm(s);
     const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
     warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     const seq = s.logSeq;
     s = ok(setReady(s, 'p:a'));
     expect(actors(s, seq)).toEqual([warden.id, 'p:a']);
@@ -215,7 +216,7 @@ describe('initiative and alternating resolution', () => {
     const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
     warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
     s.initiative = { party: 0, enemies: 99, first: 'enemies' };
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     s = ok(setReady(s, 'p:a'));
     s = ok(setReady(s, 'p:b'));
     expect(unit(s, 'p:a').downed).toBe(true);
@@ -296,7 +297,7 @@ describe('targeting by columns (front, mid, back × 2 lines)', () => {
 
   it('attacks pick a column and hit both units in it (D41); out of reach is rejected', () => {
     let s = encounter(
-      [member('a', 0, { critChance: 0 }, ['aimed_shot', 'slash'])],
+      [member('a', 0, { critChance: 0 }, ['aimed_shot', 'stab'])],
       room([
         { enemy: 'rift_husk', slot: 0 },
         { enemy: 'shard_spitter', slot: 4 },
@@ -304,9 +305,9 @@ describe('targeting by columns (front, mid, back × 2 lines)', () => {
       ]),
     );
     s = calm(s);
-    expect(
-      planAction(s, 'p:a', { type: 'plan', abilityId: 'slash', targetColumn: 'back' }).ok,
-    ).toBe(false);
+    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'stab', targetColumn: 'back' }).ok).toBe(
+      false,
+    );
     s = plan(s, 'p:a', { abilityId: 'aimed_shot', targetColumn: 'back' });
     s = ok(setReady(s, 'p:a'));
     const hit = s.log
@@ -334,7 +335,7 @@ describe('change position', () => {
     );
     s = calm(s);
     s = plan(s, 'p:b', { abilityId: 'cleave' });
-    s = plan(s, 'p:b', { abilityId: 'slash' }); // b has 0 left
+    s = plan(s, 'p:b', { abilityId: 'stab' }); // b has 0 left
     expect(
       planAction(s, 'p:a', { type: 'plan', abilityId: 'swap_position', targetSlot: 3 }).ok,
     ).toBe(false);
@@ -361,7 +362,7 @@ describe('statuses by round', () => {
     s = ok(setReady(s, 'p:a'));
     s = ok(setReady(s, 'p:b'));
     expect(unit(s, 'p:b').stunned).toBe(true);
-    expect(planAction(s, 'p:b', { type: 'plan', abilityId: 'slash' })).toMatchObject({
+    expect(planAction(s, 'p:b', { type: 'plan', abilityId: 'stab' })).toMatchObject({
       ok: false,
       code: 'NOT_YOUR_TURN',
     });
@@ -424,7 +425,7 @@ describe('rooms, downs and outcomes', () => {
     unit(s, 'p:b').hp = 0;
     unit(s, 'p:b').downed = true;
     s.combatants.find((c) => c.side === 'enemies')!.hp = 1;
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     s = ok(setReady(s, 'p:a'));
     expect(s.phase).toBe('room_cleared');
     expect(unit(s, 'p:b')).toMatchObject({ downed: false, hp: 1 });
@@ -432,7 +433,7 @@ describe('rooms, downs and outcomes', () => {
     let v = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]), true);
     v = calm(v);
     v.combatants.find((c) => c.side === 'enemies')!.hp = 1;
-    v = ok(setReady(plan(v, 'p:a', { abilityId: 'slash' }), 'p:a'));
+    v = ok(setReady(plan(v, 'p:a', { abilityId: 'stab' }), 'p:a'));
     expect(v).toMatchObject({ phase: 'ended', outcome: 'victory' });
   });
 
@@ -440,7 +441,7 @@ describe('rooms, downs and outcomes', () => {
     const run = () => {
       let s = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]), false, 7);
       for (let i = 0; i < 4 && s.phase === 'planning'; i++)
-        s = ok(setReady(plan(s, 'p:a', { abilityId: 'slash' }), 'p:a'));
+        s = ok(setReady(plan(s, 'p:a', { abilityId: 'stab' }), 'p:a'));
       return s.log;
     };
     expect(run()).toEqual(run());
@@ -450,7 +451,7 @@ describe('rooms, downs and outcomes', () => {
 describe('group runs', () => {
   it('a leaving player is out for good and their plan is dropped; the others go on', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_warden', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'slash' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
     s = ok(setReady(s, 'p:b'));
     s = leaveParty(s, 'p:a');
     expect(unit(s, 'p:a')).toMatchObject({ left: true, downed: true });
@@ -465,5 +466,35 @@ describe('group runs', () => {
       'p:a',
     );
     expect(s).toMatchObject({ phase: 'ended', outcome: 'defeat' });
+  });
+});
+
+describe('PvP (test mode)', () => {
+  it('two teams of players plan at the same time and alternate; last team standing wins', () => {
+    let s = createPvpEncounter({
+      teamA: [member('a', 0, { maxHp: 30, initiative: 100 })],
+      teamB: [member('b', 0, { maxHp: 30 })],
+      seed: 3,
+    });
+    expect(s.mode).toBe('pvp');
+    expect(unit(s, 'p:b').side).toBe('enemies');
+    expect(unit(s, 'p:b').intents).toEqual([]);
+    s = calm(s);
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    s = plan(s, 'p:b', { abilityId: 'stab' });
+    const seq = s.logSeq;
+    s = ok(setReady(s, 'p:a'));
+    expect(s.round).toBe(1); // waits for team B
+    s = ok(setReady(s, 'p:b'));
+    expect(actors(s, seq)).toEqual(['p:a', 'p:b']);
+    for (let i = 0; i < 30 && s.phase === 'planning'; i++) {
+      s = calm(s);
+      unit(s, 'p:b').stats.armor = 0;
+      s = ok(setReady(plan(s, 'p:a', { abilityId: 'stab' }), 'p:a'));
+      if (s.phase === 'planning') s = ok(setReady(s, 'p:b'));
+    }
+    expect(s).toMatchObject({ phase: 'ended', outcome: 'victory' });
+    expect(unit(s, 'p:b').downed).toBe(true);
+    expect(s.log.some((l) => l.t === 'revived')).toBe(false);
   });
 });

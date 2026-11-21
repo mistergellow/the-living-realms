@@ -117,6 +117,10 @@ function ItemLine({ item }: { item: ItemDto }) {
       ([k, v]) => `${ATTRIBUTE_NAMES[k as AttributeKey]} ${fmt(v ?? 0)}`,
     ),
     item.twoHanded ? 'Two-handed' : null,
+    // Weapon catalogue (request #31/#33): type, basic attack cost, specials, runes.
+    item.weapon
+      ? `${item.weapon.typeName} · ${item.weapon.baseDamage.min}–${item.weapon.baseDamage.max} ${item.weapon.attackType} · basic attack ${item.weapon.basicAttackCost} Focus · specials ${item.weapon.specials.length}/${item.weapon.maxSpecials} · runes ${item.weapon.runeSlots.filter((r) => r.unlocked).length}/${item.weapon.runeSlots.length} unlocked`
+      : null,
   ].filter(Boolean);
   return (
     <div className="item-line">
@@ -127,6 +131,7 @@ function ItemLine({ item }: { item: ItemDto }) {
           }
         >
           {item.name}
+          {item.quantity > 1 ? ` ×${item.quantity}` : ''}
         </strong>
         {item.broken && <span className="field-error">Broken</span>}
       </div>

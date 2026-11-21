@@ -130,7 +130,9 @@ export function CombatScreen({
     .slice(-40)
     .reverse();
   const boss = run.roomType === 'boss';
-  const enemies = combat.combatants.filter((c) => c.side === 'enemies');
+  const mySide = me?.side ?? 'party';
+  const pvp = run.mode === 'pvp';
+  const enemies = combat.combatants.filter((c) => c.side !== mySide);
   const initiative = combat.initiative;
   const waitingFor = combat.combatants.filter(
     (c) => c.side === 'party' && !c.downed && !c.stunned && !c.left && !combat.ready.includes(c.id),
@@ -141,8 +143,12 @@ export function CombatScreen({
       <header className="combat-top">
         <span className="title">{run.riftName}</span>
         <span className="muted">
-          {boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room{' '}
-          {run.roomsVisited}
+          {pvp
+            ? `PvP · you are on team ${mySide === 'party' ? 'A (left)' : 'B (right)'}`
+            : `${boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room ${run.roomsVisited}`}
+          {boss && run.threat.tier
+            ? ` · Threat ${run.threat.tier.name}: ${run.threat.tier.description}`
+            : ''}
         </span>
         <span className="spacer" />
         <span className="round-banner" data-testid="round">
@@ -151,7 +157,13 @@ export function CombatScreen({
         {initiative && (
           <span className="initiative" title="Team initiative: best roll + Agility of each side">
             Initiative {initiative.party} vs {initiative.enemies} ·{' '}
-            <strong>{initiative.first === 'party' ? 'Your team starts' : 'Enemies start'}</strong>
+            <strong>
+              {initiative.first === mySide
+                ? 'Your team starts'
+                : pvp
+                  ? 'The other team starts'
+                  : 'Enemies start'}
+            </strong>
           </span>
         )}
         <span className="spacer" />
@@ -259,7 +271,7 @@ export function CombatScreen({
         </CombatStage>
 
         <aside className="enemy-intents" aria-label="Enemy intents">
-          <h3>Enemies</h3>
+          <h3>{pvp ? 'Other team' : 'Enemies'}</h3>
           {enemies.map((e) => (
             <div key={e.id} className="intent-row" data-downed={e.downed}>
               <strong>{e.name}</strong>
