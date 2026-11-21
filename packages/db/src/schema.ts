@@ -122,9 +122,9 @@ export const characters = pgTable(
     attrMight: smallint('attr_might').notNull().default(5),
     attrAgility: smallint('attr_agility').notNull().default(5),
     attrPrecision: smallint('attr_precision').notNull().default(5),
-    attrVitality: smallint('attr_vitality').notNull().default(5),
-    attrArcana: smallint('attr_arcana').notNull().default(5),
-    attrSpirit: smallint('attr_spirit').notNull().default(5),
+    attrEndurance: smallint('attr_endurance').notNull().default(5),
+    attrIntellect: smallint('attr_intellect').notNull().default(5),
+    attrWill: smallint('attr_will').notNull().default(5),
     /** Attribute points not yet distributed. */
     attributePoints: smallint('attribute_points').notNull().default(0),
     /** Per-character currency earned through activities. */
@@ -165,8 +165,19 @@ export const items = pgTable(
     quality: smallint('quality').notNull().default(100),
     /** EquipSlot when equipped, null when in the inventory. */
     equippedSlot: text('equipped_slot'),
-    /** Where it came from: 'starter', 'drop', … */
+    /** Where it came from: 'starter', 'drop', 'loot_room', 'secret_room', 'event', … */
     source: text('source').notNull().default('starter'),
+    /** Weapons: upgrade level (+0, +1, …). Same type + level = same stats (request #31). */
+    upgradeLevel: smallint('upgrade_level').notNull().default(0),
+    /** Weapons: special properties (max 5), e.g. [{ "id": "keen" }]. */
+    specials: jsonb('specials').notNull().default([]),
+    /** Weapons: 2 rune slots, locked by default (Runemaster = future). */
+    runeSlots: jsonb('rune_slots')
+      .notNull()
+      .default([
+        { unlocked: false, runeId: null },
+        { unlocked: false, runeId: null },
+      ]),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -177,6 +188,7 @@ export const items = pgTable(
       .on(t.characterId, t.equippedSlot)
       .where(sql`${t.equippedSlot} is not null`),
     check('items_quality_range', sql`${t.quality} between 0 and 100`),
+    check('items_upgrade_level_range', sql`${t.upgradeLevel} between 0 and 10`),
   ],
 );
 
@@ -210,11 +222,13 @@ export const riftRuns = pgTable(
     riftId: text('rift_id').notNull(),
     /** 'active' | 'victory' | 'defeat' | 'abandoned' */
     status: text('status').notNull().default('active'),
+    /** Rooms entered so far. */
     roomIndex: smallint('room_index').notNull().default(0),
+    /** Run state (game-core RunState v2: map, party, current room, combat, votes). */
     state: jsonb('state').notNull(),
     /** Incremented on every saved action (optimistic concurrency / client sync). */
     version: integer('version').notNull().default(0),
-    /** When the current player turn times out (60 s, D16). */
+    /** When the current decision (vote) or combat planning phase times out (60 s, D16). */
     turnDeadline: timestamp('turn_deadline', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

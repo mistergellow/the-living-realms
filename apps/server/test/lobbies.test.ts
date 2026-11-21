@@ -84,7 +84,15 @@ describe('Rift lobbies', () => {
     const seen = (await call(archer, 'GET', `/api/rifts/lobbies/${lobby.id}`)).json() as LobbyDto;
     expect(seen.runId).toBe(started.runId);
     const run = (await call(archer, 'GET', `/api/rifts/runs/${started.runId}`)).json() as RunDto;
-    const party = run.combat.combatants.filter((c) => c.side === 'party');
+    expect(run.leaderId).toBe(started.leaderCharacterId);
+    // Both vote for the same first room: the fight starts with the lobby formation.
+    const first = run.map.nodes.find((n) => n.available)!;
+    for (const p of [leader, archer])
+      await call(p, 'POST', `/api/rifts/runs/${started.runId}/actions`, {
+        action: { type: 'vote', optionId: first.id },
+      });
+    const fight = (await call(archer, 'GET', `/api/rifts/runs/${started.runId}`)).json() as RunDto;
+    const party = fight.combat!.combatants.filter((c) => c.side === 'party');
     expect(party.map((p) => [p.name, p.slot]).sort()).toEqual(
       [
         [archer.name, 0],
@@ -166,16 +174,25 @@ describe('group combat', () => {
   const act = (p: P, runId: string, action: Record<string, unknown>) =>
     call(p, 'POST', `/api/rifts/runs/${runId}/actions`, { action });
 
-  it('players act in initiative order; acting out of turn is rejected', async () => {
+  it('the group votes the path (majority, leader breaks ties) and plans together', async () => {
     const { a, b, runId } = await groupRun();
     const run = (await call(a, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
-    const first = run.combat.activeId === `p:${a.id}` ? a : b;
-    const second = first === a ? b : a;
-    expect((await act(second, runId, { type: 'end_turn' })).json().error.code).toBe(
-      'NOT_YOUR_TURN',
-    );
-    const next = (await act(first, runId, { type: 'end_turn' })).json() as RunDto;
-    expect(next.combat.activeId).toBe(`p:${second.id}`);
+    const [x, y] = run.map.nodes.filter((n) => n.available);
+    const one = (await act(b, runId, { type: 'vote', optionId: y!.id })).json() as RunDto;
+    expect(one.phase).toBe('map');
+    expect(one.votes).toEqual([{ characterId: b.id, optionId: y!.id, testerId: null }]);
+    const both = (await act(a, runId, { type: 'vote', optionId: x!.id })).json() as RunDto;
+    // 1–1: the leader (a) breaks the tie.
+    expect(both.map.nodes.find((n) => n.current)!.id).toBe(x!.id);
+    expect(both.phase).toBe('combat');
+
+    // Both plan; the round resolves only when both are ready.
+    await act(a, runId, { type: 'plan', abilityId: 'block' });
+    const waiting = (await act(a, runId, { type: 'ready' })).json() as RunDto;
+    expect(waiting.combat!.round).toBe(1);
+    expect(waiting.combat!.ready).toEqual([`p:${a.id}`]);
+    const done = (await act(b, runId, { type: 'ready' })).json() as RunDto;
+    expect(done.combat!.round).toBe(2);
   });
 
   it('a player leaving is penalised alone; the others keep fighting', async () => {
@@ -186,9 +203,8 @@ describe('group combat', () => {
 
     const forB = (await call(b, 'GET', `/api/rifts/runs/${runId}`)).json() as RunDto;
     expect(forB.status).toBe('active');
-    expect(forB.combat.combatants.find((c) => c.characterId === a.id)).toMatchObject({
-      left: true,
-    });
+    expect(forB.party.find((m) => m.characterId === a.id)).toMatchObject({ left: true });
+    expect(forB.leaderId).toBe(b.id);
     const bSheet = (
       await t.app.inject({ url: `/api/characters/${b.id}`, headers: { cookie: b.cookie } })
     ).json();
@@ -196,6 +212,6 @@ describe('group combat', () => {
 
     // a is free again; b still in the run.
     expect((await create(a)).statusCode).toBe(201);
-    expect((await act(a, runId, { type: 'end_turn' })).statusCode).toBe(409);
+    expect((await act(a, runId, { type: 'continue' })).statusCode).toBe(409);
   });
 });

@@ -6,6 +6,7 @@ import {
   type AbilityDef,
 } from './content/abilities.js';
 import { getItemDef, type ItemDef } from './content/items.js';
+import { upgradeMultiplier } from './content/weapons.js';
 
 /*
  * Equipment rules. Items are referenced by an instance id (owned item) and a
@@ -22,6 +23,8 @@ export interface OwnedItem {
   defId: string;
   quality: number;
   equippedSlot: EquipSlot | null;
+  /** Weapons: +0, +1, … (request #31). */
+  upgradeLevel?: number;
 }
 
 export const isBroken = (quality: number) => quality <= 0;
@@ -105,6 +108,20 @@ export function availableAbilities(
   if (!hasMainWeapon) for (const id of UNARMED_ABILITIES) add(id, null);
   for (const id of learnedSkillIds) add(id, null);
   for (const id of UNIVERSAL_ABILITIES) add(id, null);
+  return out;
+}
+
+/**
+ * Weapon upgrades (+1, +2, …) improve the numbers of the abilities that weapon
+ * grants. Returns ability id → multiplier (only for upgraded weapons).
+ */
+export function abilityMultipliers(items: OwnedItem[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const w of activeEquipment(items)) {
+    const m = upgradeMultiplier(w.upgradeLevel ?? 0);
+    if (m === 1) continue;
+    for (const id of w.def.abilities ?? []) out[id] = Math.max(out[id] ?? 1, m);
+  }
   return out;
 }
 

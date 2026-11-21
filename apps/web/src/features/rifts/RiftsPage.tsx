@@ -28,7 +28,8 @@ export function RiftsPage() {
       <div className="contain stack" style={{ maxWidth: '64rem' }}>
         <h1 className="page-title">Rifts</h1>
         <p className="muted" style={{ margin: 0, fontSize: '1.05rem', fontStyle: 'italic' }}>
-          Rifts are portals to raids: several rooms and a boss. Go alone or in a group of up to 6 —
+          Rifts are dungeons with branching paths: choose your way, avoid or pick fights, rest,
+          solve events and find secret rooms before the boss. Go alone or in a group of up to 6 —
           difficulty does not change with the number of players.
         </p>
         <FormError error={start.error ?? rifts.error ?? lobby.create.error ?? lobby.join.error} />
@@ -37,9 +38,7 @@ export function RiftsPage() {
           <div className="panel row banner">
             <div>
               <strong>You are inside {active.data.riftName}</strong>
-              <div className="muted">
-                Room {active.data.roomIndex + 1} of {active.data.rooms.length}
-              </div>
+              <div className="muted">{active.data.roomsVisited} rooms explored</div>
             </div>
             <span className="spacer" />
             <Link className="btn btn-primary" to={`/rifts/runs/${active.data.id}`}>
@@ -102,14 +101,10 @@ export function RiftsPage() {
                   {r.name}
                 </h2>
                 <span className="muted">{r.description}</span>
-                <ol className="rift-rooms">
-                  {r.rooms.map((room, i) => (
-                    <li key={i} data-boss={room.isBoss}>
-                      {room.isBoss ? '☠ ' : ''}
-                      {room.name}
-                    </li>
-                  ))}
-                </ol>
+                <span className="muted small">
+                  {r.depth} rooms on any path · boss: <strong>{r.bossName}</strong> · branching map
+                  with combats, elites, campsites, events, loot and secret rooms
+                </span>
                 <div className="row" style={{ flexWrap: 'wrap' }}>
                   <button
                     className="btn btn-primary"

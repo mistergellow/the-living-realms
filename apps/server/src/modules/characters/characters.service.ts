@@ -99,9 +99,9 @@ export class CharactersService {
           attrMight: a.might,
           attrAgility: a.agility,
           attrPrecision: a.precision,
-          attrVitality: a.vitality,
-          attrArcana: a.arcana,
-          attrSpirit: a.spirit,
+          attrEndurance: a.endurance,
+          attrIntellect: a.intellect,
+          attrWill: a.will,
           attributePoints: attrs.unspent,
         });
         // Starter kit: the chosen weapon + basic armor, equipped.

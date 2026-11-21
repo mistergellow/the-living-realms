@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Attributes, CharacterAppearance, DerivedStatsDto } from './api.js';
+import type { AttributeKey, Attributes, CharacterAppearance, DerivedStatsDto } from './api.js';
 
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
@@ -24,7 +24,7 @@ export type StatusId = (typeof STATUS_IDS)[number];
 
 export interface StatusView {
   id: StatusId;
-  /** Turns left (counted at the start of the affected unit's turns). */
+  /** Rounds left (counted down at the start of every round). */
   turns: number;
   /** Damage per tick for bleed/burn. */
   value: number;
@@ -54,16 +54,22 @@ export interface CombatantView {
   mana: number;
   maxMana: number;
   focus: number;
+  /** Focus gained at the start of every round (from Precision). */
+  focusPerRound: number;
   /** Player left the run early (group runs, A28). */
   left: boolean;
-  /** Absorbs damage until the unit's next turn (Slay-the-Spire style). */
+  /** Absorbs damage before HP; stacks; removed at the start of every round. */
   block: number;
+  /** Stunned at the start of this round: cannot act this round. */
+  stunned: boolean;
   statuses: StatusView[];
   /** Player characters only (used for ability scaling). */
   attributes: Attributes | null;
   /** Enemies only: damage multiplier. */
   power: number;
-  /** Enemies only: planned actions for their next turn (D36). */
+  /** Multiplier on ability values per ability id (weapon upgrades +1, +2…). */
+  abilityMultipliers: Record<string, number>;
+  /** Enemies only: planned actions for this round (D36). */
   intents: IntentView[];
   downed: boolean;
   isBoss: boolean;
@@ -73,7 +79,12 @@ export interface CombatantView {
 
 export type CombatLogEntry =
   | { t: 'round'; round: number }
-  | { t: 'turn'; actorId: string }
+  /** Team initiative: highest (roll + Agility) of each side; `first` acts first. */
+  | { t: 'initiative'; party: number; enemies: number; first: CombatSide }
+  /** The resolution phase starts (actions alternate between teams). */
+  | { t: 'resolve'; first: CombatSide }
+  /** A planned action did not happen (actor down/stunned, not enough Focus, no target). */
+  | { t: 'skipped'; actorId: string; abilityId: string; reason: string }
   | { t: 'ability'; actorId: string; abilityId: string; targetIds: string[] }
   | { t: 'damage'; targetId: string; amount: number; crit: boolean; blocked: number }
   | { t: 'block'; targetId: string; amount: number }
@@ -86,36 +97,175 @@ export type CombatLogEntry =
   | { t: 'swap'; actorId: string; fromSlot: number; toSlot: number; withId: string | null }
   | { t: 'downed'; targetId: string }
   | { t: 'revived'; targetId: string; hp: number }
-  | { t: 'timeout'; actorId: string }
+  | { t: 'timeout'; actorId: string | null }
   | { t: 'room'; outcome: 'cleared' | 'wiped' };
 
-export type CombatPhase = 'party' | 'enemies' | 'room_cleared' | 'ended';
+/**
+ * Round structure (combat spec, request #31): `planning` = players choose
+ * their actions; the resolution runs on the server right after everyone is
+ * ready (or the timer ends) and the next round starts in `planning` again.
+ */
+export type CombatPhase = 'planning' | 'room_cleared' | 'ended';
+
+/** An action a player planned this round (resolved in planned order, D-request #31). */
+export interface PlannedActionView {
+  id: number;
+  actorId: string;
+  abilityId: string;
+  targetId?: string;
+  targetColumn?: CombatColumn;
+  targetSlot?: number;
+}
+
+export interface InitiativeView {
+  party: number;
+  enemies: number;
+  first: CombatSide;
+}
 
 export interface CombatView {
   round: number;
   phase: CombatPhase;
-  /** Whose turn it is (party phase). */
-  activeId: string | null;
-  /** Party turn order this round (by initiative). */
-  turnOrder: string[];
+  /** This round's team initiative (who starts the resolution). */
+  initiative: InitiativeView | null;
+  /** The party's planned actions, in the order they will be resolved. */
+  plan: PlannedActionView[];
+  /** Party members who confirmed their plan this round. */
+  ready: string[];
   combatants: CombatantView[];
   outcome: 'victory' | 'defeat' | null;
   /** Most recent entries last. Each entry has a sequence number. */
   log: Array<CombatLogEntry & { seq: number }>;
 }
 
-export interface RiftRoomDto {
-  name: string;
-  isBoss: boolean;
-}
+// ---------------------------------------------------------------------------
+// The Rift: dungeon exploration (request #31). A run is a branching map
+// (Slay-the-Spire style) of rooms; combat is one kind of room.
+// ---------------------------------------------------------------------------
+
+export const ROOM_TYPES = [
+  'combat',
+  'elite',
+  'campsite',
+  'event',
+  'loot',
+  'secret',
+  'boss',
+] as const;
+export type RoomType = (typeof ROOM_TYPES)[number];
 
 export interface RiftDto {
   id: string;
   name: string;
   description: string;
-  rooms: RiftRoomDto[];
+  /** Rooms on any path from the entrance to the boss (boss included). */
+  depth: number;
+  bossName: string;
 }
 
+export interface MapNodeDto {
+  id: string;
+  /** 0 = first row; the boss is on the last row. */
+  row: number;
+  /** Horizontal lane (for drawing). */
+  col: number;
+  type: RoomType;
+  visited: boolean;
+  current: boolean;
+  /** Can be chosen as the next room right now. */
+  available: boolean;
+  /** A secret room the party found (hidden rooms are never sent). */
+  secret: boolean;
+}
+
+export interface MapDto {
+  rows: number;
+  cols: number;
+  nodes: MapNodeDto[];
+  /** Connections [from, to] (always from a row to a later row). */
+  edges: Array<[string, string]>;
+}
+
+/** A lasting effect from exploration (debuff or advantage), shown between rooms. */
+export interface ConditionView {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'debuff' | 'boon';
+  /** Rooms it still lasts (null = until removed, e.g. at a Campsite). */
+  rooms: number | null;
+}
+
+export interface RunMemberDto {
+  characterId: string;
+  name: string;
+  appearance: CharacterAppearance;
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+  /** BASE attributes (no equipment, no buffs): the only values used in exploration tests. */
+  baseAttributes: Attributes;
+  conditions: ConditionView[];
+  left: boolean;
+}
+
+export interface VoteView {
+  characterId: string;
+  optionId: string;
+  /** Events: who attempts the chosen approach. */
+  testerId: string | null;
+}
+
+export interface EventApproachView {
+  id: string;
+  label: string;
+  description: string;
+  /** Attribute tested (BASE value + roll vs difficulty); null = no test. */
+  attribute: AttributeKey | null;
+  difficulty: number | null;
+}
+
+export interface TestRollView {
+  testerId: string;
+  testerName: string;
+  attribute: AttributeKey;
+  /** The BASE attribute value used (equipment and buffs never count). */
+  base: number;
+  roll: number;
+  total: number;
+  difficulty: number;
+  success: boolean;
+}
+
+export interface EventResultView {
+  approachId: string;
+  test: TestRollView | null;
+  text: string;
+  effects: string[];
+}
+
+export interface EventView {
+  eventId: string;
+  title: string;
+  text: string;
+  approaches: EventApproachView[];
+  result: EventResultView | null;
+}
+
+/** What happened in a non-combat room (Campsite, Loot, Secret) or a discovery. */
+export interface RoomOutcomeView {
+  type: RoomType;
+  title: string;
+  text: string;
+  effects: string[];
+  /** Items found, per character. */
+  items: Array<{ characterId: string; name: string }>;
+  /** A secret search on entering the room (BASE Precision of the best searcher). */
+  search: TestRollView | null;
+}
+
+export type RunPhase = 'map' | 'combat' | 'event' | 'room' | 'ended';
 export type RunStatus = 'active' | 'victory' | 'defeat' | 'abandoned';
 
 export interface RunRewardsDto {
@@ -133,11 +283,25 @@ export interface RunDto {
   riftId: string;
   riftName: string;
   status: RunStatus;
-  roomIndex: number;
-  rooms: RiftRoomDto[];
-  combat: CombatView;
-  /** ISO time the current player turn ends (60 s per turn, decision D16). */
-  turnDeadline: string | null;
+  phase: RunPhase;
+  /** Rooms entered so far. */
+  roomsVisited: number;
+  map: MapDto;
+  /** Type of the room the party is in (null before the first room). */
+  roomType: RoomType | null;
+  party: RunMemberDto[];
+  /** Lobby leader (breaks ties in votes). */
+  leaderId: string;
+  /** Combat rooms only. */
+  combat: CombatView | null;
+  /** Random Event rooms only. */
+  event: EventView | null;
+  /** Campsite/Loot/Secret result, or what was found on entering a room. */
+  outcome: RoomOutcomeView | null;
+  /** Votes for the current decision (next room or event approach). */
+  votes: VoteView[];
+  /** ISO time the current decision or planning phase ends (60 s, D16). */
+  deadline: string | null;
   /** Filled when the run ended (for the character that asked). */
   rewards: RunRewardsDto | null;
   penalty: RunPenaltyDto | null;
@@ -146,29 +310,41 @@ export interface RunDto {
 export const startRunRequestSchema = z.object({ characterId: z.uuid() });
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
 
+const slotSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(SLOTS_PER_SIDE - 1);
+
 export const combatActionSchema = z.discriminatedUnion('type', [
+  /** Planning phase: add an action to the party's plan (resolved in planned order). */
   z.object({
-    type: z.literal('ability'),
+    type: z.literal('plan'),
     abilityId: z.string().max(64),
     /** Target ally (single-target support abilities). */
     targetId: z.string().max(64).optional(),
     /** Target column (attacks hit both units of a column, D41). */
     targetColumn: z.enum(['front', 'mid', 'back']).optional(),
     /** Destination slot (Swap Position). */
-    targetSlot: z
-      .number()
-      .int()
-      .min(0)
-      .max(SLOTS_PER_SIDE - 1)
-      .optional(),
+    targetSlot: slotSchema.optional(),
   }),
-  z.object({ type: z.literal('end_turn') }),
-  /** After a room is cleared: enter the next room. */
-  z.object({ type: z.literal('advance') }),
+  /** Remove one of your planned actions. */
+  z.object({ type: z.literal('unplan'), planId: z.number().int().min(0) }),
+  /** Confirm your plan; the round resolves when every player is ready. */
+  z.object({ type: z.literal('ready') }),
+  /** Vote for the next room (node id) or an event approach (+ who attempts it). */
+  z.object({
+    type: z.literal('vote'),
+    optionId: z.string().max(64),
+    testerId: z.uuid().optional(),
+  }),
+  /** Leave a finished room (cleared combat, event result, campsite, loot) for the map. */
+  z.object({ type: z.literal('continue') }),
   /** Leave the Rift. Counts as a defeat (equipment loses quality). */
   z.object({ type: z.literal('abandon') }),
 ]);
 export type CombatAction = z.infer<typeof combatActionSchema>;
+export type PlanActionInput = Extract<CombatAction, { type: 'plan' }>;
 
 export const runActionRequestSchema = z.object({
   characterId: z.uuid(),

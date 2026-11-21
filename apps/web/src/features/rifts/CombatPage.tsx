@@ -1,82 +1,34 @@
-import { getAbility, validTargets, type CombatState } from '@realms/game-core';
-import { columnOfSlot, type CombatantView, type CombatView, type RunDto } from '@realms/shared';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router';
+import {
+  getAbility,
+  reservedBy,
+  targetColumns,
+  validTargets,
+  type CombatState,
+} from '@realms/game-core';
+import {
+  columnOfSlot,
+  type CombatAction,
+  type CombatantView,
+  type CombatView,
+  type RunDto,
+} from '@realms/shared';
+import { useCallback, useMemo, useState } from 'react';
 import { FormError } from '../../shared/ui/FormError';
-import { FullPageMessage } from '../../shared/ui/FullPageMessage';
-import { useActiveCharacter } from '../characters/active-character';
-import { useRun, useRunAction } from './api';
+import { CharacterToken } from '../characters/CharacterToken';
+import { AbilityBar } from './AbilityBar';
+import { AbilityIcon } from './AbilityIcon';
+import { CombatStage } from './CombatStage';
 import { describeLog } from './combat-text';
 import './combat.css';
-import { AbilityBar } from './AbilityBar';
-import { CombatStage } from './CombatStage';
-
-/** Seconds left on the current turn, refreshed every 250 ms. */
-function useCountdown(deadline: string | null): number | null {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!deadline) return;
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [deadline]);
-  return deadline ? Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000)) : null;
-}
-
-function EndOverlay({ run }: { run: RunDto }) {
-  const victory = run.status === 'victory';
-  return (
-    <div className="combat-overlay">
-      <div className="panel stack end-card" data-testid="run-result">
-        <h2 style={{ color: victory ? 'var(--accent)' : 'var(--danger)' }}>
-          {victory ? 'Victory' : run.status === 'abandoned' ? 'You fled the Rift' : 'Defeat'}
-        </h2>
-        {run.rewards && (
-          <div>
-            <p style={{ margin: 0 }}>
-              Reputation <strong>+{run.rewards.reputation}</strong>
-            </p>
-            {run.rewards.items.map((i) => (
-              <p key={i.id} style={{ margin: '0.25rem 0 0' }}>
-                Loot: <strong>{i.name}</strong>
-              </p>
-            ))}
-          </div>
-        )}
-        {run.penalty && (
-          <div>
-            <p className="muted" style={{ margin: 0 }}>
-              Your equipment was damaged:
-            </p>
-            {run.penalty.damaged.map((d) => (
-              <p
-                key={d.id}
-                style={{ margin: '0.25rem 0 0', color: d.broken ? 'var(--danger)' : undefined }}
-              >
-                {d.name}: quality {d.quality}
-                {d.broken ? ' — broken!' : ''}
-              </p>
-            ))}
-          </div>
-        )}
-        <div className="row" style={{ justifyContent: 'center' }}>
-          <Link className="btn" to="/rifts">
-            Back to Rifts
-          </Link>
-          <Link className="btn btn-primary" to="/home">
-            Return home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { EndOverlay } from './EndOverlay';
+import type { useRunAction } from './api';
 
 /**
  * Keeps the screen in step with the canvas replay. Computed during render
  * (not in an effect), so new results never flash up before they are played:
  * - `pending`: some log entries have not finished playing yet;
  * - `logUpTo`: the text log shows entries up to this seq;
- * - `enemiesActing`: the replay includes enemy actions (controls wait).
+ * - `resolving`: the replay includes actions (controls wait for it).
  */
 function useReplayState(combat: CombatView | undefined) {
   const [played, setPlayed] = useState<number | null>(null);
@@ -90,56 +42,61 @@ function useReplayState(combat: CombatView | undefined) {
   const maxSeq = log.length ? log[log.length - 1]!.seq : 0;
   const pending = played !== null && maxSeq > played;
   const logUpTo = pending ? Math.max(played, progress ?? played) : Infinity;
-  let enemiesActing = false;
-  if (pending && combat) {
-    const enemyIds = new Set(
-      combat.combatants.filter((c) => c.side === 'enemies').map((c) => c.id),
-    );
-    enemiesActing = log.some((e) => e.seq > played && e.t === 'ability' && enemyIds.has(e.actorId));
-  }
-  return { pending, logUpTo, enemiesActing, onProgress, onCaughtUp };
+  const resolving = pending && log.some((e) => e.seq > played! && e.t === 'ability');
+  return { pending, logUpTo, resolving, onProgress, onCaughtUp };
 }
 
-export function CombatPage() {
-  const { runId = '' } = useParams();
-  const characterId = useActiveCharacter((s) => s.characterId);
-  const run = useRun(runId, characterId);
-  const action = useRunAction(runId, characterId);
+type Mutation = ReturnType<typeof useRunAction>;
+
+/**
+ * Combat room (combat spec, request #31). Layout follows the owner's
+ * reference: planned actions on the left (portrait → action → order), round
+ * and initiative on top, enemy intents on the right, the battlefield in the
+ * middle, the character panel (HP, Mana, Focus) bottom-left and the action
+ * bar bottom-right.
+ */
+export function CombatScreen({
+  run,
+  characterId,
+  action,
+  secondsLeft,
+}: {
+  run: RunDto;
+  characterId: string;
+  action: Mutation;
+  secondsLeft: number | null;
+}) {
+  const combat = run.combat!;
   const [selected, setSelected] = useState<string | null>(null);
-  // While the canvas replays the last actions (e.g. the enemy phase), hold the controls.
-  const replay = useReplayState(run.data?.combat);
-  const secondsLeft = useCountdown(run.data?.status === 'active' ? run.data.turnDeadline : null);
-
-  // When the turn timer runs out, ask the server (it applies the timeout).
-  useEffect(() => {
-    if (secondsLeft === 0) void run.refetch();
-  }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const combat = run.data?.combat;
-  const myId = characterId ? `p:${characterId}` : '';
-  const me = combat?.combatants.find((c) => c.id === myId);
-  const myTurn = !replay.enemiesActing && combat?.phase === 'party' && combat.activeId === myId;
+  const replay = useReplayState(combat);
+  const myId = `p:${characterId}`;
+  const me = combat.combatants.find((c) => c.id === myId);
+  const state = combat as unknown as CombatState;
+  const reserved = me ? reservedBy(state, myId) : { focus: 0, mana: 0 };
+  const isReady = combat.ready.includes(myId);
+  const canPlan =
+    !replay.resolving &&
+    run.status === 'active' &&
+    combat.phase === 'planning' &&
+    !!me &&
+    !me.downed &&
+    !me.stunned &&
+    !isReady;
   const ability = selected ? getAbility(selected) : undefined;
 
   const { targetIds, swapSlots } = useMemo(() => {
     const none = { targetIds: new Set<string>(), swapSlots: null as Set<number> | null };
-    if (!combat || !me || !ability || !myTurn) return none;
+    if (!me || !ability || !canPlan) return none;
     if (ability.effects.some((e) => e.kind === 'swap'))
       return {
         targetIds: new Set<string>(),
         swapSlots: new Set([0, 1, 2, 3, 4, 5].filter((s) => s !== me.slot)),
       };
-    const t = validTargets(combat as unknown as CombatState, me, ability);
+    const t = validTargets(state, me, ability);
     return { targetIds: new Set(t.map((u) => u.id)), swapSlots: null };
-  }, [combat, me, ability, myTurn]);
+  }, [state, me, ability, canPlan]);
 
-  if (!characterId) return <Navigate to="/characters" replace />;
-  if (run.isPending) return <FullPageMessage>Opening the Rift…</FullPageMessage>;
-  if (run.isError || !run.data || !combat)
-    return <FullPageMessage spinner={false}>Rift run not found.</FullPageMessage>;
-  const data = run.data;
-
-  const send = (a: Parameters<typeof action.mutate>[0]) => {
+  const send = (a: CombatAction) => {
     setSelected(null);
     action.mutate(a);
   };
@@ -147,62 +104,69 @@ export function CombatPage() {
   const pick = (abilityId: string) => {
     const a = getAbility(abilityId)!;
     if (!me) return;
-    // Abilities with nothing to choose fire immediately.
+    // Actions with nothing to choose are planned at once.
     if (a.targeting.area === 'all' || a.targeting.side === 'self')
-      return send({ type: 'ability', abilityId });
-    if (!a.effects.some((e) => e.kind === 'swap')) {
-      const t = validTargets(combat as unknown as CombatState, me, a);
-      if (
-        a.targeting.area === 'column' &&
-        t.length > 0 &&
-        new Set(t.map((u) => Math.floor(u.slot / 2))).size === 1
-      )
-        return send({ type: 'ability', abilityId, targetId: t[0]!.id });
+      return send({ type: 'plan', abilityId });
+    if (!a.effects.some((e) => e.kind === 'swap') && a.targeting.area === 'column') {
+      const cols = targetColumns(state, me, a);
+      if (cols.length === 1)
+        return send({ type: 'plan', abilityId, targetColumn: cols[0]!.column });
     }
     setSelected(selected === abilityId ? null : abilityId);
   };
 
   // D41: attacks aim at a column (both units in it); support picks one ally.
   const columnMode = ability?.targeting.area === 'column';
-  const targetAction = (abilityId: string, u: CombatantView) =>
+  const targetAction = (abilityId: string, u: CombatantView): CombatAction =>
     getAbility(abilityId)?.targeting.area === 'column'
-      ? ({ type: 'ability', abilityId, targetColumn: columnOfSlot(u.slot) } as const)
-      : ({ type: 'ability', abilityId, targetId: u.id } as const);
+      ? { type: 'plan', abilityId, targetColumn: columnOfSlot(u.slot) }
+      : { type: 'plan', abilityId, targetId: u.id };
 
-  const room = data.rooms[data.roomIndex];
-  const byName = (id: string) => combat.combatants.find((c) => c.id === id)?.name ?? '';
+  const byId = (id: string) => combat.combatants.find((c) => c.id === id);
   const lines = combat.log
     .filter((e) => e.seq <= replay.logUpTo)
     .map((e) => ({ seq: e.seq, text: describeLog(e, combat) }))
     .filter((l): l is { seq: number; text: string } => !!l.text)
     .slice(-40)
     .reverse();
+  const boss = run.roomType === 'boss';
+  const enemies = combat.combatants.filter((c) => c.side === 'enemies');
+  const initiative = combat.initiative;
+  const waitingFor = combat.combatants.filter(
+    (c) => c.side === 'party' && !c.downed && !c.stunned && !c.left && !combat.ready.includes(c.id),
+  );
 
   return (
     <div className="combat">
       <header className="combat-top">
-        <span className="title">{data.riftName}</span>
+        <span className="title">{run.riftName}</span>
         <span className="muted">
-          Room {data.roomIndex + 1}/{data.rooms.length} · {room?.name}
-          {room?.isBoss ? ' · Boss' : ''}
-        </span>
-        <span className="mono muted">Round {combat.round}</span>
-        <span className="turn-order">
-          {combat.turnOrder.map((id) => (
-            <span key={id} data-active={id === combat.activeId}>
-              {byName(id)}
-            </span>
-          ))}
-          <span data-active={combat.phase === 'enemies'}>Enemies</span>
+          {boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room{' '}
+          {run.roomsVisited}
         </span>
         <span className="spacer" />
-        {data.status === 'active' && (
+        <span className="round-banner" data-testid="round">
+          Round {combat.round}
+        </span>
+        {initiative && (
+          <span className="initiative" title="Team initiative: best roll + Agility of each side">
+            Initiative {initiative.party} vs {initiative.enemies} ·{' '}
+            <strong>{initiative.first === 'party' ? 'Your team starts' : 'Enemies start'}</strong>
+          </span>
+        )}
+        <span className="spacer" />
+        {secondsLeft !== null && combat.phase === 'planning' && (
+          <span className="timer" data-low={secondsLeft <= 10}>
+            {secondsLeft}s
+          </span>
+        )}
+        {run.status === 'active' && (
           <button
             className="btn btn-ghost btn-sm btn-danger"
             onClick={() => {
               if (
                 confirm(
-                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps fighting.',
+                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps going.',
                 )
               )
                 send({ type: 'abandon' });
@@ -213,57 +177,145 @@ export function CombatPage() {
         )}
       </header>
 
-      <CombatStage
-        onProgress={replay.onProgress}
-        onCaughtUp={replay.onCaughtUp}
-        combat={combat}
-        boss={room?.isBoss ?? false}
-        targetIds={targetIds}
-        swapSlots={swapSlots}
-        columnMode={columnMode}
-        onTarget={(u) => selected && send(targetAction(selected, u))}
-        onSlot={(slot) =>
-          selected && send({ type: 'ability', abilityId: selected, targetSlot: slot })
-        }
-      >
-        {!replay.pending && data.status === 'active' && combat.phase === 'room_cleared' && (
-          <div className="combat-overlay">
-            <div className="panel stack end-card">
-              <h2>Room cleared</h2>
-              <p className="muted" style={{ margin: 0 }}>
-                Your HP and Mana carry over. Fallen allies get back up with 1 HP.
-              </p>
-              <button
-                className="btn btn-primary"
-                onClick={() => send({ type: 'advance' })}
-                disabled={action.isPending}
+      <div className="combat-middle">
+        <aside className="plan-queue" aria-label="Planned actions">
+          <h3>Plan</h3>
+          <ol data-testid="plan">
+            {combat.plan.map((p, i) => {
+              const actor = byId(p.actorId);
+              const a = getAbility(p.abilityId);
+              const mine = p.actorId === myId;
+              return (
+                <li key={p.id} data-mine={mine}>
+                  {actor?.appearance ? (
+                    <CharacterToken appearance={actor.appearance} size={30} title={actor.name} />
+                  ) : null}
+                  <AbilityIcon abilityId={p.abilityId} className="plan-icon" />
+                  <span className="plan-text">
+                    {a?.name}
+                    {p.targetColumn ? ` → ${p.targetColumn}` : ''}
+                    {p.targetId && p.targetId !== p.actorId
+                      ? ` → ${byId(p.targetId)?.name ?? ''}`
+                      : ''}
+                    {p.targetSlot !== undefined ? ` → slot ${p.targetSlot + 1}` : ''}
+                  </span>
+                  <span className="plan-order">{i + 1}</span>
+                  {mine && canPlan && (
+                    <button
+                      className="plan-remove"
+                      aria-label={`Remove ${a?.name ?? 'action'}`}
+                      onClick={() => send({ type: 'unplan', planId: p.id })}
+                    >
+                      ×
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+          {combat.plan.length === 0 && <p className="muted small">No actions planned yet.</p>}
+          <ol className="combat-log" data-testid="combat-log">
+            {lines.map((l) => (
+              <li key={l.seq}>{l.text}</li>
+            ))}
+          </ol>
+        </aside>
+
+        <CombatStage
+          onProgress={replay.onProgress}
+          onCaughtUp={replay.onCaughtUp}
+          combat={combat}
+          boss={boss}
+          targetIds={targetIds}
+          swapSlots={swapSlots}
+          columnMode={columnMode}
+          onTarget={(u) => selected && send(targetAction(selected, u))}
+          onSlot={(slot) =>
+            selected && send({ type: 'plan', abilityId: selected, targetSlot: slot })
+          }
+        >
+          {!replay.pending && run.status === 'active' && combat.phase === 'room_cleared' && (
+            <div className="combat-overlay">
+              <div className="panel stack end-card">
+                <h2>Room cleared</h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  Your HP and Mana carry over. Fallen allies get back up with 1 HP. No drops here —
+                  the main rewards wait at the boss.
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => send({ type: 'continue' })}
+                  disabled={action.isPending}
+                >
+                  Back to the map
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
+          {(!replay.pending || run.status === 'abandoned') && run.status !== 'active' && (
+            <EndOverlay run={run} />
+          )}
+        </CombatStage>
+
+        <aside className="enemy-intents" aria-label="Enemy intents">
+          <h3>Enemies</h3>
+          {enemies.map((e) => (
+            <div key={e.id} className="intent-row" data-downed={e.downed}>
+              <strong>{e.name}</strong>
+              <span className="muted small">
+                {e.hp}/{e.maxHp} HP{e.block ? ` · ${e.block} Block` : ''}
+              </span>
+              <span className="intent-icons">
+                {e.intents.map((it, i) => (
+                  <span key={i} title={getAbility(it.abilityId)?.name}>
+                    <AbilityIcon abilityId={it.abilityId} className="intent-icon" />
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </aside>
+      </div>
+
+      <footer className="combat-bottom">
+        {me && (
+          <div className="me-panel">
+            {me.appearance && <CharacterToken appearance={me.appearance} size={64} />}
+            <div className="me-bars">
+              <div className="bar hp">
+                <span style={{ width: `${(me.hp / Math.max(1, me.maxHp)) * 100}%` }} />
+                <em>
+                  HP {me.hp} / {me.maxHp}
+                </em>
+              </div>
+              <div className="bar mana">
+                <span style={{ width: `${(me.mana / Math.max(1, me.maxMana)) * 100}%` }} />
+                <em>
+                  Mana {me.mana} / {me.maxMana}
+                </em>
+              </div>
+              <div
+                className="focus-pips"
+                title={`+${me.focusPerRound} Focus every round (Precision)`}
               >
-                Continue to {data.rooms[data.roomIndex + 1]?.name ?? 'the next room'}
-              </button>
+                {Array.from({ length: Math.max(me.focus, 1) }, (_, i) => (
+                  <i key={i} data-spent={i >= me.focus - reserved.focus} />
+                ))}
+                <em>
+                  Focus <strong data-testid="my-focus">{me.focus - reserved.focus}</strong>/
+                  {me.focus} · +{me.focusPerRound}/round
+                </em>
+              </div>
             </div>
           </div>
         )}
-        {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
-        {(!replay.pending || data.status === 'abandoned') && data.status !== 'active' && (
-          <EndOverlay run={data} />
-        )}
-      </CombatStage>
-
-      <footer className="combat-bottom">
         <div className="action-bar">
           <FormError error={action.error} />
-          {myTurn && me ? (
+          {canPlan && me ? (
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-                <strong className="your-turn">Your turn</strong>
-                <span className="muted">
-                  Focus <strong data-testid="my-focus">{me.focus}</strong> · Mana {me.mana}
-                </span>
-                {secondsLeft !== null && (
-                  <span className="timer" data-low={secondsLeft <= 10}>
-                    {secondsLeft}s
-                  </span>
-                )}
+                <strong className="your-turn">Plan your actions</strong>
                 <span className="spacer" />
                 {selected && (
                   <span className="muted">
@@ -274,8 +326,8 @@ export function CombatPage() {
               <div className="abilities">
                 <AbilityBar
                   abilityIds={me.abilityIds}
-                  focus={me.focus}
-                  mana={me.mana}
+                  focus={me.focus - reserved.focus}
+                  mana={me.mana - reserved.mana}
                   selected={selected}
                   disabled={action.isPending}
                   onPick={pick}
@@ -283,32 +335,29 @@ export function CombatPage() {
                 />
                 <button
                   className="btn btn-primary end-turn"
-                  onClick={() => send({ type: 'end_turn' })}
+                  onClick={() => send({ type: 'ready' })}
                   disabled={action.isPending}
                 >
-                  End turn
+                  Ready
                 </button>
               </div>
             </>
           ) : (
             <span className="muted" data-testid="waiting">
-              {data.status !== 'active'
+              {run.status !== 'active'
                 ? ''
-                : combat.phase === 'enemies' || replay.enemiesActing
-                  ? 'The enemies are acting…'
+                : replay.resolving
+                  ? 'Resolving the round…'
                   : combat.phase === 'room_cleared'
                     ? 'Room cleared.'
-                    : combat.activeId
-                      ? `Waiting for ${byName(combat.activeId)}…`
-                      : 'Waiting…'}
+                    : me?.stunned
+                      ? 'You are stunned this round.'
+                      : waitingFor.length
+                        ? `Waiting for ${waitingFor.map((w) => w.name).join(', ')}…`
+                        : 'Waiting…'}
             </span>
           )}
         </div>
-        <ol className="combat-log" data-testid="combat-log">
-          {lines.map((l) => (
-            <li key={l.seq}>{l.text}</li>
-          ))}
-        </ol>
       </footer>
     </div>
   );

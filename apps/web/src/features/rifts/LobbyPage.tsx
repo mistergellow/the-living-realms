@@ -101,7 +101,7 @@ export function LobbyPage() {
           <h1>{l.riftName}</h1>
           <span className="muted">
             {l.visibility === 'public' ? 'Public lobby' : 'Private lobby (invite only)'} ·{' '}
-            {l.members.length}/{l.maxMembers} players · {l.rooms.length} rooms
+            {l.members.length}/{l.maxMembers} players · {l.depth} rooms to the boss
           </span>
         </div>
         <span className="spacer" />

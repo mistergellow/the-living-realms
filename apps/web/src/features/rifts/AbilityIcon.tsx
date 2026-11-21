@@ -61,6 +61,9 @@ const GLYPH_BY_ABILITY: Record<string, Glyph> = {
   shield_wall: 'shield',
   guard_ally: 'shieldPlus',
   swap_position: 'swap',
+  block: 'shield',
+  thrust: 'sword',
+  crush: 'fist',
   unarmed_strike: 'fist',
 };
 

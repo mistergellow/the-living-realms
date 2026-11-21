@@ -11,7 +11,10 @@ export interface EnemyDef {
   maxHp: number;
   armor: number;
   magicResist: number;
+  /** Agility-like value added to the initiative roll. */
   initiative: number;
+  /** Precision: Focus per round, same rule as players (default 5 → 3 Focus). */
+  precision?: number;
   dodgeChance: number;
   critChance: number;
   power: number;
@@ -80,12 +83,25 @@ export const ENEMIES = {
     dodgeChance: 0,
     critChance: 5,
     power: 1,
+    precision: 7,
     abilities: ['warden_slam', 'warden_pulse', 'warden_seal'],
     isBoss: true,
   }),
 } satisfies Record<string, EnemyDef>;
 
 export type EnemyId = keyof typeof ENEMIES;
+
+/**
+ * Elite Rooms (request #31): the same enemies, significantly stronger.
+ * PROVISIONAL multipliers.
+ */
+export const ELITE_RULES = {
+  namePrefix: 'Elite',
+  hpMultiplier: 1.6,
+  powerMultiplier: 1.3,
+  /** Extra Precision (more Focus per round). */
+  precisionBonus: 2,
+} as const;
 
 export function getEnemy(id: string): EnemyDef | undefined {
   return (ENEMIES as Record<string, EnemyDef>)[id];

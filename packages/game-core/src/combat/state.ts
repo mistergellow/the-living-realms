@@ -5,23 +5,32 @@ import type {
   CombatLogEntry,
   CombatView,
   DerivedStatsDto,
+  StatusView,
 } from '@realms/shared';
-import { getEnemy, type EnemyDef } from '../content/enemies.js';
+import { ELITE_RULES, getEnemy, type EnemyDef } from '../content/enemies.js';
 import type { RiftRoomDef } from '../content/rifts.js';
-import { reductionFromRating } from '../stats.js';
+import { focusPerRound, reductionFromRating } from '../stats.js';
 
 /*
- * Combat rules (decisions D13–D16, D24, D27–D29, D33–D35). PROVISIONAL NUMBERS.
+ * Combat rules (decisions D13–D16, D24, D27–D29, D33–D35 and the combat spec
+ * of request #31). PROVISIONAL NUMBERS, configurable here:
+ * - Focus per round comes from Precision (`FOCUS_RULES` in stats.ts, min 3).
+ * - Unspent Focus carries over up to `focusMax` (owner, request #31).
+ * - Initiative = roll 1..initiativeDie + Agility; a team uses its best result.
  */
 export const COMBAT_RULES = {
-  focusPerTurn: 3,
-  /** Unspent Focus carries over (D24) up to this cap (A16). */
-  focusMax: 6,
+  /** Unspent Focus carries over (D24, confirmed in request #31) up to this cap (A16). */
+  focusMax: 8,
+  /** Initiative roll: 1..initiativeDie, plus Agility (combat spec). */
+  initiativeDie: 10,
+  /** Seconds to plan a round (D16). */
   turnSeconds: 60,
   reviveHp: 1,
   /** Mark: target takes +25% damage. Weaken: attacker deals −25%. */
   markMultiplier: 1.25,
   weakenMultiplier: 0.75,
+  /** Safety net: most actions one unit can plan in a round. */
+  maxActionsPerRound: 8,
   maxLog: 250,
 } as const;
 
@@ -32,6 +41,9 @@ export interface CombatState extends Omit<CombatView, 'log'> {
   logSeq: number;
   log: CombatView['log'];
   tiebreak: Record<string, number>;
+  /** This round's individual initiative results (roll + Agility). */
+  initiativeRolls: Record<string, number>;
+  planSeq: number;
   isLastRoom: boolean;
 }
 
@@ -39,18 +51,26 @@ export interface PartyMemberInput {
   characterId: string;
   name: string;
   appearance: CharacterAppearance;
+  /** Total attributes (base + equipment): combat uses them. */
   attributes: Attributes;
   stats: DerivedStatsDto;
   abilityIds: string[];
+  /** Weapon upgrade multipliers per ability id. */
+  abilityMultipliers?: Record<string, number>;
   hp: number;
   mana: number;
   slot: number;
+  /** Statuses carried in from exploration (e.g. an event debuff). */
+  statuses?: StatusView[];
+  /** Exploration boons for the first round. */
+  firstRoundFocus?: number;
+  firstRoundBlock?: number;
 }
 
 export { columnOfSlot } from '@realms/shared';
 export const partyId = (characterId: string) => `p:${characterId}`;
 
-function enemyStats(e: EnemyDef): DerivedStatsDto {
+function enemyStats(e: EnemyDef, precision: number): DerivedStatsDto {
   return {
     maxHp: e.maxHp,
     maxMana: 0,
@@ -66,6 +86,7 @@ function enemyStats(e: EnemyDef): DerivedStatsDto {
     healingReceived: 0,
     manaRegen: 0,
     effectPotency: 0,
+    focusPerRound: focusPerRound(precision),
   };
 }
 
@@ -84,11 +105,14 @@ export function partyCombatant(p: PartyMemberInput): Combatant {
     mana: Math.min(p.mana, p.stats.maxMana),
     maxMana: p.stats.maxMana,
     focus: 0,
+    focusPerRound: p.stats.focusPerRound,
     left: false,
     block: 0,
+    stunned: false,
     statuses: [],
     attributes: p.attributes,
     power: 1,
+    abilityMultipliers: p.abilityMultipliers ?? {},
     intents: [],
     downed: p.hp <= 0,
     isBoss: false,
@@ -98,32 +122,38 @@ export function partyCombatant(p: PartyMemberInput): Combatant {
 }
 
 export function enemyCombatants(room: RiftRoomDef, roomIndex: number): Combatant[] {
-  return room.enemies.map(({ enemy, slot }, i) => {
+  return room.enemies.map(({ enemy, slot, elite }, i) => {
     const def = getEnemy(enemy)!;
+    const precision = (def.precision ?? 5) + (elite ? ELITE_RULES.precisionBonus : 0);
+    const maxHp = Math.round(def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1));
+    const stats = { ...enemyStats(def, precision), maxHp };
     return {
       id: `e:${roomIndex}:${i}`,
       side: 'enemies',
       kind: 'enemy',
-      name: def.name,
+      name: elite ? `${ELITE_RULES.namePrefix} ${def.name}` : def.name,
       characterId: null,
       appearance: null,
       enemyDefId: def.id,
       slot,
-      hp: def.maxHp,
-      maxHp: def.maxHp,
+      hp: maxHp,
+      maxHp,
       mana: 0,
       maxMana: 0,
       focus: 0,
+      focusPerRound: stats.focusPerRound,
       left: false,
       block: 0,
+      stunned: false,
       statuses: [],
       attributes: null,
-      power: def.power,
+      power: def.power * (elite ? ELITE_RULES.powerMultiplier : 1),
+      abilityMultipliers: {},
       intents: [],
       downed: false,
       isBoss: !!def.isBoss,
       abilityIds: def.abilities,
-      stats: enemyStats(def),
+      stats,
     };
   });
 }
@@ -138,8 +168,9 @@ export function toCombatView(state: CombatState): CombatView {
   return {
     round: state.round,
     phase: state.phase,
-    activeId: state.activeId,
-    turnOrder: state.turnOrder,
+    initiative: state.initiative,
+    plan: state.plan,
+    ready: state.ready,
     combatants: state.combatants,
     outcome: state.outcome,
     log: state.log,

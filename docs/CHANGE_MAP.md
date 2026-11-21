@@ -48,36 +48,38 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `apps/server/test/characters.test.ts`, `helpers.ts` (`createCharacter`), `game-core/test/character.test.ts`, `apps/web/test/world-state.test.ts` (fixture `self`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → characters, `DECISIONS.md` ADR-015
 
-## Atributos (Might, Agility, Precision, Vitality, Arcana, Spirit)
+## Atributos (Might, Agility, Precision, Endurance, Intellect, Will)
 
 - Contrato: `packages/shared/src/api.ts` (`ATTRIBUTE_KEYS`, `attributesSchema`, `createCharacterRequestSchema.attributes`, `allocateAttributesRequestSchema`, `CharacterSheetDto.attributePoints`)
 - Regras: `packages/game-core/src/attributes.ts` (`ATTRIBUTE_RULES`: base 5, 12 pontos, máx. 10; `validateCreationAttributes`, `validateAllocation`, nomes e resumos)
-- BD: `characters.attr_might … attr_spirit`, `characters.attribute_points` + migrações 0004–0006
+- BD: `characters.attr_might … attr_will`, `characters.attribute_points` + migrações 0004–0006 e 0008 (rename Vitality/Arcana/Spirit → Endurance/Intellect/Will)
 - Servidor: `characters.service.ts` (criação, pontos por gastar), `sheet.service.ts` (`baseAttributesOf`, `allocate`), rota `POST /api/characters/:id/attributes`
 - Web: `AttributePicker.tsx` (criação e distribuição posterior), `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (`AllocatePanel`)
-- Combate: `CombatantView.attributes` → `scalingMultiplier` no motor
+- Combate: `CombatantView.attributes` (totais) → `scalingMultiplier` no motor; Precision → Focus por ronda (`focusPerRound`), Agility → iniciativa
+- **Base stats (exploração):** `baseAttributesOf` (`sheet.service.ts`) → `BaseAttributes` (`game-core/src/rift/tests.ts`); ver "Regra dos BASE STATS"
+- Simulador: `scripts/simulate-balance.ts` (`BUILDS`)
 - Testes: `game-core/test/character-system.test.ts`, `apps/server/test/character-sheet.test.ts`, `helpers.ts` (`VALID_ATTRIBUTES`), `e2e` (botões "Increase …")
 - **Atributo novo/renomeado:** todos os ficheiros acima + `scaling` das habilidades em `content/abilities.ts` + `describeScaling` + migração de dados
 
 ## Estatísticas derivadas (HP, Mana, defesa, iniciativa, esquiva, crítico, poderes)
 
-- Fórmulas (provisórias, num só sítio): `packages/game-core/src/stats.ts` (`STAT_RULES`, `computeStats`, `deriveStats`, `reductionFromRating` = curva de armadura/resistência, `scalingMultiplier`)
+- Fórmulas (provisórias, num só sítio): `packages/game-core/src/stats.ts` (`STAT_RULES`, `FOCUS_RULES`/`focusPerRound`, `computeStats`, `deriveStats`, `reductionFromRating` = curva de armadura/resistência, `scalingMultiplier`)
 - Contrato: `DerivedStatsDto` em `packages/shared/src/api.ts`
 - Web: `CharacterSheetPage.tsx` (tabela "Combat stats" e números do herói), `CharacterCreatePage.tsx` (pré-visualização)
-- Inimigos: `enemyStats()` em `combat/state.ts` (têm de preencher todos os campos de `DerivedStatsDto`)
+- Inimigos: `enemyStats()` em `combat/state.ts` (têm de preencher todos os campos de `DerivedStatsDto`, incluindo `focusPerRound`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts` (valores de HP/defesa), `e2e` (`stat-hp`)
 - Futuro: o motor de combate (M2) usa `computeStats`
 
 ## Itens, equipamento e qualidade/durabilidade
 
-- Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `WeaponType`, `STARTER_WEAPONS`, `STARTER_OFFHANDS`, `STARTER_ARMOR`; `armor`/`magicResist` são ratings)
+- Conteúdo (dados): `packages/game-core/src/content/items.ts` (`ITEMS`, `STARTER_WEAPONS`, `STARTER_OFFHANDS`, `STARTER_ARMOR`; `armor`/`magicResist` são ratings); armas → ver "Armas (catálogo)"
 - Regras: `packages/game-core/src/equipment.ts` (`planEquip`, duas mãos, `isBroken`, `qualityAfterDefeat`, `DEFEAT_QUALITY_LOSS`)
 - Contrato: `EQUIP_SLOTS`, `ItemDto`, `equipRequestSchema`, `unequipRequestSchema` (`api.ts`); erro `INVALID_EQUIPMENT` (`errors.ts`)
-- BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade); migração de dados `0002_starter_kit_for_existing_characters.sql`
+- BD: tabela `items` (índice único de slot por personagem, CHECK de qualidade, `upgrade_level`/`specials`/`rune_slots`); migração de dados `0002_starter_kit_for_existing_characters.sql`
 - Servidor: `modules/characters/items.repository.ts`, `sheet.service.ts` (`equip`, `unequip`, `toItemDto`), `characters.routes.ts` (`/:id/equip`, `/:id/unequip`), kit inicial em `characters.service.ts`
 - Web: `CharacterSheetPage.tsx` (Equipment, Inventory, `QualityBar`), `api.ts` (`useEquipment`)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`, `e2e`
-- **Item novo:** acrescentar em `content/items.ts`; se for arma, ligar as habilidades em `content/abilities.ts` e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts`; se for de kit inicial, rever a migração de dados para personagens antigos; se puder cair de Rifts, `content/rifts.ts` (`loot`)
+- **Item novo:** acrescentar em `content/items.ts`; se for arma, o tipo tem de existir em `content/weapons.ts` (a 1.ª habilidade é o ataque básico do tipo) e o desenho em `features/avatar/CharacterAvatar.tsx` (`Weapon`/`Offhand`) + `weapon-art.ts` (`MAIN`, `artFromAbilities`); se for de kit inicial, rever a migração de dados para personagens antigos e `startingSlot`/`BUILDS` do simulador; se puder cair de Rifts, `content/rifts.ts` (`rewards.loot`, `lootRoom`, `secretRoom`)
 - **Espaço de equipamento novo:** `EQUIP_SLOTS` (shared), `SLOT_LABELS` (`CharacterSheetPage.tsx`), itens que o usam
 
 ## Habilidades (armas, skills aprendidas, universais)
@@ -231,11 +233,13 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Regras e números: `packages/game-core/src/combat/state.ts` (`COMBAT_RULES`: Focus por turno/máximo, crítico, 60 s, reviver com 1 HP)
 - Motor: `packages/game-core/src/combat/engine.ts` (`createEncounter`, `applyAction`, `validTargets`, IA dos inimigos, `enterNextRoom`, `timeoutTurn`), `rng.ts` (aleatoriedade determinística)
-- Contrato: `packages/shared/src/combat.ts` (`CombatView`, `CombatantView`, `CombatLogEntry`, `combatActionSchema`)
-- Ecrã: `apps/web/src/features/rifts/CombatPage.tsx` (controlos, `useReplayState`: registo/controlos/resultados esperam pela animação), `CombatStage.tsx` (canvas + botões DOM por cima), `combat-scene.ts` (desenho e animações em PixiJS, `stepMs`), `combat-timeline.ts` (log → passos de animação), `combat-layout.ts` (posição de cada slot no ecrã), `combat.css`, `combat-text.ts` (texto do log)
+- Ronda (D47–D50): `startRound` (Block reset, estados, Focus, `rollInitiative`), `planAction`/`unplanAction`/`setReady`/`timeoutTurn`, `resolveRound` (alternância), `resolvePlanned`/`resolveIntent`, `absorbWithBlock`, `reservedBy` (Focus/Mana reservados)
+- Números: `COMBAT_RULES` (state.ts), `FOCUS_RULES` (stats.ts), `BASIC_ACTIONS` (abilities.ts: Block e mudar de posição), `WEAPON_RULES` (weapons.ts)
+- Contrato: `packages/shared/src/combat.ts` (`CombatView` com `plan`/`ready`/`initiative`, `CombatantView` com `focusPerRound`/`stunned`/`abilityMultipliers`, `PlannedActionView`, `CombatLogEntry` (`initiative`, `resolve`, `skipped`), `combatActionSchema`: `plan`/`unplan`/`ready`)
+- Ecrã: `apps/web/src/features/rifts/CombatPage.tsx` (`CombatScreen`: fila do plano à esquerda, ronda/iniciativa em cima, intenções à direita, painel do personagem e barra em baixo; `useReplayState`), `RunPage.tsx` (escolhe combate ou exploração), `EndOverlay.tsx`, `CombatStage.tsx` (canvas + botões DOM por cima), `combat-scene.ts` (desenho e animações em PixiJS, `stepMs`), `combat-timeline.ts` (log → passos de animação), `combat-layout.ts` (posição de cada slot no ecrã), `combat.css`, `combat-text.ts` (texto do log)
 - Testes: `game-core/test/combat.test.ts`, `apps/server/test/rifts.test.ts`, `apps/web/test/combat-render.test.ts`, `e2e` ("Rift combat")
 - **Entrada nova no log:** `CombatLogEntry` (shared) → engine → `combat-text.ts` → `combat-timeline.ts` (`FxEvent`, `buildTimeline`, `applyStep`) → `combat-scene.ts` (`applyEvents`) se tiver animação
-- **Ação nova:** `combatActionSchema` → `applyAction` (engine) ou `rifts.service.ts` (se for de corrida) → `CombatPage.tsx`
+- **Ação nova:** `combatActionSchema` → `planAction`/`resolvePlanned` (engine) ou `rift/run.ts` + `rifts.service.ts` (`act`) se for de corrida → `CombatPage.tsx`/`RunPage.tsx`
 - **Posições da formação (D38, 3 colunas × 2 linhas) mudarem:** `combat-layout.ts` (`place`) e o teste `combat-render.test.ts`
 - Equilíbrio: `pnpm sim` (`scripts/simulate-balance.ts`) depois de mudar números; metas em `docs/REQUESTS.md` (A23)
 
@@ -256,13 +260,13 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Rifts e corridas (runs)
 
-- Conteúdo: `packages/game-core/src/content/rifts.ts` (salas, posições dos inimigos, recompensas, loot)
-- BD: `rift_runs` (estado do combate em JSONB, `version`, `turn_deadline`), `rift_run_participants` (resultado por personagem)
+- Conteúdo: `packages/game-core/src/content/rifts.ts` (`MapTemplate`, encontros combat/elite/boss com posições, eventos, recompensas do boss, `lootRoom`, `secretRoom`) → ver "The Rift"
+- BD: `rift_runs` (`RunState` v2 em JSONB, `version`, `turn_deadline` = fim do voto/planeamento, `room_index` = salas visitadas), `rift_run_participants` (resultado por personagem)
 - Servidor: `apps/server/src/modules/rifts/` (`rifts.service.ts`: começar, agir, avançar, abandonar, temporizador, recompensas/penalização; `rifts.routes.ts`; `rifts.repository.ts`)
 - Bloqueios durante um Rift: `assertNotInRift` em `characters/sheet.service.ts` (equipar/desequipar) e `characters.service.ts` (apagar); erro `IN_RIFT`
 - Recompensas/penalização: `finish()` em `rifts.service.ts`; durabilidade em `game-core/equipment.ts` (`qualityAfterDefeat`)
-- Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`
-- Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `CombatPage.tsx`, `api.ts`); link "Rifts" em `WorldPage.tsx`; rotas em `router.tsx`
+- Eventos do mundo: `rift.entered`, `rift.completed`, `rift.failed`, `rift.left`, `rift.item_found`
+- Web: `apps/web/src/features/rifts/` (`RiftsPage.tsx`, `RunPage.tsx`, `CombatPage.tsx`, `RiftMap.tsx`, `api.ts`); `HomePage.tsx` (cartão "Inside…"), `LobbyPage.tsx` (`depth`); rotas em `router.tsx`
 - Testes: `apps/server/test/rifts.test.ts` (TRUNCATE em `helpers.ts` e `worker.test.ts` — **tabela nova = acrescentar lá**), `e2e`
 - Futuro: lobby (M3), entrada pelo mapa (Fase 4)
 
@@ -339,3 +343,37 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - `apps/web/src/features/rifts/AbilityBar.tsx` (slots, teclas 1–9, Esc, tooltip), `AbilityIcon.tsx` (ícones placeholder: `GLYPH_BY_ABILITY` e cor por tipo `abilitySchool`), estilos no fim de `combat.css`
 - **Habilidade nova:** acrescentar o ícone em `GLYPH_BY_ABILITY` (senão usa o ícone do tipo); o texto da tooltip vem de `describeEffects`/`describeTargeting`/`describeScaling` (`game-core/content/abilities.ts`)
 - Usada em `CombatPage.tsx`; e2e procura os botões pelo nome ("Slash", "Raise Shield")
+
+## The Rift — dungeon, mapa e salas (pedido #31)
+
+- Regras puras: `packages/game-core/src/rift/map.ts` (`MapTemplate`, `generateRiftMap`, `validateMap`, `attachSecret`, `allPaths`), `rift/run.ts` (`RunState` v2, `createRun`, `vote`/`resolveDecision`, `enterRoom`, `resolveEvent`, `combatAction`, `continueRun`, `leaveRun`, `timeoutRun`, `toMapDto` — **nunca enviar salas secretas escondidas**), `rift/tests.ts`
+- Dados: `content/rifts.ts` (`DEFAULT_MAP_TEMPLATE`, encontros, eventos permitidos, loot), `content/rooms.ts` (`ROOM_TYPE_INFO`, `EXPLORATION_RULES`: campsite, procura secreta, dado dos testes, tempo de voto; `CONDITIONS`), `content/events.ts` (`EVENTS`, efeitos `hp`/`mana`/`condition`/`removeDebuffs`/`item`/`revealSecret`), `content/enemies.ts` (`ELITE_RULES`)
+- Contrato: `packages/shared/src/combat.ts` (`ROOM_TYPES`, `RiftDto`, `MapDto`, `MapNodeDto`, `RunMemberDto`, `ConditionView`, `VoteView`, `EventView`, `TestRollView`, `RoomOutcomeView`, `RunPhase`, `RunDto`; ações `vote`/`continue`); `LobbyDto.depth` (`social.ts`)
+- Servidor: `modules/rifts/rifts.service.ts` (`createRun`, `act`, `catchUpTimers`, `grantItems`, `decisionKey`, `toRunDto`, `startingSlot`), `lobbies.service.ts` (líder do lobby = líder da corrida)
+- BD: `rift_runs.state` (`version: 2`); itens encontrados → `items.source` (`loot_room`, `secret_room`, `event`)
+- Web: `features/rifts/RunPage.tsx` (`ExplorationScreen`, painel do grupo, eventos com escolha de quem tenta e % de sucesso, resultado das salas), `RiftMap.tsx` (`ROOM_GLYPH`, `MapLegend`), `rift-map.css`
+- **Tipo de sala novo:** `ROOM_TYPES` (shared) → `ROOM_TYPE_INFO` (rooms.ts) → `enterRoom` (run.ts) → pesos em `MapTemplate.themes` → `ROOM_GLYPH` + cor em `rift-map.css` → testes
+- **Evento novo:** `content/events.ts` + id em `RIFTS.*.events`; **estado novo:** `CONDITIONS`
+- Testes: `game-core/test/rift.test.ts` (regras do mapa em 150 seeds, votos, campsite, loot, eventos, segredos escondidos), `apps/server/test/rifts.test.ts` (corrida completa até ao boss, loot), `lobbies.test.ts` (votos em grupo), `e2e` ("Rift: map, plan…")
+- Equilíbrio: `pnpm sim` joga corridas completas
+- Futuro: Dungeon Threat (ADR-035)
+
+## Regra dos BASE STATS (D44)
+
+- Fonte única dos atributos base: `baseAttributesOf` (`apps/server/src/modules/characters/sheet.service.ts`) → `asBaseAttributes` (`game-core/src/rift/tests.ts`)
+- Testes: `attributeTest`, `baseStat`, `testChance` (`rift/tests.ts`); `RunMember.baseAttributes` (run.ts), `searchForSecret`, `resolveEvent`
+- Contrato/ecrã: `RunMemberDto.baseAttributes`, `TestRollView.base`; `RunPage.tsx` mostra "(base)"
+- **Qualquer teste novo fora do combate** tem de usar `attributeTest`/`baseStat` (nunca `attributes` totais)
+
+## Armas (catálogo, pedido #31)
+
+- Catálogo: `packages/game-core/src/content/weapons.ts` (`WEAPON_TYPES`, `WEAPON_RULES`: pesos 60/40, upgrade por nível, máx. especiais/runas, custo do ataque básico; `weaponScaling`, `weaponDamage`, `upgradeMultiplier`, `normalizeWeaponInstance`, `weaponInfo`)
+- Ataques básicos: `basicAttack()` em `content/abilities.ts` (slash, chop, stab, thrust, crush, aimed_shot, staff_strike, wand_bolt, spark)
+- Itens: `content/items.ts` (`weaponType`, `twoHanded` tem de bater com `hands`); upgrades → `abilityMultipliers` (`equipment.ts`) → `PartyMemberInput.abilityMultipliers` → `valueMultiplier` no motor
+- Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
+- BD: `items.upgrade_level`, `items.specials`, `items.rune_slots` (migração 0008)
+- Servidor: `toItemDto` e `combatProfile` (`sheet.service.ts`)
+- Arte: `CharacterAvatar.tsx` (`Weapon`), `weapon-art.ts` — lança/maça/varinha ainda sem desenho próprio
+- Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
+- Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
+- Futuro: Runemaster, runas, especiais (só a estrutura existe)

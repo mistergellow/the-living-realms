@@ -1,4 +1,11 @@
-import type { CombatAction, CombatColumn, IntentView, StatusId } from '@realms/shared';
+import type {
+  CombatColumn,
+  CombatSide,
+  IntentView,
+  PlanActionInput,
+  PlannedActionView,
+  StatusId,
+} from '@realms/shared';
 import { getAbility, type AbilityDef, type AbilityEffect } from '../content/abilities.js';
 import type { RiftRoomDef } from '../content/rifts.js';
 import { reductionFromRating, scalingMultiplier } from '../stats.js';
@@ -17,11 +24,22 @@ import {
 /*
  * Turn-based combat engine. Pure and deterministic: (state, action) → state.
  *
- * PvE round (D14): party members act one at a time by initiative, then every
- * enemy acts (AI). At the start of its turn a unit loses its Block, takes
- * damage-over-time, counts statuses down, and gains Focus (D15/D24).
- * Damage (D33/D34): roll in range × attribute scaling × statuses × crit, then
- * mitigation rating/(rating+K), then Block absorbs.
+ * Round (combat spec, request #31):
+ *  1. A new round begins: Block is reset, damage-over-time ticks, statuses
+ *     count down, every unit gains Focus from its Precision (unspent Focus
+ *     carries over up to a cap), and team initiative is rolled
+ *     (roll + Agility; each team uses its best result).
+ *  2. Enemies plan their actions (intents, visible to players, D36).
+ *  3. Planning: players add actions to the party plan, then confirm (ready).
+ *  4. Resolution: actions resolve one at a time, alternating between teams,
+ *     starting with the team that won initiative. Each team resolves its own
+ *     actions in planned order (owner). When a team runs out, the other
+ *     finishes. Every action resolves fully (damage → Block → HP → defeat)
+ *     against the current battlefield before the next one.
+ *  5. The round ends; the next one begins.
+ *
+ * The AI (planEnemyIntents) only decides what enemies want to do; the same
+ * resolution code validates and applies every action, for both teams.
  */
 
 export type EngineResult =
@@ -37,10 +55,17 @@ const fail = (code: 'NOT_YOUR_TURN' | 'INVALID_ACTION', reason: string): EngineR
 const alive = (c: Combatant) => !c.downed;
 const on = (state: CombatState, side: Combatant['side']) =>
   state.combatants.filter((c) => c.side === side);
-const opposite = (side: Combatant['side']) => (side === 'party' ? 'enemies' : 'party');
+const opposite = (side: CombatSide): CombatSide => (side === 'party' ? 'enemies' : 'party');
 const get = (state: CombatState, id: string) => state.combatants.find((c) => c.id === id);
 const hasStatus = (c: Combatant, id: StatusId) => c.statuses.some((s) => s.id === id);
 const roll = (rng: Rng, min: number, max: number) => min + rng.int(max - min + 1);
+
+/** Party members who still have to plan this round (alive, present, not stunned). */
+export function activePartyIds(state: CombatState): string[] {
+  return on(state, 'party')
+    .filter((c) => alive(c) && !c.left && !c.stunned)
+    .map((c) => c.id);
+}
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -54,61 +79,91 @@ export function createEncounter(opts: {
 }): CombatState {
   const state: CombatState = {
     round: 0,
-    phase: 'party',
-    activeId: null,
-    turnOrder: [],
+    phase: 'planning',
+    initiative: null,
+    plan: [],
+    ready: [],
     combatants: [...opts.party.map(partyCombatant), ...enemyCombatants(opts.room, opts.roomIndex)],
     outcome: null,
     log: [],
     logSeq: 0,
     rng: opts.seed,
     tiebreak: {},
+    initiativeRolls: {},
+    planSeq: 0,
     isLastRoom: opts.isLastRoom,
   };
   const rng = new Rng(state.rng);
   for (const c of state.combatants) state.tiebreak[c.id] = rng.next();
   state.rng = rng.state;
   startRound(state);
+  // Exploration effects carried into the fight (debuffs and boons).
+  for (const p of opts.party) {
+    const unit = get(state, `p:${p.characterId}`);
+    if (!unit || unit.downed) continue;
+    for (const s of p.statuses ?? []) unit.statuses.push({ ...s });
+    if (p.firstRoundFocus)
+      unit.focus = Math.max(0, Math.min(COMBAT_RULES.focusMax, unit.focus + p.firstRoundFocus));
+    if (p.firstRoundBlock) unit.block += p.firstRoundBlock;
+  }
   return state;
 }
-
-/** Carry the party (HP, mana, slots) into the next room with fresh enemies. */
-export function enterNextRoom(
-  prev: CombatState,
-  room: RiftRoomDef,
-  roomIndex: number,
-  isLastRoom: boolean,
-): CombatState {
-  const state: CombatState = structuredClone(prev);
-  state.combatants = [
-    ...on(state, 'party').map((c) => ({ ...c, focus: 0, block: 0, statuses: [] })),
-    ...enemyCombatants(room, roomIndex),
-  ];
-  const rng = new Rng(state.rng);
-  for (const c of state.combatants) if (c.side === 'enemies') state.tiebreak[c.id] = rng.next();
-  state.rng = rng.state;
-  state.isLastRoom = isLastRoom;
-  state.outcome = null;
-  state.round = 0;
-  startRound(state);
-  return state;
-}
-
-const byInitiative = (state: CombatState) => (a: Combatant, b: Combatant) =>
-  b.stats.initiative - a.stats.initiative ||
-  (state.tiebreak[b.id] ?? 0) - (state.tiebreak[a.id] ?? 0);
 
 function startRound(state: CombatState): void {
   state.round += 1;
   pushLog(state, { t: 'round', round: state.round });
-  state.phase = 'party';
-  state.turnOrder = on(state, 'party')
-    .filter(alive)
-    .sort(byInitiative(state))
-    .map((c) => c.id);
-  state.activeId = null;
+  const units = state.combatants.filter((c) => alive(c) && !c.left);
+  // Block is temporary: whatever is left is removed when a new round begins.
+  for (const u of state.combatants) u.block = 0;
+  for (const u of units) {
+    for (const s of u.statuses) {
+      if ((s.id === 'bleed' || s.id === 'burn') && !u.downed) {
+        const amount = Math.min(u.hp, s.value);
+        u.hp -= amount;
+        pushLog(state, { t: 'tick', targetId: u.id, status: s.id, amount });
+        if (u.hp <= 0) knockDown(state, u);
+      }
+    }
+    if (u.downed) continue;
+    u.stunned = hasStatus(u, 'stun');
+    if (u.stunned) pushLog(state, { t: 'stunned', targetId: u.id });
+    u.statuses = u.statuses.map((s) => ({ ...s, turns: s.turns - 1 })).filter((s) => s.turns > 0);
+    u.focus = Math.min(COMBAT_RULES.focusMax, u.focus + u.focusPerRound);
+    u.mana = Math.min(u.maxMana, u.mana + u.stats.manaRegen);
+  }
+  if (checkEnd(state)) return;
+  rollInitiative(state);
+  state.phase = 'planning';
+  state.plan = [];
+  state.ready = [];
   planEnemyIntents(state);
-  advanceToNextPartyTurn(state);
+  // Nobody can plan (everyone stunned): the round resolves at once.
+  if (activePartyIds(state).length === 0) resolveRound(state);
+}
+
+/** Initiative = roll + Agility for every unit; each team keeps its best (combat spec §4). */
+function rollInitiative(state: CombatState): void {
+  const rng = new Rng(state.rng);
+  state.initiativeRolls = {};
+  const best: Record<CombatSide, number> = { party: 0, enemies: 0 };
+  for (const u of state.combatants) {
+    if (!alive(u) || u.left) continue;
+    const value = 1 + rng.int(COMBAT_RULES.initiativeDie) + u.stats.initiative;
+    state.initiativeRolls[u.id] = value;
+    best[u.side] = Math.max(best[u.side], value);
+  }
+  // Ties: a coin flip.
+  const first: CombatSide =
+    best.party > best.enemies
+      ? 'party'
+      : best.enemies > best.party
+        ? 'enemies'
+        : rng.next() < 0.5
+          ? 'party'
+          : 'enemies';
+  state.rng = rng.state;
+  state.initiative = { party: best.party, enemies: best.enemies, first };
+  pushLog(state, { t: 'initiative', party: best.party, enemies: best.enemies, first });
 }
 
 function knockDown(state: CombatState, unit: Combatant): void {
@@ -116,53 +171,10 @@ function knockDown(state: CombatState, unit: Combatant): void {
   unit.downed = true;
   unit.focus = 0;
   unit.block = 0;
+  unit.stunned = false;
   unit.statuses = [];
+  unit.intents = [];
   pushLog(state, { t: 'downed', targetId: unit.id });
-}
-
-/**
- * Start of a unit's turn. Returns false if it cannot act (downed by a tick,
- * or stunned).
- */
-function beginTurn(state: CombatState, unit: Combatant): boolean {
-  unit.block = 0;
-  pushLog(state, { t: 'turn', actorId: unit.id });
-  for (const s of unit.statuses) {
-    if ((s.id === 'bleed' || s.id === 'burn') && !unit.downed) {
-      const amount = Math.min(unit.hp, s.value);
-      unit.hp -= amount;
-      pushLog(state, { t: 'tick', targetId: unit.id, status: s.id, amount });
-      if (unit.hp <= 0) knockDown(state, unit);
-    }
-  }
-  if (unit.downed) return false;
-  const stunned = hasStatus(unit, 'stun');
-  unit.statuses = unit.statuses
-    .map((s) => ({ ...s, turns: s.turns - 1 }))
-    .filter((s) => s.turns > 0);
-  unit.focus = Math.min(COMBAT_RULES.focusMax, unit.focus + COMBAT_RULES.focusPerTurn);
-  unit.mana = Math.min(unit.maxMana, unit.mana + unit.stats.manaRegen);
-  if (stunned) {
-    pushLog(state, { t: 'stunned', targetId: unit.id });
-    return false;
-  }
-  return true;
-}
-
-function advanceToNextPartyTurn(state: CombatState): void {
-  const order = state.turnOrder;
-  let idx = state.activeId ? order.indexOf(state.activeId) + 1 : 0;
-  while (idx < order.length) {
-    const unit = get(state, order[idx]!);
-    idx++;
-    if (!unit || !alive(unit)) continue;
-    state.activeId = unit.id;
-    const canAct = beginTurn(state, unit);
-    if (checkEnd(state)) return;
-    if (canAct) return;
-  }
-  state.activeId = null;
-  runEnemyPhase(state);
 }
 
 // ---------------------------------------------------------------------------
@@ -170,21 +182,21 @@ function advanceToNextPartyTurn(state: CombatState): void {
 // ---------------------------------------------------------------------------
 /** Units an ability may target. 'first' = the first occupied column (A30). */
 export function validTargets(
-  state: CombatState,
+  state: Pick<CombatState, 'combatants'>,
   actor: Combatant,
   ability: AbilityDef,
 ): Combatant[] {
   const t = ability.targeting;
   if (t.side === 'self') return [actor];
   const side = t.side === 'enemy' ? opposite(actor.side) : actor.side;
-  const units = on(state, side).filter(alive);
+  const units = state.combatants.filter((c) => c.side === side && alive(c));
   if (t.reach === 'any') return units;
-  if (t.reach === 'first') {
-    for (const col of ['front', 'mid', 'back'] as const) {
-      const inCol = units.filter((u) => columnOfSlot(u.slot) === col);
-      if (inCol.length) return inCol;
-    }
-    return [];
+  if (t.reach === 'first' || t.reach === 'first2') {
+    const wanted = t.reach === 'first' ? 1 : 2;
+    const cols: CombatColumn[] = [];
+    for (const col of ['front', 'mid', 'back'] as const)
+      if (cols.length < wanted && units.some((u) => columnOfSlot(u.slot) === col)) cols.push(col);
+    return units.filter((u) => cols.includes(columnOfSlot(u.slot)));
   }
   const cols = t.reach;
   return units.filter((u) => cols.includes(columnOfSlot(u.slot)));
@@ -222,7 +234,7 @@ function resolveTargets(
 
 /** Columns an ability can be aimed at, with the units it would hit. */
 export function targetColumns(
-  state: CombatState,
+  state: Pick<CombatState, 'combatants'>,
   actor: Combatant,
   ability: AbilityDef,
 ): Array<{ column: CombatColumn; units: Combatant[] }> {
@@ -237,9 +249,25 @@ export function targetColumns(
 // ---------------------------------------------------------------------------
 // Effects
 // ---------------------------------------------------------------------------
-/** Ability value multiplier: player attribute scaling, or enemy power. */
+/** Ability value multiplier: player attribute scaling × weapon upgrade, or enemy power. */
 function valueMultiplier(actor: Combatant, ability: AbilityDef): number {
-  return actor.attributes ? scalingMultiplier(actor.attributes, ability.scaling) : actor.power;
+  const upgrade = actor.abilityMultipliers?.[ability.id] ?? 1;
+  return (
+    (actor.attributes ? scalingMultiplier(actor.attributes, ability.scaling) : actor.power) *
+    upgrade
+  );
+}
+
+/**
+ * Block absorbs damage before HP (combat spec §7.1):
+ * damage to HP = max(0, incoming − block); block left = max(0, block − incoming).
+ */
+export function absorbWithBlock(
+  incoming: number,
+  block: number,
+): { toHp: number; blocked: number; blockLeft: number } {
+  const blocked = Math.min(block, Math.max(0, incoming));
+  return { toHp: Math.max(0, incoming - block), blocked, blockLeft: Math.max(0, block - incoming) };
 }
 
 /** Returns false if the target dodged (the rest of the ability misses it too). */
@@ -258,6 +286,7 @@ function applyEffect(
         pushLog(state, { t: 'dodge', targetId: target.id });
         return false;
       }
+      // 1. Incoming damage.
       let dmg = roll(rng, effect.min, effect.max) * mult;
       if (hasStatus(actor, 'weaken')) dmg *= COMBAT_RULES.weakenMultiplier;
       if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
@@ -267,11 +296,13 @@ function applyEffect(
       if (crit) dmg *= actor.stats.critDamage / 100;
       const rating = effect.damageType === 'magic' ? target.stats.magicResist : target.stats.armor;
       dmg = Math.max(1, Math.round(dmg * (1 - reductionFromRating(rating))));
-      const blocked = Math.min(target.block, dmg);
-      target.block -= blocked;
-      const amount = Math.min(target.hp, dmg - blocked);
+      // 2. Block absorbs. 3. The rest comes off HP.
+      const { toHp, blocked, blockLeft } = absorbWithBlock(dmg, target.block);
+      target.block = blockLeft;
+      const amount = Math.min(target.hp, toHp);
       target.hp -= amount;
       pushLog(state, { t: 'damage', targetId: target.id, amount, crit, blocked });
+      // 4–5. Status update and defeat check.
       if (target.hp <= 0) knockDown(state, target);
       return true;
     }
@@ -284,6 +315,7 @@ function applyEffect(
       return true;
     }
     case 'block': {
+      // Block stacks (combat spec §7.2).
       const amount = Math.max(1, Math.round(roll(rng, effect.min, effect.max) * mult));
       target.block += amount;
       pushLog(state, { t: 'block', targetId: target.id, amount });
@@ -335,6 +367,7 @@ function applyAbility(
 
 /** Returns true if the encounter ended (room cleared or party wiped). */
 function checkEnd(state: CombatState): boolean {
+  if (state.phase !== 'planning') return true;
   if (on(state, 'enemies').every((e) => e.downed)) {
     for (const p of on(state, 'party')) {
       if (p.downed && !p.left) {
@@ -344,10 +377,12 @@ function checkEnd(state: CombatState): boolean {
       }
       p.focus = 0;
       p.block = 0;
+      p.stunned = false;
       p.statuses = [];
     }
     pushLog(state, { t: 'room', outcome: 'cleared' });
-    state.activeId = null;
+    state.plan = [];
+    state.ready = [];
     if (state.isLastRoom) {
       state.phase = 'ended';
       state.outcome = 'victory';
@@ -356,7 +391,8 @@ function checkEnd(state: CombatState): boolean {
   }
   if (on(state, 'party').every((p) => p.downed)) {
     pushLog(state, { t: 'room', outcome: 'wiped' });
-    state.activeId = null;
+    state.plan = [];
+    state.ready = [];
     state.phase = 'ended';
     state.outcome = 'defeat';
     return true;
@@ -366,7 +402,7 @@ function checkEnd(state: CombatState): boolean {
 
 // ---------------------------------------------------------------------------
 // Enemy AI (simple, deterministic): best expected value per Focus; single
-// targets: lowest HP (ties random).
+// targets: lowest HP (ties random). Decides only; resolution validates.
 // ---------------------------------------------------------------------------
 /** Rough value of an ability against a set of targets (enemy AI). */
 function expectedValue(a: AbilityDef, targets: Combatant[]): number {
@@ -421,16 +457,16 @@ function bestMove(state: CombatState, enemy: Combatant, focus: number, rng: Rng)
 }
 
 /**
- * Intents (D36): at the start of each round every enemy plans its turn with
- * the Focus it will have, and players see it before acting.
+ * Intents (D36): at the start of each round every enemy plans its actions
+ * with the Focus it has, and players see them while planning.
  */
 function planEnemyIntents(state: CombatState): void {
   const rng = new Rng(state.rng);
   for (const enemy of on(state, 'enemies')) {
     enemy.intents = [];
-    if (enemy.downed || hasStatus(enemy, 'stun')) continue;
-    let focus = Math.min(COMBAT_RULES.focusMax, enemy.focus + COMBAT_RULES.focusPerTurn);
-    for (let guard = 0; guard < 6; guard++) {
+    if (enemy.downed || enemy.stunned) continue;
+    let focus = enemy.focus;
+    for (let guard = 0; guard < COMBAT_RULES.maxActionsPerRound; guard++) {
       const plan = bestMove(state, enemy, focus, rng);
       if (!plan) break;
       enemy.intents.push({
@@ -444,113 +480,258 @@ function planEnemyIntents(state: CombatState): void {
   state.rng = rng.state;
 }
 
-/** Targets for a planned intent now; re-aim if the planned ones are gone. */
-function intentTargets(
+/** Targets for a planned column/area action now; re-aim if the planned column is empty. */
+function currentTargets(
   state: CombatState,
-  enemy: Combatant,
+  actor: Combatant,
   a: AbilityDef,
-  intent: IntentView,
+  plannedColumn: CombatColumn | null | undefined,
+  plannedIds: string[],
   rng: Rng,
 ): Combatant[] {
-  if (a.targeting.area === 'all') return validTargets(state, enemy, a);
+  if (a.targeting.area === 'all') return validTargets(state, actor, a);
   if (a.targeting.area === 'column') {
-    const cols = targetColumns(state, enemy, a);
-    const planned = cols.find((c) => c.column === intent.column);
+    const cols = targetColumns(state, actor, a);
+    const planned = cols.find((c) => c.column === plannedColumn);
     if (planned) return planned.units;
     // The planned column is empty now: aim at the most crowded reachable column.
     return [...cols].sort((x, y) => y.units.length - x.units.length)[0]?.units ?? [];
   }
-  const candidates = validTargets(state, enemy, a);
-  const still = candidates.find((c) => intent.targetIds.includes(c.id));
+  const candidates = validTargets(state, actor, a);
+  const still = candidates.find((c) => plannedIds.includes(c.id));
   if (still) return [still];
-  if (!candidates.length) return [];
+  // Support on a specific ally: no re-aim (they are gone); enemy attacks pick the weakest.
+  if (a.targeting.side !== 'enemy' || !candidates.length) return [];
   const minHp = Math.min(...candidates.map((t) => t.hp));
   const weakest = candidates.filter((t) => t.hp === minHp);
   return [weakest[rng.int(weakest.length)]!];
 }
 
-function runEnemyPhase(state: CombatState): void {
-  state.phase = 'enemies';
+// ---------------------------------------------------------------------------
+// Planning (players)
+// ---------------------------------------------------------------------------
+/** Focus and Mana already committed by a unit's planned actions this round. */
+export function reservedBy(
+  state: Pick<CombatState, 'plan' | 'combatants'>,
+  unitId: string,
+): { focus: number; mana: number } {
+  let focus = 0;
+  let mana = 0;
+  for (const p of state.plan) {
+    const a = getAbility(p.abilityId);
+    if (!a) continue;
+    if (p.actorId === unitId) {
+      focus += a.focusCost;
+      mana += a.manaCost;
+    } else if (a.effects.some((e) => e.kind === 'swap') && p.targetSlot !== undefined) {
+      // Swapping with another player costs them Focus too (D27).
+      const actor = state.combatants.find((c) => c.id === p.actorId);
+      const other = state.combatants.find(
+        (c) => c.side === actor?.side && c.slot === p.targetSlot && c.kind === 'player',
+      );
+      if (other?.id === unitId) focus += a.focusCost;
+    }
+  }
+  return { focus, mana };
+}
+
+function validatePlan(state: CombatState, actor: Combatant, input: PlanActionInput): string | null {
+  if (!actor.abilityIds.includes(input.abilityId)) return 'You do not have that ability.';
+  const ability = getAbility(input.abilityId);
+  if (!ability) return 'Unknown ability.';
+  const reserved = reservedBy(state, actor.id);
+  if (ability.focusCost > actor.focus - reserved.focus) return 'Not enough Focus.';
+  if (ability.manaCost > actor.mana - reserved.mana) return 'Not enough Mana.';
+  if (state.plan.filter((p) => p.actorId === actor.id).length >= COMBAT_RULES.maxActionsPerRound)
+    return 'Too many actions this round.';
+  if (ability.effects.some((e) => e.kind === 'swap')) {
+    if (input.targetSlot === undefined || input.targetSlot === actor.slot)
+      return 'Choose another slot.';
+    const other = on(state, actor.side).find((c) => c.slot === input.targetSlot);
+    if (other && other.kind === 'player' && !other.downed) {
+      const theirs = reservedBy(state, other.id);
+      if (other.focus - theirs.focus < ability.focusCost)
+        return `${other.name} does not have enough Focus to swap.`;
+    }
+    return null;
+  }
+  const targets = resolveTargets(state, actor, ability, input.targetId, input.targetColumn);
+  return typeof targets === 'string' ? targets : null;
+}
+
+/** Add an action to the party plan (planning phase). Resolved later, in planned order. */
+export function planAction(
+  prev: CombatState,
+  actorId: string,
+  input: PlanActionInput,
+): EngineResult {
+  if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to plan right now.');
+  const actor = get(prev, actorId);
+  if (!actor || actor.side !== 'party' || !activePartyIds(prev).includes(actorId))
+    return fail('NOT_YOUR_TURN', 'You cannot act this round.');
+  if (prev.ready.includes(actorId))
+    return fail('INVALID_ACTION', 'You already confirmed your actions.');
+  const reason = validatePlan(prev, actor, input);
+  if (reason) return fail('INVALID_ACTION', reason);
+  const state: CombatState = structuredClone(prev);
+  const ability = getAbility(input.abilityId)!;
+  // Fix the aim now (column attacks keep their column; single targets their id).
+  let targetColumn = input.targetColumn;
+  let targetId = input.targetId;
+  if (!ability.effects.some((e) => e.kind === 'swap')) {
+    const targets = resolveTargets(state, actor, ability, input.targetId, input.targetColumn);
+    if (typeof targets !== 'string') {
+      if (ability.targeting.area === 'column') targetColumn = columnOfSlot(targets[0]!.slot);
+      else if (ability.targeting.area === 'single') targetId = targets[0]!.id;
+    }
+  }
+  const planned: PlannedActionView = {
+    id: ++state.planSeq,
+    actorId,
+    abilityId: input.abilityId,
+    ...(targetId !== undefined && ability.targeting.area === 'single' ? { targetId } : {}),
+    ...(targetColumn !== undefined && ability.targeting.area === 'column' ? { targetColumn } : {}),
+    ...(input.targetSlot !== undefined ? { targetSlot: input.targetSlot } : {}),
+  };
+  state.plan.push(planned);
+  return { ok: true, state };
+}
+
+/** Remove one of your planned actions (before confirming). */
+export function unplanAction(prev: CombatState, actorId: string, planId: number): EngineResult {
+  if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to change right now.');
+  if (prev.ready.includes(actorId))
+    return fail('INVALID_ACTION', 'You already confirmed your actions.');
+  const p = prev.plan.find((x) => x.id === planId);
+  if (!p || p.actorId !== actorId)
+    return fail('INVALID_ACTION', 'That is not one of your actions.');
+  const state: CombatState = structuredClone(prev);
+  state.plan = state.plan.filter((x) => x.id !== planId);
+  return { ok: true, state };
+}
+
+/** Confirm your plan. When every active player is ready, the round resolves. */
+export function setReady(prev: CombatState, actorId: string): EngineResult {
+  if (prev.phase !== 'planning') return fail('INVALID_ACTION', 'Nothing to confirm right now.');
+  if (!activePartyIds(prev).includes(actorId))
+    return fail('NOT_YOUR_TURN', 'You cannot act this round.');
+  if (prev.ready.includes(actorId)) return { ok: true, state: prev };
+  const state: CombatState = structuredClone(prev);
+  state.ready.push(actorId);
+  maybeResolve(state);
+  return { ok: true, state };
+}
+
+function maybeResolve(state: CombatState): void {
+  const active = activePartyIds(state);
+  if (state.phase === 'planning' && active.every((id) => state.ready.includes(id)))
+    resolveRound(state);
+}
+
+/** Planning timer expired (D16): whatever was planned resolves. */
+export function timeoutTurn(prev: CombatState): CombatState {
+  if (prev.phase !== 'planning') return prev;
+  const state: CombatState = structuredClone(prev);
+  pushLog(state, { t: 'timeout', actorId: null });
+  resolveRound(state);
+  return state;
+}
+
+// ---------------------------------------------------------------------------
+// Resolution (alternating between teams)
+// ---------------------------------------------------------------------------
+type QueuedAction =
+  | { side: 'party'; plan: PlannedActionView }
+  | { side: 'enemies'; actorId: string; intent: IntentView };
+
+function resolveRound(state: CombatState): void {
   const rng = new Rng(state.rng);
-  const enemies = on(state, 'enemies').filter(alive).sort(byInitiative(state));
-  for (const enemy of enemies) {
-    if (enemy.downed) continue;
-    const intents = enemy.intents;
-    enemy.intents = [];
-    const canAct = beginTurn(state, enemy);
+  const first = state.initiative?.first ?? 'party';
+  pushLog(state, { t: 'resolve', first });
+
+  const queues: Record<CombatSide, QueuedAction[]> = {
+    party: state.plan.map((plan) => ({ side: 'party', plan })),
+    // Enemies resolve in their planned order: by initiative, each enemy's intents in turn.
+    enemies: on(state, 'enemies')
+      .filter((e) => !e.downed)
+      .sort(
+        (a, b) =>
+          (state.initiativeRolls[b.id] ?? 0) - (state.initiativeRolls[a.id] ?? 0) ||
+          (state.tiebreak[b.id] ?? 0) - (state.tiebreak[a.id] ?? 0),
+      )
+      .flatMap((e) =>
+        e.intents.map((intent) => ({ side: 'enemies' as const, actorId: e.id, intent })),
+      ),
+  };
+
+  let side: CombatSide = first;
+  while (queues.party.length || queues.enemies.length) {
+    if (!queues[side].length) side = opposite(side);
+    const next = queues[side].shift()!;
+    if (next.side === 'party') resolvePlanned(state, rng, next.plan);
+    else resolveIntent(state, rng, next.actorId, next.intent);
     if (checkEnd(state)) {
       state.rng = rng.state;
       return;
     }
-    if (!canAct) continue;
-    for (const intent of intents) {
-      const a = getAbility(intent.abilityId);
-      if (!a || a.focusCost > enemy.focus || enemy.downed) continue;
-      const targets = intentTargets(state, enemy, a, intent, rng);
-      if (targets.length === 0) continue;
-      applyAbility(state, rng, enemy, a, targets);
-      if (checkEnd(state)) {
-        state.rng = rng.state;
-        return;
-      }
-    }
+    side = opposite(side);
   }
+  for (const e of on(state, 'enemies')) e.intents = [];
   state.rng = rng.state;
   startRound(state);
 }
 
-// ---------------------------------------------------------------------------
-// Player actions
-// ---------------------------------------------------------------------------
-export function applyAction(
-  prev: CombatState,
-  actorId: string,
-  action: CombatAction,
-): EngineResult {
-  if (prev.phase !== 'party') return fail('INVALID_ACTION', 'Nothing to do right now.');
-  if (prev.activeId !== actorId) return fail('NOT_YOUR_TURN', 'It is not your turn.');
-  const state: CombatState = structuredClone(prev);
-  const actor = get(state, actorId)!;
-
-  if (action.type === 'end_turn') {
-    advanceToNextPartyTurn(state);
-    return { ok: true, state };
-  }
-  if (action.type !== 'ability') return fail('INVALID_ACTION', 'Unsupported action.');
-
-  if (!actor.abilityIds.includes(action.abilityId))
-    return fail('INVALID_ACTION', 'You do not have that ability.');
-  const ability = getAbility(action.abilityId);
-  if (!ability) return fail('INVALID_ACTION', 'Unknown ability.');
-  if (ability.focusCost > actor.focus) return fail('INVALID_ACTION', 'Not enough Focus.');
-  if (ability.manaCost > actor.mana) return fail('INVALID_ACTION', 'Not enough Mana.');
-
-  const rng = new Rng(state.rng);
-  if (ability.effects.some((e) => e.kind === 'swap')) {
-    const res = swap(state, actor, ability, action.targetSlot);
-    if (typeof res === 'string') return fail('INVALID_ACTION', res);
-  } else {
-    const targets = resolveTargets(state, actor, ability, action.targetId, action.targetColumn);
-    if (typeof targets === 'string') return fail('INVALID_ACTION', targets);
-    applyAbility(state, rng, actor, ability, targets);
-  }
-  state.rng = rng.state;
-  checkEnd(state);
-  return { ok: true, state };
+function skip(state: CombatState, actorId: string, abilityId: string, reason: string): void {
+  pushLog(state, { t: 'skipped', actorId, abilityId, reason });
 }
 
-/** Swap Position (D27): costs the actor; swapping with another living player costs them too. */
+function resolvePlanned(state: CombatState, rng: Rng, p: PlannedActionView): void {
+  const actor = get(state, p.actorId);
+  const ability = getAbility(p.abilityId);
+  if (!actor || !ability) return;
+  // Defeated characters never act (combat spec §5.1).
+  if (actor.downed || actor.left) return skip(state, actor.id, ability.id, 'down');
+  if (actor.stunned) return skip(state, actor.id, ability.id, 'stunned');
+  if (ability.focusCost > actor.focus) return skip(state, actor.id, ability.id, 'no Focus');
+  if (ability.manaCost > actor.mana) return skip(state, actor.id, ability.id, 'no Mana');
+  if (ability.effects.some((e) => e.kind === 'swap')) {
+    const res = swap(state, actor, ability, p.targetSlot);
+    if (typeof res === 'string') skip(state, actor.id, ability.id, res);
+    return;
+  }
+  const targets = currentTargets(
+    state,
+    actor,
+    ability,
+    p.targetColumn,
+    p.targetId ? [p.targetId] : [],
+    rng,
+  );
+  if (!targets.length) return skip(state, actor.id, ability.id, 'no target');
+  applyAbility(state, rng, actor, ability, targets);
+}
+
+function resolveIntent(state: CombatState, rng: Rng, actorId: string, intent: IntentView): void {
+  const enemy = get(state, actorId);
+  const a = getAbility(intent.abilityId);
+  if (!enemy || !a || enemy.downed || enemy.stunned) return;
+  if (a.focusCost > enemy.focus) return skip(state, enemy.id, a.id, 'no Focus');
+  const targets = currentTargets(state, enemy, a, intent.column, intent.targetIds, rng);
+  if (!targets.length) return skip(state, enemy.id, a.id, 'no target');
+  applyAbility(state, rng, enemy, a, targets);
+}
+
+/** Change position (D27): costs the actor; swapping with another living player costs them too. */
 function swap(
   state: CombatState,
   actor: Combatant,
   ability: AbilityDef,
   targetSlot: number | undefined,
 ): string | void {
-  if (targetSlot === undefined || targetSlot === actor.slot) return 'Choose another slot.';
+  if (targetSlot === undefined || targetSlot === actor.slot) return 'already there';
   const other = on(state, actor.side).find((c) => c.slot === targetSlot);
   const otherPays = other && other.kind === 'player' && !other.downed;
-  if (otherPays && other.focus < ability.focusCost)
-    return `${other.name} does not have enough Focus to swap.`;
+  if (otherPays && other.focus < ability.focusCost) return `${other.name} has no Focus`;
   actor.focus -= ability.focusCost;
   if (otherPays) other.focus -= ability.focusCost;
   const from = actor.slot;
@@ -565,18 +746,9 @@ function swap(
   });
 }
 
-/** Turn timer expired (D16): the active player's turn ends. */
-export function timeoutTurn(prev: CombatState): CombatState {
-  if (prev.phase !== 'party' || !prev.activeId) return prev;
-  const state: CombatState = structuredClone(prev);
-  pushLog(state, { t: 'timeout', actorId: state.activeId! });
-  advanceToNextPartyTurn(state);
-  return state;
-}
-
 /**
  * A player leaves a group run (A28). They count as down for the rest of the
- * run (never revived); if it was their turn, play moves on.
+ * run (never revived); their planned actions are dropped.
  */
 export function leaveParty(prev: CombatState, actorId: string): CombatState {
   const state: CombatState = structuredClone(prev);
@@ -587,8 +759,22 @@ export function leaveParty(prev: CombatState, actorId: string): CombatState {
   unit.hp = 0;
   unit.block = 0;
   unit.statuses = [];
+  state.plan = state.plan.filter((p) => p.actorId !== actorId);
+  state.ready = state.ready.filter((id) => id !== actorId);
   pushLog(state, { t: 'left', actorId });
   if (checkEnd(state)) return state;
-  if (state.phase === 'party' && state.activeId === actorId) advanceToNextPartyTurn(state);
+  maybeResolve(state);
   return state;
+}
+
+/** Party HP/Mana after a fight (carried into exploration, D29). */
+export function partyAfterCombat(
+  state: CombatState,
+): Array<{ characterId: string; hp: number; mana: number; slot: number }> {
+  return on(state, 'party').map((c) => ({
+    characterId: c.characterId!,
+    hp: c.hp,
+    mana: c.mana,
+    slot: c.slot,
+  }));
 }

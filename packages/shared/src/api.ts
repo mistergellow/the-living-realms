@@ -172,9 +172,9 @@ export const ATTRIBUTE_KEYS = [
   'might',
   'agility',
   'precision',
-  'vitality',
-  'arcana',
-  'spirit',
+  'endurance',
+  'intellect',
+  'will',
 ] as const;
 export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 export type Attributes = Record<AttributeKey, number>;
@@ -185,9 +185,9 @@ export const attributesSchema = z
     might: attributeScore,
     agility: attributeScore,
     precision: attributeScore,
-    vitality: attributeScore,
-    arcana: attributeScore,
-    spirit: attributeScore,
+    endurance: attributeScore,
+    intellect: attributeScore,
+    will: attributeScore,
   })
   .strict();
 
@@ -242,6 +242,40 @@ export interface ItemDto {
   bonuses: Partial<Attributes>;
   armor: number;
   magicResist: number;
+  /** Weapons only (request #31): type, base stats, upgrades, specials, rune slots. */
+  weapon: WeaponInfoDto | null;
+}
+
+/** A special property on a weapon (max 5). Catalogue of specials: future. */
+export interface WeaponSpecial {
+  id: string;
+  value?: number;
+}
+
+/** A rune slot (max 2). Locked by default; the Runemaster NPC unlocks them (future). */
+export interface WeaponRuneSlot {
+  unlocked: boolean;
+  runeId: string | null;
+}
+
+export interface WeaponInfoDto {
+  type: string;
+  typeName: string;
+  hands: 1 | 2;
+  category: 'melee' | 'ranged' | 'magic';
+  primaryAttribute: AttributeKey;
+  secondaryAttribute: AttributeKey | null;
+  attackType: 'physical' | 'ranged' | 'magic';
+  attackStyle: string;
+  identity: string;
+  /** Basic attack damage at this upgrade level (before attribute scaling). */
+  baseDamage: { min: number; max: number };
+  basicAttackId: string;
+  /** +0, +1, +2 … */
+  upgradeLevel: number;
+  specials: WeaponSpecial[];
+  maxSpecials: number;
+  runeSlots: WeaponRuneSlot[];
 }
 
 export type AbilitySource = 'weapon' | 'skill' | 'universal' | 'enemy';
@@ -286,6 +320,8 @@ export interface DerivedStatsDto {
   manaRegen: number;
   /** Bonus percent to status effects (bleed, burn, …) applied. */
   effectPotency: number;
+  /** Focus generated at the start of every combat round (Precision). */
+  focusPerRound: number;
 }
 
 export interface CharacterSheetDto {

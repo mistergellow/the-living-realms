@@ -7,6 +7,14 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
   switch (e.t) {
     case 'round':
       return `— Round ${e.round} —`;
+    case 'initiative':
+      return `Initiative ${e.party} vs ${e.enemies}: ${e.first === 'party' ? 'your team' : 'the enemies'} act first.`;
+    case 'resolve':
+      return null;
+    case 'skipped': {
+      const a = getAbility(e.abilityId)?.name ?? e.abilityId;
+      return `${name(e.actorId)} could not use ${a} (${e.reason}).`;
+    }
     case 'ability': {
       const a = getAbility(e.abilityId)?.name ?? e.abilityId;
       const targets = e.targetIds.map(name);
@@ -19,13 +27,13 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
     case 'block':
       return `${name(e.targetId)} gains ${e.amount} Block.`;
     case 'status':
-      return `${name(e.targetId)} is ${STATUS_NAMES[e.status].toLowerCase()} for ${e.turns} turn${e.turns > 1 ? 's' : ''}.`;
+      return `${name(e.targetId)} is ${STATUS_NAMES[e.status].toLowerCase()} for ${e.turns} round${e.turns > 1 ? 's' : ''}.`;
     case 'tick':
       return `${name(e.targetId)} suffers ${e.amount} from ${STATUS_NAMES[e.status].toLowerCase()}.`;
     case 'left':
       return `${name(e.actorId)} left the Rift.`;
     case 'stunned':
-      return `${name(e.targetId)} is stunned and loses the turn.`;
+      return `${name(e.targetId)} is stunned this round.`;
     case 'dodge':
       return `${name(e.targetId)} dodges.`;
     case 'heal':
@@ -39,10 +47,8 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
     case 'revived':
       return `${name(e.targetId)} gets back up with ${e.hp} HP.`;
     case 'timeout':
-      return `${name(e.actorId)} ran out of time.`;
+      return e.actorId ? `${name(e.actorId)} ran out of time.` : 'Time is up: the round resolves.';
     case 'room':
       return e.outcome === 'cleared' ? 'The room is clear.' : 'The party has fallen.';
-    case 'turn':
-      return null;
   }
 }

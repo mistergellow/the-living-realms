@@ -708,3 +708,233 @@
   font-size: 0.78rem;
   color: var(--danger);
 }
+
+/* ---------------------------------------------------------------------------
+ * Combat layout (request #31, owner's reference): plan queue on the left,
+ * round + initiative on top, enemy intents on the right, the battlefield in
+ * the middle, the character panel bottom-left and the action bar bottom-right.
+ * Positions first; the visual polish comes later.
+ * ------------------------------------------------------------------------- */
+.combat-middle {
+  display: grid;
+  grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr) minmax(10rem, 14rem);
+  min-height: 0;
+}
+.combat-middle > .stage {
+  min-height: 0;
+}
+.plan-queue,
+.enemy-intents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  min-height: 0;
+  overflow: hidden;
+  background: rgb(8 7 12 / 0.85);
+  border-right: 1px solid var(--frame);
+}
+.enemy-intents {
+  border-right: 0;
+  border-left: 1px solid var(--frame);
+  overflow-y: auto;
+}
+.plan-queue h3,
+.enemy-intents h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.plan-queue ol[data-testid='plan'] {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  max-height: 45%;
+}
+.plan-queue li[data-mine] {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
+.plan-queue li[data-mine='true'] .plan-text {
+  color: var(--accent-strong);
+}
+.plan-icon,
+.intent-icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+.plan-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-order {
+  font-family: var(--font-display);
+  font-weight: 800;
+  min-width: 1.3rem;
+  text-align: center;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+}
+.plan-remove {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.plan-queue .combat-log {
+  border: 0;
+  border-top: 1px solid var(--frame);
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  padding: var(--space-2) 0 0;
+  font-size: 0.75rem;
+}
+.intent-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.06);
+}
+.intent-row[data-downed='true'] {
+  opacity: 0.45;
+}
+.intent-icons {
+  display: flex;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+}
+.round-banner {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.2rem 1.2rem;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #2a2737, #17151f);
+  color: var(--accent-strong);
+}
+.initiative {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.combat-bottom {
+  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+}
+.me-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-right: 1px solid var(--frame);
+}
+.me-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.bar {
+  position: relative;
+  height: 1rem;
+  border-radius: 0.5rem;
+  background: rgb(0 0 0 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+.bar.small {
+  height: 0.8rem;
+}
+.bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+.bar.hp > span {
+  background: linear-gradient(180deg, #e2604c, #8f2a1f);
+}
+.bar.mana > span {
+  background: linear-gradient(180deg, #5aa6ff, #24508f);
+}
+.bar > em {
+  position: relative;
+  display: block;
+  font-style: normal;
+  font-size: 0.68rem;
+  line-height: 1rem;
+  padding-left: 0.4rem;
+  text-shadow: 0 1px 2px #000;
+}
+.bar.small > em {
+  line-height: 0.8rem;
+  font-size: 0.62rem;
+}
+.focus-pips {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+}
+.focus-pips i {
+  width: 0.7rem;
+  height: 0.7rem;
+  transform: rotate(45deg);
+  background: linear-gradient(180deg, #f6d17c, #b88a35);
+  box-shadow: 0 0 0.3rem var(--frame-glow);
+}
+.focus-pips i[data-spent='true'] {
+  background: #3a3546;
+  box-shadow: none;
+}
+.focus-pips em {
+  font-style: normal;
+  font-size: 0.72rem;
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+}
+.small {
+  font-size: 0.78rem;
+}
+@media (max-width: 56.25em) {
+  .combat-middle {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .plan-queue {
+    order: 2;
+    max-height: 7rem;
+    border-right: 0;
+    border-top: 1px solid var(--frame);
+  }
+  .enemy-intents {
+    display: none;
+  }
+  .combat-bottom {
+    grid-template-columns: 1fr;
+  }
+  .me-panel {
+    border-right: 0;
+    padding: var(--space-1) var(--space-3);
+  }
+}
+/* Ability icons outside the action bar (plan queue, enemy intents). */
+.ability-icon.plan-icon,
+.ability-icon.intent-icon {
+  position: relative;
+  inset: auto;
+  display: inline-grid;
+  flex-shrink: 0;
+}

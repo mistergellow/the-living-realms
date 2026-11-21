@@ -1,5 +1,7 @@
 import { characters, type Character, type Database, type DbOrTx, type Item } from '@realms/db';
 import {
+  abilityMultipliers,
+  asBaseAttributes,
   availableAbilities,
   computeStats,
   describeEffects,
@@ -10,6 +12,8 @@ import {
   getItemDef,
   isBroken,
   planEquip,
+  weaponInfo,
+  type BaseAttributes,
   type OwnedItem,
 } from '@realms/game-core';
 import {
@@ -32,20 +36,26 @@ export async function assertNotInRift(db: DbOrTx, characterId: string): Promise<
     throw new AppError(409, ErrorCode.IN_RIFT, 'Not possible while inside a Rift.');
 }
 
-export const baseAttributesOf = (c: Character): Attributes => ({
-  might: c.attrMight,
-  agility: c.attrAgility,
-  precision: c.attrPrecision,
-  vitality: c.attrVitality,
-  arcana: c.attrArcana,
-  spirit: c.attrSpirit,
-});
+/**
+ * BASE attributes of a character: creation + spent points, never equipment or
+ * buffs. The single source of base stats for exploration tests (request #31).
+ */
+export const baseAttributesOf = (c: Character): BaseAttributes =>
+  asBaseAttributes({
+    might: c.attrMight,
+    agility: c.attrAgility,
+    precision: c.attrPrecision,
+    endurance: c.attrEndurance,
+    intellect: c.attrIntellect,
+    will: c.attrWill,
+  });
 
 const toOwned = (i: Item): OwnedItem => ({
   id: i.id,
   defId: i.itemDefId,
   quality: i.quality,
   equippedSlot: i.equippedSlot as EquipSlot | null,
+  upgradeLevel: i.upgradeLevel,
 });
 
 function toItemDto(i: Item): ItemDto {
@@ -53,7 +63,7 @@ function toItemDto(i: Item): ItemDto {
   return {
     id: i.id,
     defId: i.itemDefId,
-    name: def?.name ?? i.itemDefId,
+    name: (def?.name ?? i.itemDefId) + (i.upgradeLevel > 0 ? ` +${i.upgradeLevel}` : ''),
     kind: def?.kind ?? 'accessory',
     description: def?.description ?? '',
     quality: i.quality,
@@ -64,6 +74,11 @@ function toItemDto(i: Item): ItemDto {
     bonuses: def?.bonuses ?? {},
     armor: def?.armor ?? 0,
     magicResist: def?.magicResist ?? 0,
+    weapon: weaponInfo(def?.weaponType, {
+      upgradeLevel: i.upgradeLevel,
+      specials: i.specials,
+      runeSlots: i.runeSlots,
+    }),
   };
 }
 
@@ -103,9 +118,9 @@ export class CharacterSheetService {
           attrMight: r.might,
           attrAgility: r.agility,
           attrPrecision: r.precision,
-          attrVitality: r.vitality,
-          attrArcana: r.arcana,
-          attrSpirit: r.spirit,
+          attrEndurance: r.endurance,
+          attrIntellect: r.intellect,
+          attrWill: r.will,
           attributePoints: c.attributePoints - res.used,
         })
         .where(eq(characters.id, c.id))
@@ -157,8 +172,10 @@ export class CharacterSheetService {
     const owned = rows.map(toOwned);
     return {
       appearance: c.appearance as CharacterAppearance,
+      baseAttributes: baseAttributesOf(c),
       ...computeStats(baseAttributesOf(c), owned),
       abilityIds: availableAbilities(owned, skills).map((a) => a.ability.id),
+      abilityMultipliers: abilityMultipliers(owned),
     };
   }
 
