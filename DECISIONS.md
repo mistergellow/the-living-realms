@@ -649,3 +649,15 @@ PvE). No revive; last team standing wins. Matches are created from a lobby
 whose `riftId` is `pvp_arena` (slots 0–5 team A, 6–11 team B) and stored in
 `rift_runs` as a `RunState` with `mode: 'pvp'`. The server hides the other
 team's plan. No rewards and no equipment damage while it is a test.
+
+## ADR-038 — PvE turns like Slay the Spire; PvP keeps planning
+
+**Status:** accepted (request #34, replaces ADR-033 for PvE)
+
+**Decision.** In PvE, `planAction` resolves a player's action at once;
+`setReady` ends the player's turn and, when every player has ended it, the
+enemies carry out their intents (ordered by initiative) and a new round
+begins. No initiative roll in PvE. The party's Block is removed when a round
+begins; the enemies' Block is removed when their phase begins, so it lasts
+through the party's turn. PvP (`mode: 'pvp'`) keeps ADR-033: hidden plans and
+alternating resolution by team initiative.

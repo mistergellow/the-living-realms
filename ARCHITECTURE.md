@@ -266,7 +266,11 @@ difficulty`. `BaseAttributes` is a branded type built only by
 - **Design goal (D36 + combat spec of request #31):** "Slay the Spire without
   cards + Darkest Dungeon", with a **planning phase** and an **alternating
   resolution**.
-- **Round:** (1) Block is reset, damage-over-time ticks, statuses count down,
+- **PvE turn (request #34, Slay the Spire):** each player action resolves at
+  once; when every player ends the turn, the enemies carry out their intents
+  (by initiative) and a new round begins. The party's Block resets at the start
+  of the round, the enemies' Block at the start of their phase.
+- **PvP round:** (1) Block is reset, damage-over-time ticks, statuses count down,
   every unit gains Focus from Precision (`focusPerRound`: min 3, unspent Focus
   carries over to a cap) and team initiative is rolled (roll + Agility; each
   team keeps its best). (2) Enemies plan (visible intents). (3) Players add

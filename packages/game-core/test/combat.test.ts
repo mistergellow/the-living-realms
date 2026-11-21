@@ -106,122 +106,64 @@ describe('Focus (Precision)', () => {
   });
 });
 
-describe('planning phase', () => {
-  it('players plan actions first; nothing resolves until everyone is ready', () => {
+describe('PvE turn (Slay the Spire, request #34)', () => {
+  it('actions happen at once; ending the turn lets the enemies act; a new round begins', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
     expect(s.phase).toBe('planning');
+    expect(s.initiative).toBeNull(); // no initiative roll in PvE: the party always starts
     s = plan(s, 'p:a', { abilityId: 'stab' });
-    expect(s.plan).toHaveLength(1);
-    expect(s.plan[0]).toMatchObject({ actorId: 'p:a', abilityId: 'stab', targetColumn: 'front' });
-    expect(s.log.some((l) => l.t === 'ability')).toBe(false);
+    expect(s.plan).toEqual([]);
+    expect(s.log.some((l) => l.t === 'ability' && l.actorId === 'p:a')).toBe(true);
+    expect(unit(s, 'p:a').focus).toBe(3 - 1);
     s = ok(setReady(s, 'p:a'));
-    expect(s.round).toBe(1);
+    expect(s.round).toBe(1); // waits for b
     s = ok(setReady(s, 'p:b'));
     expect(s.round).toBe(2);
-    expect(s.log.some((l) => l.t === 'ability' && l.actorId === 'p:a')).toBe(true);
+    expect(s.log.some((l) => l.t === 'resolve' && l.first === 'enemies')).toBe(true);
+    expect(s.log.some((l) => l.t === 'ability' && l.actorId.startsWith('e:'))).toBe(true);
   });
 
-  it('cannot plan more than the Focus (and Mana) available; reserved Focus counts', () => {
+  it('cannot act beyond the Focus (and Mana) available; nothing to undo', () => {
     let s = encounter(
       [member('a', 0, { focusPerRound: 3 })],
-      room([{ enemy: 'rift_husk', slot: 0 }]),
+      room([{ enemy: 'rift_warden', slot: 0 }]),
     );
     s = plan(s, 'p:a', { abilityId: 'cleave' }); // 2
-    expect(reservedBy(s, 'p:a').focus).toBe(2);
-    const poor = planAction(s, 'p:a', { type: 'plan', abilityId: 'cleave' });
-    expect(poor).toMatchObject({ ok: false, reason: 'Not enough Focus.' });
-    s = plan(s, 'p:a', { abilityId: 'stab' }); // 1 → 3 used
-    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(false);
-    // Removing a planned action frees its Focus.
-    s = ok(unplanAction(s, 'p:a', s.plan[0]!.id));
-    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(true);
+    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'cleave' })).toMatchObject({
+      ok: false,
+      reason: 'Not enough Focus.',
+    });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    expect(unit(s, 'p:a').focus).toBe(0);
+    expect(unplanAction(s, 'p:a', 1).ok).toBe(false);
   });
 
-  it('a confirmed plan cannot be changed; others cannot remove your actions', () => {
-    let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'stab' });
-    expect(unplanAction(s, 'p:b', s.plan[0]!.id).ok).toBe(false);
+  it('after ending the turn you cannot act; the timer ends everyone’s turn', () => {
+    let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_warden', slot: 0 }]));
     s = ok(setReady(s, 'p:a'));
     expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(false);
-  });
-
-  it('the planning timer resolves whatever was planned', () => {
-    let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_husk', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'stab' });
     const t = timeoutTurn(s);
     expect(t.round).toBe(2);
     expect(t.log.some((l) => l.t === 'timeout')).toBe(true);
-    expect(t.log.some((l) => l.t === 'ability' && l.actorId === 'p:a')).toBe(true);
-  });
-});
-
-describe('initiative and alternating resolution', () => {
-  it('team initiative = best (roll + Agility) of each side; it decides who starts', () => {
-    const s = encounter(
-      [member('a', 0, { initiative: 100 }), member('b', 1, { initiative: 0 })],
-      room([{ enemy: 'rift_husk', slot: 0 }]),
-    );
-    expect(s.initiative!.first).toBe('party');
-    expect(s.initiative!.party).toBeGreaterThan(100);
-    const r = s.log.find((l) => l.t === 'initiative');
-    expect(r).toMatchObject({ first: 'party' });
   });
 
-  it('actions alternate between teams, each team in planned order; the longer queue finishes', () => {
+  it('enemies act in order of initiative, each with its intents', () => {
     let s = encounter(
-      [
-        member('a', 0, { initiative: 100, maxHp: 999, focusPerRound: 3 }),
-        member('b', 1, { maxHp: 999 }),
-      ],
+      [member('a', 0, { maxHp: 999 })],
       room([
-        { enemy: 'rift_warden', slot: 0 },
-        { enemy: 'rift_bulwark', slot: 1 },
+        { enemy: 'rift_bulwark', slot: 0 },
+        { enemy: 'hollow_hound', slot: 2 },
       ]),
     );
     s = calm(s);
-    const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
-    warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
-    // Planned order: b, a, a — not initiative order.
-    s = plan(s, 'p:b', { abilityId: 'stab' });
-    s = plan(s, 'p:a', { abilityId: 'stab' });
-    s = plan(s, 'p:a', { abilityId: 'stab' });
+    const [bulwark, hound] = s.combatants.filter((c) => c.side === 'enemies');
+    bulwark!.intents = [{ abilityId: 'bulwark_bash', targetIds: [], column: 'front' }];
+    hound!.intents = [{ abilityId: 'hound_lunge', targetIds: [], column: 'front' }];
+    hound!.focus = 5;
     const seq = s.logSeq;
     s = ok(setReady(s, 'p:a'));
-    s = ok(setReady(s, 'p:b'));
-    expect(actors(s, seq)).toEqual(['p:b', warden.id, 'p:a', 'p:a']);
-  });
-
-  it('the enemies start when they win initiative', () => {
-    let s = encounter(
-      [member('a', 0, { initiative: -100, maxHp: 999 })],
-      room([{ enemy: 'rift_warden', slot: 0 }]),
-    );
-    expect(s.initiative!.first).toBe('enemies');
-    s = calm(s);
-    const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
-    warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
-    s = plan(s, 'p:a', { abilityId: 'stab' });
-    const seq = s.logSeq;
-    s = ok(setReady(s, 'p:a'));
-    expect(actors(s, seq)).toEqual([warden.id, 'p:a']);
-  });
-
-  it('a character defeated before their action does not act', () => {
-    let s = encounter(
-      [member('a', 0, { initiative: -100, maxHp: 10 }), member('b', 4, { maxHp: 999 })],
-      room([{ enemy: 'rift_warden', slot: 0 }]),
-    );
-    s = calm(s);
-    unit(s, 'p:a').hp = 1;
-    const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
-    warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
-    s.initiative = { party: 0, enemies: 99, first: 'enemies' };
-    s = plan(s, 'p:a', { abilityId: 'stab' });
-    s = ok(setReady(s, 'p:a'));
-    s = ok(setReady(s, 'p:b'));
-    expect(unit(s, 'p:a').downed).toBe(true);
-    expect(s.log.some((l) => l.t === 'skipped' && l.actorId === 'p:a')).toBe(true);
-    expect(s.log.some((l) => l.t === 'ability' && l.actorId === 'p:a')).toBe(false);
+    // The hound has more initiative (9 vs 1).
+    expect(actors(s, seq)).toEqual([hound!.id, bulwark!.id]);
   });
 });
 
@@ -231,37 +173,32 @@ describe('Block', () => {
     expect(absorbWithBlock(5, 10)).toEqual({ toHp: 0, blocked: 5, blockLeft: 5 });
   });
 
-  it('costs 1 Focus, stacks, and is removed when the next round begins', () => {
-    let s = encounter([member('a', 0, { maxHp: 999 })], room([{ enemy: 'rift_warden', slot: 0 }]));
+  it('costs 1 Focus, stacks, protects against the enemy phase, then resets', () => {
+    let s = encounter(
+      [member('a', 0, { maxHp: 999, armor: 0, physicalReduction: 0 })],
+      room([{ enemy: 'rift_warden', slot: 0 }]),
+    );
     s = calm(s);
     expect(getAbility('block')!.focusCost).toBe(BASIC_ACTIONS.block.focusCost);
     s = plan(s, 'p:a', { abilityId: 'block' });
     s = plan(s, 'p:a', { abilityId: 'block' });
-    const seq = s.logSeq;
+    expect(unit(s, 'p:a').block).toBe(2 * BASIC_ACTIONS.block.amount);
+    const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
+    warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
     s = ok(setReady(s, 'p:a'));
-    const gains = s.log.filter((l) => l.seq > seq && l.t === 'block');
-    expect(gains.map((g) => (g as { amount: number }).amount)).toEqual([
-      BASIC_ACTIONS.block.amount,
-      BASIC_ACTIONS.block.amount,
-    ]);
+    const hit = s.log.find((l) => l.t === 'damage' && l.targetId === 'p:a') as { blocked: number };
+    expect(hit.blocked).toBeGreaterThan(0);
     expect(unit(s, 'p:a').block).toBe(0); // new round
   });
 
-  it('blocked damage is reported and Block shields HP within the round', () => {
-    let s = encounter(
-      [member('a', 0, { maxHp: 999, armor: 0, physicalReduction: 0, initiative: 100 })],
-      room([{ enemy: 'rift_warden', slot: 0 }]),
-    );
+  it("enemy Block lasts through the party's turn", () => {
+    let s = encounter([member('a', 0)], room([{ enemy: 'rift_bulwark', slot: 0 }]));
     s = calm(s);
-    const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
-    warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
-    s.initiative = { party: 99, enemies: 0, first: 'party' };
-    s = plan(s, 'p:a', { abilityId: 'block' });
-    s = plan(s, 'p:a', { abilityId: 'block' });
+    const bulwark = s.combatants.find((c) => c.side === 'enemies')!;
+    bulwark.intents = [{ abilityId: 'bulwark_wall', targetIds: [], column: 'front' }];
     s = ok(setReady(s, 'p:a'));
-    const hit = s.log.find((l) => l.t === 'damage' && l.targetId === 'p:a') as
-      { blocked: number; amount: number } | undefined;
-    expect(hit!.blocked).toBeGreaterThan(0);
+    expect(s.round).toBe(2);
+    expect(unit(s, bulwark.id).block).toBeGreaterThan(0);
   });
 });
 
@@ -320,28 +257,28 @@ describe('targeting by columns (front, mid, back × 2 lines)', () => {
 describe('change position', () => {
   it('moving to an empty slot costs 1 Focus for the actor only', () => {
     let s = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]));
-    s = calm(s);
     expect(getAbility('swap_position')!.focusCost).toBe(BASIC_ACTIONS.changePosition.focusCost);
     s = plan(s, 'p:a', { abilityId: 'swap_position', targetSlot: 4 });
-    s = ok(setReady(s, 'p:a'));
-    expect(unit(s, 'p:a').slot).toBe(4);
-    expect(unit(s, 'p:a').focus).toBe(Math.min(COMBAT_RULES.focusMax, 3 - 1 + 3));
+    expect(unit(s, 'p:a')).toMatchObject({ slot: 4, focus: 2 });
   });
 
-  it('swapping with another player costs Focus for both (reserved while planning)', () => {
+  it('swapping with another player costs Focus for both', () => {
     let s = encounter(
       [member('a', 0, { focusPerRound: 3 }), member('b', 3, { focusPerRound: 3 })],
-      room([{ enemy: 'rift_husk', slot: 0 }]),
+      room([{ enemy: 'rift_warden', slot: 0 }]),
     );
-    s = calm(s);
     s = plan(s, 'p:b', { abilityId: 'cleave' });
     s = plan(s, 'p:b', { abilityId: 'stab' }); // b has 0 left
     expect(
       planAction(s, 'p:a', { type: 'plan', abilityId: 'swap_position', targetSlot: 3 }).ok,
     ).toBe(false);
-    s = ok(unplanAction(s, 'p:b', s.plan[1]!.id));
-    s = plan(s, 'p:a', { abilityId: 'swap_position', targetSlot: 3 });
-    expect(reservedBy(s, 'p:b').focus).toBe(3);
+    let t = encounter(
+      [member('a', 0, { focusPerRound: 3 }), member('b', 3, { focusPerRound: 3 })],
+      room([{ enemy: 'rift_warden', slot: 0 }]),
+    );
+    t = plan(t, 'p:a', { abilityId: 'swap_position', targetSlot: 3 });
+    expect(unit(t, 'p:a')).toMatchObject({ slot: 3, focus: 2 });
+    expect(unit(t, 'p:b')).toMatchObject({ slot: 0, focus: 2 });
   });
 });
 
@@ -426,22 +363,23 @@ describe('rooms, downs and outcomes', () => {
     unit(s, 'p:b').downed = true;
     s.combatants.find((c) => c.side === 'enemies')!.hp = 1;
     s = plan(s, 'p:a', { abilityId: 'stab' });
-    s = ok(setReady(s, 'p:a'));
     expect(s.phase).toBe('room_cleared');
     expect(unit(s, 'p:b')).toMatchObject({ downed: false, hp: 1 });
 
     let v = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]), true);
     v = calm(v);
     v.combatants.find((c) => c.side === 'enemies')!.hp = 1;
-    v = ok(setReady(plan(v, 'p:a', { abilityId: 'stab' }), 'p:a'));
+    v = plan(v, 'p:a', { abilityId: 'stab' });
     expect(v).toMatchObject({ phase: 'ended', outcome: 'victory' });
   });
 
   it('is deterministic for a given seed', () => {
     const run = () => {
       let s = encounter([member('a', 0)], room([{ enemy: 'rift_husk', slot: 0 }]), false, 7);
-      for (let i = 0; i < 4 && s.phase === 'planning'; i++)
-        s = ok(setReady(plan(s, 'p:a', { abilityId: 'stab' }), 'p:a'));
+      for (let i = 0; i < 4 && s.phase === 'planning'; i++) {
+        s = plan(s, 'p:a', { abilityId: 'stab' });
+        if (s.phase === 'planning') s = ok(setReady(s, 'p:a'));
+      }
       return s.log;
     };
     expect(run()).toEqual(run());
@@ -449,15 +387,12 @@ describe('rooms, downs and outcomes', () => {
 });
 
 describe('group runs', () => {
-  it('a leaving player is out for good and their plan is dropped; the others go on', () => {
+  it('a leaving player is out for good; if the others already ended the turn, the enemies act', () => {
     let s = encounter([member('a', 0), member('b', 1)], room([{ enemy: 'rift_warden', slot: 0 }]));
-    s = plan(s, 'p:a', { abilityId: 'stab' });
     s = ok(setReady(s, 'p:b'));
     s = leaveParty(s, 'p:a');
     expect(unit(s, 'p:a')).toMatchObject({ left: true, downed: true });
-    // b was the only one left and already ready: the round resolved.
     expect(s.round).toBe(2);
-    expect(s.log.some((l) => l.t === 'ability' && l.actorId === 'p:a')).toBe(false);
   });
 
   it('the last player leaving ends the fight in defeat', () => {
@@ -466,6 +401,62 @@ describe('group runs', () => {
       'p:a',
     );
     expect(s).toMatchObject({ phase: 'ended', outcome: 'defeat' });
+  });
+});
+
+describe('PvP (test mode): planning and alternating resolution', () => {
+  const duel = (a = {}, b = {}) =>
+    calm(
+      createPvpEncounter({
+        teamA: [member('a', 0, { maxHp: 999, ...a })],
+        teamB: [member('b', 0, { maxHp: 999, ...b })],
+        seed: 4,
+      }),
+    );
+
+  it('plans are queued, reserved, removable until ready; nothing resolves before both teams are ready', () => {
+    let s = duel({ focusPerRound: 3 });
+    s = plan(s, 'p:a', { abilityId: 'cleave' });
+    expect(reservedBy(s, 'p:a').focus).toBe(2);
+    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'cleave' }).ok).toBe(false);
+    s = ok(unplanAction(s, 'p:a', s.plan[0]!.id));
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    expect(s.log.some((l) => l.t === 'ability')).toBe(false);
+    s = ok(setReady(s, 'p:a'));
+    expect(planAction(s, 'p:a', { type: 'plan', abilityId: 'block' }).ok).toBe(false);
+    s = ok(setReady(s, 'p:b'));
+    expect(s.round).toBe(2);
+  });
+
+  it('team initiative decides who starts; actions alternate in planned order', () => {
+    let s = duel({ initiative: 100 }, { initiative: -100 });
+    expect(s.initiative!.first).toBe('party');
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    s = plan(s, 'p:b', { abilityId: 'stab' });
+    const seq = s.logSeq;
+    s = ok(setReady(ok(setReady(s, 'p:a')), 'p:b'));
+    expect(actors(s, seq)).toEqual(['p:a', 'p:b', 'p:a']);
+  });
+
+  it('a character defeated before their action does not act', () => {
+    let s = calm(
+      createPvpEncounter({
+        teamA: [
+          member('a', 0, { initiative: -100 }),
+          member('c', 4, { initiative: -100, maxHp: 999 }),
+        ],
+        teamB: [member('b', 0, { initiative: 100, maxHp: 999 })],
+        seed: 4,
+      }),
+    );
+    unit(s, 'p:a').hp = 1;
+    unit(s, 'p:a').stats.armor = 0;
+    s = plan(s, 'p:b', { abilityId: 'cleave' });
+    s = plan(s, 'p:a', { abilityId: 'stab' });
+    s = ok(setReady(ok(setReady(ok(setReady(s, 'p:a')), 'p:c')), 'p:b'));
+    expect(unit(s, 'p:a').downed).toBe(true);
+    expect(s.log.some((l) => l.t === 'skipped' && l.actorId === 'p:a')).toBe(true);
   });
 });
 

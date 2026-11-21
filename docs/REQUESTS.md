@@ -68,6 +68,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D56 | Dungeon Threat: implementar já uma versão simples para testar a mecânica                                                                                                                                                                                             | 2026-11-21 | `THREAT_RULES`, ADR-035                                                                        |
 | D57 | Modo PvP de teste                                                                                                                                                                                                                                                    | 2026-11-21 | `createPvpEncounter`, lobbies `pvp_arena`, ADR-037                                             |
 | D58 | **Profissões** (estilo Project Zomboid): muitas (Runesmith, Blacksmith, Pescador, …), com níveis que melhoram o sucesso e os resultados; equilíbrio depois                                                                                                           | 2026-11-21 | `content/professions.ts`, `modules/professions`, ADR-036                                       |
+| D59 | **PvE é como Slay the Spire:** as ações dos jogadores acontecem logo (em tempo real); quando todos terminam o turno, os inimigos fazem as ações deles. Mais fácil e fluido. **O PvP mantém** o planeamento + resolução alternada (substitui D47 no PvE)              | 2026-11-21 | `planAction`/`resolveRound` (`combat/engine.ts`), `CombatPage.tsx`, ADR-038                    |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -598,3 +599,21 @@ que melhoram o sucesso e os resultados; equilíbrio depois.
 - Testes: 77 unitários no game-core, 65 de integração no servidor, 19 web, 9 e2e.
 - Docs: CHANGE_MAP, DECISIONS (ADR-035 atualizado, ADR-036, ADR-037),
   DATABASE, ROADMAP, ARCHITECTURE.
+
+### #34 — 2026-11-21 — PvE como no Slay the Spire
+
+**Pedido:** no PvE, as ações acontecem em tempo real e depois o inimigo faz as
+dele (mais fácil e fluido); o PvP mantém-se. Dar commit e pull para ver.
+**Decisões:** D59.
+**Resultado:**
+
+- Motor: no PvE cada ação resolve-se no momento; "End turn" quando todos
+  terminam → fase dos inimigos (intenções por ordem de iniciativa). Sem
+  rolagem de iniciativa no PvE (o grupo começa sempre). O Block do grupo
+  desaparece no início da ronda; o Block dos inimigos dura até à fase deles
+  (como no Slay the Spire). O PvP continua com planeamento escondido e
+  resolução alternada por iniciativa de equipa.
+- Ecrã: no PvE o painel da esquerda mostra o registo, o botão é "End turn" e
+  as tuas ações animam logo; no PvP mantém-se o plano e o "Ready".
+- Testes: 76 unitários, 65 de integração, 19 web, 9 e2e.
+- Docs: CHANGE_MAP, DECISIONS (ADR-038), ARCHITECTURE.

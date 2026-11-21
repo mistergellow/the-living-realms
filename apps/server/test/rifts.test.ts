@@ -62,7 +62,12 @@ async function winFight(h: Hero, runId: string): Promise<RunDto> {
   await rig(runId);
   let run: RunDto | undefined;
   for (let i = 0; i < 20; i++) {
-    await act(h, runId, { type: 'plan', abilityId: 'cleave' });
+    // PvE: the attack happens at once; it may already win the fight.
+    const hit = await act(h, runId, { type: 'plan', abilityId: 'cleave' });
+    if (hit.statusCode === 200 && (hit.json() as RunDto).combat?.phase !== 'planning') {
+      run = hit.json();
+      break;
+    }
     const res = await act(h, runId, { type: 'ready' });
     expect(res.statusCode).toBe(200);
     run = res.json();
@@ -173,8 +178,10 @@ describe('Rifts', () => {
     await act(h, run.id, { type: 'vote', optionId: first.id });
     const wrong = await act(h, run.id, { type: 'plan', abilityId: 'arcane_bolt' });
     expect(wrong.json().error.code).toBe('INVALID_ACTION');
+    // PvE (Slay the Spire): the action happens at once.
     const planned = (await act(h, run.id, { type: 'plan', abilityId: 'block' })).json() as RunDto;
-    expect(planned.combat!.plan).toHaveLength(1);
+    expect(planned.combat!.plan).toHaveLength(0);
+    expect(planned.combat!.log.some((l) => l.t === 'block')).toBe(true);
     const next = (await act(h, run.id, { type: 'ready' })).json() as RunDto;
     expect(next.combat!.round).toBe(2);
     expect(next.combat!.log.some((l) => l.t === 'resolve')).toBe(true);

@@ -28,7 +28,9 @@ import type { useRunAction } from './api';
  * (not in an effect), so new results never flash up before they are played:
  * - `pending`: some log entries have not finished playing yet;
  * - `logUpTo`: the text log shows entries up to this seq;
- * - `resolving`: the replay includes actions (controls wait for it).
+ * - `resolving`: the replay includes the enemy phase (PvE) or the round's
+ *   resolution (PvP); the controls wait for it. Your own PvE actions do not
+ *   block the controls (Slay the Spire: act, act, act, end turn).
  */
 function useReplayState(combat: CombatView | undefined) {
   const [played, setPlayed] = useState<number | null>(null);
@@ -42,7 +44,7 @@ function useReplayState(combat: CombatView | undefined) {
   const maxSeq = log.length ? log[log.length - 1]!.seq : 0;
   const pending = played !== null && maxSeq > played;
   const logUpTo = pending ? Math.max(played, progress ?? played) : Infinity;
-  const resolving = pending && log.some((e) => e.seq > played! && e.t === 'ability');
+  const resolving = pending && log.some((e) => e.seq > played! && e.t === 'resolve');
   return { pending, logUpTo, resolving, onProgress, onCaughtUp };
 }
 
@@ -191,41 +193,45 @@ export function CombatScreen({
 
       <div className="combat-middle">
         <aside className="plan-queue" aria-label="Planned actions">
-          <h3>Plan</h3>
-          <ol data-testid="plan">
-            {combat.plan.map((p, i) => {
-              const actor = byId(p.actorId);
-              const a = getAbility(p.abilityId);
-              const mine = p.actorId === myId;
-              return (
-                <li key={p.id} data-mine={mine}>
-                  {actor?.appearance ? (
-                    <CharacterToken appearance={actor.appearance} size={30} title={actor.name} />
-                  ) : null}
-                  <AbilityIcon abilityId={p.abilityId} className="plan-icon" />
-                  <span className="plan-text">
-                    {a?.name}
-                    {p.targetColumn ? ` → ${p.targetColumn}` : ''}
-                    {p.targetId && p.targetId !== p.actorId
-                      ? ` → ${byId(p.targetId)?.name ?? ''}`
-                      : ''}
-                    {p.targetSlot !== undefined ? ` → slot ${p.targetSlot + 1}` : ''}
-                  </span>
-                  <span className="plan-order">{i + 1}</span>
-                  {mine && canPlan && (
-                    <button
-                      className="plan-remove"
-                      aria-label={`Remove ${a?.name ?? 'action'}`}
-                      onClick={() => send({ type: 'unplan', planId: p.id })}
-                    >
-                      ×
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          {combat.plan.length === 0 && <p className="muted small">No actions planned yet.</p>}
+          <h3>{pvp ? 'Plan' : 'Log'}</h3>
+          {pvp && (
+            <ol data-testid="plan">
+              {combat.plan.map((p, i) => {
+                const actor = byId(p.actorId);
+                const a = getAbility(p.abilityId);
+                const mine = p.actorId === myId;
+                return (
+                  <li key={p.id} data-mine={mine}>
+                    {actor?.appearance ? (
+                      <CharacterToken appearance={actor.appearance} size={30} title={actor.name} />
+                    ) : null}
+                    <AbilityIcon abilityId={p.abilityId} className="plan-icon" />
+                    <span className="plan-text">
+                      {a?.name}
+                      {p.targetColumn ? ` → ${p.targetColumn}` : ''}
+                      {p.targetId && p.targetId !== p.actorId
+                        ? ` → ${byId(p.targetId)?.name ?? ''}`
+                        : ''}
+                      {p.targetSlot !== undefined ? ` → slot ${p.targetSlot + 1}` : ''}
+                    </span>
+                    <span className="plan-order">{i + 1}</span>
+                    {mine && canPlan && (
+                      <button
+                        className="plan-remove"
+                        aria-label={`Remove ${a?.name ?? 'action'}`}
+                        onClick={() => send({ type: 'unplan', planId: p.id })}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          {pvp && combat.plan.length === 0 && (
+            <p className="muted small">No actions planned yet.</p>
+          )}
           <ol className="combat-log" data-testid="combat-log">
             {lines.map((l) => (
               <li key={l.seq}>{l.text}</li>
@@ -327,7 +333,7 @@ export function CombatScreen({
           {canPlan && me ? (
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-                <strong className="your-turn">Plan your actions</strong>
+                <strong className="your-turn">{pvp ? 'Plan your actions' : 'Your turn'}</strong>
                 <span className="spacer" />
                 {selected && (
                   <span className="muted">
@@ -350,7 +356,7 @@ export function CombatScreen({
                   onClick={() => send({ type: 'ready' })}
                   disabled={action.isPending}
                 >
-                  Ready
+                  {pvp ? 'Ready' : 'End turn'}
                 </button>
               </div>
             </>
@@ -359,7 +365,9 @@ export function CombatScreen({
               {run.status !== 'active'
                 ? ''
                 : replay.resolving
-                  ? 'Resolving the round…'
+                  ? pvp
+                    ? 'Resolving the round…'
+                    : 'The enemies are acting…'
                   : combat.phase === 'room_cleared'
                     ? 'Room cleared.'
                     : me?.stunned

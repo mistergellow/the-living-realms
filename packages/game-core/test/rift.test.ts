@@ -266,7 +266,8 @@ describe('exploration run', () => {
     s = ok(vote(s, 'a', first));
     s = ok(vote(s, 'b', first));
     s = ok(combatAction(s, 'a', { type: 'plan', abilityId: 'block' }));
-    expect(s.combat!.plan).toHaveLength(1);
+    // PvE: the action happens at once (Slay the Spire).
+    expect(s.combat!.combatants.find((c) => c.id === 'p:a')!.block).toBeGreaterThan(0);
     s = leaveRun(s, 'a');
     expect(s.leaderId).toBe('b');
     expect(s.status).toBe('active');
