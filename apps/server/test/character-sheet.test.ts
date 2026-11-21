@@ -227,7 +227,7 @@ describe('creation off-hand and attribute points', () => {
   });
 });
 
-describe('item cards (request #36): bonus effects, rarity, requirements, runes', () => {
+describe('item cards (request #37): bonus effects, rarity, requirements, runes', () => {
   it('shows rolled effects and rarity, and they change the stats when equipped', async () => {
     const { cookie, id } = await newCharacter();
     const [ring] = await t.dbHandle.sql`

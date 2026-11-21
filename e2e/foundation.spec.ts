@@ -138,7 +138,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
 
   await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
-  // Item card (request #36): type, base effect and BASE-attribute requirements.
+  // Item card (request #37): type, base effect and BASE-attribute requirements.
   const card = page.getByTestId('inventory').getByTestId('item-card');
   await expect(card).toHaveAttribute('data-rarity', 'common');
   await expect(card).toContainText('Weapon · Bow');

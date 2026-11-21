@@ -1671,7 +1671,7 @@ fieldset.field {
   border: 0;
 }
 
-/* item card (request #36): colour = rarity = number of bonus effects */
+/* item card (request #37): colour = rarity = number of bonus effects */
 [data-rarity='common'] {
   --rarity: var(--rarity-common);
 }

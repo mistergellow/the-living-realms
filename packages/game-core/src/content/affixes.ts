@@ -13,7 +13,7 @@ import {
 import type { Rng } from '../combat/rng.js';
 
 /*
- * Bonus effects on gear (request #36). PROVISIONAL CONTENT AND NUMBERS — the
+ * Bonus effects on gear (request #37). PROVISIONAL CONTENT AND NUMBERS — the
  * owner chose the four groups (attributes, derived stats, offensive %, combat
  * effects); the list, the ranges and the drop weights are placeholders.
  *

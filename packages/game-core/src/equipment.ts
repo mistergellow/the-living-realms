@@ -33,15 +33,15 @@ export interface OwnedItem {
   equippedSlot: EquipSlot | null;
   /** Weapons: +0, +1, … (request #31). */
   upgradeLevel?: number;
-  /** Bonus effects (request #36), already normalised. */
+  /** Bonus effects (request #37), already normalised. */
   affixes?: WeaponSpecial[];
 }
 
 /*
- * Requirements to equip an item (request #36): BASE attributes only, like the
+ * Requirements to equip an item (request #37): BASE attributes only, like the
  * exploration tests (D44). They belong to the item itself and never change
  * with upgrades (+0…+10 only raise the weapon's base stats — owner, request
- * #37). PROVISIONAL: weapons ask for their primary attribute at
+ * #38). PROVISIONAL: weapons ask for their primary attribute at
  * `weaponPrimaryBase` unless the definition sets its own `requirements`.
  */
 export const REQUIREMENT_RULES = {

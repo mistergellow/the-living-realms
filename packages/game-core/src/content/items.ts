@@ -25,7 +25,7 @@ export interface ItemDef {
   bonuses?: Partial<Attributes>;
   armor?: number;
   magicResist?: number;
-  /** BASE attributes needed to equip it (request #36); weapons add their primary. */
+  /** BASE attributes needed to equip it (request #37); weapons add their primary. */
   requirements?: Partial<Attributes>;
 }
 

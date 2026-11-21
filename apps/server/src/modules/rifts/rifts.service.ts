@@ -124,7 +124,7 @@ export async function assertFreeForRift(
 
 const statusOf = (state: RunState): RunStatus => state.status;
 
-/** Bonus effects of a new piece of gear (request #36); materials get none. */
+/** Bonus effects of a new piece of gear (request #37); materials get none. */
 const rollDropAffixes = (rng: Rng, defId: string) => {
   const kind = getItemDef(defId)?.kind;
   return isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng)) : [];

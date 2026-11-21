@@ -92,13 +92,13 @@ export function deriveStats(
 export interface CharacterStats {
   attributes: Attributes;
   stats: DerivedStatsDto;
-  /** Combat bonuses from gear effects (request #36). */
+  /** Combat bonuses from gear effects (request #37). */
   gear: GearCombatEffects;
 }
 
 export function computeStats(base: Attributes, items: OwnedItem[] = []): CharacterStats {
   const equipped = activeEquipment(items);
-  // Bonus effects of every equipped item (request #36).
+  // Bonus effects of every equipped item (request #37).
   const g = gearTotals(equipped.flatMap((i) => i.affixes ?? []));
   const attributes = addAttributes(base, ...equipped.map((i) => i.def.bonuses ?? {}), g.attributes);
   const armor = equipped.reduce((sum, i) => sum + (i.def.armor ?? 0), 0) + g.stats.armor;

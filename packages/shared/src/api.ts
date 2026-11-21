@@ -247,7 +247,7 @@ export interface ItemDto {
   magicResist: number;
   /** Weapons only (request #31): type, base stats, upgrades, specials, rune slots. */
   weapon: WeaponInfoDto | null;
-  /** Rarity = number of bonus effects (request #36): 0 common … 5 mythic. */
+  /** Rarity = number of bonus effects (request #37): 0 common … 5 mythic. */
   rarity: ItemRarity;
   /** Bonus effects (max 5), with their text for the item card. */
   affixes: ItemAffixDto[];
@@ -262,7 +262,7 @@ export type ItemRarity = (typeof ITEM_RARITIES)[number];
 
 export type AffixGroup = 'attribute' | 'stat' | 'offense' | 'combat';
 
-/** A bonus effect on a piece of gear (request #36). */
+/** A bonus effect on a piece of gear (request #37). */
 export interface ItemAffixDto {
   id: string;
   value: number;
@@ -280,7 +280,7 @@ export interface ItemRequirementDto {
 }
 
 /**
- * Combat bonuses from gear (request #36), carried by player combatants.
+ * Combat bonuses from gear (request #37), carried by player combatants.
  * Percentages are whole numbers (15 = 15%).
  */
 export interface GearCombatEffects {

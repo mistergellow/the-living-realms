@@ -82,7 +82,7 @@ export interface RunMember {
   stats: DerivedStatsDto;
   abilityIds: string[];
   abilityMultipliers: Record<string, number>;
-  /** Gear effects (request #36); missing on runs saved before it. */
+  /** Gear effects (request #37); missing on runs saved before it. */
   gear?: GearCombatEffects;
   hp: number;
   mana: number;

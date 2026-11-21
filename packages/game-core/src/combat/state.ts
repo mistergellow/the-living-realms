@@ -65,7 +65,7 @@ export interface PartyMemberInput {
   slot: number;
   /** Statuses carried in from exploration (e.g. an event debuff). */
   statuses?: StatusView[];
-  /** Combat bonuses from gear effects (request #36). */
+  /** Combat bonuses from gear effects (request #37). */
   gear?: GearCombatEffects;
   /** Exploration boons for the first round. */
   firstRoundFocus?: number;

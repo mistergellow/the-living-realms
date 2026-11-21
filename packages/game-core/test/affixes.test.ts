@@ -24,7 +24,7 @@ import {
 
 const base = { might: 5, agility: 5, precision: 5, endurance: 5, intellect: 5, will: 5 };
 
-describe('bonus effects (request #36)', () => {
+describe('bonus effects (request #37)', () => {
   it('rarity is the number of effects', () => {
     expect([0, 1, 2, 3, 4, 5].map(rarityOf)).toEqual([
       'common',
@@ -104,8 +104,8 @@ describe('bonus effects (request #36)', () => {
   });
 });
 
-describe('requirements (request #36): BASE attributes', () => {
-  it('weapons need their primary attribute; upgrades never change it (request #37)', () => {
+describe('requirements (request #37): BASE attributes', () => {
+  it('weapons need their primary attribute; upgrades never change it (request #38)', () => {
     const sword = getItemDef('training_sword')!;
     expect(itemRequirements(sword)).toEqual({ might: 5 });
     expect(itemRequirements({ ...sword, requirements: { might: 8, will: 6 } })).toEqual({
@@ -128,7 +128,7 @@ describe('requirements (request #36): BASE attributes', () => {
   });
 });
 
-describe('gear effects in combat (request #36)', () => {
+describe('gear effects in combat (request #37)', () => {
   const appearance = { version: 1, color: '#c0392b', emblem: 'circle' } as const;
   const stats = computeStats(base).stats;
   const member = (gear = noGearEffects(), over: Partial<DerivedStatsDto> = {}) =>

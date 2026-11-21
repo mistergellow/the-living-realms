@@ -3,7 +3,7 @@ import type { AttributeKey, ItemDto, ItemKind } from '@realms/shared';
 import type { ReactNode } from 'react';
 
 /*
- * Item card (request #36), modelled on the owner's reference:
+ * Item card (request #37), modelled on the owner's reference:
  * header coloured by rarity (= number of bonus effects) with name, type and
  * the base effect; requirements (BASE attributes); bonus effects (up to 5);
  * rune slots only when the item has unlocked ones.

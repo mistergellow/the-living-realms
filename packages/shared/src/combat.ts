@@ -82,7 +82,7 @@ export interface CombatantView {
   isBoss: boolean;
   abilityIds: string[];
   stats: DerivedStatsDto;
-  /** Player characters: combat bonuses from gear effects (request #36). */
+  /** Player characters: combat bonuses from gear effects (request #37). */
   gear?: GearCombatEffects;
 }
 

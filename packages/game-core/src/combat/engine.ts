@@ -339,7 +339,7 @@ function addStatus(
 }
 
 /**
- * Gear effects after a hit lands (request #36): life steal heals the attacker,
+ * Gear effects after a hit lands (request #37): life steal heals the attacker,
  * thorns hurt the attacker, on-hit statuses may stick to the target.
  */
 function gearOnHit(
@@ -397,7 +397,7 @@ function applyEffect(
       if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
       if (effect.bonusVs && hasStatus(target, effect.bonusVs.status))
         dmg *= effect.bonusVs.multiplier;
-      // Gear effects (request #36): +% damage, +% vs bosses.
+      // Gear effects (request #37): +% damage, +% vs bosses.
       if (actor.gear)
         dmg *= 1 + (actor.gear.damagePct + (target.isBoss ? actor.gear.bossDamagePct : 0)) / 100;
       const crit = rng.chance(actor.stats.critChance);
