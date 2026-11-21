@@ -343,8 +343,10 @@ conversion, `pixelToHex` for picking). Characters store `hex_q`, `hex_r`.
 The client draws the map with PixiJS (`features/world/map-scene.ts`; camera
 maths in `map-camera.ts`): drag to pan, wheel/pinch/buttons/keys to zoom. Movement cost in Action Points
 per hex, terrain, pathfinding and fog of war are later-phase mechanics built on
-these utilities. The map tiles themselves will live in a `map_hexes` table (see
-DATABASE.md).
+these utilities. The continent itself (land hexes, regions, capitals) is
+deterministic data in `packages/game-core/src/content/world-map.ts`, shared by
+server and client (ADR-040); it moves to a `map_hexes` table (see DATABASE.md)
+once hexes need mutable state.
 
 ## 9. Frontend
 

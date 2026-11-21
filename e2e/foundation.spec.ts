@@ -43,7 +43,14 @@ test('register → create character → enter the world → log out → log in',
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
+  // The continent: the spawn hex (centre of the view) lies in the neutral Riftlands.
+  await expect(async () => {
+    await page.locator('.world-map canvas').click(); // the scene may still be loading
+    await expect(page.getByTestId('hex-info')).toContainText('The Riftlands', { timeout: 500 });
+  }).toPass();
   await page.screenshot({ path: 'test-results/screens/02-world.png' });
+  for (let i = 0; i < 8; i++) await page.keyboard.press('-');
+  await page.screenshot({ path: 'test-results/screens/02-world-continent.png' });
 
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL(/\/login$/);

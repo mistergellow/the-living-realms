@@ -1,4 +1,4 @@
-import { hexDistance } from '@realms/game-core';
+import { hexDistance, mapHexAt, REGIONS } from '@realms/game-core';
 import type { HexCoord, PresencePlayer } from '@realms/shared';
 import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -84,7 +84,7 @@ export function WorldPage() {
   );
 }
 
-/** One line about a hex: coordinates, distance and who is there. */
+/** One line about a hex: region (or capital), coordinates, distance and who is there. */
 function HexInfo({
   hex,
   from,
@@ -96,9 +96,18 @@ function HexInfo({
 }) {
   if (!hex) return <span className="muted">Select a hex to inspect it.</span>;
   const here = players.filter((p) => p.position.q === hex.q && p.position.r === hex.r);
+  const tile = mapHexAt(hex);
   return (
     <span data-testid="hex-info">
-      Hex{' '}
+      {tile ? (
+        <strong>
+          {tile.capital ? `${tile.capital}, ` : ''}
+          {REGIONS[tile.region].name}
+        </strong>
+      ) : (
+        <strong>Open sea</strong>
+      )}{' '}
+      · Hex{' '}
       <span className="mono">
         ({hex.q}, {hex.r})
       </span>{' '}

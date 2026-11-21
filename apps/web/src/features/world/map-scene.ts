@@ -1,10 +1,17 @@
 import {
+  HEX_DIRECTIONS,
+  REGIONS,
+  REGION_IDS,
+  RIFTLANDS_CENTER,
+  hexAdd,
   hexCorners,
-  hexDistance,
-  hexesInRange,
   hexKey,
   hexToPixel,
+  mapHexAt,
   pixelToHex,
+  worldMapHexes,
+  type MapHex,
+  type RegionId,
 } from '@realms/game-core';
 import type { HexCoord, PresencePlayer } from '@realms/shared';
 import {
@@ -22,18 +29,37 @@ import type { PixiScene } from '../render/usePixiScene';
 import { clampToBounds, fitZoom, screenToWorld, zoomAt, type Camera } from './map-camera';
 
 /*
- * World map renderer (PixiJS, ADR-029): hex grid around the player, player
- * tokens, hover/selection, and a camera you can drag, zoom (wheel, pinch,
- * buttons, + / − keys) and recenter. Terrain, fog of war and movement come
- * in Phase 4; the server stays the source of truth for positions.
+ * World map renderer (PixiJS, ADR-029, ADR-040): the whole continent coloured
+ * by region (three nations + the Riftlands), borders, coast and capitals,
+ * player tokens, hover/selection, and a camera you can drag, zoom (wheel,
+ * pinch, buttons, + / − keys) and recenter. Terrain, fog of war and movement
+ * come later; the server stays the source of truth for positions.
  */
 
 /** Hex size (centre to corner) in world units. */
 export const HEX_SIZE = 34;
-/** How many rings of hexes are drawn around the player. */
-export const GRID_RADIUS = 12;
 /** Rings that fit the view when the map opens. */
 const VIEW_RADIUS = 5;
+
+/** Region colours on the map (placeholders, A64). */
+export const REGION_COLORS: Readonly<Record<RegionId, number>> = {
+  west: 0x2f5d9e,
+  east: 0x9e3b32,
+  north: 0x3d7f48,
+  riftlands: 0x5a2f78,
+};
+
+const MAP_HEXES: readonly MapHex[] = worldMapHexes();
+/** Centre and radius (world units) of the continent, for the camera and the mist. */
+const MAP_BOUNDS = (() => {
+  const pts = MAP_HEXES.map((h) => hexToPixel(h, HEX_SIZE));
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  const x = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const y = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const radius = Math.max(...pts.map((p) => Math.hypot(p.x - x, p.y - y))) + HEX_SIZE;
+  return { x, y, radius };
+})();
 
 const C = {
   bg: 0x0b0d12,
@@ -159,6 +185,10 @@ export class MapScene implements PixiScene {
   private readonly world = new Container();
   private readonly hexFill = new Graphics();
   private readonly hexLines = new Graphics();
+  private readonly borderG = new Graphics();
+  private readonly capitalLayer = new Container();
+  private readonly regionLabels = new Container();
+  private readonly labelAnchors: Array<{ t: Text; y: number; below: boolean }> = [];
   private readonly hoverG = new Graphics();
   private readonly selectedG = new Graphics();
   private readonly selfG = new Graphics();
@@ -172,7 +202,8 @@ export class MapScene implements PixiScene {
   private readonly fog: Array<{ s: Sprite; vx: number }> = [];
 
   private data: MapSceneData | null = null;
-  private gridKey = '';
+  private gridBuilt = false;
+  private centerKey = '';
   private width: number;
   private height: number;
   private cam: Camera = { x: 0, y: 0, zoom: 1 };
@@ -203,11 +234,14 @@ export class MapScene implements PixiScene {
       this.hexFill,
       this.hoverG,
       this.hexLines,
+      this.borderG,
       this.selectedG,
       this.selfGlow,
       this.selfG,
       this.coordLayer,
+      this.capitalLayer,
       this.tokenLayer,
+      this.regionLabels,
       this.fogLayer,
     );
     app.stage.addChild(this.world, this.vignette);
@@ -228,11 +262,14 @@ export class MapScene implements PixiScene {
     if (this.destroyed) return;
     const prev = this.data;
     this.data = d;
+    if (!this.gridBuilt) {
+      this.gridBuilt = true;
+      this.buildGrid();
+    }
     const key = hexKey(d.center);
-    if (key !== this.gridKey) {
-      const first = this.gridKey === '';
-      this.gridKey = key;
-      this.buildGrid(d.center);
+    if (key !== this.centerKey) {
+      const first = this.centerKey === '';
+      this.centerKey = key;
       const c = hexToPixel(d.center, HEX_SIZE);
       if (first) {
         const zoom = fitZoom(this.width, this.height, HEX_SIZE * (VIEW_RADIUS * 2 + 1) * 0.95);
@@ -288,34 +325,82 @@ export class MapScene implements PixiScene {
 
   /* -- drawing ------------------------------------------------------------ */
 
-  private buildGrid(center: HexCoord) {
+  private buildGrid() {
     const fill = this.hexFill.clear();
     const lines = this.hexLines.clear();
+    const borders = this.borderG.clear();
     for (const t of this.coords.values()) t.destroy();
     this.coords.clear();
-    for (const h of hexesInRange(center, GRID_RADIUS)) {
-      const { x, y } = hexToPixel(h, HEX_SIZE);
-      const d = hexDistance(center, h);
-      const edge = Math.max(0, Math.min(1, (d - (GRID_RADIUS - 4)) / 4));
-      const pts = CORNERS.map((v, i) => v + (i % 2 === 0 ? x : y));
-      const color = mix(C.fill, C.fillAlt, hexNoise(h));
-      fill.poly(pts).fill({ color, alpha: 1 - 0.8 * edge });
-      lines.poly(pts).stroke({ width: 1.5, color: C.stroke, alpha: 1 - 0.75 * edge });
+    this.capitalLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.regionLabels.removeChildren().forEach((c) => c.destroy());
+    this.labelAnchors.length = 0;
+    const corners = hexCorners(HEX_SIZE);
 
+    for (const h of MAP_HEXES) {
+      const { x, y } = hexToPixel(h, HEX_SIZE);
+      const pts = CORNERS.map((v, i) => v + (i % 2 === 0 ? x : y));
+      const base = REGION_COLORS[h.region];
+      fill.poly(pts).fill(mix(mix(base, C.bg, 0.45), base, hexNoise(h) * 0.35));
+      lines.poly(pts).stroke({ width: 1, color: mix(base, C.text, 0.15), alpha: 0.35 });
+
+      // Edges towards the sea (coast) or another region (border).
+      HEX_DIRECTIONS.forEach((dir, i) => {
+        const n = mapHexAt(hexAdd(h, dir));
+        if (n && n.region === h.region) return;
+        const a = corners[(6 - i) % 6]!;
+        const b = corners[(7 - i) % 6]!;
+        borders
+          .moveTo(x + a.x, y + a.y)
+          .lineTo(x + b.x, y + b.y)
+          .stroke(
+            n
+              ? { width: 3, color: C.text, alpha: 0.55, cap: 'round' }
+              : { width: 3.5, color: 0xc9b98a, alpha: 0.8, cap: 'round' },
+          );
+      });
+
+      if (h.capital) {
+        this.capitalLayer.addChild(this.capitalMarker(x, y, h.capital));
+        continue;
+      }
       const label = new BitmapText({
         text: `${h.q},${h.r}`,
         style: { fontFamily: MONO, fontSize: 9, fill: C.faint },
       });
       label.anchor.set(0.5);
       label.position.set(x, y);
-      label.alpha = 1 - edge;
       this.coordLayer.addChild(label);
       this.coords.set(hexKey(h), label);
     }
 
+    // Region names, shown when zoomed out.
+    for (const id of REGION_IDS) {
+      const t = new Text({
+        text: REGIONS[id].name.toUpperCase(),
+        style: {
+          fontFamily: FONT,
+          fontSize: 30,
+          fontWeight: '800',
+          letterSpacing: 4,
+          fill: C.text,
+          stroke: { color: 0x000000, width: 5, join: 'round' },
+        },
+        resolution: 2,
+      });
+      t.anchor.set(0.5, 0);
+      t.alpha = 0.85;
+      // Nations: under their capital (the screen offset is set each frame); Riftlands: centre.
+      const cap = REGIONS[id].capital;
+      // The Riftlands' name sits further south, clear of the nations' names.
+      const at = hexToPixel(cap ? cap.hex : hexAdd(RIFTLANDS_CENTER, { q: -2, r: 4 }), HEX_SIZE);
+      t.position.set(at.x, at.y);
+      this.regionLabels.addChild(t);
+      this.labelAnchors.push({ t, y: at.y, below: cap !== null });
+    }
+
     // Slow drifting mist over the map.
     if (!this.fog.length) {
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 14; i++) {
         const s = new Sprite(glowTexture());
         s.anchor.set(0.5);
         s.tint = 0x8fa2d0;
@@ -325,10 +410,41 @@ export class MapScene implements PixiScene {
         this.fog.push({ s, vx: 4 + Math.random() * 8 });
       }
     }
-    const c = hexToPixel(center, HEX_SIZE);
-    const R = GRID_RADIUS * HEX_SIZE * 1.6;
+    const R = MAP_BOUNDS.radius;
     for (const f of this.fog)
-      f.s.position.set(c.x + (Math.random() - 0.5) * 2 * R, c.y + (Math.random() - 0.5) * 1.6 * R);
+      f.s.position.set(
+        MAP_BOUNDS.x + (Math.random() - 0.5) * 2 * R,
+        MAP_BOUNDS.y + (Math.random() - 0.5) * 1.4 * R,
+      );
+  }
+
+  /** A placeholder capital: a gold keep on its hex with the city name. */
+  private capitalMarker(x: number, y: number, name: string): Container {
+    const c = new Container();
+    c.position.set(x, y);
+    const keep = new Graphics()
+      .poly([
+        -11, 8, -11, -4, -7, -4, -7, -9, -3, -9, -3, -4, 3, -4, 3, -9, 7, -9, 7, -4, 11, -4, 11, 8,
+      ])
+      .fill(C.accent)
+      .stroke({ width: 1.5, color: C.ink })
+      .rect(-2.5, 1, 5, 7)
+      .fill(C.ink);
+    const label = new Text({
+      text: name,
+      style: {
+        fontFamily: FONT,
+        fontSize: 11,
+        fontWeight: '800',
+        fill: C.accentStrong,
+        stroke: { color: 0x000000, width: 3, join: 'round' },
+      },
+      resolution: 3,
+    });
+    label.anchor.set(0.5, 0);
+    label.position.set(0, 11);
+    c.addChild(keep, label);
+    return c;
   }
 
   private buildTokens(d: MapSceneData) {
@@ -394,7 +510,7 @@ export class MapScene implements PixiScene {
     if (!this.data) return null;
     const w = screenToWorld(this.cam, this.width, this.height, sx, sy);
     const h = pixelToHex(w.x, w.y, HEX_SIZE);
-    return hexDistance(this.data.center, h) <= GRID_RADIUS ? h : null;
+    return mapHexAt(h) ? h : null;
   }
 
   private setHover(h: HexCoord | null) {
@@ -524,7 +640,7 @@ export class MapScene implements PixiScene {
 
   private bound(cam: Camera): Camera {
     if (!this.data) return cam;
-    return clampToBounds(cam, hexToPixel(this.data.center, HEX_SIZE), GRID_RADIUS * HEX_SIZE * 1.4);
+    return clampToBounds(cam, MAP_BOUNDS, MAP_BOUNDS.radius);
   }
 
   /* -- clock -------------------------------------------------------------- */
@@ -554,17 +670,25 @@ export class MapScene implements PixiScene {
     );
 
     this.coordLayer.visible = this.cam.zoom >= 0.85;
+    this.regionLabels.alpha = Math.max(0, Math.min(1, (0.85 - this.cam.zoom) / 0.25));
+    this.regionLabels.visible = this.regionLabels.alpha > 0;
+    // Names and capitals keep a readable size on screen when zoomed out.
+    for (const l of this.labelAnchors) {
+      l.t.scale.set(0.42 / this.cam.zoom);
+      l.t.y = l.y + (l.below ? 34 : -8) / this.cam.zoom;
+    }
+    const capScale = Math.max(1, 0.7 / this.cam.zoom);
+    for (const c of this.capitalLayer.children) c.scale.set(capScale);
     const pulse = 0.5 + 0.5 * Math.sin(this.time / 600);
     this.selfGlow.alpha = 0.18 + 0.12 * (reduced ? 0.5 : pulse);
     this.selectedG.alpha = 0.75 + 0.25 * (reduced ? 1 : pulse);
     for (const t of this.tokens.values()) t.animate(this.time, this.cam.zoom, reduced);
 
-    if (!reduced && this.data) {
-      const c = hexToPixel(this.data.center, HEX_SIZE);
-      const R = GRID_RADIUS * HEX_SIZE * 1.6;
+    if (!reduced) {
+      const R = MAP_BOUNDS.radius;
       for (const f of this.fog) {
         f.s.x += (f.vx * dt) / 1000;
-        if (f.s.x > c.x + R) f.s.x = c.x - R;
+        if (f.s.x > MAP_BOUNDS.x + R) f.s.x = MAP_BOUNDS.x - R;
       }
     }
   };

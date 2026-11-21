@@ -10,7 +10,7 @@ export interface Camera {
   zoom: number;
 }
 
-export const MIN_ZOOM = 0.45;
+export const MIN_ZOOM = 0.2;
 export const MAX_ZOOM = 2.6;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
