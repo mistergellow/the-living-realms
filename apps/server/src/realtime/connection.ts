@@ -10,6 +10,8 @@ export class Connection {
   isAlive = true;
   violations = 0;
   readonly bucket = new TokenBucket(30, 10);
+  /** Chat is slower: a burst of 5, then one message a second. */
+  readonly chatBucket = new TokenBucket(5, 1);
 
   constructor(
     readonly id: string,

@@ -32,7 +32,7 @@ export function ProfessionsPage() {
   const characterId = useActiveCharacter((s) => s.characterId);
   const list = useProfessions(characterId);
   const [selected, setSelected] = useState<string>('fishing');
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
   const profs = list.data?.professions ?? [];
   const current = profs.find((p) => p.id === selected) ?? profs[0];
 

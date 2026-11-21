@@ -6,7 +6,7 @@ import { useWorldStore } from './world-store';
 export function useWorldConnection(characterId: string | null): void {
   useEffect(() => {
     if (!characterId) return;
-    const { receive, setStatus, reset } = useWorldStore.getState();
+    const { receive, setStatus, reset, setSender } = useWorldStore.getState();
     reset();
     const client = new RealtimeClient({
       onMessage: receive,
@@ -15,8 +15,10 @@ export function useWorldConnection(characterId: string | null): void {
       onReady: (send) => send({ type: 'world.enter', data: { characterId } }),
     });
     client.connect();
+    setSender((msg) => client.send(msg));
     return () => {
       client.disconnect();
+      setSender(null);
       reset();
     };
   }, [characterId]);

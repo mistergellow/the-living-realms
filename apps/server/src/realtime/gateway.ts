@@ -1,5 +1,6 @@
 import {
   channels,
+  chatKey,
   PRESENCE_REFRESH_MS,
   publishControl,
   publishToWorld,
@@ -7,11 +8,13 @@ import {
   type WorldBroadcast,
 } from '@realms/server-kit';
 import {
+  CHAT_HISTORY,
   clientMessageSchema,
   ErrorCode,
   PROTOCOL_VERSION,
   WsCloseCode,
   type CharacterAppearance,
+  type ChatMessage,
   type ClientMessage,
 } from '@realms/shared';
 import type { FastifyBaseLogger as Logger } from 'fastify';
@@ -30,6 +33,11 @@ import { Connection } from './connection.js';
 
 const MAX_VIOLATIONS = 50;
 const HEARTBEAT_MS = 30_000;
+/** Hex chat history lives this long after the last message (seconds). */
+const CHAT_TTL_S = 24 * 60 * 60;
+/** Control characters are replaced by spaces in chat text. */
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
 
 /**
  * Real-time gateway. Owns this instance's WebSocket connections, validates
@@ -149,6 +157,8 @@ export class RealtimeGateway {
         case 'world.leave':
           await this.leaveWorld(conn);
           return conn.send({ type: 'world.left' });
+        case 'chat.send':
+          return await this.chat(conn, msg.data.text);
       }
     } catch (err) {
       if (err instanceof AppError)
@@ -189,19 +199,62 @@ export class RealtimeGateway {
     await presence.set(world.id, conn.presence);
     await charactersRepository.markPlayed(this.ctx.db, character.id);
 
-    const [players, current] = await Promise.all([presence.list(world.id), loadWorld(this.ctx)]);
+    const [players, current, chat] = await Promise.all([
+      presence.list(world.id),
+      loadWorld(this.ctx),
+      this.chatHistory(player.position.q, player.position.r),
+    ]);
     conn.send({
       type: 'world.entered',
       data: {
         world: toWorldDto(current),
         character: toCharacterDto({ ...character, lastPlayedAt: new Date() }),
         players: players.map((p) => p.player),
+        chat,
       },
     });
     await publishToWorld(redis, world.id, {
       message: { type: 'player.joined', data: { player } },
       exceptCharacterId: character.id,
     });
+  }
+
+  /** Hex chat: everyone on the sender's hex (on any instance) receives it. */
+  private async chat(conn: Connection, raw: string): Promise<void> {
+    if (!conn.presence) {
+      throw new AppError(400, ErrorCode.VALIDATION_FAILED, 'Enter the world before chatting.');
+    }
+    if (!conn.chatBucket.take()) {
+      throw new AppError(429, ErrorCode.RATE_LIMITED, 'You are talking too fast.');
+    }
+    const text = raw.replace(CONTROL_CHARS, ' ').trim();
+    if (!text) return;
+    const { player } = conn.presence;
+    const message: ChatMessage = {
+      id: randomUUID(),
+      characterId: player.characterId,
+      name: player.name,
+      text,
+      at: new Date().toISOString(),
+      hex: player.position,
+    };
+    const key = chatKey(this.ctx.world.id, player.position.q, player.position.r);
+    await this.ctx.redis
+      .multi()
+      .lpush(key, JSON.stringify(message))
+      .ltrim(key, 0, CHAT_HISTORY - 1)
+      .expire(key, CHAT_TTL_S)
+      .exec();
+    await publishToWorld(this.ctx.redis, this.ctx.world.id, {
+      message: { type: 'chat.message', data: { message } },
+      onlyHex: player.position,
+    });
+  }
+
+  /** Recent chat of a hex, oldest first. */
+  private async chatHistory(q: number, r: number): Promise<ChatMessage[]> {
+    const raw = await this.ctx.redis.lrange(chatKey(this.ctx.world.id, q, r), 0, CHAT_HISTORY - 1);
+    return raw.map((m) => JSON.parse(m) as ChatMessage).reverse();
   }
 
   private async leaveWorld(conn: Connection): Promise<void> {
@@ -222,7 +275,10 @@ export class RealtimeGateway {
   // ---------------------------------------------------------------------------
   private onWorldBroadcast(b: WorldBroadcast): void {
     for (const c of this.connections.values()) {
-      if (c.presence && c.characterId !== b.exceptCharacterId) c.send(b.message);
+      if (!c.presence || c.characterId === b.exceptCharacterId) continue;
+      const pos = c.presence.player.position;
+      if (b.onlyHex && (pos.q !== b.onlyHex.q || pos.r !== b.onlyHex.r)) continue;
+      c.send(b.message);
     }
   }
 

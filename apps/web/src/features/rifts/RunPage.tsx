@@ -41,7 +41,7 @@ export function RunPage() {
     if (secondsLeft === 0) void run.refetch();
   }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
   if (run.isPending) return <FullPageMessage>Opening the Rift…</FullPageMessage>;
   if (run.isError || !run.data)
     return <FullPageMessage spinner={false}>Rift run not found.</FullPageMessage>;

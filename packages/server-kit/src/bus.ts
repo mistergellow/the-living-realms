@@ -1,4 +1,4 @@
-import type { ServerMessage } from '@realms/shared';
+import type { HexCoord, ServerMessage } from '@realms/shared';
 import type { Redis } from 'ioredis';
 
 /*
@@ -21,6 +21,8 @@ export interface WorldBroadcast {
   message: ServerMessage;
   /** Skip delivery to this character's connection (e.g. the originator). */
   exceptCharacterId?: string;
+  /** Deliver only to characters standing on this hex (hex chat). */
+  onlyHex?: HexCoord;
 }
 
 export type ControlMessage =
@@ -28,6 +30,10 @@ export type ControlMessage =
   | { kind: 'account.replace'; accountId: string; keepConnectionId: string }
   /** A session was revoked (logout); close every connection opened with it. */
   | { kind: 'session.revoked'; sessionId: string };
+
+/** Redis list with the recent chat of one hex (newest first, capped). */
+export const chatKey = (worldId: string, q: number, r: number) =>
+  `${REDIS_PREFIX}chat:${worldId}:${q},${r}`;
 
 export async function publishToWorld(
   redis: Redis,

@@ -63,6 +63,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 Bring the hex world to life for exploration (Rifts placed on the map).
 
 - [x] Hub (home screen) with the in-game shell (top bar, bottom navigation); MMO-style ability bar with tooltips (request #30)
+- [x] **Request #36:** the game opens with the last character played on the hex where it stopped; hex screen with the place's picture and actions (starting town Emberhold; other hexes are open wilds); 2 character slots
 - ❓ World size and shape, terrain types, regions, points of interest, starting area
 - ❓ Action Points: pool size, regeneration, AP cost per hex / per terrain
 - `map_regions` / `map_hexes` tables, a map seeding/import tool
@@ -73,7 +74,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 ## Phase 5 — Social layer and reputation ⏳ ❓
 
-- Chat (local hex/region, global, private), with moderation basics
+- [x] Hex chat (request #36): everyone on the same hex, recent history on arrival
+- Chat (region, global, private), with moderation basics
 - Player inspection, interaction menu
 - ❓ Reputation model (tracks, sources, decay, effects) in place of levels
 - ❓ How in-game languages affect communication (ties into phase 6)

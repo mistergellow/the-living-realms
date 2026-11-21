@@ -44,7 +44,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - BD: `schema.ts` → `characters` (índice único `characters_world_name_uq`) + migração
 - Servidor: `apps/server/src/modules/characters/characters.repository.ts`, `characters.service.ts` (`toCharacterDto`, limite, eventos), `characters.routes.ts`
 - Tempo real: `gateway.ts` → `enterWorld` (constrói `PresencePlayer` a partir do personagem)
-- Web: `apps/web/src/features/characters/api.ts`, `CharacterSelectPage.tsx`, `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (rota `/characters/:id`), `active-character.ts`
+- Web: `apps/web/src/features/characters/api.ts`, `CharacterSelectPage.tsx`, `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (rota `/characters/:id`), `active-character.ts`, `PlayEntry.tsx` (rota `/`: entra com o último jogado, `lastPlayed`)
 - Testes: `apps/server/test/characters.test.ts`, `helpers.ts` (`createCharacter`), `game-core/test/character.test.ts`, `apps/web/test/world-state.test.ts` (fixture `self`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → characters, `DECISIONS.md` ADR-015
 
@@ -112,7 +112,32 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - `apps/server/src/config.ts` (`MAX_CHARACTERS_PER_ACCOUNT`), `.env.example`, `.env`
 - `characters.service.ts` (verificação com bloqueio da linha da conta)
 - `apps/server/test/helpers.ts` (usa 3 nos testes), `characters.test.ts`
-- Web: `CharacterSelectPage.tsx` (mostra `x / limite`)
+- Web: `CharacterSelectPage.tsx` (mostra `x / limite` e o espaço bloqueado `locked-slot`)
+- Produção: variável no Railway (se estiver definida)
+- Docs: `DATABASE.md`, `DECISIONS.md` ADR-015, D63
+
+## Entrada no jogo / troca de personagem
+
+- Rota `/` → `PlayEntry.tsx` (ativo do separador ou `lastPlayed`; sem personagens → `/characters/new`)
+- Redirecionamentos para `/`: `guards.tsx` (`GuestOnly`), `LoginPage.tsx`, `GameShell.tsx` e páginas do jogo sem personagem (`RiftsPage`, `RunPage`, `LobbyPage`, `FriendsPage`, `ProfessionsPage`)
+- Troca de personagem: só o botão "Switch character" do `TopBar` (`GameShell.tsx`) → `/characters`
+- `lastPlayedAt` é marcado em `gateway.ts` → `enterWorld` (`markPlayed`)
+- Testes: `e2e/foundation.spec.ts` (login volta a `/home`, botão de troca)
+
+## Locais (o hex onde estás: cidade, campo, …)
+
+- Conteúdo/regras: `packages/game-core/src/content/locations.ts` (`locationAt`, `namedLocations`, ações `npcs`/`shop`/`rifts`/`workshop`/`map`, `available`)
+- Web: `apps/web/src/features/game/HomePage.tsx` (ecrã `/home`: cena, ações → rotas em `ACTION_TO`, ícones em `ACTION_ICON`), `LocationScene.tsx` (um desenho por `LocationScene`), `game.css` (`.place*`)
+- **Local novo:** acrescentar em `NAMED` (`locations.ts`); cena nova → `LocationScene` (tipo) + desenho em `LocationScene.tsx`; ação nova → `LocationActionId`, `ACTION`, `ACTION_ICON`/`ACTION_TO`
+- Testes: `game-core/test/locations.test.ts`, `e2e` (`place-name`)
+
+## Chat do hex
+
+- Contrato: `packages/shared/src/protocol.ts` (`ChatMessage`, `CHAT_MAX_LENGTH`, `CHAT_HISTORY`, `chat.send`, `chat.message`, `world.entered.chat`)
+- Servidor: `gateway.ts` (`chat`, `chatHistory`, filtro `onlyHex` em `onWorldBroadcast`), `connection.ts` (`chatBucket`), `server-kit/src/bus.ts` (`chatKey`, `WorldBroadcast.onlyHex`)
+- Web: `world-state.ts` (`chat`), `world-store.ts` (`send`/`setSender`), `useWorldConnection.ts`, `HomePage.tsx` (`HexChat`)
+- **Quando houver movimento:** ao mudar de hex, enviar o histórico do novo hex e atualizar `PresencePlayer.position` (o filtro usa a posição da presença)
+- Testes: `realtime.test.ts`, `apps/web/test/world-state.test.ts`, `e2e` (`hex-chat-log`)
 
 ## Aparência do personagem (corpo base editável) e arte
 
