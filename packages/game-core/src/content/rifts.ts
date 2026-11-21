@@ -165,7 +165,7 @@ export const RIFTS = {
       loot: [
         { item: 'wooden_shield', weight: 3 },
         { item: 'leather_cap', weight: 3 },
-        { item: 'leather_leggings', weight: 3 },
+        { item: 'leather_boots', weight: 3 },
         { item: 'bone_talisman', weight: 2 },
         { item: 'rusty_dagger', weight: 2 },
         { item: 'ring_of_vigor', weight: 1 },
@@ -178,7 +178,7 @@ export const RIFTS = {
       drops: 1,
       loot: [
         { item: 'leather_cap', weight: 3 },
-        { item: 'leather_leggings', weight: 3 },
+        { item: 'leather_boots', weight: 3 },
         { item: 'wooden_shield', weight: 2 },
         { item: 'bone_talisman', weight: 2 },
         { item: 'iron_mace', weight: 1 },

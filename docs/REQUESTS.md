@@ -70,6 +70,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D58 | **Profissões** (estilo Project Zomboid): muitas (Runesmith, Blacksmith, Pescador, …), com níveis que melhoram o sucesso e os resultados; equilíbrio depois                                                                                                           | 2026-11-21 | `content/professions.ts`, `modules/professions`, ADR-036                                              |
 | D59 | **PvE é como Slay the Spire:** as ações dos jogadores acontecem logo (em tempo real); quando todos terminam o turno, os inimigos fazem as ações deles. Mais fácil e fluido. **O PvP mantém** o planeamento + resolução alternada (substitui D47 no PvE)              | 2026-11-21 | `planAction`/`resolveRound` (`combat/engine.ts`), `CombatPage.tsx`, ADR-038                           |
 | D60 | **Formação em linha:** 4 posições por lado numa só linha (frente, 2.ª, 3.ª, trás), como na imagem de referência; grupo/lobby de **4** (PvP 4 contra 4). Substitui D38 (3 × 2) e D18 (lobby de 6); D41 (ataque à coluna) passa a ser ataque a uma posição             | 2026-11-21 | `SLOTS_PER_SIDE`, `COMBAT_COLUMNS`, `LOBBY_MAX_MEMBERS`, `combat-layout.ts`, `LobbyPage.tsx`, ADR-039 |
+| D61 | **Espaços de equipamento:** mão principal, mão secundária, cabeça, corpo, botas, anel 1, anel 2, pendente ("pelo menos, para já"). Substitui D25                                                                                                                     |
+| D62 | **Skills preparadas:** as habilidades (as que se aprendem nos livros) são imensas; prepara-se **8** para o combate. Em combate: 8 skills + as habilidades da arma + Block e Swap Position (garantidos). Substitui D23 ("todas disponíveis")                          |
+| D63 | **Perfil do personagem em tabs:** Equipamento + inventário (drag and drop, tooltips dos itens) / Habilidades / Profissões                                                                                                                                            |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -138,6 +141,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A61 | Alcance na linha de 4                                           | corpo a corpo = inimigo mais próximo; lança, Cleave, Rift Slam = os 2 mais próximos; distância/magia = qualquer posição; Shield Wall/Bulwark = Block para os 2 da frente; corpo a corpo começa à frente, distância/magia atrás                                                                                                                                                                            | `content/abilities.ts`, `startingSlot`                     |
 | A62 | Corridas e lobbies abertos durante a mudança de formação        | fechados sem penalização (migração 0010)                                                                                                                                                                                                                                                                                                                                                                  | `0010_one_line_formation.sql`                              |
 | A63 | Equilíbrio com a linha de 4 (40 corridas por build)             | média a solo 47% (volta ao alvo de 40–50%; o corpo a corpo só alcança o mais próximo)                                                                                                                                                                                                                                                                                                                     | `pnpm sim`                                                 |
+| A64 | Peças antigas nos espaços novos                                 | Leather Leggings passam a Leather Boots (botas); acessórios → anéis; Charm of Focus → pendente (se estava equipado, volta ao inventário); a receita de Leatherworking faz botas                                                                                                                                                                                                                           | `content/items.ts`, migração 0011                          |
+| A65 | Habilidades por arma                                            | **Não alterado:** as armas dão 1–4 habilidades (espada 3, adaga 4, lança 1…), não 2. Falta decidir se se corta para 2 por arma e quais                                                                                                                                                                                                                                                                    | `content/items.ts` (`abilities`)                           |
+| A66 | Livros de skills                                                | Ainda não existem livros nem skills de livro: a biblioteca aparece vazia. As skills já aprendidas (se houver) ficaram preparadas nos primeiros 8 espaços                                                                                                                                                                                                                                                  | `content/abilities.ts`, `character_skills`                 |
+| A67 | Loadout dentro do Rift                                          | Não se pode mudar as skills preparadas durante um Rift (como o equipamento)                                                                                                                                                                                                                                                                                                                               | `sheet.service.ts` (`assertNotInRift`)                     |
 
 ---
 
@@ -639,3 +646,30 @@ slots e tudo em linha" (com captura do lobby antigo).
   gente numa linha; intenções mais curtas ("→ front").
 - Migração 0010: fecha corridas ativas e lobbies abertos da formação antiga.
 - Testes: 75 unitários, 65 de integração, 18 web, 9 e2e.
+
+### #36 — 2026-11-21 — Perfil do personagem: tabs, inventário e skills
+
+**Pedido:** "A página de perfil está horrível." Inventário separado das skills;
+Block e Swap Position não são skills (são garantidos), tal como as habilidades
+das armas; as Abilities são as dos livros. Equipar: mão, cabeça, corpo, off
+hand, botas, anel 1, anel 2, pendente. Inventário com drag and drop e tooltips
+decentes. Skills numa tab à parte (vão ser imensas); preparar 8 (8 + 2 da arma
+
+- Block e Swap). Outra tab com as profissões.
+  **Decisões:** D61, D62, D63; valores provisórios A64–A67.
+  **Resultado:**
+
+* Espaços novos `feet`, `ring1`, `ring2`, `pendant` (saem `legs`,
+  `accessory1/2`); Leather Leggings → Leather Boots; Charm of Focus → pendente.
+* Skills preparadas: coluna `character_skills.loadout_slot` (0–7, única por
+  personagem), `PUT /api/characters/:id/loadout`, `planLoadout`; o combate só
+  usa as preparadas (+ arma + Block/Swap). Migração 0011 (slots e loadout).
+* Ficha: tabs Equipment / Abilities / Professions (`?tab=`). Equipment: boneco
+  com 8 espaços, mochila em grelha com filtros, drag and drop por ponteiro
+  (rato e toque), duplo clique para equipar/desequipar, tooltips completas
+  (dano, custo, escala, habilidades que dá, qualidade), atributos + stats.
+  Abilities: 8 espaços preparados (arrastar ou clicar), biblioteca com pesquisa
+  e filtros, "Always available" (arma + ações básicas). Professions: o mesmo
+  painel da página de profissões.
+* Testes: 77 unitários, 67 de integração, 18 web, 9 e2e.
+* Docs: CHANGE_MAP, DECISIONS (ADR-040), ROADMAP.

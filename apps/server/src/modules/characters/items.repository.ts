@@ -1,6 +1,6 @@
 import { characterSkills, items, type DbOrTx, type Item } from '@realms/db';
 import type { EquipSlot } from '@realms/shared';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const itemsRepository = {
   listByCharacter(db: DbOrTx, characterId: string): Promise<Item[]> {
@@ -24,11 +24,32 @@ export const itemsRepository = {
     await db.update(items).set({ equippedSlot: slot }).where(eq(items.id, id));
   },
 
-  async learnedSkillIds(db: DbOrTx, characterId: string): Promise<string[]> {
-    const rows = await db
-      .select({ id: characterSkills.skillId })
+  /** Learned skills (oldest first) with their loadout slot (null = not prepared). */
+  learnedSkills(
+    db: DbOrTx,
+    characterId: string,
+  ): Promise<Array<{ id: string; loadoutSlot: number | null }>> {
+    return db
+      .select({ id: characterSkills.skillId, loadoutSlot: characterSkills.loadoutSlot })
       .from(characterSkills)
+      .where(eq(characterSkills.characterId, characterId))
+      .orderBy(asc(characterSkills.learnedAt), asc(characterSkills.skillId));
+  },
+
+  /** Replace the prepared skills (clear all slots first: unique slot index). */
+  async setLoadout(db: DbOrTx, characterId: string, slots: Array<string | null>): Promise<void> {
+    await db
+      .update(characterSkills)
+      .set({ loadoutSlot: null })
       .where(eq(characterSkills.characterId, characterId));
-    return rows.map((r) => r.id);
+    for (const [slot, skillId] of slots.entries()) {
+      if (!skillId) continue;
+      await db
+        .update(characterSkills)
+        .set({ loadoutSlot: slot })
+        .where(
+          and(eq(characterSkills.characterId, characterId), eq(characterSkills.skillId, skillId)),
+        );
+    }
   },
 };

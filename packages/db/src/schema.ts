@@ -218,8 +218,9 @@ export const characterProfessions = pgTable(
   ],
 );
 
-// Skills learned by a character (from drops). Weapon abilities are not stored:
-// they come from the equipped weapon.
+// Skills learned by a character (from books). Weapon abilities are not stored:
+// they come from the equipped weapon. `loadout_slot` 0–7 = prepared for combat
+// (request #36: 8 prepared skills); null = learned but not prepared.
 export const characterSkills = pgTable(
   'character_skills',
   {
@@ -227,9 +228,16 @@ export const characterSkills = pgTable(
       .notNull()
       .references(() => characters.id, { onDelete: 'cascade' }),
     skillId: text('skill_id').notNull(),
+    loadoutSlot: smallint('loadout_slot'),
     learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.characterId, t.skillId] })],
+  (t) => [
+    primaryKey({ columns: [t.characterId, t.skillId] }),
+    uniqueIndex('character_skills_loadout_uq')
+      .on(t.characterId, t.loadoutSlot)
+      .where(sql`${t.loadoutSlot} is not null`),
+    check('character_skills_loadout_range', sql`${t.loadoutSlot} between 0 and 7`),
+  ],
 );
 
 // ---------------------------------------------------------------------------

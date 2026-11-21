@@ -126,8 +126,18 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('sheet-name')).toHaveText(name);
   await expect(page.getByTestId('sheet-attr-agility')).toHaveText('10');
   await expect(page.getByTestId('stat-hp')).toHaveText(String(40 + 6 * 9));
-  await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
   await page.screenshot({ path: 'test-results/screens/06-sheet.png', fullPage: true });
+
+  // Abilities tab: weapon abilities and basic actions are always there; no skills learned yet.
+  await page.getByRole('tab', { name: /Abilities/ }).click();
+  await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
+  await expect(page.getByTestId('basic-actions')).toContainText('Swap Position');
+  await expect(page.getByTestId('loadout')).toContainText('Empty');
+  await expect(page.getByTestId('library-empty')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/06b-abilities.png', fullPage: true });
+  await page.getByRole('tab', { name: /Professions/ }).click();
+  await expect(page.getByTestId('profession-fishing')).toBeVisible();
+  await page.getByRole('tab', { name: /Equipment/ }).click();
 
   // The 3 unspent points can be distributed later on the sheet.
   const allocate = page.getByTestId('allocate');
@@ -136,9 +146,18 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await page.getByRole('button', { name: 'Confirm attributes' }).click();
   await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
 
-  await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
-  await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
-  await page.getByRole('button', { name: 'Equip Hunting Bow' }).click();
+  // Drag and drop: the bow goes to the bag and back to the main hand.
+  await page
+    .getByRole('button', { name: 'Main hand: Hunting Bow' })
+    .dragTo(page.getByTestId('inventory'));
+  await expect(page.getByLabel('Main hand: empty')).toBeVisible();
+  const bow = page.getByTestId('bag-hunting_bow');
+  await bow.hover();
+  await expect(page.getByTestId('item-tooltip')).toContainText('Basic attack');
+  await page.screenshot({ path: 'test-results/screens/06c-tooltip.png' });
+  await bow.dragTo(page.getByTestId('slot-mainHand'));
+  await expect(page.getByRole('button', { name: 'Main hand: Hunting Bow' })).toBeVisible();
+  await page.getByRole('tab', { name: /Abilities/ }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 

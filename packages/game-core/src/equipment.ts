@@ -1,4 +1,4 @@
-import { EQUIP_SLOTS, type EquipSlot } from '@realms/shared';
+import { EQUIP_SLOTS, MAX_PREPARED_SKILLS, type EquipSlot } from '@realms/shared';
 import {
   getAbility,
   UNARMED_ABILITIES,
@@ -82,12 +82,13 @@ export interface GrantedAbility {
 }
 
 /**
- * Abilities available in combat (decision D23): from equipped weapons, plus
- * learned skills, plus universal actions. Without a usable weapon: unarmed.
+ * Abilities available in combat: from equipped weapons, plus the PREPARED
+ * skills (request #36: up to MAX_PREPARED_SKILLS of the learned ones), plus
+ * the universal actions (Block, Swap). Without a usable weapon: unarmed.
  */
 export function availableAbilities(
   items: OwnedItem[],
-  learnedSkillIds: string[] = [],
+  preparedSkillIds: string[] = [],
 ): GrantedAbility[] {
   const out: GrantedAbility[] = [];
   const seen = new Set<string>();
@@ -106,7 +107,7 @@ export function availableAbilities(
   for (const w of weapons) for (const id of w.def.abilities!) add(id, w.def.name);
   const hasMainWeapon = weapons.some((w) => w.def.kind === 'weapon');
   if (!hasMainWeapon) for (const id of UNARMED_ABILITIES) add(id, null);
-  for (const id of learnedSkillIds) add(id, null);
+  for (const id of preparedSkillIds) add(id, null);
   for (const id of UNIVERSAL_ABILITIES) add(id, null);
   return out;
 }
@@ -127,4 +128,25 @@ export function abilityMultipliers(items: OwnedItem[]): Record<string, number> {
 
 export function emptyEquipment<T>(): Record<EquipSlot, T | null> {
   return Object.fromEntries(EQUIP_SLOTS.map((s) => [s, null])) as Record<EquipSlot, T | null>;
+}
+
+export type LoadoutPlan = { ok: true; slots: Array<string | null> } | { ok: false; reason: string };
+
+/**
+ * Validate a new skill loadout (request #36): exactly MAX_PREPARED_SKILLS
+ * entries, each a learned skill or empty, no skill twice.
+ */
+export function planLoadout(learnedSkillIds: string[], slots: Array<string | null>): LoadoutPlan {
+  if (slots.length !== MAX_PREPARED_SKILLS)
+    return { ok: false, reason: `The loadout has ${MAX_PREPARED_SKILLS} slots.` };
+  const learned = new Set(learnedSkillIds);
+  const seen = new Set<string>();
+  for (const id of slots) {
+    if (id === null) continue;
+    if (!learned.has(id) || !getAbility(id))
+      return { ok: false, reason: 'You have not learned that skill.' };
+    if (seen.has(id)) return { ok: false, reason: 'A skill can only be prepared once.' };
+    seen.add(id);
+  }
+  return { ok: true, slots: [...slots] };
 }

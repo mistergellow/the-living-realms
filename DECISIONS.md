@@ -672,3 +672,20 @@ keeps its "column" vocabulary: a column is now one position
 (`COMBAT_COLUMNS = front, second, third, back`), so `area: 'column'` hits one
 unit and reach `first`/`first2` mean the nearest one/two positions. Abilities
 that used to hit a whole column use `reach: 'first2', area: 'all'`.
+
+## ADR-040 — Equipment slots, skill loadout and a tabbed character sheet
+
+**Status:** accepted (request #36; replaces D23 "all skills in combat" and D25 slots)
+
+**Decision.** Equipment slots are `mainHand`, `offHand`, `head`, `body`,
+`feet`, `ring1`, `ring2`, `pendant`. Learned skills stay in
+`character_skills`; a nullable `loadout_slot` (0–7, unique per character)
+marks the `MAX_PREPARED_SKILLS` = 8 prepared ones. Combat gets weapon
+abilities + prepared skills + Block/Swap (`availableAbilities`). The loadout
+is replaced as a whole (`PUT /characters/:id/loadout` with 8 entries), which
+keeps drag-and-drop swaps atomic. Migration 0011 moves old slots
+(legs → feet, accessories → rings) and prepares already-learned skills.
+
+**Sheet UI.** Three tabs (Equipment, Abilities, Professions) in the URL.
+Drag and drop is pointer-based (`sheet/drag.tsx`), not HTML5 drag events,
+so it also works on touch screens; drop targets are `data-drop` elements.

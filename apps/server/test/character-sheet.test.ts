@@ -160,7 +160,7 @@ describe('equipment', () => {
       values (gen_random_uuid(), ${id}, 'ring_of_vigor', 'drop') returning id`;
     const res = await post(cookie, `/api/characters/${id}/equip`, {
       itemId: ring!.id,
-      slot: 'accessory2',
+      slot: 'ring2',
     });
     const sheet = res.json() as CharacterSheetDto;
     expect(sheet.baseAttributes.endurance).toBe(9);
@@ -176,15 +176,56 @@ describe('equipment', () => {
       returning id`;
     const results = await Promise.all(
       rings.map((r) =>
-        post(cookie, `/api/characters/${id}/equip`, { itemId: r.id, slot: 'accessory1' }),
+        post(cookie, `/api/characters/${id}/equip`, { itemId: r.id, slot: 'ring1' }),
       ),
     );
     expect(results.every((r) => r.statusCode === 200)).toBe(true);
     const [{ n }] = (await t.dbHandle.sql`
-      select count(*)::int as n from items where character_id = ${id} and equipped_slot = 'accessory1'`) as unknown as [
+      select count(*)::int as n from items where character_id = ${id} and equipped_slot = 'ring1'`) as unknown as [
       { n: number },
     ];
     expect(n).toBe(1);
+  });
+});
+
+describe('skill loadout (8 prepared skills)', () => {
+  const put = (cookie: string, id: string, slots: Array<string | null>) =>
+    t.app.inject({
+      method: 'PUT',
+      url: `/api/characters/${id}/loadout`,
+      headers: { cookie },
+      payload: { slots },
+    });
+  const empty = () => Array.from({ length: 8 }, () => null as string | null);
+
+  it('only prepared skills are available in combat', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.sql`
+      insert into character_skills (character_id, skill_id) values (${id}, 'firebolt'), (${id}, 'mend')`;
+    let sheet = await sheetOf(cookie, id);
+    expect(sheet.learnedSkills.map((a) => a.id)).toEqual(['firebolt', 'mend']);
+    expect(sheet.loadout).toEqual(empty());
+    expect(sheet.abilities.map((a) => a.id)).not.toContain('firebolt');
+
+    const slots = empty();
+    slots[3] = 'firebolt';
+    const res = await put(cookie, id, slots);
+    expect(res.statusCode).toBe(200);
+    sheet = res.json() as CharacterSheetDto;
+    expect(sheet.loadout[3]).toBe('firebolt');
+    expect(sheet.abilities.map((a) => a.id)).toContain('firebolt');
+    expect(sheet.abilities.map((a) => a.id)).not.toContain('mend');
+  });
+
+  it('rejects unknown, unlearned or repeated skills and wrong sizes', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.sql`
+      insert into character_skills (character_id, skill_id) values (${id}, 'firebolt')`;
+    expect((await put(cookie, id, ['mend', ...empty().slice(1)])).statusCode).toBe(400);
+    expect((await put(cookie, id, ['firebolt', 'firebolt', ...empty().slice(2)])).statusCode).toBe(
+      400,
+    );
+    expect((await put(cookie, id, empty().slice(1))).statusCode).toBe(400);
   });
 });
 

@@ -30,41 +30,50 @@ function useSecondsUntil(iso: string | null): number {
  */
 export function ProfessionsPage() {
   const characterId = useActiveCharacter((s) => s.characterId);
+  if (!characterId) return <Navigate to="/characters" replace />;
+  return (
+    <div className="screen-body">
+      <div className="contain" style={{ maxWidth: '72rem' }}>
+        <ProfessionsPanel characterId={characterId} />
+      </div>
+    </div>
+  );
+}
+
+/** The professions list + detail; also shown in the character sheet's Professions tab. */
+export function ProfessionsPanel({ characterId }: { characterId: string }) {
   const list = useProfessions(characterId);
   const [selected, setSelected] = useState<string>('fishing');
-  if (!characterId) return <Navigate to="/characters" replace />;
   const profs = list.data?.professions ?? [];
   const current = profs.find((p) => p.id === selected) ?? profs[0];
 
   return (
-    <div className="screen-body">
-      <div className="contain professions" style={{ maxWidth: '72rem' }}>
-        <aside className="panel prof-list" aria-label="Professions">
-          {(['gathering', 'crafting', 'service'] as const).map((cat) => (
-            <section key={cat}>
-              <div className="panel-title">{CATEGORY_NAMES[cat]}</div>
-              {profs
-                .filter((p) => p.category === cat)
-                .map((p) => (
-                  <button
-                    key={p.id}
-                    className="prof-row"
-                    data-active={p.id === current?.id}
-                    data-testid={`profession-${p.id}`}
-                    onClick={() => setSelected(p.id)}
-                  >
-                    <span>{p.name}</span>
-                    <span className="prof-level">Lv {p.level}</span>
-                    <span className="prof-xp">
-                      <i style={{ width: `${p.xpToNext ? (p.xp / p.xpToNext) * 100 : 100}%` }} />
-                    </span>
-                  </button>
-                ))}
-            </section>
-          ))}
-        </aside>
-        {current && <ProfessionDetail key={current.id} p={current} characterId={characterId} />}
-      </div>
+    <div className="professions">
+      <aside className="panel prof-list" aria-label="Professions">
+        {(['gathering', 'crafting', 'service'] as const).map((cat) => (
+          <section key={cat}>
+            <div className="panel-title">{CATEGORY_NAMES[cat]}</div>
+            {profs
+              .filter((p) => p.category === cat)
+              .map((p) => (
+                <button
+                  key={p.id}
+                  className="prof-row"
+                  data-active={p.id === current?.id}
+                  data-testid={`profession-${p.id}`}
+                  onClick={() => setSelected(p.id)}
+                >
+                  <span>{p.name}</span>
+                  <span className="prof-level">Lv {p.level}</span>
+                  <span className="prof-xp">
+                    <i style={{ width: `${p.xpToNext ? (p.xp / p.xpToNext) * 100 : 100}%` }} />
+                  </span>
+                </button>
+              ))}
+          </section>
+        ))}
+      </aside>
+      {current && <ProfessionDetail key={current.id} p={current} characterId={characterId} />}
     </div>
   );
 }

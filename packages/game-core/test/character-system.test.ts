@@ -5,6 +5,7 @@ import {
   BASE_ATTRIBUTES,
   computeStats,
   planEquip,
+  planLoadout,
   pointsSpent,
   qualityAfterDefeat,
   reductionFromRating,
@@ -76,13 +77,13 @@ describe('derived stats', () => {
     expect(reductionFromRating(100000)).toBeLessThan(1);
   });
   it('equipment adds attributes and armor; broken items do nothing', () => {
-    const items = [owned('r', 'ring_of_vigor', 'accessory1'), owned('t', 'padded_tunic', 'body')];
+    const items = [owned('r', 'ring_of_vigor', 'ring1'), owned('t', 'padded_tunic', 'body')];
     const { attributes, stats } = computeStats(attrs(), items);
     expect(attributes.endurance).toBe(7);
     expect(stats.armor).toBe(6);
     expect(stats.physicalReduction).toBe(Math.round((6 / 56) * 100));
     expect(
-      computeStats(attrs(), [owned('r', 'ring_of_vigor', 'accessory1', 0)]).attributes.endurance,
+      computeStats(attrs(), [owned('r', 'ring_of_vigor', 'ring1', 0)]).attributes.endurance,
     ).toBe(5);
   });
   it('abilities scale with two attributes (+8% per weighted point)', () => {
@@ -122,8 +123,31 @@ describe('equipment and abilities', () => {
   it('rejects wrong slots, broken and unknown items', () => {
     const items = [owned('t', 'padded_tunic'), owned('x', 'ring_of_vigor', null, 0)];
     expect(planEquip(items, 't', 'head').ok).toBe(false);
-    expect(planEquip(items, 'x', 'accessory1').ok).toBe(false);
+    expect(planEquip(items, 'x', 'ring1').ok).toBe(false);
     expect(planEquip(items, 'nope', 'body').ok).toBe(false);
+  });
+  it('prepared skills join weapon abilities; up to 8 learned skills can be prepared', () => {
+    const sword = [owned('s', 'training_sword', 'mainHand')];
+    expect(availableAbilities(sword, ['firebolt']).map((a) => a.ability.id)).toEqual([
+      'slash',
+      'cleave',
+      'rend',
+      'firebolt',
+      'block',
+      'swap_position',
+    ]);
+    const empty = Array.from({ length: 8 }, () => null);
+    expect(planLoadout(['firebolt'], ['firebolt', ...empty.slice(1)]).ok).toBe(true);
+    expect(planLoadout(['firebolt'], ['mend', ...empty.slice(1)]).ok).toBe(false);
+    expect(planLoadout(['firebolt'], ['firebolt', 'firebolt', ...empty.slice(2)]).ok).toBe(false);
+    expect(planLoadout(['firebolt'], empty.slice(1)).ok).toBe(false);
+  });
+  it('rings, pendant and boots go in their own slots', () => {
+    const items = [owned('r', 'ring_of_vigor'), owned('c', 'charm_of_focus'), owned('b', 'leather_boots')];
+    expect(planEquip(items, 'r', 'ring2').ok).toBe(true);
+    expect(planEquip(items, 'r', 'pendant').ok).toBe(false);
+    expect(planEquip(items, 'c', 'pendant').ok).toBe(true);
+    expect(planEquip(items, 'b', 'feet').ok).toBe(true);
   });
   it('loses 25% quality per defeat and breaks at 0', () => {
     expect([100, 75, 50, 25, 10].map(qualityAfterDefeat)).toEqual([75, 50, 25, 0, 0]);
