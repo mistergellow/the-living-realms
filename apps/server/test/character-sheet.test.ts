@@ -7,7 +7,10 @@ import {
   VALID_ATTRIBUTES,
   type TestApp,
 } from './helpers.js';
-import type { CharacterSheetDto } from '@realms/shared';
+import { characterSkills, characters, items } from '@realms/db';
+import type { CharacterSheetDto, ReadBookResultDto } from '@realms/shared';
+import { eq } from 'drizzle-orm';
+import { CharacterSheetService } from '../src/modules/characters/sheet.service.js';
 
 let t: TestApp;
 beforeAll(async () => (t = await createTestApp()));
@@ -208,21 +211,128 @@ describe('creation off-hand and attribute points', () => {
     expect(bad.json().error.details[0].path).toBe('startingOffhand');
   });
 
-  it('keeps unspent creation points and lets you spend them later', async () => {
+  it('base attributes are chosen only at creation: all points must be spent', async () => {
     const { cookie } = await registerUser(t.app);
     const res = await createCharacter(t.app, cookie, 'Saver', {
       attributes: { might: 7, agility: 5, precision: 5, endurance: 5, intellect: 5, will: 5 },
     });
-    const id = res.json().character.id;
-    expect((await sheetOf(cookie, id)).attributePoints).toBe(10);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.details[0].path).toBe('attributes');
+  });
+
+  it('old characters with unspent points finish their creation once', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.db
+      .update(characters)
+      .set({ attrEndurance: 5, attrAgility: 5, attributePoints: 7 })
+      .where(eq(characters.id, id));
+    expect((await sheetOf(cookie, id)).attributePoints).toBe(7);
     const spend = await post(cookie, `/api/characters/${id}/attributes`, {
       add: { endurance: 4, will: 3 },
     });
     expect(spend.statusCode).toBe(200);
     const sheet = spend.json() as CharacterSheetDto;
-    expect(sheet.attributePoints).toBe(3);
+    expect(sheet.attributePoints).toBe(0);
     expect(sheet.baseAttributes).toMatchObject({ endurance: 9, will: 8 });
-    const tooMuch = await post(cookie, `/api/characters/${id}/attributes`, { add: { might: 4 } });
+    const tooMuch = await post(cookie, `/api/characters/${id}/attributes`, { add: { might: 1 } });
     expect(tooMuch.statusCode).toBe(400);
+  });
+});
+
+describe('country of origin (request #36)', () => {
+  it('is required at creation and shown on the sheet', async () => {
+    const { cookie } = await registerUser(t.app);
+    const bad = await createCharacter(t.app, cookie, 'Nowhere', { origin: 'atlantis' });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error.details[0].path).toBe('origin');
+    const ok = await createCharacter(t.app, cookie, 'Northman', { origin: 'khazdar' });
+    expect(ok.json().character.origin).toBe('khazdar');
+    const sheet = await sheetOf(cookie, ok.json().character.id);
+    expect(sheet.origin).toMatchObject({ id: 'khazdar', language: 'Khazdari' });
+  });
+
+  it('old characters without an origin choose it once', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.db.update(characters).set({ origin: null }).where(eq(characters.id, id));
+    expect((await sheetOf(cookie, id)).origin).toBeNull();
+    const set = await post(cookie, `/api/characters/${id}/origin`, { origin: 'sareth' });
+    expect(set.statusCode).toBe(200);
+    expect((set.json() as CharacterSheetDto).origin?.id).toBe('sareth');
+    const again = await post(cookie, `/api/characters/${id}/origin`, { origin: 'valdmark' });
+    expect(again.statusCode).toBe(400);
+  });
+});
+
+describe('skill books (request #36)', () => {
+  const MAGE = { might: 5, agility: 6, precision: 7, endurance: 6, intellect: 10, will: 8 };
+  const giveBooks = (characterId: string, defId: string, quantity: number) =>
+    t.dbHandle.db.insert(items).values({ characterId, itemDefId: defId, quantity, source: 'drop' });
+  const bookRow = async (characterId: string, defId: string) =>
+    (await t.dbHandle.db.select().from(items).where(eq(items.characterId, characterId))).find(
+      (i) => i.itemDefId === defId,
+    );
+
+  it('needs the base attribute; a book you cannot read is not consumed', async () => {
+    const { cookie, id } = await newCharacter(); // Intellect 5
+    await giveBooks(id, 'book_fireball', 1);
+    const sheet = await sheetOf(cookie, id);
+    const book = sheet.inventory.find((i) => i.defId === 'book_fireball')!;
+    expect(book.book).toMatchObject({ readable: false, requirement: { minimum: 8 } });
+    const res = await post(cookie, `/api/characters/${id}/items/${book.id}/read`, {});
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/Intellect 8/);
+    expect((await bookRow(id, 'book_fireball'))?.quantity).toBe(1);
+  });
+
+  it('reading consumes the book (even on failure) and teaches the skill', async () => {
+    const { cookie, id } = await newCharacter('apprentice_staff', MAGE);
+    await giveBooks(id, 'book_magic_missile', 20);
+    let learned = false;
+    for (let n = 20; n > 0 && !learned; n--) {
+      const row = (await bookRow(id, 'book_magic_missile'))!;
+      expect(row.quantity).toBe(n);
+      const res = await post(cookie, `/api/characters/${id}/items/${row.id}/read`, {});
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as ReadBookResultDto;
+      expect(body.chance).toBe(88); // 70 + 6 × (10 − 7)
+      learned = body.learned;
+      // Skip the time cost (AP later) between reads.
+      await t.dbHandle.db
+        .update(characters)
+        .set({ readReadyAt: null })
+        .where(eq(characters.id, id));
+    }
+    expect(learned).toBe(true);
+    const sheet = await sheetOf(cookie, id);
+    expect(sheet.skills[0]).toMatchObject({
+      id: 'magic_missile',
+      rank: 1,
+      rankLabel: '1',
+      needed: 2,
+    });
+    expect(sheet.abilities.find((a) => a.id === 'magic_missile')?.rank).toBe('1');
+  });
+
+  it('has a time cost between reads', async () => {
+    const { cookie, id } = await newCharacter('apprentice_staff', MAGE);
+    await giveBooks(id, 'book_second_wind', 3);
+    const row = (await bookRow(id, 'book_second_wind'))!;
+    expect((await post(cookie, `/api/characters/${id}/items/${row.id}/read`, {})).statusCode).toBe(
+      200,
+    );
+    const again = await post(cookie, `/api/characters/${id}/items/${row.id}/read`, {});
+    expect(again.statusCode).toBe(400);
+    expect((await bookRow(id, 'book_second_wind'))?.quantity).toBe(2);
+  });
+
+  it('skill ranks make the skill stronger in combat', async () => {
+    const { id } = await newCharacter('apprentice_staff', MAGE);
+    await t.dbHandle.db
+      .insert(characterSkills)
+      .values({ characterId: id, skillId: 'fireball', rank: 10 });
+    const [c] = await t.dbHandle.db.select().from(characters).where(eq(characters.id, id));
+    const profile = await new CharacterSheetService(t.dbHandle.db).combatProfile(t.dbHandle.db, c!);
+    expect(profile.abilityIds).toContain('fireball');
+    expect(profile.abilityMultipliers.fireball).toBeCloseTo(1.45);
   });
 });

@@ -58,6 +58,7 @@ import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
+import { itemsRepository } from '../characters/items.repository.js';
 import { riftsRepository as repo } from './rifts.repository.js';
 
 type ParticipantResult = { rewards?: RunRewardsDto; penalty?: RunPenaltyDto };
@@ -434,22 +435,16 @@ export class RiftsService {
         let roll = rng.next() * totalWeight;
         const entry =
           rift.rewards.loot.find((l) => (roll -= l.weight) < 0) ?? rift.rewards.loot[0]!;
-        const [row] = await tx
-          .insert(items)
-          .values({ characterId: p.characterId, itemDefId: entry.item, source: 'drop' })
-          .returning({ id: items.id });
-        dropped.push({ id: row!.id, name: getItemDef(entry.item)?.name ?? entry.item });
+        const row = await itemsRepository.giveOne(tx, p.characterId, entry.item, 'drop');
+        dropped.push({ id: row.id, name: getItemDef(entry.item)?.name ?? entry.item });
       }
       // Items found on the way (Loot/Secret rooms, events) are only kept on
       // victory, by those still in the party (request #33).
       const state = run.state as RunState;
       const stayed = state.party.some((m) => m.characterId === p.characterId && !m.left);
       for (const g of stayed ? state.grants.filter((x) => x.characterId === p.characterId) : []) {
-        const [row] = await tx
-          .insert(items)
-          .values({ characterId: g.characterId, itemDefId: g.itemDefId, source: g.source })
-          .returning({ id: items.id });
-        dropped.push({ id: row!.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
+        const row = await itemsRepository.giveOne(tx, g.characterId, g.itemDefId, g.source);
+        dropped.push({ id: row.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
       }
       await tx
         .update(characters)

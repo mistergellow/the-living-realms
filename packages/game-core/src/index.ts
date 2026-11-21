@@ -23,3 +23,6 @@ export * from './rift/tests.js';
 export * from './rift/run.js';
 export * from './content/professions.js';
 export * from './professions.js';
+export * from './content/books.js';
+export * from './content/origins.js';
+export * from './skills.js';

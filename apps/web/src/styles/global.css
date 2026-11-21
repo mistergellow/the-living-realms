@@ -903,6 +903,11 @@ fieldset.field {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.origin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: var(--space-2);
+}
 .weapon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
@@ -1242,7 +1247,7 @@ fieldset.field {
   grid-template-areas:
     'hero attrs stats'
     'hero inv inv'
-    'abil abil abil';
+    'skills abil abil';
   gap: var(--hud-gap);
   align-items: start;
 }
@@ -1261,6 +1266,16 @@ fieldset.field {
 .sheet-grid > .area-abil {
   grid-area: abil;
 }
+.sheet-grid > .area-skills {
+  grid-area: skills;
+}
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: rgb(16 15 22 / 0.85);
+}
 @media (max-width: 85em) {
   .sheet-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1268,13 +1283,14 @@ fieldset.field {
       'hero hero'
       'attrs stats'
       'inv inv'
+      'skills skills'
       'abil abil';
   }
 }
 @media (max-width: 40em) {
   .sheet-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'hero' 'attrs' 'stats' 'inv' 'abil';
+    grid-template-areas: 'hero' 'attrs' 'stats' 'inv' 'skills' 'abil';
   }
 }
 .sheet-header {

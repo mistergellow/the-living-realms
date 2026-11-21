@@ -58,6 +58,7 @@ describe('characters', () => {
         appearance: { version: 1, color: 'pink', emblem: 'star' },
         attributes: VALID_ATTRIBUTES,
         startingWeapon: 'training_sword',
+        origin: 'valdmark',
       },
     });
     expect(badLook.statusCode).toBe(400);

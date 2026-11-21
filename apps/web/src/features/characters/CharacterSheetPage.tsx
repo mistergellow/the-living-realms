@@ -1,4 +1,4 @@
-import { ATTRIBUTE_NAMES } from '@realms/game-core';
+import { ATTRIBUTE_NAMES, ORIGINS } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
   type AttributeKey,
@@ -7,7 +7,7 @@ import {
   type EquipSlot,
   type ItemDto,
 } from '@realms/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { AttributePicker } from './AttributePicker';
 import { FormError } from '../../shared/ui/FormError';
@@ -15,7 +15,13 @@ import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { Icon } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
 import { useActiveCharacter } from './active-character';
-import { useAllocateAttributes, useCharacterSheet, useEquipment } from './api';
+import {
+  useAllocateAttributes,
+  useCharacterSheet,
+  useEquipment,
+  useReadBook,
+  useSetOrigin,
+} from './api';
 import { CharacterToken } from './CharacterToken';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
@@ -47,7 +53,7 @@ function AllocatePanel(props: {
         onChange={setValue}
         floor={props.base}
         points={props.points}
-        title="Unspent points"
+        title="Finish your character: unspent points (only once)"
       />
       <button
         className="btn btn-primary btn-sm"
@@ -58,6 +64,66 @@ function AllocatePanel(props: {
       </button>
     </div>
   );
+}
+
+/** Old characters (before request #36) choose their country of origin once. */
+function OriginPanel(props: { busy: boolean; onSave: (origin: string) => void }) {
+  const [origin, setOrigin] = useState<string | null>(null);
+  return (
+    <section className="panel" data-testid="choose-origin">
+      <div className="panel-title">
+        <span>Choose your country of origin (only once)</span>
+      </div>
+      <div className="origin-grid">
+        {Object.values(ORIGINS).map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            className="weapon-card"
+            aria-pressed={origin === o.id}
+            onClick={() => setOrigin(o.id)}
+          >
+            <strong>{o.name}</strong>
+            <span className="field-hint">{o.description}</span>
+            <span className="field-hint">Language: {o.language}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        style={{ marginTop: '0.5rem' }}
+        disabled={props.busy || !origin}
+        onClick={() => origin && props.onSave(origin)}
+      >
+        Confirm origin
+      </button>
+    </section>
+  );
+}
+
+function BookInfoLine({ item }: { item: ItemDto }) {
+  const b = item.book!;
+  return (
+    <span className="field-hint" data-testid={`book-${b.skillId}`}>
+      {b.school} ·{' '}
+      {b.requirement
+        ? `needs ${b.requirement.name} ${b.requirement.minimum} (base)`
+        : 'anyone can read it'}
+      {' · '}your rank {b.currentRank}
+      {b.readable ? ` · ${b.chance}% success` : ` · ${b.reason}`}
+    </span>
+  );
+}
+
+/** True until `iso` (from the server, null when free) has passed (reading time cost). */
+function useBusyUntil(iso: string | null): boolean {
+  const [doneFor, setDoneFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!iso) return;
+    const t = setTimeout(() => setDoneFor(iso), Math.max(0, Date.parse(iso) - Date.now()) + 50);
+    return () => clearTimeout(t);
+  }, [iso]);
+  return !!iso && doneFor !== iso;
 }
 
 const LEFT_SLOTS: EquipSlot[] = ['mainHand', 'head', 'accessory1', 'offHand'];
@@ -148,6 +214,9 @@ export function CharacterSheetPage() {
   const sheet = useCharacterSheet(id);
   const { equip, unequip } = useEquipment(id);
   const allocate = useAllocateAttributes(id);
+  const read = useReadBook(id);
+  const setOrigin = useSetOrigin(id);
+  const reading = useBusyUntil(sheet.data?.readReadyAt ?? null);
   const select = useActiveCharacter((s) => s.select);
   const navigate = useNavigate();
 
@@ -170,6 +239,12 @@ export function CharacterSheetPage() {
             <span className="rep-badge">
               Reputation <strong data-testid="reputation">{s.reputation}</strong>
             </span>
+            {s.origin && (
+              <span className="field-hint" data-testid="sheet-origin">
+                {' '}
+                {s.origin.name} · speaks {s.origin.language}
+              </span>
+            )}
           </div>
         </div>
         <span className="spacer" />
@@ -186,7 +261,24 @@ export function CharacterSheetPage() {
 
       <main className="screen-body">
         <div className="contain stack">
-          <FormError error={equip.error ?? unequip.error ?? allocate.error} />
+          <FormError
+            error={equip.error ?? unequip.error ?? allocate.error ?? read.error ?? setOrigin.error}
+          />
+          {read.data && !read.isPending && (
+            <p
+              className={read.data.success ? 'notice' : 'notice field-error'}
+              role="status"
+              data-testid="read-result"
+            >
+              {read.data.message}
+            </p>
+          )}
+          {!s.origin && (
+            <OriginPanel
+              busy={setOrigin.isPending}
+              onSave={(origin) => setOrigin.mutate({ origin })}
+            />
+          )}
 
           <div className="sheet-grid">
             <section className="panel area-hero hero" data-testid="equipment">
@@ -348,6 +440,30 @@ export function CharacterSheetPage() {
                 <ul className="slot-list" data-testid="inventory">
                   {s.inventory.map((item) => {
                     const slot = targetSlot(item, s);
+                    if (item.book)
+                      return (
+                        <li key={item.id}>
+                          <div className="item-line">
+                            <strong>
+                              {item.name}
+                              {item.quantity > 1 ? ` ×${item.quantity}` : ''}
+                            </strong>
+                            <BookInfoLine item={item} />
+                          </div>
+                          <button
+                            className="btn btn-sm btn-primary"
+                            disabled={read.isPending || !item.book.readable || reading}
+                            title={
+                              item.book.reason ??
+                              'Reading uses the book, even if you fail. Costs AP (a short time, for now).'
+                            }
+                            onClick={() => read.mutate(item.id)}
+                            aria-label={`Read ${item.name}`}
+                          >
+                            Read
+                          </button>
+                        </li>
+                      );
                     return (
                       <li key={item.id}>
                         <ItemLine item={item} />
@@ -366,6 +482,38 @@ export function CharacterSheetPage() {
               )}
             </section>
 
+            <section className="panel area-skills">
+              <div className="panel-title">
+                <span>Skills ({s.skills.length})</span>
+              </div>
+              {s.skills.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  No skills yet. Skill books drop in Rifts; read them from your inventory. Ranks go
+                  1–10, then M1–M9 and P (Perfect).
+                </p>
+              ) : (
+                <ul className="ability-list" data-testid="skills">
+                  {s.skills.map((k) => (
+                    <li key={k.id}>
+                      <div className="row" style={{ gap: '0.5rem' }}>
+                        <strong>
+                          {k.name} {k.rankLabel}
+                        </strong>
+                        <span className="field-hint">{k.school}</span>
+                        <span className="spacer" />
+                        <span className="field-hint">Power {k.power}%</span>
+                      </div>
+                      <div className="field-hint">
+                        {k.nextRankLabel
+                          ? `${k.progress} / ${k.needed} books to rank ${k.nextRankLabel}`
+                          : 'Perfected'}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             <section className="panel area-abil">
               <div className="panel-title">
                 <span>Abilities in combat</span>
@@ -374,7 +522,10 @@ export function CharacterSheetPage() {
                 {s.abilities.map((a) => (
                   <li key={a.id}>
                     <div className="row" style={{ gap: '0.5rem' }}>
-                      <strong>{a.name}</strong>
+                      <strong>
+                        {a.name}
+                        {a.rank ? ` ${a.rank}` : ''}
+                      </strong>
                       <span className="cost">{a.focusCost} Focus</span>
                       {a.manaCost > 0 && <span className="cost mana">{a.manaCost} Mana</span>}
                       <span className="spacer" />

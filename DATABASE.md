@@ -94,6 +94,8 @@ Expired rows are purged by the worker.
 | appearance               | jsonb                        | `{ version: 1, color, emblem }`, a placeholder for this phase                                                                    |
 | attr_might … attr_spirit | smallint, default 5          | base attributes (D33): 5 + creation points (max 10); equipment bonuses are computed, not stored                                  |
 | attribute_points         | smallint, default 0          | attribute points not yet distributed                                                                                             |
+| origin                   | text null                    | country of origin (request #36), chosen once at creation; null = old character that has not chosen yet                           |
+| read_ready_at            | timestamptz null             | reading skill books has a time cost until Action Points exist                                                                    |
 | reputation               | bigint, default 0            | per-character currency earned through activities                                                                                 |
 | hex_q, hex_r             | integer                      | axial hex position; indexed with `world_id` for "who is on this hex / in this area"                                              |
 | last_played_at           | timestamptz null             |                                                                                                                                  |
@@ -132,11 +134,14 @@ the old format (no penalty).
 
 ### `character_skills`
 
-| Column       | Type                           | Notes                                                       |
-| ------------ | ------------------------------ | ----------------------------------------------------------- |
-| character_id | uuid FK → characters (cascade) | PK part                                                     |
-| skill_id     | text                           | ability id in game-core content; PK part                    |
-| learned_at   | timestamptz                    | weapon abilities are not stored (they come from the weapon) |
+| Column       | Type                           | Notes                                                         |
+| ------------ | ------------------------------ | ------------------------------------------------------------- |
+| character_id | uuid FK → characters (cascade) | PK part                                                       |
+| skill_id     | text                           | ability id in game-core content; PK part                      |
+| rank         | smallint, default 1            | 1–10, Mastery 11–19 (M1–M9), 20 = P; CHECK 1–20 (request #36) |
+| progress     | integer, default 0             | successful book reads towards the next rank                   |
+| learned_at   | timestamptz                    | weapon abilities are not stored (they come from the weapon)   |
+| updated_at   | timestamptz                    |                                                               |
 
 ### `character_professions`
 

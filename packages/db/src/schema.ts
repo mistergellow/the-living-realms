@@ -125,8 +125,12 @@ export const characters = pgTable(
     attrEndurance: smallint('attr_endurance').notNull().default(5),
     attrIntellect: smallint('attr_intellect').notNull().default(5),
     attrWill: smallint('attr_will').notNull().default(5),
-    /** Attribute points not yet distributed. */
+    /** Attribute points not yet distributed (only characters made before request #36). */
     attributePoints: smallint('attribute_points').notNull().default(0),
+    /** Country of origin (request #36), chosen once; null = old character, picks it once. */
+    origin: text('origin'),
+    /** Reading skill books has a time cost until Action Points exist (request #36). */
+    readReadyAt: timestamp('read_ready_at', { withTimezone: true }),
     /** Per-character currency earned through activities. */
     reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
     /** Axial hex coordinates of the character on the world map. */
@@ -218,8 +222,8 @@ export const characterProfessions = pgTable(
   ],
 );
 
-// Skills learned by a character (from drops). Weapon abilities are not stored:
-// they come from the equipped weapon.
+// Skills learned by a character by reading skill books (request #36). Weapon
+// abilities are not stored: they come from the equipped weapon.
 export const characterSkills = pgTable(
   'character_skills',
   {
@@ -227,9 +231,17 @@ export const characterSkills = pgTable(
       .notNull()
       .references(() => characters.id, { onDelete: 'cascade' }),
     skillId: text('skill_id').notNull(),
+    /** 1–10, then Mastery 11–19 (M1–M9) and 20 = P (Perfect). */
+    rank: smallint('rank').notNull().default(1),
+    /** Successful reads towards the next rank. */
+    progress: integer('progress').notNull().default(0),
     learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: updatedAt(),
   },
-  (t) => [primaryKey({ columns: [t.characterId, t.skillId] })],
+  (t) => [
+    primaryKey({ columns: [t.characterId, t.skillId] }),
+    check('character_skills_rank_range', sql`${t.rank} between 1 and 20`),
+  ],
 );
 
 // ---------------------------------------------------------------------------

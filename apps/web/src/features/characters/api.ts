@@ -5,6 +5,8 @@ import type {
   CreateCharacterRequest,
   AllocateAttributesRequest,
   EquipRequest,
+  ReadBookResultDto,
+  SetOriginRequest,
   UnequipRequest,
 } from '@realms/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,6 +70,26 @@ export function useAllocateAttributes(id: string) {
   return useMutation({
     mutationFn: (input: AllocateAttributesRequest) =>
       api<CharacterSheetDto>('POST', `/characters/${id}/attributes`, input),
+    onSuccess: (sheet) => qc.setQueryData(sheetQueryKey(id), sheet),
+  });
+}
+
+/** Request #36: read a skill book (use an item); the book is consumed even on failure. */
+export function useReadBook(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      api<ReadBookResultDto>('POST', `/characters/${id}/items/${itemId}/read`),
+    onSuccess: (r) => qc.setQueryData(sheetQueryKey(id), r.sheet),
+  });
+}
+
+/** Characters made before origins existed choose theirs once. */
+export function useSetOrigin(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetOriginRequest) =>
+      api<CharacterSheetDto>('POST', `/characters/${id}/origin`, input),
     onSuccess: (sheet) => qc.setQueryData(sheetQueryKey(id), sheet),
   });
 }

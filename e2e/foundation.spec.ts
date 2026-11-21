@@ -19,8 +19,18 @@ async function register(page: Page, email: string) {
   await expect(page).toHaveURL(/\/characters\/new$/);
 }
 
+/** Request #36: origin and all 12 points are chosen at creation, once. */
+async function chooseOriginAndPoints(page: Page) {
+  await page.getByRole('button', { name: /Valdmark/ }).click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
+  for (let i = 0; i < 4; i++)
+    await page.getByRole('button', { name: 'Increase Endurance' }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
+}
+
 async function createCharacter(page: Page, name: string) {
   await page.getByLabel('Name').fill(name);
+  await chooseOriginAndPoints(page);
   await page.getByRole('button', { name: 'Hair style spiky' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page).toHaveURL(/\/home$/);
@@ -109,13 +119,21 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   const name = randomName('Archer');
   await page.getByLabel('Name').fill(name);
 
-  // Spend points: Agility 5 → 10 (max), Endurance 5 → 9. 3 points left unspent.
+  // Spend points: Agility 5 → 10 (max), Endurance 5 → 9. 3 points left.
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
   for (let i = 0; i < 4; i++)
     await page.getByRole('button', { name: 'Increase Endurance' }).click();
   await expect(page.getByTestId('attr-agility')).toHaveText('10');
   await expect(page.getByTestId('points-remaining')).toContainText('3 / 12');
   await expect(page.getByRole('button', { name: 'Increase Agility' })).toBeDisabled();
+
+  // Request #36: points left and no origin → creation refused (chosen only once).
+  await page.getByRole('button', { name: 'Create and enter the world' }).click();
+  await expect(page.getByText('Choose your country of origin.')).toBeVisible();
+  await expect(page.getByText(/Spend all 12 points/)).toBeVisible();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole('button', { name: 'Increase Precision' }).click();
+  await page.getByRole('button', { name: /Khazdar Holds/ }).click();
 
   await page.getByRole('button', { name: /Hunting Bow/ }).click();
   await page.screenshot({ path: 'test-results/screens/05-create-attributes.png', fullPage: true });
@@ -129,12 +147,11 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
   await page.screenshot({ path: 'test-results/screens/06-sheet.png', fullPage: true });
 
-  // The 3 unspent points can be distributed later on the sheet.
-  const allocate = page.getByTestId('allocate');
-  await expect(allocate).toContainText('3 / 3 points left');
-  await allocate.getByRole('button', { name: 'Increase Precision' }).click();
-  await page.getByRole('button', { name: 'Confirm attributes' }).click();
-  await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
+  // Origin and language on the sheet; nothing left to distribute; no skills yet.
+  await expect(page.getByTestId('sheet-origin')).toContainText('Khazdar Holds · speaks Khazdari');
+  await expect(page.getByTestId('sheet-attr-precision')).toHaveText('8');
+  await expect(page.getByTestId('allocate')).toHaveCount(0);
+  await expect(page.getByText(/Skill books drop in Rifts/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
   await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
@@ -145,10 +162,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
 test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ page }) => {
   await register(page, `e2e-rift-${unique()}@example.com`);
   await page.getByLabel('Name').fill(randomName('Raider'));
-  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Increase Might' }).click();
-  for (let i = 0; i < 4; i++)
-    await page.getByRole('button', { name: 'Increase Endurance' }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Increase Agility' }).click();
+  await chooseOriginAndPoints(page);
   await page.getByRole('button', { name: 'Wooden Shield' }).click();
   await page.getByRole('button', { name: 'Hair style long' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();

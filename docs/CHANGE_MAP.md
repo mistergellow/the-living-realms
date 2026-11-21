@@ -48,10 +48,21 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `apps/server/test/characters.test.ts`, `helpers.ts` (`createCharacter`), `game-core/test/character.test.ts`, `apps/web/test/world-state.test.ts` (fixture `self`), `e2e/foundation.spec.ts`
 - Docs: `DATABASE.md` → characters, `DECISIONS.md` ADR-015
 
+## País de origem e língua (pedido #36)
+
+- Conteúdo: `packages/game-core/src/content/origins.ts` (`ORIGINS`, `getOrigin`; nomes provisórios A69)
+- Contrato: `CharacterDto.origin`, `createCharacterRequestSchema.origin`, `setOriginRequestSchema`, `OriginDto`, `CharacterSheetDto.origin` (`api.ts`)
+- BD: `characters.origin` (migração 0011)
+- Servidor: `characters.service.ts` (validação na criação, `toCharacterDto`), `sheet.service.ts` (`setOrigin` só para quem não tem, `toOriginDto`), rota `POST /api/characters/:id/origin`
+- Web: `CharacterCreatePage.tsx` (grelha de países, `.origin-grid`), `CharacterSheetPage.tsx` (cabeçalho, `OriginPanel`), `api.ts` (`useSetOrigin`)
+- Testes: `character-sheet.test.ts`, `helpers.ts` (`createCharacter` → `origin`), `characters.test.ts`, `skills.test.ts`, `e2e` (`chooseOriginAndPoints`), `world-state.test.ts` (fixture)
+- Futuro: línguas na comunicação (Fases 5/6)
+
 ## Atributos (Might, Agility, Precision, Endurance, Intellect, Will)
 
 - Contrato: `packages/shared/src/api.ts` (`ATTRIBUTE_KEYS`, `attributesSchema`, `createCharacterRequestSchema.attributes`, `allocateAttributesRequestSchema`, `CharacterSheetDto.attributePoints`)
-- Regras: `packages/game-core/src/attributes.ts` (`ATTRIBUTE_RULES`: base 5, 12 pontos, máx. 10; `validateCreationAttributes`, `validateAllocation`, nomes e resumos)
+- Regras: `packages/game-core/src/attributes.ts` (`ATTRIBUTE_RULES`: base 5, 12 pontos, máx. 10; `validateCreationAttributes` exige **todos** os pontos gastos (D64), `validateAllocation` só para personagens antigos, nomes e resumos)
+- **Atributos base e livros:** os requisitos dos livros (`content/books.ts`) usam os atributos base — mudar um atributo obriga a rever `SKILL_BOOKS`
 - BD: `characters.attr_might … attr_will`, `characters.attribute_points` + migrações 0004–0006 e 0008 (rename Vitality/Arcana/Spirit → Endurance/Intellect/Will)
 - Servidor: `characters.service.ts` (criação, pontos por gastar), `sheet.service.ts` (`baseAttributesOf`, `allocate`), rota `POST /api/characters/:id/attributes`
 - Web: `AttributePicker.tsx` (criação e distribuição posterior), `CharacterCreatePage.tsx`, `CharacterSheetPage.tsx` (`AllocatePanel`)
@@ -87,8 +98,9 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Conteúdo (dados): `packages/game-core/src/content/abilities.ts` (`ABILITIES` com dano em intervalo, `scaling` por 2 atributos, efeitos `damage`/`heal`/`block`/`status`/`swap`; `STATUS_NAMES`, `STATUS_DESCRIPTIONS`, `describeTargeting`, `describeEffects`, `describeScaling`)
 - Regras: `availableAbilities` em `packages/game-core/src/equipment.ts` (arma equipada + aprendidas + universais)
 - Contrato: `AbilityDto` (`api.ts`, inclui `effects` e `scaling` em texto)
-- BD: `character_skills` (skills aprendidas por drops; as de arma não se guardam)
-- Servidor: `sheet.service.ts` (`abilities`)
+- BD: `character_skills` (skills aprendidas por livros, com `rank`/`progress`; as de arma não se guardam)
+- Servidor: `sheet.service.ts` (`abilities`, com `rank`)
+- **Skill nova (livro):** habilidade com `source: 'skill'` em `abilities.ts` + entrada em `SKILL_BOOKS` (`content/books.ts`); o item `book_<id>` e o loot dos Rifts são gerados sozinhos; ver "Skills e livros"
 - Web: `CharacterSheetPage.tsx` (lista), `CharacterCreatePage.tsx` (habilidades de cada arma inicial)
 - Testes: `character-system.test.ts`, `character-sheet.test.ts`
 - Futuro: execução em combate no motor M2
@@ -415,3 +427,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx`, `api.ts`, `professions.css`), rota `/professions` no `GameShell`, botão no Hub (`HomePage.tsx`); quantidades na ficha
 - **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS` se precisar)
 - Testes: `game-core/test/professions.test.ts`, `apps/server/test/professions.test.ts`, `e2e` ("professions")
+
+## Skills e livros (ranks 1–10, M1–M9, P — pedido #36)
+
+- Regras: `packages/game-core/src/skills.ts` (`SKILL_RULES`, `READ_RULES`, `rankLabel`, `booksForRank`, `totalBooksTo`, `skillRankMultiplier`, `readCheck`, `applyRead`)
+- Conteúdo: `content/abilities.ts` (secção "Learned skills"), `content/books.ts` (`SKILL_BOOKS`, `BOOK_ITEMS`, `bookOfItem`, escolas), `content/items.ts` (junta `BOOK_ITEMS`; `isStackable` inclui `book`), `content/rifts.ts` (`BOOK_LOOT`)
+- Combate: `abilityMultipliers(items, skillRanks)` (`equipment.ts`) → `combatProfile` (`sheet.service.ts`) → `actor.abilityMultipliers` no motor
+- Contrato: `ItemKind` (`book`), `ItemDto.book` (`BookInfoDto`), `SkillDto`, `CharacterSheetDto.skills`/`readReadyAt`, `AbilityDto.rank`, `ReadBookResultDto` (`api.ts`)
+- BD: `character_skills.rank/progress/updated_at`, `characters.read_ready_at` (migração 0011)
+- Servidor: `sheet.service.ts` (`readBook`, `bookInfo`, `toSkillDto`), rota `POST /api/characters/:id/items/:itemId/read`, `items.repository.ts` (`learnedSkills`, `giveOne` — empilha livros vindos do Rift), `rifts.service.ts` (recompensas)
+- Web: `CharacterSheetPage.tsx` (botão Read no inventário, `BookInfoLine`, painel Skills, `useBusyUntil`), `api.ts` (`useReadBook`), `global.css` (`.area-skills`, `.notice`)
+- Testes: `game-core/test/skills.test.ts`, `apps/server/test/character-sheet.test.ts` ("skill books")
+- **Quando existir AP:** trocar o tempo (`READ_RULES.cooldownSeconds`, `read_ready_at`) por `READ_RULES.apCost`

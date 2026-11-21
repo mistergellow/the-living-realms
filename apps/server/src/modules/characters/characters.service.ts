@@ -1,6 +1,7 @@
 import { accounts, worldEvents, type Character, type Database } from '@realms/db';
 import {
   getItemDef,
+  getOrigin,
   STARTER_ARMOR,
   STARTER_OFFHANDS,
   STARTER_WEAPONS,
@@ -25,6 +26,7 @@ export function toCharacterDto(c: Character): CharacterDto {
     id: c.id,
     name: c.name,
     appearance: c.appearance as CharacterAppearance,
+    origin: c.origin,
     position: { q: c.hexQ, r: c.hexR },
     createdAt: c.createdAt.toISOString(),
     lastPlayedAt: c.lastPlayedAt?.toISOString() ?? null,
@@ -58,6 +60,10 @@ export class CharactersService {
     const attrs = validateCreationAttributes(input.attributes);
     if (!attrs.ok)
       throw errors.validation(attrs.reason, [{ path: 'attributes', message: attrs.reason }]);
+    if (!getOrigin(input.origin))
+      throw errors.validation('Choose your country of origin.', [
+        { path: 'origin', message: 'Choose your country of origin.' },
+      ]);
     if (!(STARTER_WEAPONS as string[]).includes(input.startingWeapon))
       throw errors.validation('Choose one of the starting weapons.', [
         { path: 'startingWeapon', message: 'Choose one of the starting weapons.' },
@@ -103,6 +109,7 @@ export class CharactersService {
           attrIntellect: a.intellect,
           attrWill: a.will,
           attributePoints: attrs.unspent,
+          origin: input.origin,
         });
         // Starter kit: the chosen weapon + basic armor, equipped.
         const kit: Array<{ defId: string; slot: string }> = [
@@ -128,6 +135,7 @@ export class CharactersService {
             name: character.name,
             startingWeapon: input.startingWeapon,
             startingOffhand: input.startingOffhand ?? null,
+            origin: input.origin,
           },
         });
         return character;

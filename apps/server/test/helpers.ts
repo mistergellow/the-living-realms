@@ -97,6 +97,7 @@ export async function createCharacter(
     attributes?: Record<string, number>;
     startingWeapon?: string;
     startingOffhand?: string;
+    origin?: string;
   } = {},
 ) {
   return app.inject({
@@ -108,6 +109,7 @@ export async function createCharacter(
       appearance,
       attributes: extra.attributes ?? VALID_ATTRIBUTES,
       startingWeapon: extra.startingWeapon ?? 'training_sword',
+      origin: extra.origin ?? 'valdmark',
       ...(extra.startingOffhand ? { startingOffhand: extra.startingOffhand } : {}),
     },
   });

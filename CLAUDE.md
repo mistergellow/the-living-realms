@@ -40,7 +40,8 @@ iniciativa; Focus gerado pela Precision; ecrã separado da exploração; formaç
 de **3 colunas (back, mid, front) × 2 linhas** por lado. Rifts = dungeons com
 mapa ramificado (estilo Slay the Spire) até um boss, a solo ou em lobby até 6.
 **Testes de exploração usam só os BASE STATS.** Armas: catálogo com números
-iguais por tipo e nível.
+iguais por tipo e nível. Skills/magias aprendem-se a **ler livros** (usar o
+item; ranks 1–10, M1–M9, P); atributos base e país de origem só na criação.
 Progressão por reputação (sem níveis). Nações, línguas, economia, NPCs e
 eventos virão em fases futuras (ver ROADMAP.md).
 

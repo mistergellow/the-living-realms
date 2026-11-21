@@ -8,6 +8,7 @@ import {
   describeScaling,
   getAbility,
   getItemDef,
+  ORIGINS,
   STARTER_OFFHANDS,
   STARTER_WEAPONS,
   validateCharacterName,
@@ -36,6 +37,7 @@ export function CharacterCreatePage() {
   const [attributes, setAttributes] = useState<Attributes>(BASE_ATTRIBUTES);
   const [weapon, setWeapon] = useState<string>(STARTER_WEAPONS[0]!);
   const [offhand, setOffhand] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<string | null>(null);
   const twoHanded = !!getItemDef(weapon)?.twoHanded;
   const chosenOffhand = twoHanded ? null : offhand;
   const create = useCreateCharacter();
@@ -56,15 +58,20 @@ export function CharacterCreatePage() {
     e.preventDefault();
     const v = validateCharacterName(name);
     const pb = validateCreationAttributes(attributes);
-    const next = { name: v.ok ? undefined : v.reason, attributes: pb.ok ? undefined : pb.reason };
+    const next = {
+      name: v.ok ? undefined : v.reason,
+      attributes: pb.ok ? undefined : pb.reason,
+      origin: origin ? undefined : 'Choose your country of origin.',
+    };
     setErrors(next);
-    if (!v.ok || !pb.ok) return;
+    if (!v.ok || !pb.ok || !origin) return;
     create.mutate(
       {
         name: v.name,
         appearance,
         attributes,
         startingWeapon: weapon,
+        origin,
         ...(chosenOffhand ? { startingOffhand: chosenOffhand } : {}),
       },
       {
@@ -108,6 +115,33 @@ export function CharacterCreatePage() {
               />
             </section>
             <section className="panel">
+              <fieldset className="field">
+                <legend className="legend">
+                  Country of origin — sets your native language. Chosen only once.
+                </legend>
+                <div className="origin-grid" data-testid="origins">
+                  {Object.values(ORIGINS).map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      className="weapon-card"
+                      aria-pressed={origin === o.id}
+                      onClick={() => setOrigin(o.id)}
+                    >
+                      <strong>{o.name}</strong>
+                      <span className="field-hint">{o.description}</span>
+                      <span className="field-hint">Language: {o.language}</span>
+                    </button>
+                  ))}
+                </div>
+                {errors.origin && <p className="field-error">{errors.origin}</p>}
+              </fieldset>
+            </section>
+            <section className="panel">
+              <p className="field-hint" style={{ marginTop: 0 }}>
+                Base attributes are chosen only now and never change. Equipment adds on top; some
+                skill books need a minimum base score.
+              </p>
               <AttributePicker
                 value={attributes}
                 onChange={setAttributes}
@@ -254,7 +288,7 @@ export function CharacterCreatePage() {
         </div>
         <footer className="create-footer">
           <span className="muted" style={{ fontSize: '0.85rem' }}>
-            Choose a name, spend your points and pick a weapon.
+            Choose a name and origin, spend all your points and pick a weapon.
           </span>
           <span className="spacer" />
           <button className="btn btn-primary btn-lg" type="submit" disabled={create.isPending}>

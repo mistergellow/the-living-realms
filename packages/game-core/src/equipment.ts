@@ -7,6 +7,7 @@ import {
 } from './content/abilities.js';
 import { getItemDef, type ItemDef } from './content/items.js';
 import { upgradeMultiplier } from './content/weapons.js';
+import { skillRankMultiplier } from './skills.js';
 
 /*
  * Equipment rules. Items are referenced by an instance id (owned item) and a
@@ -113,14 +114,22 @@ export function availableAbilities(
 
 /**
  * Weapon upgrades (+1, +2, …) improve the numbers of the abilities that weapon
- * grants. Returns ability id → multiplier (only for upgraded weapons).
+ * grants; skill ranks (request #36) improve learned skills. Returns ability
+ * id → multiplier (only where it is not 1).
  */
-export function abilityMultipliers(items: OwnedItem[]): Record<string, number> {
+export function abilityMultipliers(
+  items: OwnedItem[],
+  skillRanks: Record<string, number> = {},
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const w of activeEquipment(items)) {
     const m = upgradeMultiplier(w.upgradeLevel ?? 0);
     if (m === 1) continue;
     for (const id of w.def.abilities ?? []) out[id] = Math.max(out[id] ?? 1, m);
+  }
+  for (const [id, rank] of Object.entries(skillRanks)) {
+    const m = skillRankMultiplier(rank);
+    if (m !== 1) out[id] = (out[id] ?? 1) * m;
   }
   return out;
 }

@@ -1,4 +1,5 @@
 import type { ItemDefId } from './items.js';
+import { SKILL_BOOKS, type BookSkillId } from './books.js';
 import type { EnemyId } from './enemies.js';
 import type { EventId } from './events.js';
 import type { MapTemplate } from '../rift/map.js';
@@ -53,6 +54,13 @@ export interface RiftDef {
 }
 
 const rift = (r: RiftDef) => r;
+
+/** Every skill book, each with the same weight (request #36, PROVISIONAL). */
+const BOOK_LOOT = (weight: number): LootEntry[] =>
+  (Object.keys(SKILL_BOOKS) as BookSkillId[]).map((id) => ({
+    item: `book_${id}` as const,
+    weight,
+  }));
 
 /** Default map: 7 rows + boss, 5 lanes, 4 walks (≈ 15–20 rooms, 8 on any path). */
 export const DEFAULT_MAP_TEMPLATE: MapTemplate = {
@@ -172,6 +180,8 @@ export const RIFTS = {
         { item: 'charm_of_focus', weight: 1 },
         { item: 'hawkeye_band', weight: 1 },
         { item: 'brawler_wrap', weight: 1 },
+        // Skill books (request #36): the boss is the best source.
+        ...BOOK_LOOT(2),
       ],
     },
     lootRoom: {
@@ -184,6 +194,7 @@ export const RIFTS = {
         { item: 'iron_mace', weight: 1 },
         { item: 'ash_spear', weight: 1 },
         { item: 'birch_wand', weight: 1 },
+        ...BOOK_LOOT(1),
       ],
     },
     secretRoom: {
@@ -193,6 +204,7 @@ export const RIFTS = {
         { item: 'charm_of_focus', weight: 2 },
         { item: 'hawkeye_band', weight: 2 },
         { item: 'brawler_wrap', weight: 2 },
+        ...BOOK_LOOT(1),
       ],
     },
   }),

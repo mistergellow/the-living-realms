@@ -2,6 +2,7 @@ import {
   createCharacterRequestSchema,
   allocateAttributesRequestSchema,
   equipRequestSchema,
+  setOriginRequestSchema,
   unequipRequestSchema,
   type CharacterListResponse,
 } from '@realms/shared';
@@ -13,6 +14,7 @@ import { toCharacterDto, type CharactersService } from './characters.service.js'
 import type { CharacterSheetService } from './sheet.service.js';
 
 const idParams = z.object({ id: z.uuid() });
+const itemParams = z.object({ id: z.uuid(), itemId: z.uuid() });
 
 export async function charactersRoutes(
   app: FastifyInstance,
@@ -47,6 +49,18 @@ export async function charactersRoutes(
     const { id } = parse(idParams, request.params);
     const { add } = parse(allocateAttributesRequestSchema, request.body);
     return sheets.allocate(request.auth!.account.id, id, add);
+  });
+
+  // Request #36: reading a skill book is using an item from the inventory.
+  app.post('/:id/items/:itemId/read', async (request) => {
+    const { id, itemId } = parse(itemParams, request.params);
+    return sheets.readBook(request.auth!.account.id, id, itemId);
+  });
+
+  app.post('/:id/origin', async (request) => {
+    const { id } = parse(idParams, request.params);
+    const { origin } = parse(setOriginRequestSchema, request.body);
+    return sheets.setOrigin(request.auth!.account.id, id, origin);
   });
 
   app.post('/:id/unequip', async (request) => {

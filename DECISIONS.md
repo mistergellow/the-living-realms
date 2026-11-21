@@ -672,3 +672,20 @@ keeps its "column" vocabulary: a column is now one position
 (`COMBAT_COLUMNS = front, second, third, back`), so `area: 'column'` hits one
 unit and reach `first`/`first2` mean the nearest one/two positions. Abilities
 that used to hit a whole column use `reach: 'first2', area: 'all'`.
+
+## ADR-040 — Skills learned from books; ranks 1–10, M1–M9, P
+
+**Status:** accepted (request #36)
+
+**Decision.** Non-weapon skills are learned and ranked up by reading skill
+books. A book is an ordinary stackable item (`book_<skillId>`, kind `book`);
+reading it is using that item (not a profession): it costs a short time until
+Action Points exist, consumes the book whether it succeeds or not, and needs
+a minimum **base** attribute for some books (`SKILL_BOOKS.*.minimum`). Ranks
+are stored per character in `character_skills (rank 1–20, progress)`; rank _n_
+needs _n_ successful reads (1–10), Mastery Mk needs 10 × k, and rank 20 is
+shown as P. All rank rules live in `game-core/src/skills.ts`; the rank power
+reaches combat through the existing per-ability multipliers
+(`abilityMultipliers(items, skillRanks)`), so the engine did not change.
+Base attributes and the country of origin are chosen only at creation
+(`characters.origin`); old characters pick their origin once.

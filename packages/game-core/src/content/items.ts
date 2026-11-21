@@ -1,6 +1,7 @@
 import type { Attributes, EquipSlot, ItemKind } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
+import { BOOK_ITEMS, type BookSkillId } from './books.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -201,7 +202,7 @@ export const ITEMS = {
   }),
 } satisfies Record<string, ItemDef>;
 
-export type ItemDefId = keyof typeof ITEMS | MaterialId;
+export type ItemDefId = keyof typeof ITEMS | MaterialId | `book_${BookSkillId}`;
 
 export function getItemDef(id: string): ItemDef | undefined {
   return (ITEMS as Record<string, ItemDef>)[id];
@@ -273,7 +274,9 @@ export const MATERIALS = {
 
 export type MaterialId = keyof typeof MATERIALS;
 Object.assign(ITEMS, MATERIALS);
+// Skill books (request #36): they stack and are used (read) from the inventory.
+Object.assign(ITEMS, BOOK_ITEMS);
 
-/** Materials and consumables stack in the inventory. */
+/** Materials, consumables and books stack in the inventory. */
 export const isStackable = (def: ItemDef | undefined) =>
-  def?.kind === 'material' || def?.kind === 'consumable';
+  def?.kind === 'material' || def?.kind === 'consumable' || def?.kind === 'book';

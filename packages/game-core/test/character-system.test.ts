@@ -28,16 +28,13 @@ const owned = (
 });
 
 describe('attributes (6 linear attributes, 12 creation points)', () => {
-  it('everyone starts at 5; up to 12 points, max 10 each', () => {
+  it('everyone starts at 5; exactly 12 points, max 10 each', () => {
     expect(ATTRIBUTE_RULES).toMatchObject({ base: 5, creationPoints: 12, creationMax: 10 });
     const a = attrs({ might: 10, agility: 8, endurance: 9 });
     expect(pointsSpent(a)).toBe(12);
     expect(validateCreationAttributes(a)).toEqual({ ok: true, spent: 12, unspent: 0 });
-    expect(validateCreationAttributes(BASE_ATTRIBUTES)).toEqual({
-      ok: true,
-      spent: 0,
-      unspent: 12,
-    });
+    // Request #36: base attributes are chosen only at creation, so all points are spent.
+    expect(validateCreationAttributes(BASE_ATTRIBUTES).ok).toBe(false);
   });
   it('rejects overspending and out-of-range scores', () => {
     expect(validateCreationAttributes(attrs({ might: 10, agility: 10, endurance: 8 })).ok).toBe(

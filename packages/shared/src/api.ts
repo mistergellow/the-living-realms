@@ -60,6 +60,8 @@ export interface CharacterDto {
   id: string;
   name: string;
   appearance: CharacterAppearance;
+  /** Country of origin (request #36), chosen once at creation; null = old character. */
+  origin: string | null;
   position: HexCoord;
   createdAt: string;
   lastPlayedAt: string | null;
@@ -200,12 +202,25 @@ export const createCharacterRequestSchema = z.object({
   startingWeapon: z.string().max(64),
   /** Optional starter off-hand (only with one-handed weapons). */
   startingOffhand: z.string().max(64).optional(),
+  /** Country of origin (request #36); sets the native language. */
+  origin: z.string().max(64),
 });
 export type CreateCharacterRequest = z.infer<typeof createCharacterRequestSchema>;
 
 /** Spend unspent attribute points (e.g. characters converted from the old system). */
 export const allocateAttributesRequestSchema = z.object({ add: attributesSchema.partial() });
 export type AllocateAttributesRequest = z.infer<typeof allocateAttributesRequestSchema>;
+
+/** Characters made before origins existed choose theirs once (request #36). */
+export const setOriginRequestSchema = z.object({ origin: z.string().max(64) });
+export type SetOriginRequest = z.infer<typeof setOriginRequestSchema>;
+
+export interface OriginDto {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+}
 
 export interface CharacterListResponse {
   characters: CharacterDto[];
@@ -224,8 +239,12 @@ export const EQUIP_SLOTS = [
 ] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
-/** 'material' and 'consumable' come from professions (request #33); they stack. */
-export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable';
+/**
+ * 'material' and 'consumable' come from professions (request #33); 'book' =
+ * skill books (request #36). All three stack.
+ */
+export type ItemKind =
+  'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable' | 'book';
 
 export interface ItemDto {
   id: string;
@@ -247,6 +266,25 @@ export interface ItemDto {
   magicResist: number;
   /** Weapons only (request #31): type, base stats, upgrades, specials, rune slots. */
   weapon: WeaponInfoDto | null;
+  /** Skill books only (request #36). */
+  book: BookInfoDto | null;
+}
+
+/** What reading a skill book would do for this character right now. */
+export interface BookInfoDto {
+  skillId: string;
+  skillName: string;
+  school: string;
+  /** e.g. { attribute: 'intellect', name: 'Intellect', minimum: 8 } — BASE score; null = anyone. */
+  requirement: { attribute: AttributeKey; name: string; minimum: number } | null;
+  /** Can be read now (meets the requirement, not perfected). */
+  readable: boolean;
+  /** Why it cannot be read (requirement, already perfect). */
+  reason: string | null;
+  /** Success chance (percent) when readable. */
+  chance: number;
+  /** Your current rank label in that skill ("—" if not learned). */
+  currentRank: string;
 }
 
 /** A special property on a weapon (max 5). Catalogue of specials: future. */
@@ -300,6 +338,33 @@ export interface AbilityDto {
   effects: string[];
   /** Attributes it scales with, e.g. "Might 60% · Agility 40%". */
   scaling: string;
+  /** Learned skills: rank label ("1"–"10", "M1"–"M9", "P"). */
+  rank: string | null;
+}
+
+/** A learned skill and its progress (request #36). */
+export interface SkillDto {
+  id: string;
+  name: string;
+  school: string;
+  /** 1–20 (1–10, M1–M9, P). */
+  rank: number;
+  rankLabel: string;
+  /** Successful reads towards the next rank, and how many it needs (0 at P). */
+  progress: number;
+  needed: number;
+  nextRankLabel: string | null;
+  /** Power multiplier from the rank, in percent (100 at rank 1). */
+  power: number;
+}
+
+export interface ReadBookResultDto {
+  success: boolean;
+  chance: number;
+  message: string;
+  rankedUp: boolean;
+  learned: boolean;
+  sheet: CharacterSheetDto;
 }
 
 export interface DerivedStatsDto {
@@ -341,8 +406,14 @@ export interface CharacterSheetDto {
   abilities: AbilityDto[];
   /** Reputation is a per-character currency earned through activities. */
   reputation: number;
-  /** Attribute points not yet distributed. */
+  /** Attribute points not yet distributed (only characters made before request #36). */
   attributePoints: number;
+  /** Learned skills with rank and progress (request #36). */
+  skills: SkillDto[];
+  /** Country of origin and native language; null = choose it (old characters). */
+  origin: OriginDto | null;
+  /** ISO time from which another book can be read (null = now). */
+  readReadyAt: string | null;
 }
 
 export const equipRequestSchema = z.object({ itemId: z.uuid(), slot: z.enum(EQUIP_SLOTS) });

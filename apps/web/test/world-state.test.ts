@@ -18,6 +18,7 @@ const self: CharacterDto = {
   id: 'a',
   name: 'Alda',
   appearance,
+  origin: null,
   position: { q: 0, r: 0 },
   createdAt: '',
   lastPlayedAt: null,

@@ -58,10 +58,20 @@ export function validateCreationAttributes(a: Attributes): AttributeValidation {
       ok: false,
       reason: `You spent ${spent} points; you have ${ATTRIBUTE_RULES.creationPoints}.`,
     };
+  // Request #36: base attributes are chosen only once, at creation — spend them all.
+  if (spent < ATTRIBUTE_RULES.creationPoints)
+    return {
+      ok: false,
+      reason: `Spend all ${ATTRIBUTE_RULES.creationPoints} points: base attributes can only be chosen now (${ATTRIBUTE_RULES.creationPoints - spent} left).`,
+    };
   return { ok: true, spent, unspent: ATTRIBUTE_RULES.creationPoints - spent };
 }
 
-/** Spending unspent points later (same per-attribute cap as creation). */
+/**
+ * Spending unspent points later. Only for characters made before request #36
+ * that still have points left (they finish their creation once); new
+ * characters spend everything at creation.
+ */
 export function validateAllocation(
   base: Attributes,
   add: Partial<Attributes>,

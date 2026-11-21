@@ -45,7 +45,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **M2 done:** deterministic combat engine (2 rows × 3 slots per side, initiative, Focus with carry-over, row targeting, swap, enemy AI, rooms → boss, revive at 1 HP); Rift runs persisted every action; 60 s turn timer; rewards (reputation + drops) and defeat penalty (−25% quality); side-view combat screen with animations; layered SVG characters with an editable base body
 - ❓ Rift structure (encounters, waves, boss), lobby size, defeat and rewards
 - Combat instances (server state machine, persisted every turn)
-- [x] **Combat 2.0:** six linear attributes (12 creation points, unspent points can be spent later), weapons scaling with two attributes, main + off-hand combinations (6 starter weapons, 3 off-hands), diminishing-returns armor/resistance, Block, statuses (Bleed, Burn, Mark, Weaken, Stun), damage ranges, visible enemy intents; rebalanced by simulation
+- [x] **Combat 2.0:** six linear attributes (12 creation points, all spent at creation since request #36), weapons scaling with two attributes, main + off-hand combinations (6 starter weapons, 3 off-hands), diminishing-returns armor/resistance, Block, statuses (Bleed, Burn, Mark, Weaken, Stun), damage ranges, visible enemy intents; rebalanced by simulation
 - [x] **Column attacks (D41/D42):** attacks pick a column and hit both units; enemies play the formation (Rift Bulwark shields its column); rebalanced with `pnpm sim`
 - [x] **Formation fix (D38):** 3 columns (front, mid, back) × 2 lines per side, column-based reach and areas
 - [x] **M3 done:** friends (requests by character name, online status); lobbies up to 6 (public or invite-only, invites to friends, formation slots, ready check, kick, leader hand-over, leader starts for everyone); group combat (initiative across players, leaving penalises only the leaver); live refresh by polling
@@ -54,6 +54,8 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
 - [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
 - [x] **Request #33:** basic attack cost per weapon (heavy 3, dagger 1); a wiped party keeps no Rift loot; simple Dungeon Threat; PvP arena (test mode, lobby with two teams)
+- [x] **Skill books (request #36):** 18 skills (arcane, divine, half-caster, martial) learned from books; ranks 1–10, M1–M9, P; base-attribute requirements; reading consumes the book; country of origin + language chosen at creation; base attributes chosen only at creation
+- ❓ Action Points for reading books (and the map); more skills and tuning
 - ❓ Full Dungeon Threat design (ADR-035); Runemaster, runes and weapon specials content; PvP rewards/ranking
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
