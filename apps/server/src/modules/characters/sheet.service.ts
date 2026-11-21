@@ -22,6 +22,7 @@ import {
   emptyEquipment,
   getAbility,
   ATTRIBUTE_NAMES,
+  gearReputationBonusPct,
   getItemDef,
   getSkill,
   planLoadout,
@@ -48,7 +49,7 @@ import {
   type ItemAffixDto,
   type ItemDto,
 } from '@realms/shared';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { AppError, errors } from '../../lib/errors.js';
 import { toCharacterDto } from './characters.service.js';
 import { itemsRepository } from './items.repository.js';
@@ -144,6 +145,20 @@ function toAbilityDto(ability: AbilityDef, grantedBy: string | null): AbilityDto
       value: v ?? 0,
     })),
   };
+}
+
+/** Reputation bonus % from the gear a character has equipped (request #49). */
+export async function reputationGearBonus(db: DbOrTx, characterId: string): Promise<number> {
+  const equipped = await db
+    .select({ specials: items.specials, upgradeLevel: items.upgradeLevel })
+    .from(items)
+    .where(and(eq(items.characterId, characterId), isNotNull(items.equippedSlot)));
+  return gearReputationBonusPct(
+    equipped.map((i) => ({
+      affixCount: normalizeAffixes(i.specials).length,
+      upgradeLevel: i.upgradeLevel,
+    })),
+  );
 }
 
 type LearnedSkill = { id: string; loadoutSlot: number | null };
@@ -363,6 +378,7 @@ export class CharacterSheetService {
       }),
       loadout: loadoutOf(skills),
       reputation: c.reputation,
+      reputationBonusPct: await reputationGearBonus(db, c.id),
       attributePoints: c.attributePoints,
     };
   }

@@ -35,6 +35,8 @@ import {
   riftSites,
   RUN_STATE_VERSION,
   seedFrom,
+  riftClearFactor,
+  riftReputation,
   createWorldBossRun,
   WORLD_BOSS_ID,
   worldBossDamage,
@@ -63,6 +65,7 @@ import {
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
+import { reputationGearBonus } from '../characters/sheet.service.js';
 import { settleWorldBossFight } from '../worldboss/worldboss.repository.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
@@ -584,16 +587,29 @@ export class RiftsService {
           .returning({ id: items.id });
         dropped.push({ id: row!.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
       }
+      // Request #49: less reputation each time you beat the same Rift, then
+      // none; better equipped gear raises it.
+      const previousClears = await repo.victoriesIn(tx, p.characterId, run.riftId, run.id);
+      const gearBonusPct = await reputationGearBonus(tx, p.characterId);
+      const reputation = riftReputation(rift.rewards.reputation, previousClears, gearBonusPct);
       await tx
         .update(characters)
-        .set({ reputation: sql`${characters.reputation} + ${rift.rewards.reputation}` })
+        .set({ reputation: sql`${characters.reputation} + ${reputation}` })
         .where(eq(characters.id, p.characterId));
       await this.recordResult(
         tx,
         run,
         p.characterId,
         p.accountId,
-        { rewards: { reputation: rift.rewards.reputation, items: dropped } },
+        {
+          rewards: {
+            reputation,
+            items: dropped,
+            clearNumber: previousClears + 1,
+            clearFactorPct: Math.round(riftClearFactor(previousClears) * 100),
+            gearBonusPct,
+          },
+        },
         'victory',
       );
     }

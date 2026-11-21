@@ -31,3 +31,4 @@ export * from './content/locations.js';
 export * from './ap.js';
 export * from './content/world-boss.js';
 export * from './content/skills.js';
+export * from './reputation.js';

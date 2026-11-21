@@ -320,6 +320,12 @@ export type RunStatus = 'active' | 'victory' | 'defeat' | 'abandoned';
 export interface RunRewardsDto {
   reputation: number;
   items: Array<{ id: string; name: string }>;
+  /** Request #49: how many times you have beaten this Rift (1 = first time). */
+  clearNumber?: number;
+  /** Share of the Rift's reputation for this clear (100, 50, 25, then 0). */
+  clearFactorPct?: number;
+  /** Bonus from equipped gear (bonus effects and upgrades). */
+  gearBonusPct?: number;
 }
 
 export interface RunPenaltyDto {
