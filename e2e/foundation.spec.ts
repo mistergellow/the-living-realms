@@ -35,11 +35,11 @@ test('register → create character → enter the world → log out → log in',
   await page.screenshot({ path: 'test-results/screens/01-create.png' });
   await createCharacter(page, name);
 
-  // The hub: you are online, and its main buttons lead to the world map.
+  // The hex you stand on: the starting town, its actions and the hex chat.
   await expect(page.getByTestId('connection-status')).toContainText('Online');
-  await expect(page.getByTestId('activity')).toBeVisible();
+  await expect(page.getByTestId('place-name')).toHaveText('Emberhold');
   await page.screenshot({ path: 'test-results/screens/02-home.png' });
-  await page.getByRole('link', { name: 'Explore the world' }).click();
+  await page.getByRole('link', { name: 'Leave', exact: true }).click();
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
@@ -57,8 +57,14 @@ test('register → create character → enter the world → log out → log in',
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Log in' }).click();
+  // Straight back in with the last character played, on the hex where it stopped.
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByTestId('self-name')).toHaveText(name);
+  // Switching character is a small corner button.
+  await page.getByRole('button', { name: 'Switch character' }).click();
   await expect(page).toHaveURL(/\/characters$/);
   await expect(page.getByTestId('character-card')).toContainText(name);
+  await expect(page.getByTestId('locked-slot')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/03-select.png' });
 });
 
@@ -82,6 +88,13 @@ test('players see each other in real time', async ({ browser }) => {
   await createCharacter(a, nameA);
   await register(b, `e2e-b-${unique()}@example.com`);
   await createCharacter(b, nameB);
+
+  // Hex chat: both stand in the starting town and hear each other.
+  await a.getByLabel('Message').fill('Well met!');
+  await a.getByRole('button', { name: 'Send' }).click();
+  await expect(b.getByTestId('hex-chat-log')).toContainText(`${nameA}Well met!`);
+  await expect(a.getByTestId('hex-here')).toContainText(nameB);
+
   await a.getByRole('link', { name: 'World', exact: true }).click();
   await b.getByRole('link', { name: 'World', exact: true }).click();
 
@@ -133,8 +146,18 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('sheet-name')).toHaveText(name);
   await expect(page.getByTestId('sheet-attr-agility')).toHaveText('10');
   await expect(page.getByTestId('stat-hp')).toHaveText(String(40 + 6 * 9));
-  await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
   await page.screenshot({ path: 'test-results/screens/06-sheet.png', fullPage: true });
+
+  // Abilities tab: weapon abilities and basic actions are always there; no skills learned yet.
+  await page.getByRole('tab', { name: /Abilities/ }).click();
+  await expect(page.getByTestId('abilities')).toContainText('Marking Shot');
+  await expect(page.getByTestId('basic-actions')).toContainText('Swap Position');
+  await expect(page.getByTestId('loadout')).toContainText('Empty');
+  await expect(page.getByTestId('library-empty')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/06b-abilities.png', fullPage: true });
+  await page.getByRole('tab', { name: /Professions/ }).click();
+  await expect(page.getByTestId('profession-fishing')).toBeVisible();
+  await page.getByRole('tab', { name: /Equipment/ }).click();
 
   // The 3 unspent points can be distributed later on the sheet.
   const allocate = page.getByTestId('allocate');
@@ -143,9 +166,23 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await page.getByRole('button', { name: 'Confirm attributes' }).click();
   await expect(page.getByTestId('sheet-attr-precision')).toHaveText('6');
 
-  await page.getByRole('button', { name: 'Unequip Hunting Bow' }).click();
-  await expect(page.getByTestId('abilities')).toContainText('Unarmed Strike');
-  await page.getByRole('button', { name: 'Equip Hunting Bow' }).click();
+  // Drag and drop: the bow goes to the bag and back to the main hand.
+  await page
+    .getByRole('button', { name: 'Main hand: Hunting Bow' })
+    .dragTo(page.getByTestId('inventory'));
+  await expect(page.getByLabel('Main hand: empty')).toBeVisible();
+  const bow = page.getByTestId('bag-hunting_bow');
+  await bow.hover();
+  await expect(page.getByTestId('item-tooltip')).toContainText('Basic attack');
+  // Item card parts (request #37): rarity and BASE-attribute requirements.
+  await expect(page.getByTestId('item-tooltip')).toHaveAttribute('data-rarity', 'common');
+  await expect(page.getByTestId('item-tooltip')).toContainText('Common');
+  await expect(page.getByTestId('item-tooltip')).toContainText('Requires');
+  await expect(page.getByTestId('item-tooltip')).toContainText('Precision');
+  await page.screenshot({ path: 'test-results/screens/06c-tooltip.png' });
+  await bow.dragTo(page.getByTestId('slot-mainHand'));
+  await expect(page.getByRole('button', { name: 'Main hand: Hunting Bow' })).toBeVisible();
+  await page.getByRole('tab', { name: /Abilities/ }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 });
 
@@ -161,7 +198,7 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page.getByTestId('self-name')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Rifts', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Rifts' }).click();
   await expect(page.getByTestId('rift-card')).toContainText('Shattered Breach');
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
@@ -268,7 +305,7 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
 test('professions: practise fishing and gain XP', async ({ page }) => {
   await register(page, `e2e-prof-${unique()}@example.com`);
   await createCharacter(page, randomName('Angler'));
-  await page.getByRole('link', { name: 'Professions' }).click();
+  await page.getByRole('link', { name: 'Workshop', exact: true }).click();
   await expect(page.getByTestId('profession-fishing')).toContainText('Lv 0');
   await page.getByTestId('profession-fishing').click();
   await page.getByRole('button', { name: 'Fish', exact: true }).click();

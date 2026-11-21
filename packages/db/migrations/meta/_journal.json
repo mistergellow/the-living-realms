@@ -78,6 +78,20 @@
       "when": 1795255974358,
       "tag": "0010_one_line_formation",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795267596585,
+      "tag": "0011_equipment_slots_and_loadout",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795272094502,
+      "tag": "0012_admin_custom_content",
+      "breakpoints": true
     }
   ]
 }

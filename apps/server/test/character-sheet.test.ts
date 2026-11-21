@@ -160,7 +160,7 @@ describe('equipment', () => {
       values (gen_random_uuid(), ${id}, 'ring_of_vigor', 'drop') returning id`;
     const res = await post(cookie, `/api/characters/${id}/equip`, {
       itemId: ring!.id,
-      slot: 'accessory2',
+      slot: 'ring2',
     });
     const sheet = res.json() as CharacterSheetDto;
     expect(sheet.baseAttributes.endurance).toBe(9);
@@ -176,15 +176,56 @@ describe('equipment', () => {
       returning id`;
     const results = await Promise.all(
       rings.map((r) =>
-        post(cookie, `/api/characters/${id}/equip`, { itemId: r.id, slot: 'accessory1' }),
+        post(cookie, `/api/characters/${id}/equip`, { itemId: r.id, slot: 'ring1' }),
       ),
     );
     expect(results.every((r) => r.statusCode === 200)).toBe(true);
     const [{ n }] = (await t.dbHandle.sql`
-      select count(*)::int as n from items where character_id = ${id} and equipped_slot = 'accessory1'`) as unknown as [
+      select count(*)::int as n from items where character_id = ${id} and equipped_slot = 'ring1'`) as unknown as [
       { n: number },
     ];
     expect(n).toBe(1);
+  });
+});
+
+describe('skill loadout (8 prepared skills)', () => {
+  const put = (cookie: string, id: string, slots: Array<string | null>) =>
+    t.app.inject({
+      method: 'PUT',
+      url: `/api/characters/${id}/loadout`,
+      headers: { cookie },
+      payload: { slots },
+    });
+  const empty = () => Array.from({ length: 8 }, () => null as string | null);
+
+  it('only prepared skills are available in combat', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.sql`
+      insert into character_skills (character_id, skill_id) values (${id}, 'firebolt'), (${id}, 'mend')`;
+    let sheet = await sheetOf(cookie, id);
+    expect(sheet.learnedSkills.map((a) => a.id)).toEqual(['firebolt', 'mend']);
+    expect(sheet.loadout).toEqual(empty());
+    expect(sheet.abilities.map((a) => a.id)).not.toContain('firebolt');
+
+    const slots = empty();
+    slots[3] = 'firebolt';
+    const res = await put(cookie, id, slots);
+    expect(res.statusCode).toBe(200);
+    sheet = res.json() as CharacterSheetDto;
+    expect(sheet.loadout[3]).toBe('firebolt');
+    expect(sheet.abilities.map((a) => a.id)).toContain('firebolt');
+    expect(sheet.abilities.map((a) => a.id)).not.toContain('mend');
+  });
+
+  it('rejects unknown, unlearned or repeated skills and wrong sizes', async () => {
+    const { cookie, id } = await newCharacter();
+    await t.dbHandle.sql`
+      insert into character_skills (character_id, skill_id) values (${id}, 'firebolt')`;
+    expect((await put(cookie, id, ['mend', ...empty().slice(1)])).statusCode).toBe(400);
+    expect((await put(cookie, id, ['firebolt', 'firebolt', ...empty().slice(2)])).statusCode).toBe(
+      400,
+    );
+    expect((await put(cookie, id, empty().slice(1))).statusCode).toBe(400);
   });
 });
 
@@ -224,5 +265,53 @@ describe('creation off-hand and attribute points', () => {
     expect(sheet.baseAttributes).toMatchObject({ endurance: 9, will: 8 });
     const tooMuch = await post(cookie, `/api/characters/${id}/attributes`, { add: { might: 4 } });
     expect(tooMuch.statusCode).toBe(400);
+  });
+});
+
+describe('item cards (request #37): bonus effects, rarity, requirements, runes', () => {
+  it('shows rolled effects and rarity, and they change the stats when equipped', async () => {
+    const { cookie, id } = await newCharacter();
+    const [ring] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source, specials, rune_slots)
+      values (gen_random_uuid(), ${id}, 'ring_of_vigor', 'drop',
+        ${JSON.stringify([
+          { id: 'health', value: 10 },
+          { id: 'agility', value: 2 },
+        ])}::jsonb,
+        ${JSON.stringify([
+          { unlocked: true, runeId: null },
+          { unlocked: false, runeId: null },
+        ])}::jsonb)
+      returning id`;
+    const before = await sheetOf(cookie, id);
+    const card = before.inventory.find((i) => i.id === ring!.id)!;
+    expect(card.rarity).toBe('rare');
+    expect(card.affixes.map((a) => [a.label, a.display])).toEqual([
+      ['Health', '+10'],
+      ['Agility', '+2'],
+    ]);
+    expect(card.runeSlots).toEqual({ used: 0, total: 1 });
+    expect(before.equipment.body?.runeSlots).toBeNull(); // no unlocked slots: hidden
+    const res = await post(cookie, `/api/characters/${id}/equip`, {
+      itemId: ring!.id,
+      slot: 'ring2',
+    });
+    const after = res.json() as CharacterSheetDto;
+    expect(after.stats.maxHp).toBe(before.stats.maxHp + 6 * 2 + 10);
+    expect(after.attributes.agility).toBe(before.attributes.agility + 2);
+  });
+
+  it('lists the BASE attributes needed; upgrades do not change them', async () => {
+    const { cookie, id } = await newCharacter();
+    const [dagger] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source, upgrade_level)
+      values (gen_random_uuid(), ${id}, 'rusty_dagger', 'drop', 8) returning id`;
+    const card = (await sheetOf(cookie, id)).inventory.find((i) => i.id === dagger!.id)!;
+    expect(card.requirements).toEqual([{ attribute: 'agility', value: 5, met: true }]);
+    const res = await post(cookie, `/api/characters/${id}/equip`, {
+      itemId: dagger!.id,
+      slot: 'mainHand',
+    });
+    expect(res.statusCode).toBe(200);
   });
 });

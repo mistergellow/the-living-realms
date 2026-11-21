@@ -4,3 +4,4 @@ export * from './protocol.js';
 export * from './combat.js';
 export * from './social.js';
 export * from './professions.js';
+export * from './admin.js';

@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import type { AttributeKey, Attributes, CharacterAppearance, DerivedStatsDto } from './api.js';
+import type {
+  AttributeKey,
+  Attributes,
+  CharacterAppearance,
+  DerivedStatsDto,
+  GearCombatEffects,
+} from './api.js';
 
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
@@ -76,6 +82,8 @@ export interface CombatantView {
   isBoss: boolean;
   abilityIds: string[];
   stats: DerivedStatsDto;
+  /** Player characters: combat bonuses from gear effects (request #37). */
+  gear?: GearCombatEffects;
 }
 
 export type CombatLogEntry =

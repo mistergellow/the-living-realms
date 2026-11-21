@@ -33,7 +33,7 @@ export function LobbyPage() {
     if (runId) navigate(`/rifts/runs/${runId}`, { replace: true });
   }, [runId, navigate]);
 
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
   if (lobby.isPending) return <FullPageMessage>Loading lobby…</FullPageMessage>;
   if (lobby.isError || !lobby.data) {
     return (

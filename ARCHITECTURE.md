@@ -142,16 +142,18 @@ WebSocket message:
 
 Defined in `packages/shared/src/protocol.ts`. Envelope `{ type, data? }`.
 
-| Direction | Type                                        | Meaning                 |
-| --------- | ------------------------------------------- | ----------------------- |
-| C → S     | `world.enter {characterId}`                 | Play this character     |
-| C → S     | `world.leave`                               | Stop playing            |
-| C → S     | `ping {t}`                                  | Latency probe           |
-| S → C     | `welcome {protocolVersion, connectionId}`   | Connection accepted     |
-| S → C     | `world.entered {world, character, players}` | Snapshot after entering |
-| S → C     | `player.joined` / `player.left`             | Presence changes        |
-| S → C     | `world.tick {tick, at}`                     | World clock advanced    |
-| S → C     | `error {code, message}`                     | Intent rejected         |
+| Direction | Type                                              | Meaning                                          |
+| --------- | ------------------------------------------------- | ------------------------------------------------ |
+| C → S     | `world.enter {characterId}`                       | Play this character                              |
+| C → S     | `world.leave`                                     | Stop playing                                     |
+| C → S     | `ping {t}`                                        | Latency probe                                    |
+| C → S     | `chat.send {text}`                                | Say something on your hex                        |
+| S → C     | `welcome {protocolVersion, connectionId}`         | Connection accepted                              |
+| S → C     | `world.entered {world, character, players, chat}` | Snapshot after entering (chat = recent hex chat) |
+| S → C     | `chat.message {message}`                          | Someone spoke on your hex                        |
+| S → C     | `player.joined` / `player.left`                   | Presence changes                                 |
+| S → C     | `world.tick {tick, at}`                           | World clock advanced                             |
+| S → C     | `error {code, message}`                           | Intent rejected                                  |
 
 Close codes: `4001` unauthenticated / logged out, `4002` session replaced
 (another tab took over), `4003` protocol abuse, `4004` server shutdown,
@@ -354,7 +356,11 @@ once hexes need mutable state.
 - **Routing:** `/login`, `/register` (guests) → `/characters`, `/characters/new`
   (account area) → the in-game shell (`GameShell`, ADR-031): `/home` (hub),
   `/world` (map), `/rifts`, `/friends` → `/rifts/lobbies/:id`, `/rifts/runs/:id`
-  (combat, own screen).
+  (combat, own screen). `/admin` (ADR-044): admin tools, only for accounts in
+  `ADMIN_EMAILS`.
+- **Custom content (ADR-044):** after login, `RequireAuth` loads
+  `GET /api/content/custom` into the game-core content registry, so admin-made
+  items and abilities work everywhere `getItemDef`/`getAbility` are used.
 - **State:**
   - _Server state_ (REST): TanStack Query (`features/*/api.ts`).
   - _Real-time state:_ a Zustand store fed by the WebSocket through a **pure

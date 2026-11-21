@@ -30,7 +30,7 @@ export function FriendsPage() {
   const lobby = useLobbyOverview(characterId);
   const lobbyActions = useLobbyActions(characterId);
   const [name, setName] = useState('');
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
 
   const myLobby = lobby.data?.mine;
   const data = friends.data;

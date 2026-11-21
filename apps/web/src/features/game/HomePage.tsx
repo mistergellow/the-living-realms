@@ -1,148 +1,166 @@
-import { useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { locationAt, type LocationActionId } from '@realms/game-core';
+import { CHAT_MAX_LENGTH, type HexCoord } from '@realms/shared';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
-import { CharacterToken } from '../characters/CharacterToken';
 import { useActiveRun } from '../rifts/api';
 import { useLobbyOverview } from '../rifts/lobby-api';
-import { useFriends } from '../social/api';
 import { useWorldStore } from '../world/world-store';
+import { LocationScene } from './LocationScene';
+
+const ACTION_ICON: Record<LocationActionId, IconName> = {
+  npcs: 'friends',
+  shop: 'bag',
+  rifts: 'portal',
+  workshop: 'gear',
+  map: 'compass',
+};
+const ACTION_TO: Partial<Record<LocationActionId, string>> = {
+  rifts: '/rifts',
+  workshop: '/professions',
+  map: '/world',
+};
 
 /**
- * The hub (home screen, request #30): painted backdrop, side menus of icon
- * buttons, a "current activity" card, the big diamond buttons for the main
- * modes and the latest Chronicle line. Everything links to real features.
+ * The hex you are standing on (request #40): its picture, what you can do
+ * there (talk to people, market, workshop, Rifts, leave to the world map)
+ * and the chat with everyone on the same hex. It is the first screen when
+ * you open the game.
  */
 export function HomePage() {
   const characterId = useActiveCharacter((s) => s.characterId)!;
-  const clearCharacter = useActiveCharacter((s) => s.clear);
-  const navigate = useNavigate();
-  const { log, players, selfId } = useWorldStore(
-    useShallow((s) => ({ log: s.log, players: s.players, selfId: s.self?.id ?? null })),
-  );
-  const friends = useFriends(characterId);
-  const pending = friends.data?.incoming.length ?? 0;
-  const [drawer, setDrawer] = useState<'chronicle' | 'online' | null>(null);
-  const latest = log[0];
+  const self = useWorldStore((s) => s.self);
+  const position = self?.position ?? { q: 0, r: 0 };
+  const place = locationAt(position);
 
   return (
-    <div className="hub">
-      <ActivityCard characterId={characterId} />
-
-      <nav className="hub-side hub-left" aria-label="Social">
-        <SideButton icon="friends" label="Friends" to="/friends" badge={pending} />
-        <SideButton icon="lobby" label="Lobbies" to="/rifts" />
-        <SideButton
-          icon="scroll"
-          label="Chronicle"
-          pressed={drawer === 'chronicle'}
-          onClick={() => setDrawer(drawer === 'chronicle' ? null : 'chronicle')}
-        />
-      </nav>
-
-      <nav className="hub-side hub-right" aria-label="Hero">
-        <SideButton icon="hero" label="Hero" to={`/characters/${characterId}`} />
-        <SideButton icon="gear" label="Professions" to="/professions" />
-        <SideButton icon="bag" label="Inventory" to={`/characters/${characterId}#inventory`} />
-        <SideButton
-          icon="friends"
-          label="Online"
-          badge={Object.keys(players).length}
-          pressed={drawer === 'online'}
-          onClick={() => setDrawer(drawer === 'online' ? null : 'online')}
-        />
-        <SideButton
-          icon="swap"
-          label="Switch character"
-          onClick={() => {
-            clearCharacter();
-            navigate('/characters');
-          }}
-        />
-      </nav>
-
-      {drawer && (
-        <section
-          className="panel hub-drawer"
-          aria-label={drawer === 'online' ? 'Online' : 'Chronicle'}
-        >
-          <div className="panel-title">
-            <span>
-              {drawer === 'online' ? `In the world (${Object.keys(players).length})` : 'Chronicle'}
+    <div className="place" data-testid="place">
+      <div className="place-main">
+        <section className="place-scene" aria-label={`${place.name} scene`}>
+          <LocationScene scene={place.scene} />
+          <div className="place-caption">
+            <span className="place-kind">
+              {place.kind === 'town' ? 'Town' : 'Wilderness'} · hex ({position.q}, {position.r})
             </span>
+            <h1 data-testid="place-name">{place.name}</h1>
           </div>
-          {drawer === 'online' ? (
-            <ul className="player-list">
-              {Object.values(players).map((p) => (
-                <li key={p.characterId}>
-                  <CharacterToken appearance={p.appearance} size={26} />
-                  <span>{p.name}</span>
-                  {p.characterId === selfId && <span className="muted">(you)</span>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ol className="log">
-              {log.map((e) => (
-                <li key={e.id}>
-                  <time dateTime={e.at}>{new Date(e.at).toLocaleTimeString()}</time>
-                  {e.text}
-                </li>
-              ))}
-            </ol>
-          )}
         </section>
-      )}
+        <p className="place-desc">{place.description}</p>
 
-      <div className="diamonds">
-        <Diamond
-          to="/rifts"
-          icon="portal"
-          label="Rifts"
-          aria="Enter the Rifts"
-          className="d-top"
-          main
-        />
-        <Diamond
-          to="/world"
-          icon="compass"
-          label="World"
-          aria="Explore the world"
-          className="d-left"
-        />
-        <Diamond
-          to={`/characters/${characterId}`}
-          icon="hero"
-          label="Hero"
-          aria="Your hero"
-          className="d-right"
-        />
+        <ActivityCard characterId={characterId} />
+
+        <nav className="place-actions" aria-label={`What to do in ${place.name}`}>
+          {place.actions.map((a) => {
+            const to = ACTION_TO[a.id];
+            const inner = (
+              <>
+                <Icon name={ACTION_ICON[a.id]} />
+                <span className="place-action-text">
+                  <strong>
+                    {a.label}
+                    {!a.available && <span className="soon">soon</span>}
+                  </strong>
+                  <span>{a.description}</span>
+                </span>
+              </>
+            );
+            return a.available && to ? (
+              <Link key={a.id} className="place-action" to={to} aria-label={a.label}>
+                {inner}
+              </Link>
+            ) : (
+              <div
+                key={a.id}
+                className="place-action"
+                aria-disabled="true"
+                title={`${a.label}: coming in a later update`}
+              >
+                {inner}
+              </div>
+            );
+          })}
+        </nav>
       </div>
 
-      <button
-        type="button"
-        className="hub-ticker"
-        onClick={() => setDrawer(drawer === 'chronicle' ? null : 'chronicle')}
-        aria-label="Open the Chronicle"
-      >
-        <Icon name="chat" />
-        <span className="ticker-text">
-          {latest ? (
-            <>
-              <span className="ticker-time">{new Date(latest.at).toLocaleTimeString()}</span>
-              {latest.text}
-            </>
-          ) : (
-            'The Chronicle is quiet.'
-          )}
-        </span>
-      </button>
+      <HexChat hex={position} />
     </div>
   );
 }
 
-/** Top-right card: what you can do next (resume a fight, your lobby, or go to the Rifts). */
+/** Chat with everyone on the same hex. */
+function HexChat({ hex }: { hex: HexCoord }) {
+  const { chat, players, selfId, send, online } = useWorldStore(
+    useShallow((s) => ({
+      chat: s.chat,
+      players: s.players,
+      selfId: s.self?.id ?? null,
+      send: s.send,
+      online: s.status === 'online',
+    })),
+  );
+  const here = useMemo(
+    () => Object.values(players).filter((p) => p.position.q === hex.q && p.position.r === hex.r),
+    [players, hex.q, hex.r],
+  );
+  const [text, setText] = useState('');
+  const logRef = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chat.length]);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const t = text.trim();
+    if (!t) return;
+    send({ type: 'chat.send', data: { text: t } });
+    setText('');
+  };
+
+  return (
+    <section className="panel hex-chat" aria-label="Hex chat">
+      <div className="panel-title">
+        <span>Chat on this hex</span>
+      </div>
+      <div className="hex-chat-here" data-testid="hex-here">
+        <Icon name="friends" />
+        {here.length <= 1
+          ? 'Nobody else is here.'
+          : `${here.length} here: ${here.map((p) => p.name).join(', ')}`}
+      </div>
+      <ol className="hex-chat-log" ref={logRef} data-testid="hex-chat-log" aria-live="polite">
+        {chat.length === 0 && <li className="muted">It is quiet. Say something.</li>}
+        {chat.map((m) => (
+          <li key={m.id} className={m.characterId === selfId ? 'is-self' : undefined}>
+            <time dateTime={m.at}>
+              {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </time>
+            <span className="who">{m.name}</span>
+            {m.text}
+          </li>
+        ))}
+      </ol>
+      <form className="hex-chat-form" onSubmit={submit}>
+        <input
+          aria-label="Message"
+          placeholder={online ? 'Say something…' : 'Connecting…'}
+          maxLength={CHAT_MAX_LENGTH}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          disabled={!online}
+        />
+        <button className="btn btn-primary btn-sm" type="submit" disabled={!online || !text.trim()}>
+          Send
+        </button>
+      </form>
+    </section>
+  );
+}
+
+/** What you can do next (resume a fight, your lobby, or go to the Rifts). */
 function ActivityCard({ characterId }: { characterId: string }) {
   const active = useActiveRun(characterId);
   const overview = useLobbyOverview(characterId);
@@ -166,9 +184,7 @@ function ActivityCard({ characterId }: { characterId: string }) {
     body = `${invites} lobby invitation${invites > 1 ? 's' : ''} waiting.`;
     action = { to: '/rifts', label: 'See invites' };
   } else {
-    title = 'A Rift is open';
-    body = 'Several rooms and a boss. Go alone or gather up to 6 players.';
-    action = { to: '/rifts', label: 'Go to the Rifts' };
+    return null;
   }
   return (
     <section className="panel activity-card" aria-label="Current activity" data-testid="activity">
@@ -183,55 +199,5 @@ function ActivityCard({ characterId }: { characterId: string }) {
         </Link>
       </div>
     </section>
-  );
-}
-
-function SideButton(props: {
-  icon: IconName;
-  label: string;
-  to?: string;
-  badge?: number;
-  pressed?: boolean;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <>
-      <span className="side-icon">
-        <Icon name={props.icon} />
-        {!!props.badge && <span className="badge-dot">{props.badge}</span>}
-      </span>
-      <span className="side-label">{props.label}</span>
-    </>
-  );
-  return props.to ? (
-    <Link className="side-btn" to={props.to}>
-      {inner}
-    </Link>
-  ) : (
-    <button type="button" className="side-btn" aria-pressed={props.pressed} onClick={props.onClick}>
-      {inner}
-    </button>
-  );
-}
-
-function Diamond(props: {
-  to: string;
-  icon: IconName;
-  label: string;
-  aria: string;
-  className: string;
-  main?: boolean;
-}) {
-  return (
-    <Link
-      to={props.to}
-      className={['diamond', props.className, props.main ? 'is-main' : ''].join(' ')}
-      aria-label={props.aria}
-    >
-      <span className="diamond-inner">
-        <Icon name={props.icon} />
-        <span className="diamond-label">{props.label}</span>
-      </span>
-    </Link>
   );
 }

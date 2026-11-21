@@ -36,6 +36,8 @@ export interface AccountDto {
   id: string;
   email: string;
   createdAt: string;
+  /** Owner/admin tools (request #41): accounts listed in the server's ADMIN_EMAILS. */
+  isAdmin: boolean;
 }
 export interface MeResponse {
   account: AccountDto;
@@ -213,19 +215,24 @@ export interface CharacterListResponse {
 }
 
 // ---- Character sheet: equipment, items, abilities, derived stats ----
+/** Equipment slots (request #39): hands, head, body, boots, two rings, pendant. */
 export const EQUIP_SLOTS = [
   'mainHand',
   'offHand',
   'head',
   'body',
-  'legs',
-  'accessory1',
-  'accessory2',
+  'feet',
+  'ring1',
+  'ring2',
+  'pendant',
 ] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 /** 'material' and 'consumable' come from professions (request #33); they stack. */
 export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable';
+
+/** Skills prepared for combat (request #39): 8, plus weapon abilities, Block and Swap. */
+export const MAX_PREPARED_SKILLS = 8;
 
 export interface ItemDto {
   id: string;
@@ -247,6 +254,55 @@ export interface ItemDto {
   magicResist: number;
   /** Weapons only (request #31): type, base stats, upgrades, specials, rune slots. */
   weapon: WeaponInfoDto | null;
+  /** Rarity = number of bonus effects (request #37): 0 common … 5 mythic. */
+  rarity: ItemRarity;
+  /** Bonus effects (max 5), with their text for the item card. */
+  affixes: ItemAffixDto[];
+  /** BASE attributes needed to equip it; `met` is for the character viewing it. */
+  requirements: ItemRequirementDto[];
+  /** Unlocked rune slots (`used` of `total`); null when the item has none unlocked. */
+  runeSlots: { used: number; total: number } | null;
+  /** Names of the abilities this item grants while equipped (weapons, off-hands). */
+  grantsAbilities: string[];
+}
+
+export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
+export type ItemRarity = (typeof ITEM_RARITIES)[number];
+
+export type AffixGroup = 'attribute' | 'stat' | 'offense' | 'combat';
+
+/** A bonus effect on a piece of gear (request #37). */
+export interface ItemAffixDto {
+  id: string;
+  value: number;
+  group: AffixGroup;
+  /** Player-facing text, e.g. "Might +2", "Bleed on hit: 15%". */
+  label: string;
+  /** Formatted value, e.g. "+2", "+15%". */
+  display: string;
+}
+
+export interface ItemRequirementDto {
+  attribute: AttributeKey;
+  value: number;
+  met: boolean;
+}
+
+/**
+ * Combat bonuses from gear (request #37), carried by player combatants.
+ * Percentages are whole numbers (15 = 15%).
+ */
+export interface GearCombatEffects {
+  /** +% to all damage dealt. */
+  damagePct: number;
+  /** +% damage against bosses. */
+  bossDamagePct: number;
+  /** % of damage dealt to HP healed back. */
+  lifestealPct: number;
+  /** Damage returned to an attacker that hits this unit. */
+  thorns: number;
+  /** Chance to apply a status when dealing damage. */
+  onHit: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
 }
 
 /** A special property on a weapon (max 5). Catalogue of specials: future. */
@@ -338,7 +394,12 @@ export interface CharacterSheetDto {
   equipment: Record<EquipSlot, ItemDto | null>;
   /** Unequipped items. */
   inventory: ItemDto[];
+  /** Everything usable in combat: weapon abilities + prepared skills + Block/Swap. */
   abilities: AbilityDto[];
+  /** All skills the character has learned (from books), prepared or not. */
+  learnedSkills: AbilityDto[];
+  /** The prepared skills, by loadout slot (length MAX_PREPARED_SKILLS; null = empty). */
+  loadout: Array<string | null>;
   /** Reputation is a per-character currency earned through activities. */
   reputation: number;
   /** Attribute points not yet distributed. */
@@ -349,3 +410,9 @@ export const equipRequestSchema = z.object({ itemId: z.uuid(), slot: z.enum(EQUI
 export type EquipRequest = z.infer<typeof equipRequestSchema>;
 export const unequipRequestSchema = z.object({ slot: z.enum(EQUIP_SLOTS) });
 export type UnequipRequest = z.infer<typeof unequipRequestSchema>;
+
+/** Replace the prepared skills; each entry is a learned skill id or null (empty slot). */
+export const loadoutRequestSchema = z.object({
+  slots: z.array(z.string().max(64).nullable()).length(MAX_PREPARED_SKILLS),
+});
+export type LoadoutRequest = z.infer<typeof loadoutRequestSchema>;

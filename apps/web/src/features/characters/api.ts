@@ -5,6 +5,7 @@ import type {
   CreateCharacterRequest,
   AllocateAttributesRequest,
   EquipRequest,
+  LoadoutRequest,
   UnequipRequest,
 } from '@realms/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,6 +69,16 @@ export function useAllocateAttributes(id: string) {
   return useMutation({
     mutationFn: (input: AllocateAttributesRequest) =>
       api<CharacterSheetDto>('POST', `/characters/${id}/attributes`, input),
+    onSuccess: (sheet) => qc.setQueryData(sheetQueryKey(id), sheet),
+  });
+}
+
+/** Prepared skills (request #39); the server returns the updated sheet. */
+export function useLoadout(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: LoadoutRequest) =>
+      api<CharacterSheetDto>('PUT', `/characters/${id}/loadout`, input),
     onSuccess: (sheet) => qc.setQueryData(sheetQueryKey(id), sheet),
   });
 }

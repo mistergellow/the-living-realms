@@ -54,7 +54,9 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
 - [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
 - [x] **Request #33:** basic attack cost per weapon (heavy 3, dagger 1); a wiped party keeps no Rift loot; simple Dungeon Threat; PvP arena (test mode, lobby with two teams)
-- ❓ Full Dungeon Threat design (ADR-035); Runemaster, runes and weapon specials content; PvP rewards/ranking
+- [x] **Item cards (request #37):** bonus effects on all gear (up to 5; attributes, derived stats, offensive %, combat effects), rarity by effect count, BASE-attribute requirements, rune slots shown when unlocked; drops roll effects (ADR-041)
+- [x] **Admin tools (request #41, ADR-044):** `/admin` for accounts in `ADMIN_EMAILS` — create/edit custom weapons, items and abilities; give items, teach abilities and change attributes/reputation of any character
+- ❓ Full Dungeon Threat design (ADR-035); Runemaster and runes content; bonus-effect balance (A67–A69); PvP rewards/ranking
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers
 
@@ -63,6 +65,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 Bring the hex world to life for exploration (Rifts placed on the map).
 
 - [x] Hub (home screen) with the in-game shell (top bar, bottom navigation); MMO-style ability bar with tooltips (request #30)
+- [x] **Request #40:** the game opens with the last character played on the hex where it stopped; hex screen with the place's picture and actions (starting town Emberhold; other hexes are open wilds); 2 character slots
 - [x] One continent, 4 regions: nations west, east and north, the neutral Rift-infected Riftlands in the middle; one capital hex per nation (placeholders, request #36, ADR-040)
 - ❓ Terrain types, points of interest, starting area (spawn is still (0, 0) in the Riftlands)
 - ❓ Action Points = time an activity takes (moving between hexes costs AP; X AP gained per real hour): pool size, regeneration, AP cost per hex / per terrain / per activity — **next**
@@ -74,7 +77,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 ## Phase 5 — Social layer and reputation ⏳ ❓
 
-- Chat (local hex/region, global, private), with moderation basics
+- [x] Hex chat (request #40): everyone on the same hex, recent history on arrival
+- Chat (region, global, private), with moderation basics
 - Player inspection, interaction menu
 - ❓ Reputation model (tracks, sources, decay, effects) in place of levels
 - ❓ How in-game languages affect communication (ties into phase 6)
@@ -90,6 +94,8 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 - [x] **Professions (request #33):** 15 professions (gathering, crafting, service) with levels 0–10, materials that stack, crafting, repairs and weapon upgrades (+1); balance and time cost (AP) to be decided
 - Consumables usable in the Rift (food, draughts, bandages); runes from rune stones
+- [x] **Character sheet (request #39):** tabs (Equipment / Abilities / Professions); 8 equipment slots (boots, 2 rings, pendant); drag-and-drop inventory with item tooltips; 8 prepared skills + weapon abilities + Block/Swap
+- Skill books (learn skills from books); weapon ability count per weapon (2?) to be decided
 
 - ❓ Currency, resources, crafting/production, sinks and faucets
 - Items and inventories, double-entry ledger

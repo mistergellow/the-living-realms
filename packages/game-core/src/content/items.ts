@@ -1,6 +1,7 @@
 import type { Attributes, EquipSlot, ItemKind } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
+import { customItemDef } from './custom.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -25,10 +26,13 @@ export interface ItemDef {
   bonuses?: Partial<Attributes>;
   armor?: number;
   magicResist?: number;
+  /** BASE attributes needed to equip it (request #37); weapons add their primary. */
+  requirements?: Partial<Attributes>;
 }
 
 const item = (i: ItemDef) => i;
-const ACCESSORY: EquipSlot[] = ['accessory1', 'accessory2'];
+const RING: EquipSlot[] = ['ring1', 'ring2'];
+const PENDANT: EquipSlot[] = ['pendant'];
 
 export const ITEMS = {
   // ---- starter main-hand weapons ----
@@ -157,30 +161,30 @@ export const ITEMS = {
     slots: ['head'],
     armor: 3,
   }),
-  leather_leggings: item({
-    id: 'leather_leggings',
-    name: 'Leather Leggings',
-    description: 'Light leg protection.',
+  leather_boots: item({
+    id: 'leather_boots',
+    name: 'Leather Boots',
+    description: 'Sturdy boots for the road.',
     kind: 'armor',
-    slots: ['legs'],
+    slots: ['feet'],
     armor: 4,
   }),
 
-  // ---- accessories (drops) ----
+  // ---- accessories (drops): rings and pendants (request #39) ----
   ring_of_vigor: item({
     id: 'ring_of_vigor',
     name: 'Ring of Vigor',
     description: 'Hardens the body.',
     kind: 'accessory',
-    slots: ACCESSORY,
+    slots: RING,
     bonuses: { endurance: 2 },
   }),
   charm_of_focus: item({
     id: 'charm_of_focus',
     name: 'Charm of Focus',
-    description: 'Sharpens the mind.',
+    description: 'A pendant that sharpens the mind.',
     kind: 'accessory',
-    slots: ACCESSORY,
+    slots: PENDANT,
     bonuses: { intellect: 1, will: 1 },
   }),
   hawkeye_band: item({
@@ -188,7 +192,7 @@ export const ITEMS = {
     name: 'Hawkeye Band',
     description: 'Steadies the aim.',
     kind: 'accessory',
-    slots: ACCESSORY,
+    slots: RING,
     bonuses: { precision: 2 },
   }),
   brawler_wrap: item({
@@ -196,7 +200,7 @@ export const ITEMS = {
     name: 'Brawler Wrap',
     description: 'Strength in the swing.',
     kind: 'accessory',
-    slots: ACCESSORY,
+    slots: RING,
     bonuses: { might: 1, agility: 1 },
   }),
 } satisfies Record<string, ItemDef>;
@@ -204,7 +208,8 @@ export const ITEMS = {
 export type ItemDefId = keyof typeof ITEMS | MaterialId;
 
 export function getItemDef(id: string): ItemDef | undefined {
-  return (ITEMS as Record<string, ItemDef>)[id];
+  // Built-in content first; then admin-made items (request #41).
+  return Object.hasOwn(ITEMS, id) ? (ITEMS as Record<string, ItemDef>)[id] : customItemDef(id);
 }
 
 /** Main-hand weapons a new character can pick from. */

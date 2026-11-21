@@ -218,8 +218,9 @@ export const characterProfessions = pgTable(
   ],
 );
 
-// Skills learned by a character (from drops). Weapon abilities are not stored:
-// they come from the equipped weapon.
+// Skills learned by a character (from books). Weapon abilities are not stored:
+// they come from the equipped weapon. `loadout_slot` 0–7 = prepared for combat
+// (request #39: 8 prepared skills); null = learned but not prepared.
 export const characterSkills = pgTable(
   'character_skills',
   {
@@ -227,9 +228,16 @@ export const characterSkills = pgTable(
       .notNull()
       .references(() => characters.id, { onDelete: 'cascade' }),
     skillId: text('skill_id').notNull(),
+    loadoutSlot: smallint('loadout_slot'),
     learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.characterId, t.skillId] })],
+  (t) => [
+    primaryKey({ columns: [t.characterId, t.skillId] }),
+    uniqueIndex('character_skills_loadout_uq')
+      .on(t.characterId, t.loadoutSlot)
+      .where(sql`${t.loadoutSlot} is not null`),
+    check('character_skills_loadout_range', sql`${t.loadoutSlot} between 0 and 7`),
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -385,6 +393,29 @@ export const riftLobbyInvites = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Custom content (admin tools, request #41): items and abilities made by the
+// admin for testing. `definition` is validated by the zod schemas in
+// @realms/shared (customItemInputSchema / customAbilityInputSchema) and loaded
+// into the game-core content registry. Ids start with 'custom_'.
+// ---------------------------------------------------------------------------
+export const customContent = pgTable(
+  'custom_content',
+  {
+    id: text('id').primaryKey(),
+    /** 'item' | 'ability' */
+    kind: text('kind').notNull(),
+    definition: jsonb('definition').notNull(),
+    createdBy: uuid('created_by').references(() => accounts.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('custom_content_kind_ck', sql`${t.kind} in ('item', 'ability')`),
+    index('custom_content_kind_idx').on(t.kind, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // World events: append-only log of meaningful things that happened.
 // Audit trail today; the backbone of world history / world-changing events later.
 // ---------------------------------------------------------------------------
@@ -417,6 +448,7 @@ export type Session = typeof sessions.$inferSelect;
 export type World = typeof worlds.$inferSelect;
 export type Character = typeof characters.$inferSelect;
 export type WorldEvent = typeof worldEvents.$inferSelect;
+export type CustomContent = typeof customContent.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type CharacterSkill = typeof characterSkills.$inferSelect;
 export type CharacterProfession = typeof characterProfessions.$inferSelect;

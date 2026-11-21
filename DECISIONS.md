@@ -184,7 +184,7 @@ Action Points (amount to be defined; mechanic not implemented in phase 1).
 
 **Status:** accepted (game design decision by the project owner)
 
-**Decision.** Accounts may own several characters (default limit 5, set by
+**Decision.** Accounts may own several characters (default limit 2 since request #40, set by
 `MAX_CHARACTERS_PER_ACCOUNT`). Only one may be in the world at a time per
 account: entering with a new connection replaces the old one cluster-wide (WS
 close code `4002`). The limit is enforced transactionally (account row lock).
@@ -692,3 +692,98 @@ heart (weighted so the neutral land is the middle and touches every nation).
 **Later.** When hexes need per-hex mutable state (terrain changes, ownership,
 Rift spawns), move the static part to a `map_hexes` table seeded from this
 generator (DATABASE.md), keeping `mapHexAt` as the read API.
+
+## ADR-041 — Item cards, bonus effects (affixes), rarity and requirements
+
+**Status:** accepted (request #37)
+
+**Decision.** Every piece of gear can carry up to 5 bonus effects, stored as
+`{ id, value }` in the existing `items.specials` column (no migration). The
+catalogue lives in `game-core/src/content/affixes.ts`; each effect has a
+group (attribute, derived stat, offensive %, combat effect), a value range and
+the gear kinds it can roll on. Rarity is not stored: it is the number of
+effects (0 common … 5 mythic). Equipped effects are folded into
+`computeStats`; combat-only effects travel as `GearCombatEffects` on the
+combatant (`gear`) and are applied in the engine (`gearOnHit`). Requirements to
+equip use BASE attributes only (consistent with D44); weapons derive theirs
+from the primary attribute; upgrades (+0…+10) never change them — they only
+raise the weapon's base stats (D66). Each effect is a range; the value is
+rolled within it when the effect appears (D67). The item card shows rune slots
+only when some are unlocked.
+
+**Why.** Reusing `specials` avoids a migration and keeps old rows valid
+(unknown ids are ignored by `normalizeAffixes`). Deriving rarity from the
+effect count keeps a single source of truth. All numbers are provisional
+(A67–A69) and data-only.
+
+## ADR-042 — Equipment slots, skill loadout and a tabbed character sheet
+
+**Status:** accepted (request #39; replaces D23 "all skills in combat" and D25 slots)
+
+**Decision.** Equipment slots are `mainHand`, `offHand`, `head`, `body`,
+`feet`, `ring1`, `ring2`, `pendant`. Learned skills stay in
+`character_skills`; a nullable `loadout_slot` (0–7, unique per character)
+marks the `MAX_PREPARED_SKILLS` = 8 prepared ones. Combat gets weapon
+abilities + prepared skills + Block/Swap (`availableAbilities`). The loadout
+is replaced as a whole (`PUT /characters/:id/loadout` with 8 entries), which
+keeps drag-and-drop swaps atomic. Migration 0011 moves old slots
+(legs → feet, accessories → rings) and prepares already-learned skills.
+
+**Sheet UI.** Three tabs (Equipment, Abilities, Professions) in the URL.
+Drag and drop is pointer-based (`sheet/drag.tsx`), not HTML5 drag events,
+so it also works on touch screens; drop targets are `data-drop` elements.
+
+## ADR-043 — The game opens on your hex; hex chat
+
+**Status:** accepted (request #40)
+
+**Decision.** `/` is a front door (`PlayEntry`) that resumes the character
+played last (this tab's active one, else the newest `lastPlayedAt`) and
+opens `/home`, which is now the screen of the hex you stand on: a picture,
+the place's actions and the hex chat. Places are data in game-core
+(`locationAt`): a few named hexes, everything else "open wilds". Character
+select is a secondary screen behind a small corner button.
+
+Hex chat goes over the existing WebSocket: `chat.send` → the gateway pushes
+the message on the world bus with `onlyHex`, and every instance delivers it
+only to connections whose presence stands on that hex. The last 50 messages
+of a hex are kept in a Redis list (24 h TTL) and sent in `world.entered`.
+Chat is ephemeral by design (not in PostgreSQL); moderation tools come later.
+
+**Consequences.** When movement arrives, a hex change must refresh the
+presence position and send the new hex's history. The default character
+limit is now 2 (D73); extra slots are a later feature.
+
+## ADR-044 — Admin tools and custom content in a registry
+
+**Status:** accepted (request #41)
+
+**Context.** The owner wants to create weapons and abilities and give them to
+characters to test the game, without a deploy for each change. Content lives
+in code (`game-core/content/*`) and is used by the server (combat engine,
+sheets) and by the browser (ability bar, combat log, art).
+
+**Decision.**
+
+- **Who is admin:** the server variable `ADMIN_EMAILS` (comma-separated). No
+  database flag, so nobody can grant themselves admin through the game; the
+  owner changes it in Railway. `AccountDto.isAdmin` tells the client to show
+  the `/admin` link; every `/api/admin` route checks it again (`requireAdmin`).
+- **Custom content:** admin-made items and abilities are stored in
+  `custom_content` (JSONB definitions validated by zod in `@realms/shared` and
+  by the same equipment/weapon rules as built-in content in
+  `game-core/content/custom-rules.ts`). They are loaded into an in-memory
+  registry (`game-core/content/custom.ts`); `getItemDef`/`getAbility` fall back
+  to it, so the engine and the UI need no other change. Built-in ids always
+  win; custom ids start with `custom_`.
+- **Sync:** the server loads the registry at start-up and after every admin
+  change, and publishes `content.changed` on the control bus so other server
+  instances reload. Clients load `GET /api/content/custom` after login.
+- **Character tools:** give items (any upgrade/quality), change or remove
+  them, teach/forget abilities, overwrite base attributes, unspent points and
+  reputation. Every change is a `world_events` row (`admin.*`).
+- Definitions can be edited but not deleted (items and run logs may reference
+  them). A custom weapon always starts with its type's basic attack (ADR-034).
+
+**Consequences.** game-core keeps no I/O: the registry is filled by the caller.
+A Rift in progress keeps the combat profile it started with.

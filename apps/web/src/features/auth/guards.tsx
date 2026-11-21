@@ -1,12 +1,16 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
+import { useCustomContent } from '../admin/api';
 import { useMe } from './api';
 
 /** Only for logged-in accounts; otherwise redirect to /login. */
 export function RequireAuth() {
   const me = useMe();
   const location = useLocation();
-  if (me.isPending) return <FullPageMessage>Loading…</FullPageMessage>;
+  // Admin-made items/abilities (request #41) must be known before any game screen renders.
+  const custom = useCustomContent(!!me.data);
+  if (me.isPending || (me.data && custom.isPending))
+    return <FullPageMessage>Loading…</FullPageMessage>;
   if (me.isError)
     return (
       <FullPageMessage spinner={false}>
@@ -17,10 +21,10 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Only for guests; logged-in accounts go straight to character selection. */
+/** Only for guests; logged-in accounts go straight back into the game. */
 export function GuestOnly() {
   const me = useMe();
   if (me.isPending) return <FullPageMessage>Loading…</FullPageMessage>;
-  if (me.data) return <Navigate to="/characters" replace />;
+  if (me.data) return <Navigate to="/" replace />;
   return <Outlet />;
 }

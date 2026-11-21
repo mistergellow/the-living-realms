@@ -1,4 +1,13 @@
-import { EQUIP_SLOTS, type EquipSlot } from '@realms/shared';
+import {
+  ATTRIBUTE_KEYS,
+  EQUIP_SLOTS,
+  MAX_PREPARED_SKILLS,
+  type Attributes,
+  type EquipSlot,
+  type ItemRequirementDto,
+  type WeaponSpecial,
+} from '@realms/shared';
+import { ATTRIBUTE_NAMES } from './attributes.js';
 import {
   getAbility,
   UNARMED_ABILITIES,
@@ -6,7 +15,7 @@ import {
   type AbilityDef,
 } from './content/abilities.js';
 import { getItemDef, type ItemDef } from './content/items.js';
-import { upgradeMultiplier } from './content/weapons.js';
+import { getWeaponType, upgradeMultiplier } from './content/weapons.js';
 
 /*
  * Equipment rules. Items are referenced by an instance id (owned item) and a
@@ -25,6 +34,38 @@ export interface OwnedItem {
   equippedSlot: EquipSlot | null;
   /** Weapons: +0, +1, … (request #31). */
   upgradeLevel?: number;
+  /** Bonus effects (request #37), already normalised. */
+  affixes?: WeaponSpecial[];
+}
+
+/*
+ * Requirements to equip an item (request #37): BASE attributes only, like the
+ * exploration tests (D44). They belong to the item itself and never change
+ * with upgrades (+0…+10 only raise the weapon's base stats — owner, request
+ * #38). PROVISIONAL: weapons ask for their primary attribute at
+ * `weaponPrimaryBase` unless the definition sets its own `requirements`.
+ */
+export const REQUIREMENT_RULES = {
+  weaponPrimaryBase: 5,
+} as const;
+
+export function itemRequirements(def: ItemDef): Partial<Attributes> {
+  const out: Partial<Attributes> = { ...(def.requirements ?? {}) };
+  const w = getWeaponType(def.weaponType);
+  if (w && def.kind === 'weapon' && out[w.primary] === undefined)
+    out[w.primary] = REQUIREMENT_RULES.weaponPrimaryBase;
+  return out;
+}
+
+export function checkRequirements(
+  reqs: Partial<Attributes>,
+  base: Attributes | undefined,
+): ItemRequirementDto[] {
+  return ATTRIBUTE_KEYS.filter((k) => reqs[k] !== undefined).map((k) => ({
+    attribute: k,
+    value: reqs[k]!,
+    met: !base || base[k] >= reqs[k]!,
+  }));
 }
 
 export const isBroken = (quality: number) => quality <= 0;
@@ -42,7 +83,12 @@ export type EquipPlan =
  * be unequipped (whatever occupies the slot; the off-hand for two-handed
  * weapons; a two-handed main hand when equipping the off-hand).
  */
-export function planEquip(items: OwnedItem[], itemId: string, slot: EquipSlot): EquipPlan {
+export function planEquip(
+  items: OwnedItem[],
+  itemId: string,
+  slot: EquipSlot,
+  baseAttributes?: Attributes,
+): EquipPlan {
   const target = items.find((i) => i.id === itemId);
   if (!target) return { ok: false, reason: 'You do not own that item.' };
   const def = getItemDef(target.defId);
@@ -51,6 +97,12 @@ export function planEquip(items: OwnedItem[], itemId: string, slot: EquipSlot): 
     return { ok: false, reason: `${def.name} is broken and cannot be used.` };
   if (!def.slots.includes(slot))
     return { ok: false, reason: `${def.name} cannot be equipped there.` };
+  const unmet = checkRequirements(itemRequirements(def), baseAttributes).filter((r) => !r.met);
+  if (unmet.length)
+    return {
+      ok: false,
+      reason: `${def.name} requires ${unmet.map((r) => `${ATTRIBUTE_NAMES[r.attribute]} ${r.value}`).join(', ')}.`,
+    };
 
   const equippedIn = (s: EquipSlot) => items.find((i) => i.equippedSlot === s && i.id !== itemId);
   const unequip = new Set<string>();
@@ -82,12 +134,13 @@ export interface GrantedAbility {
 }
 
 /**
- * Abilities available in combat (decision D23): from equipped weapons, plus
- * learned skills, plus universal actions. Without a usable weapon: unarmed.
+ * Abilities available in combat: from equipped weapons, plus the PREPARED
+ * skills (request #39: up to MAX_PREPARED_SKILLS of the learned ones), plus
+ * the universal actions (Block, Swap). Without a usable weapon: unarmed.
  */
 export function availableAbilities(
   items: OwnedItem[],
-  learnedSkillIds: string[] = [],
+  preparedSkillIds: string[] = [],
 ): GrantedAbility[] {
   const out: GrantedAbility[] = [];
   const seen = new Set<string>();
@@ -106,7 +159,7 @@ export function availableAbilities(
   for (const w of weapons) for (const id of w.def.abilities!) add(id, w.def.name);
   const hasMainWeapon = weapons.some((w) => w.def.kind === 'weapon');
   if (!hasMainWeapon) for (const id of UNARMED_ABILITIES) add(id, null);
-  for (const id of learnedSkillIds) add(id, null);
+  for (const id of preparedSkillIds) add(id, null);
   for (const id of UNIVERSAL_ABILITIES) add(id, null);
   return out;
 }
@@ -127,4 +180,25 @@ export function abilityMultipliers(items: OwnedItem[]): Record<string, number> {
 
 export function emptyEquipment<T>(): Record<EquipSlot, T | null> {
   return Object.fromEntries(EQUIP_SLOTS.map((s) => [s, null])) as Record<EquipSlot, T | null>;
+}
+
+export type LoadoutPlan = { ok: true; slots: Array<string | null> } | { ok: false; reason: string };
+
+/**
+ * Validate a new skill loadout (request #39): exactly MAX_PREPARED_SKILLS
+ * entries, each a learned skill or empty, no skill twice.
+ */
+export function planLoadout(learnedSkillIds: string[], slots: Array<string | null>): LoadoutPlan {
+  if (slots.length !== MAX_PREPARED_SKILLS)
+    return { ok: false, reason: `The loadout has ${MAX_PREPARED_SKILLS} slots.` };
+  const learned = new Set(learnedSkillIds);
+  const seen = new Set<string>();
+  for (const id of slots) {
+    if (id === null) continue;
+    if (!learned.has(id) || !getAbility(id))
+      return { ok: false, reason: 'You have not learned that skill.' };
+    if (seen.has(id)) return { ok: false, reason: 'A skill can only be prepared once.' };
+    seen.add(id);
+  }
+  return { ok: true, slots: [...slots] };
 }
