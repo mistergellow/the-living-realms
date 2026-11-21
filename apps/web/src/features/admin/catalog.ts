@@ -1,6 +1,7 @@
 import {
   ABILITIES,
   ITEMS,
+  SKILLS,
   toCustomAbilityDef,
   toCustomItemDef,
   type AbilityDef,
@@ -24,6 +25,10 @@ export function itemGroups(custom: CustomContentDto | undefined): CatalogGroup<I
     { label: 'Off-hands', entries: byKind('offhand') },
     { label: 'Armor', entries: byKind('armor') },
     { label: 'Accessories', entries: byKind('accessory') },
+    // Request #48: Skill Books, consumables and materials too.
+    { label: 'Skill books', entries: builtIn.filter((i) => !!i.teaches) },
+    { label: 'Consumables', entries: builtIn.filter((i) => i.kind === 'consumable' && !i.teaches) },
+    { label: 'Materials', entries: byKind('material') },
   ].filter((g) => g.entries.length);
 }
 
@@ -34,6 +39,8 @@ export function abilityGroups(custom: CustomContentDto | undefined): CatalogGrou
   );
   return [
     { label: 'Custom abilities', entries: (custom?.abilities ?? []).map(toCustomAbilityDef) },
+    // Request #48: the skills learned from books.
+    { label: 'Skills', entries: Object.values(SKILLS) as AbilityDef[] },
     { label: 'Weapon abilities', entries: builtIn.filter((a) => a.source !== 'enemy') },
     { label: 'Enemy abilities', entries: builtIn.filter((a) => a.source === 'enemy') },
   ].filter((g) => g.entries.length);
