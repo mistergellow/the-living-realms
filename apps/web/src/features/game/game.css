@@ -1,4 +1,4 @@
-/* In-game frame (GameShell) and the hex screen (HomePage). Requests #30, #36. */
+/* In-game frame (GameShell) and the hex screen (HomePage). Requests #30, #40. */
 
 /* `.screen.game`: beats `.screen` (global.css loads after this file). */
 .screen.game {
@@ -203,7 +203,7 @@
   box-shadow: 0 0 0 2px rgb(0 0 0 / 0.6);
 }
 
-/* ---------- the hex you are on (HomePage, request #36) ---------- */
+/* ---------- the hex you are on (HomePage, request #40) ---------- */
 .place {
   position: absolute;
   inset: 0;

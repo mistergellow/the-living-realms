@@ -5,7 +5,7 @@ import { useActiveCharacter } from './active-character';
 import { useCharacters } from './api';
 
 /**
- * The game's front door (request #36): opening the game puts you straight back
+ * The game's front door (request #40): opening the game puts you straight back
  * on the hex where you stopped, with the character you played last. The
  * character list is only needed to create the first one, or to switch.
  */

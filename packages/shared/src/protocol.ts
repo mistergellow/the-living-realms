@@ -21,7 +21,7 @@ export const WsCloseCode = {
   FORBIDDEN_ORIGIN: 4005,
 } as const;
 
-/** Hex chat (request #36): players talk to everyone standing on the same hex. */
+/** Hex chat (request #40): players talk to everyone standing on the same hex. */
 export const CHAT_MAX_LENGTH = 200;
 /** How many recent messages of a hex are kept and sent when you arrive. */
 export const CHAT_HISTORY = 50;

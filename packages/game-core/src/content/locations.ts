@@ -2,10 +2,10 @@ import type { HexCoord } from '@realms/shared';
 import { hexKey } from '../hex.js';
 
 /*
- * Places on the world map (request #36). Every hex is a location: a few are
+ * Places on the world map (request #40). Every hex is a location: a few are
  * named places (towns, …) with their own scene and actions; every other hex
  * is open wilderness. PROVISIONAL CONTENT (names, scenes, actions): see
- * docs/REQUESTS.md → "Decisões em aberto" A63–A65.
+ * docs/REQUESTS.md → "Decisões em aberto" A75–A77.
  */
 
 /** Kinds of place. Decides the default actions and the scene art. */

@@ -24,7 +24,7 @@ const ACTION_TO: Partial<Record<LocationActionId, string>> = {
 };
 
 /**
- * The hex you are standing on (request #36): its picture, what you can do
+ * The hex you are standing on (request #40): its picture, what you can do
  * there (talk to people, market, workshop, Rifts, leave to the world map)
  * and the chat with everyone on the same hex. It is the first screen when
  * you open the game.

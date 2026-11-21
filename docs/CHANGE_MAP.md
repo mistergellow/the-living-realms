@@ -114,7 +114,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - `apps/server/test/helpers.ts` (usa 3 nos testes), `characters.test.ts`
 - Web: `CharacterSelectPage.tsx` (mostra `x / limite` e o espaço bloqueado `locked-slot`)
 - Produção: variável no Railway (se estiver definida)
-- Docs: `DATABASE.md`, `DECISIONS.md` ADR-015, D63
+- Docs: `DATABASE.md`, `DECISIONS.md` ADR-015, D73
 
 ## Entrada no jogo / troca de personagem
 

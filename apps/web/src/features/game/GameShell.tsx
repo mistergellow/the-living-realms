@@ -28,7 +28,7 @@ const DIM: Record<string, number> = { '/home': 0.45, '/world': 0.4 };
  * The in-game frame shared by the hex screen, the world map, Rifts and Friends:
  * the world connection (you stay online while moving between them), the top
  * bar (portrait, name, status, reputation; switching character is a small
- * corner button, request #36) and the bottom navigation bar.
+ * corner button, request #40) and the bottom navigation bar.
  * Pages render inside `.game-main`.
  */
 export function GameShell() {

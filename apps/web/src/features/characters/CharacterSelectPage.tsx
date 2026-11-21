@@ -11,7 +11,7 @@ import { CharacterToken } from './CharacterToken';
 import { lastPlayed } from './PlayEntry';
 
 /**
- * Hero select (secondary since request #36: the game opens with the last
+ * Hero select (secondary since request #40: the game opens with the last
  * character played; this screen is for switching and creating). The focused
  * character stands on a pedestal, the roster sits below.
  */
