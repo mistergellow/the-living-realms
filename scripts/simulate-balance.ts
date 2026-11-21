@@ -75,6 +75,39 @@ const BUILDS: Record<string, { attributes: Attributes; main: string; off?: strin
     main: 'worn_tome',
     off: 'bone_talisman',
   },
+  // Request #45: new weapon types.
+  greatsword: {
+    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
+    main: 'iron_greatsword',
+  },
+  greataxe: {
+    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    main: 'bearded_greataxe',
+  },
+  'hand axe x2': {
+    attributes: attrs({ might: 10, agility: 8, endurance: 9 }),
+    main: 'hand_axe',
+    off: 'hand_axe',
+  },
+  'hammer+shield': {
+    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    main: 'war_hammer',
+    off: 'wooden_shield',
+  },
+  'great hammer': {
+    attributes: attrs({ might: 10, endurance: 10, agility: 7 }),
+    main: 'great_maul',
+  },
+  'morning star+shield': {
+    attributes: attrs({ might: 10, precision: 8, endurance: 9 }),
+    main: 'morning_star',
+    off: 'wooden_shield',
+  },
+  lance: { attributes: attrs({ might: 10, agility: 8, endurance: 9 }), main: 'knight_lance' },
+  crossbow: {
+    attributes: attrs({ precision: 10, might: 9, endurance: 8 }),
+    main: 'light_crossbow',
+  },
 };
 
 function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
@@ -89,7 +122,7 @@ function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
     ];
     const { stats, attributes } = computeStats(build.attributes, items);
     const abilityIds = availableAbilities(items).map((a) => a.ability.id);
-    const backline = ['aimed_shot', 'staff_strike', 'spark', 'wand_bolt'].some((a) =>
+    const backline = ['aimed_shot', 'staff_strike', 'spark', 'wand_bolt', 'bolt_shot'].some((a) =>
       abilityIds.includes(a),
     );
     return {

@@ -484,7 +484,8 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
 - BD: `items.upgrade_level`, `items.specials`, `items.rune_slots` (migração 0008)
 - Servidor: `toItemDto` e `combatProfile` (`sheet.service.ts`)
-- Arte: `CharacterAvatar.tsx` (`Weapon`), `weapon-art.ts` — lança/maça/varinha ainda sem desenho próprio
+- Arte: `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`) — todos os tipos têm desenho (pedido #45)
+- **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + arte (`CharacterAvatar.tsx`, `weapon-art.ts`) + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas (só a estrutura existe); os especiais passaram a ser os efeitos bónus → ver "Cartão do item e efeitos bónus"

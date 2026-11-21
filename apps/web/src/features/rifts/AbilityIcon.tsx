@@ -65,6 +65,24 @@ const GLYPH_BY_ABILITY: Record<string, Glyph> = {
   thrust: 'sword',
   crush: 'fist',
   unarmed_strike: 'fist',
+  // request #45
+  great_swing: 'slash',
+  executioner: 'sword',
+  great_chop: 'axe',
+  rampage: 'drop',
+  hack: 'axe',
+  throw_axe: 'axe',
+  hammer_blow: 'fist',
+  concuss: 'sun',
+  great_smash: 'fist',
+  earthshaker: 'bolt',
+  spiked_blow: 'drop',
+  flail_spin: 'drop',
+  lance_thrust: 'sword',
+  charge: 'target',
+  bolt_shot: 'arrow',
+  piercing_bolt: 'arrow',
+  fireball: 'flame',
 };
 
 /** The kind of action, from the ability's effects (decides the tile colour). */

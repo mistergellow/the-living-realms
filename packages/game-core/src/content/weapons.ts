@@ -30,6 +30,15 @@ export type WeaponType =
   | 'staff'
   | 'wand'
   | 'tome'
+  // request #45
+  | 'greatsword'
+  | 'greataxe'
+  | 'handaxe'
+  | 'hammer'
+  | 'greathammer'
+  | 'morningstar'
+  | 'lance'
+  | 'crossbow'
   // off-hands (not weapons of the catalogue, but share the field on items)
   | 'shield'
   | 'talisman';
@@ -200,6 +209,119 @@ export const WEAPON_TYPES = {
     baseDamage: { min: 4, max: 6 },
     basicAttack: 'spark',
     basicAttackCost: 1,
+  }),
+  // ---- request #45: more weapon types (PROVISIONAL numbers, tuned by `pnpm sim`) ----
+  greatsword: weapon({
+    type: 'greatsword',
+    name: 'Greatsword',
+    hands: 2,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'agility',
+    attackType: 'physical',
+    attackStyle: 'Wide two-handed swings',
+    identity: 'Hits the two nearest enemies at once',
+    baseDamage: { min: 12, max: 16 },
+    basicAttack: 'great_swing',
+    basicAttackCost: 3,
+  }),
+  greataxe: weapon({
+    type: 'greataxe',
+    name: 'Greataxe',
+    hands: 2,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'endurance',
+    attackType: 'physical',
+    attackStyle: 'Brutal two-handed chops',
+    identity: 'The biggest single hits; makes wounds bleed',
+    baseDamage: { min: 26, max: 34 },
+    basicAttack: 'great_chop',
+    basicAttackCost: 3,
+  }),
+  handaxe: weapon({
+    type: 'handaxe',
+    name: 'Hand Axe',
+    hands: 1,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'agility',
+    attackType: 'physical',
+    attackStyle: 'Quick hacks, or thrown',
+    identity: 'Light enough for the off hand; can be thrown at any enemy',
+    baseDamage: { min: 14, max: 17 },
+    basicAttack: 'hack',
+    basicAttackCost: 2,
+  }),
+  hammer: weapon({
+    type: 'hammer',
+    name: 'Hammer',
+    hands: 1,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'endurance',
+    attackType: 'physical',
+    attackStyle: 'Crushing blows',
+    identity: 'Can stun the enemy it hits',
+    baseDamage: { min: 21, max: 25 },
+    basicAttack: 'hammer_blow',
+    basicAttackCost: 3,
+  }),
+  greathammer: weapon({
+    type: 'greathammer',
+    name: 'Great Hammer',
+    hands: 2,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'endurance',
+    attackType: 'physical',
+    attackStyle: 'Earth-shaking blows',
+    identity: 'Shakes and weakens the two nearest enemies',
+    baseDamage: { min: 24, max: 30 },
+    basicAttack: 'great_smash',
+    basicAttackCost: 3,
+  }),
+  morningstar: weapon({
+    type: 'morningstar',
+    name: 'Morning Star',
+    hands: 1,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'precision',
+    attackType: 'physical',
+    attackStyle: 'Spiked blows',
+    identity: 'Every hit tears: Bleed',
+    baseDamage: { min: 10, max: 13 },
+    basicAttack: 'spiked_blow',
+    basicAttackCost: 2,
+  }),
+  lance: weapon({
+    type: 'lance',
+    name: 'Lance',
+    hands: 2,
+    category: 'melee',
+    primary: 'might',
+    secondary: 'agility',
+    attackType: 'physical',
+    attackStyle: 'Long charging thrusts',
+    identity: 'Reaches the two nearest enemies; charges and marks',
+    baseDamage: { min: 14, max: 17 },
+    basicAttack: 'lance_thrust',
+    basicAttackCost: 2,
+  }),
+  crossbow: weapon({
+    type: 'crossbow',
+    name: 'Crossbow',
+    hands: 2,
+    category: 'ranged',
+    primary: 'precision',
+    secondary: 'might',
+    attackType: 'ranged',
+    attackStyle: 'Slow, heavy bolts',
+    identity: 'Few shots, each one hits hard; pierces Dodge',
+    baseDamage: { min: 12, max: 15 },
+    basicAttack: 'bolt_shot',
+    basicAttackCost: 3,
   }),
 } satisfies Partial<Record<WeaponType, WeaponTypeDef>>;
 

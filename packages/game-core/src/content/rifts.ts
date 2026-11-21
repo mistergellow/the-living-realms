@@ -237,6 +237,15 @@ export const RIFTS = {
         { item: 'charm_of_focus', weight: 1 },
         { item: 'hawkeye_band', weight: 1 },
         { item: 'brawler_wrap', weight: 1 },
+        // Request #45: the new weapon types.
+        { item: 'iron_greatsword', weight: 1 },
+        { item: 'bearded_greataxe', weight: 1 },
+        { item: 'hand_axe', weight: 1 },
+        { item: 'war_hammer', weight: 1 },
+        { item: 'great_maul', weight: 1 },
+        { item: 'morning_star', weight: 1 },
+        { item: 'knight_lance', weight: 1 },
+        { item: 'light_crossbow', weight: 1 },
       ],
     },
     lootRoom: {
@@ -249,6 +258,10 @@ export const RIFTS = {
         { item: 'iron_mace', weight: 1 },
         { item: 'ash_spear', weight: 1 },
         { item: 'birch_wand', weight: 1 },
+        { item: 'hand_axe', weight: 1 },
+        { item: 'morning_star', weight: 1 },
+        { item: 'war_hammer', weight: 1 },
+        { item: 'light_crossbow', weight: 1 },
       ],
     },
     secretRoom: {

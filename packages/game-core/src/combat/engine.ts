@@ -410,6 +410,7 @@ function applyEffect(
       if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
       if (effect.bonusVs && hasStatus(target, effect.bonusVs.status))
         dmg *= effect.bonusVs.multiplier;
+      if (effect.bonusVsBlock && target.block > 0) dmg *= effect.bonusVsBlock;
       // Strength (request #44): flat extra damage per hit.
       dmg += statusValue(actor, 'strength');
       // Gear effects (request #37): +% damage, +% vs bosses.
