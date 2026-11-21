@@ -1,0 +1,150 @@
+/* ---------- screen & scene ---------- */
+.screen {
+  position: relative;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+}
+.scene-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgb(212 120 50 / 0.18), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgb(110 90 200 / 0.16), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 90% 10%, rgb(60 120 160 / 0.12), transparent 70%),
+    linear-gradient(180deg, #100e18 0%, #0b0a10 60%, #0d0a0a 100%);
+}
+.scene-bg::before,
+.scene-bg::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 30% 18% at 30% 60%, rgb(200 190 230 / 0.05), transparent 70%),
+    radial-gradient(ellipse 35% 15% at 70% 40%, rgb(200 190 230 / 0.045), transparent 70%);
+  animation: mist 38s ease-in-out infinite alternate;
+}
+.scene-bg::after {
+  animation-duration: 52s;
+  animation-direction: alternate-reverse;
+  transform: scaleX(-1);
+}
+/* painted backdrop (shared/ui/Landscape.tsx, placeholder art) */
+.landscape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.landscape .ls-clouds {
+  animation: clouds 60s ease-in-out infinite alternate;
+}
+@keyframes clouds {
+  from {
+    transform: translateX(-30px);
+  }
+  to {
+    transform: translateX(30px);
+  }
+}
+.scene-dim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(8 8 14 / 0.85), rgb(8 8 14 / 0.7) 50%, rgb(8 8 14 / 0.9));
+  transition: opacity 0.4s;
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.6) 100%);
+}
+@keyframes mist {
+  from {
+    transform: translate3d(-4%, 0, 0);
+  }
+  to {
+    transform: translate3d(4%, -2%, 0);
+  }
+}
+.embers {
+  position: absolute;
+  inset: 0;
+}
+.embers i {
+  position: absolute;
+  bottom: -2vh;
+  width: 0.2rem;
+  height: 0.2rem;
+  border-radius: 50%;
+  background: #ffb86b;
+  box-shadow: 0 0 0.4rem 0.1rem rgb(255 150 60 / 0.6);
+  opacity: 0;
+  animation: ember 14s linear infinite;
+}
+@keyframes ember {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(6vw, -105vh, 0);
+    opacity: 0;
+  }
+}
+
+/* top bar used by menu screens */
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--hud-gap);
+  min-height: 3.5rem;
+  background: linear-gradient(180deg, rgb(8 7 12 / 0.92), rgb(8 7 12 / 0.55));
+  border-bottom: 1px solid var(--frame);
+  box-shadow: 0 1px 0 rgb(232 189 95 / 0.08);
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 3;
+}
+.topbar h1 {
+  font-size: 1.5rem;
+}
+.logo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #fff1c8 0%, var(--accent-strong) 45%, #9c7228 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0.15rem 0.3rem rgb(0 0 0 / 0.8));
+  text-decoration: none;
+  white-space: nowrap;
+}
+.topbar .logo {
+  font-size: 1.15rem;
+}
+.screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--hud-gap);
+}
+.screen-body > .contain {
+  width: 100%;
+  max-width: 90rem;
+  margin: 0 auto;
+}

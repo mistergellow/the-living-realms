@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes how The Living Realms is built and how it is meant to
-grow. Decisions and their rationale are recorded in [DECISIONS.md](DECISIONS.md).
+grow. Decisions and their rationale are recorded in [docs/adr/](adr/README.md).
 
 ## 1. Goals and constraints
 
@@ -267,7 +267,7 @@ Combat is separate from exploration on both sides:
   everyone) and `modules/social` (friend requests between characters, online
   status). Leaving a group run penalises only the leaver; the others continue.
 - **Client:** its own routes (`/rifts`, `/rifts/runs/:runId`) and a side-view
-  stage drawn with PixiJS (`features/rifts/combat-scene.ts`, ADR-029). New
+  stage drawn with PixiJS (`features/combat/combat-scene.ts`, ADR-029). New
   combat log entries become animation steps (`combat-timeline.ts`) played one
   action at a time; the text log, the controls during enemy actions and the
   result overlays wait for the replay. Clicks go to DOM buttons placed over
@@ -301,9 +301,12 @@ DATABASE.md).
   - _Real-time state:_ a Zustand store fed by the WebSocket through a **pure
     reducer** (`world-state.ts`, unit-tested).
   - _Per-tab UI state:_ active character in `sessionStorage`.
-- **Structure:** feature folders (`features/auth`, `characters`, `world`,
-  `combat`), shared UI primitives in `shared/ui`, infrastructure in `lib`
-  (`api.ts`, `realtime.ts` with automatic reconnection and backoff).
+- **Structure:** feature folders (`features/auth`, `characters`, `avatar`,
+  `game` (hub + shell), `world`, `rifts` (list, lobbies), `combat` (combat
+  screen), `social`, `render`), shared UI primitives in `shared/ui`,
+  infrastructure in `lib` (`api.ts`, `realtime.ts` with automatic reconnection
+  and backoff). Styles: `styles/global.css` is an ordered `@import` index of
+  shared partials; feature-only styles sit next to the feature.
 - **Rendering:** menus, panels and forms are React DOM. The world map and the
   combat stage are PixiJS canvases (ADR-029), loaded lazily, with shared
   infrastructure in `features/render` (`usePixiScene`, SVG → texture). Input
@@ -382,7 +385,7 @@ rolling deploys only cause a short client reconnect.
 
 ### Hosting: Railway
 
-The live environment runs on **Railway** (see DECISIONS ADR-018). Four
+The live environment runs on **Railway** (see ADR-018 in docs/adr/). Four
 services in one project: managed PostgreSQL, managed Redis, `server` and
 `worker`. Both app services build the same `infra/Dockerfile`; their per-service
 settings are versioned in `railway.json` (repository root, picked up

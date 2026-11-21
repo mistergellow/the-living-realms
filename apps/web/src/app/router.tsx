@@ -7,7 +7,7 @@ import { CharacterSelectPage } from '../features/characters/CharacterSelectPage'
 import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
-import { CombatPage } from '../features/rifts/CombatPage';
+import { CombatPage } from '../features/combat/CombatPage';
 import { LobbyPage } from '../features/rifts/LobbyPage';
 import { FriendsPage } from '../features/social/FriendsPage';
 import { Screen } from '../shared/ui/Screen';

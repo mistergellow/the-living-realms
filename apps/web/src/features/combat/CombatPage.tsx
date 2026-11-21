@@ -5,7 +5,7 @@ import { Link, Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { useActiveCharacter } from '../characters/active-character';
-import { useRun, useRunAction } from './api';
+import { useRun, useRunAction } from '../rifts/api';
 import { describeLog } from './combat-text';
 import './combat.css';
 import { AbilityBar } from './AbilityBar';

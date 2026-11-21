@@ -9,7 +9,7 @@ import { useActiveCharacter } from '../characters/active-character';
 import { CharacterToken } from '../characters/CharacterToken';
 import { useFriends } from '../social/api';
 import { useLobby, useLobbyActions } from './lobby-api';
-import './combat.css';
+import './rifts.css';
 
 /** Party formation as in combat (D38): back, mid and front columns × 2 lines. */
 const COLUMNS = [

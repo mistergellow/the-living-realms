@@ -10,19 +10,20 @@ evolve with the players' actions.
 > **Status: Phase 1 — technical foundation.** What exists today: accounts
 > (register / login / logout), character creation and selection, a real-time
 > world shell (hex map, live presence of other players, world clock), and the
-> architecture to grow into the full game. See [ROADMAP.md](ROADMAP.md).
+> architecture to grow into the full game. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
 
-| Document                                 | Contents                                                       |
-| ---------------------------------------- | -------------------------------------------------------------- |
-| [ARCHITECTURE.md](ARCHITECTURE.md)       | System overview, processes, real-time model, code organization |
-| [DATABASE.md](DATABASE.md)               | Data model, conventions, persistence strategy, future entities |
-| [DECISIONS.md](DECISIONS.md)             | Technical decisions and their rationale (ADR log)              |
-| [ROADMAP.md](ROADMAP.md)                 | Development phases                                             |
-| [CLAUDE.md](CLAUDE.md)                   | Working rules for the AI assistant (read automatically)        |
-| [docs/REQUESTS.md](docs/REQUESTS.md)     | Log of every request and design decision (PT)                  |
-| [docs/CHANGE_MAP.md](docs/CHANGE_MAP.md) | Impact map: what to change when a concept changes (PT)         |
+| Document                                     | Contents                                                       |
+| -------------------------------------------- | -------------------------------------------------------------- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System overview, processes, real-time model, code organization |
+| [docs/DATABASE.md](docs/DATABASE.md)         | Data model, conventions, persistence strategy, future entities |
+| [docs/adr/](docs/adr/README.md)              | Technical decisions, one file per ADR, with an index           |
+| [docs/ROADMAP.md](docs/ROADMAP.md)           | Development phases                                             |
+| [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)   | Game design decisions and provisional values (PT)              |
+| [docs/CHANGE_MAP.md](docs/CHANGE_MAP.md)     | Impact map index; one file per area in `docs/change-map/` (PT) |
+| [docs/REQUESTS.md](docs/REQUESTS.md)         | Recent requests log; older ones in `docs/archive/` (PT)        |
+| [CLAUDE.md](CLAUDE.md)                       | Working rules and code map for the AI assistant (PT)           |
 
 ## Tech stack
 
@@ -80,12 +81,12 @@ First time running e2e locally: `pnpm exec playwright install chromium`.
 
 ```
 apps/
-  web/          React client (features/auth, characters, world; combat reserved)
-  server/       Fastify API + WebSocket gateway (modules/auth, characters, world, health)
+  web/          React client (features/auth, characters, game hub, world, rifts, combat, social)
+  server/       Fastify API + WebSocket gateway (modules/auth, characters, rifts, social, world, health)
   worker/       World simulation process (tick loop, maintenance, leader election)
 packages/
   shared/       API & real-time protocol contracts (zod schemas + types) — used by all
-  game-core/    Pure, deterministic game rules (hex math, name rules) — used by all
+  game-core/    Pure, deterministic game rules (hex math, names, combat engine, content) — used by all
   db/           Drizzle schema, migrations, DB client, seed
   server-kit/   Server-side infrastructure shared by server & worker (logger, Redis bus, presence)
 infra/          docker-compose (dev + prod example), Dockerfile
@@ -105,4 +106,4 @@ for the full, commented list. Never commit `.env`.
 `infra/docker-compose.prod.yml` shows a complete stack.
 
 The live environment runs on **Railway**: see [docs/DEPLOY_RAILWAY.md](docs/DEPLOY_RAILWAY.md) (step-by-step, in Portuguese) and `infra/railway/`. See
-[ARCHITECTURE.md → Deployment](ARCHITECTURE.md#deployment).
+[docs/ARCHITECTURE.md → Deployment](docs/ARCHITECTURE.md#deployment).

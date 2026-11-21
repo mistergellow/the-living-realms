@@ -1,0 +1,144 @@
+/* ---------- character select (hero roster) ---------- */
+.select-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+.select-stage {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--hud-gap);
+  overflow-y: auto;
+}
+.select-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+.select-hero h2 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+}
+.pedestal {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  padding: 0 2rem;
+}
+.pedestal::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -0.6rem;
+  width: 120%;
+  height: 2.2rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgb(240 199 106 / 0.45) 0%,
+    rgb(212 166 74 / 0.12) 45%,
+    transparent 70%
+  );
+  filter: blur(2px);
+}
+.pedestal::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 10%;
+  width: 70%;
+  height: 80%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgb(240 199 106 / 0.12), transparent 70%);
+  z-index: -1;
+}
+.select-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+.roster {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--hud-gap) var(--hud-gap);
+  overflow-x: auto;
+  background: linear-gradient(0deg, rgb(8 7 12 / 0.95), rgb(8 7 12 / 0));
+}
+.roster-card {
+  flex: 0 0 auto;
+  width: 9.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: linear-gradient(180deg, rgb(30 28 41 / 0.92), rgb(14 13 20 / 0.95));
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.roster-card:hover {
+  border-color: var(--frame-hi);
+  transform: translateY(-2px);
+}
+.roster-card[aria-pressed='true'] {
+  border-color: var(--accent-strong);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 1.2rem var(--frame-glow);
+}
+.roster-card .name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roster-card .meta {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+.roster-new {
+  border-style: dashed;
+  justify-content: center;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.roster-new .plus {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 1px dashed var(--frame-hi);
+  font-size: 1.8rem;
+  color: var(--accent-strong);
+}
+.roster-count {
+  align-self: center;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}

@@ -1,0 +1,43 @@
+/* ---------- auth / centered layouts ---------- */
+.centered {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  place-items: center;
+  padding: var(--hud-gap);
+}
+.centered-card {
+  width: 100%;
+  max-width: 27rem;
+}
+.brand {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+.brand .logo {
+  display: block;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1.05;
+}
+.brand p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+.brand-divider {
+  display: block;
+  width: 60%;
+  height: 0.6rem;
+  margin: var(--space-3) auto 0;
+  background:
+    linear-gradient(90deg, transparent, var(--frame-hi), transparent) center / 100% 1px no-repeat,
+    radial-gradient(circle, var(--accent-strong) 0 0.18rem, transparent 0.2rem) center / 0.6rem
+      0.6rem no-repeat;
+}
+.form-title {
+  font-size: 1.35rem;
+  text-align: center;
+  color: var(--text);
+}

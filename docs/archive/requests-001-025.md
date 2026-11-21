@@ -1,0 +1,275 @@
+# Arquivo de pedidos #1–#25 (2026-11-17 a 2026-11-18)
+
+Histórico fechado. Só consultar quando for preciso saber **porquê** algo foi
+feito; as decisões em vigor estão em [`../GAME_DESIGN.md`](../GAME_DESIGN.md).
+
+---
+
+### #1 — 2026-11-17 — Fase 1: fundação e arquitetura
+
+**Pedido:** analisar o ambiente e propor a stack, a arquitetura, os riscos e o
+plano; implementar só a fundação técnica (registo, login, criação de
+personagens, interface inicial, testes de infraestrutura), sem mecânicas de jogo.
+**Resultado:** monorepo completo (ver `ROADMAP.md` → Fase 1). 43 testes
+unitários e de integração e 4 testes e2e a passar.
+**Ficheiros:** projeto inteiro; documentação em `README.md`, `ARCHITECTURE.md`,
+`DATABASE.md`, `DECISIONS.md`, `ROADMAP.md`.
+
+### #2 — 2026-11-17 — Respostas às perguntas de design
+
+**Pedido:** respostas D1–D6 (ver tabela acima).
+
+### #3 — 2026-11-17 — Memória do projeto e mapa de impacto
+
+**Pedido:** registar tudo o que é pedido num ficheiro, para consulta futura, e
+manter um ficheiro com o que está associado a cada item, para que uma alteração
+atualize rapidamente tudo o que está ligado.
+**Resultado:** `CLAUDE.md` (lido automaticamente em cada sessão, com as regras
+de trabalho), `docs/REQUESTS.md` (este ficheiro), `docs/CHANGE_MAP.md` (mapa de
+impacto por conceito).
+
+### #4 — 2026-11-17 — Guardar o código no GitHub
+
+**Pedido:** onde colocar o código; o dono criou o repositório
+`mistergellow/the-living-realms`.
+**Resultado:** primeiro commit ("Phase 1: technical foundation") enviado para o
+ramo `main` do GitHub. A partir daqui, cada sessão nova começa por clonar este
+repositório. O `CLAUDE.md` é lido automaticamente e aponta para este registo e
+para o mapa de impacto.
+
+### #5 — 2026-11-17 — Abrir o projeto no Visual Studio Code
+
+**Pedido:** como começar com o editor aberto no computador.
+**Resultado:** guia passo a passo (clonar no VS Code, instalar requisitos,
+arrancar). Sem alterações ao código.
+
+### #6 — 2026-11-17 — Instalação do Docker Desktop falhou (Windows)
+
+**Pedido:** o que é o Docker e para que serve; a instalação falhou porque a
+funcionalidade "Virtual Machine Platform" do Windows não está ativa.
+**Resultado:** explicação e solução (`wsl --install` numa PowerShell de
+administrador, reiniciar, voltar a instalar). Alternativa sem Docker:
+PostgreSQL e Redis na cloud, mudando só `DATABASE_URL` e `REDIS_URL` no `.env`.
+Sem alterações ao código.
+
+### #7 — 2026-11-17 — Publicar online em vez de usar o Docker localmente
+
+**Pedido:** em vez do Docker, pôr o jogo já num serviço como a Cloudflare.
+**Resultado:** análise apresentada. A Cloudflare (Workers/Pages) não corre o
+servidor Node.js com WebSockets nem o worker sem reescrever o backend.
+Recomendação: Railway (frontend + API + worker + PostgreSQL + Redis, deploy
+automático a partir do GitHub), com a Cloudflare opcional mais tarde à frente
+(domínio/DNS/proteção). **Aprovado no pedido #8.**
+
+### #8 — 2026-11-17 — Railway aprovado; o dono já tem conta
+
+**Pedido:** avançar com o Railway.
+**Resultado:** configuração por serviço em `infra/railway/server.json` e
+`infra/railway/worker.json`; a imagem define `WEB_DIST_DIR`; o cliente Redis
+aceita IPv6 (`family: 0`). Guia de cliques em `docs/DEPLOY_RAILWAY.md`. A
+imagem de produção foi simulada sem Docker (migrações numa BD vazia, servidor,
+worker, registo e personagem) e funciona. ADR-018; ARCHITECTURE → Deployment;
+CHANGE_MAP → "Deploy / produção".
+**Pendente:** o dono segue o guia; primeiro deploy real por confirmar.
+
+### #9 — 2026-11-17 — Railway não mostra o repositório
+
+**Pedido:** ao criar o serviço a partir do GitHub, o Railway diz "No
+repositories found".
+**Resultado:** a GitHub App do Railway ainda não tinha acesso ao repositório.
+Passos dados ao dono: Configure GitHub App → dar acesso a
+`the-living-realms` → Save → Refresh. Sem alterações ao código.
+
+### #10 — 2026-11-17 — Servidor a crashar no Railway ("relation worlds does not exist")
+
+**Pedido:** o serviço `server` crashava em ciclo.
+**Causa:** o Railway não aplicou o ficheiro de configuração indicado no painel.
+Detetou o projeto sozinho (Railpack), correu `pnpm start` sem o Dockerfile e
+sem o passo de migrações, por isso as tabelas não existiam. A ligação à base de
+dados funcionava.
+**Correção:** a configuração do servidor passou a ser o `railway.json` na raiz
+do repositório, que o Railway lê sempre automaticamente (antes era
+`infra/railway/server.json`). O worker continua com
+`/infra/railway/worker.json`, que tem de ser indicado no painel. Guia, ARCHITECTURE
+e CHANGE_MAP atualizados.
+**Lição:** confirmar sempre nos logs a mensagem de arranque esperada (ver
+`docs/DEPLOY_RAILWAY.md` → Verificar).
+
+### #11 — 2026-11-17 — Server e worker com erro no Railway
+
+**Pedido:** captura do painel: `server` "Crashed", `worker` com "1 Change" por
+aplicar.
+**Diagnóstico:** o worker tem alterações guardadas mas ainda não aplicadas (é
+preciso clicar em Deploy / Apply changes). Para o server, pedidos ao dono os logs
+do deploy mais recente (Build Logs e Deploy Logs) e o commit desse deploy.
+
+### #12 — 2026-11-17 — Continua "relation worlds does not exist"
+
+**Pedido:** logs do novo deploy (já com `/app/server.js`, ou seja, com o
+Dockerfile).
+**Causa:** o Railway não executou o `preDeployCommand` (migrações), por isso as
+tabelas continuavam por criar.
+**Correção:** o servidor e o worker passam a aplicar as migrações sozinhos ao
+arrancar (`migrateWithLock`, com advisory lock do PostgreSQL;
+`MIGRATE_ON_START=true` por defeito). O `preDeployCommand` foi removido do
+`railway.json`. Testado: base de dados vazia, servidor e worker a arrancar em
+simultâneo, ambos arrancam sem erros. ADR-019.
+
+### #13 — 2026-11-17 — Deploy no Railway a funcionar; avançar para a Fase 2
+
+**Pedido:** o jogo está online (o dono vê o mapa); passar à próxima fase.
+**Resultado:** Fase 1 fechada (deploy confirmado). Apresentados o plano da
+Fase 2 (mapa e movimento) e as decisões de design necessárias.
+**Substituído pelo pedido #14** (mudança de prioridade). As perguntas sobre o mapa ficam guardadas para a Fase 4.
+
+### #14 — 2026-11-17 — Nova prioridade: sistema de personagem e combate (Rifts)
+
+**Pedido:** começar pelo sistema de personagem e testar o combate, por ser o
+mais importante do jogo. Conceito: **Rifts** são portais que levam a **raids**.
+Pode-se entrar **em lobby (grupo) ou sozinho**; **a dificuldade não muda** com o
+número de jogadores.
+**Resultado:** ROADMAP reordenado: Fase 2 = sistema de personagem; Fase 3 =
+combate e Rifts; Fase 4 = mapa e movimento; Fase 5 = social e reputação.
+Perguntas de design enviadas ao dono.
+**A aguardar:** respostas às perguntas sobre personagem, combate e Rifts.
+
+### #15 — 2026-11-17 — Respostas de design: personagem, combate e Rifts
+
+**Pedido:** respostas às perguntas do pedido #14 (registadas como D8–D20).
+**Resultado:** plano das Fases 2 e 3 apresentado em marcos (M1–M4), com as
+últimas perguntas em aberto.
+**A aguardar:** respostas às perguntas finais e aprovação do plano.
+
+### #16 — 2026-11-17 — Respostas finais; início do M1 (sistema de personagem)
+
+**Pedido:** respostas às últimas perguntas (decisões D21–D31) e luz verde.
+**Resultado (M1 concluído):**
+
+- Atributos D&D com point-buy (27 pontos, 8–15), validados no cliente e no servidor.
+- Estatísticas derivadas calculadas (fórmulas provisórias A10).
+- Itens com qualidade (0 = partido), 7 espaços de equipamento, regras de duas mãos, bónus de atributos.
+- As armas dão as habilidades; tabela de skills aprendidas; reputação por personagem.
+- Criação com escolha de arma inicial; ficha de personagem (`/characters/:id`) com equipar/desequipar.
+- Migrações `0001_character_system` e `0002_starter_kit_for_existing_characters` (testada sobre uma BD com personagens antigos).
+- Testes: 17 unitários no game-core, 37 de integração no servidor (9 novos), 5 e2e.
+- Docs: CHANGE_MAP (atributos, estatísticas, itens, habilidades, reputação), DATABASE, ARCHITECTURE, ADR-020, ROADMAP.
+  **Próximo:** M2 (motor de combate + Rift a solo).
+
+### #17 — 2026-11-17 — "Faz o combate, siga" + referência visual
+
+**Pedido:** avançar com o combate (M2). Durante o trabalho: imagem de referência
+de um ecrã de herói (personagem ilustrado ao centro, equipamento à volta,
+estatísticas por baixo); personagens com visual e animações parecidos; para já,
+editar o corpo base; mais tarde, equipamento visível no personagem.
+**Decisões:** D32; valores provisórios A16–A22.
+**Resultado (M2 concluído):**
+
+- Motor de combate determinístico no `game-core` (filas 2×3, iniciativa, Focus com acumulação até 6, alvos por fila, troca de posição, IA dos inimigos, salas → boss, reviver com 1 HP, 60 s por turno).
+- Rift de teste "Shattered Breach" (3 salas, boss Rift Warden); inimigos e números provisórios (A17/A18).
+- Corridas guardadas a cada ação (`rift_runs`, `rift_run_participants`); vitória dá reputação + 1 drop; derrota/abandono tira 25% de qualidade ao equipamento.
+- Equipar/desequipar/apagar bloqueados dentro de um Rift (`IN_RIFT`).
+- Ecrã de Rifts (lista; "Enter solo"; lobby desativado até ao M3) e ecrã de combate em vista lateral com animações.
+- Personagens desenhados em SVG por camadas com corpo base editável (aparência v2); personagens antigos convertidos automaticamente; ficha em formato "herói" com equipamento à volta.
+- Testes: 29 unitários no game-core, 46 de integração no servidor, 6 e2e (incluindo um combate no browser).
+- Docs: CHANGE_MAP (aparência/arte, combate, inimigos, Rifts), DATABASE, ARCHITECTURE §7, ADR-021, ADR-022, ROADMAP.
+  **Próximo:** M3 (lobby até 6 jogadores, convites, lista pública, combate em tempo real entre jogadores).
+
+### #18 — 2026-11-17 — Equilíbrio fraco; substituir os atributos de D&D?
+
+**Pedido:** o equilíbrio está um pouco mau e o dono não gosta muito dos
+atributos de D&D; pede uma recomendação "do género, mas melhor".
+**Resultado:** apresentado o diagnóstico e três alternativas, com
+recomendação (4 atributos lineares + crescimento pelo equipamento + fórmulas de
+dano/armadura em percentagem). Sem alterações ao código.
+**A aguardar:** escolha do dono e o que sentiu de errado no equilíbrio.
+
+### #19 — 2026-11-17 — Opção C, mas com mais variedade; dúvida sobre armadura em %
+
+**Pedido:** o dono prefere a opção C (atributos + crescimento pelo equipamento),
+mas quer mais variedade de builds, e não tem a certeza de que a redução em
+percentagem seja a melhor opção.
+**Resultado:** proposta apresentada: 6 atributos sem "atributos inúteis", armas
+que escalam com 2 atributos, armadura com retornos decrescentes
+(armadura/(armadura+K)), Block ativo ao estilo Slay the Spire, estados
+(sangrar, queimar, marcar, atordoar…) e, mais tarde, afixos no equipamento e
+traços. Sem alterações ao código.
+**A aguardar:** aprovação da proposta e respostas sobre o equilíbrio (#18).
+
+### #20 — 2026-11-17 — Avançar com a proposta (Combate 2.0)
+
+**Pedido:** aprovada a proposta do #19. Durante o trabalho: "o combate é quase
+suposto ser um Slay the Spire sem cartas + Darkest Dungeon".
+**Decisões:** D33–D36; valores provisórios A23–A24 (sem resposta às perguntas
+de equilíbrio, usada a dificuldade média).
+**Resultado (Combate 2.0):**
+
+- 6 atributos lineares (base 5, 12 pontos, máx. 10); pontos por gastar podem ser distribuídos depois na ficha; personagens existentes convertidos (tudo a 5 + 12 pontos).
+- 6 armas iniciais (espada, machado, adaga, arco, cajado, tomo), cada uma a escalar com 2 atributos; mão secundária opcional (escudo, talismã, adaga) cujas habilidades se juntam às da arma.
+- Armadura e resistência com retornos decrescentes (rating ÷ (rating + 50)); dano em intervalo; Block que expira no próprio turno; estados Bleed, Burn, Mark, Weaken, Stun com sinergias (ex.: Backstab ×1,6 contra alvos a sangrar).
+- Intenções dos inimigos visíveis antes do turno dos jogadores (agrupadas, ex.: "4–6 ×3 → alvo").
+- Equilíbrio por simulação: média a solo 49%, todas as armas entre 26% e 68% (A23).
+- Bug encontrado pelos testes e corrigido: habilidades só para o próprio (ex.: Raise Shield) passavam a pedir um alvo.
+- Testes: 37 unitários no game-core, 48 de integração no servidor, 6 e2e.
+- Docs: CHANGE_MAP (atributos, estatísticas, itens, estados/Block/intenções), DATABASE, ARCHITECTURE §7, ADR-023, ADR-024, ROADMAP.
+  **Próximo:** M3 (lobby até 6 jogadores) — perguntas pendentes no pedido #17.
+
+### #21 — 2026-11-18 — "O que fazer agora?"
+
+**Pedido:** orientação sobre o próximo passo.
+**Resultado:** recomendado: (1) testar a versão online com uma lista de
+verificação e dar feedback sobre a sensação do combate e o equilíbrio;
+(2) responder às 3 perguntas do lobby para avançar com o M3. Alternativas
+apresentadas: mais conteúdo (Rifts/inimigos), direção de arte, mapa (Fase 4).
+
+### #22 — 2026-11-18 — Amigos e lobby de Rifts (M3)
+
+**Pedido:** "faz já a cena de adicionar amigo e fazer o Rift dar para fazer lobby".
+**Decisões:** D37; valores provisórios A25–A29 (perguntas do lobby sem resposta
+explícita).
+**Resultado (M3 concluído):**
+
+- Amigos: pedir pelo nome do personagem, aceitar/recusar/cancelar/remover, estado online, contador de pedidos no ecrã do mundo (`/friends`).
+- Lobbies até 6: público ou privado, convidar amigos, convites na página de Rifts, escolher/trocar posição na formação, "pronto", expulsar, a liderança passa se o líder sair, o líder inicia o Rift para todos.
+- Combate em grupo: iniciativa entre todos os jogadores, "Waiting for X…", sair a meio só penaliza quem sai e o grupo continua.
+- Problema encontrado pelo teste com 2 browsers e corrigido: durante o próprio turno o ecrã não se atualizava (não se via um colega sair).
+- Testes: 39 unitários no game-core, 58 de integração no servidor, 7 e2e (incluindo 2 jogadores em simultâneo).
+- Docs: CHANGE_MAP (amigos, lobbies, combate em grupo), DATABASE, ARCHITECTURE §7, ADR-025, ADR-026, ROADMAP.
+
+### #23 — 2026-11-18 — Posicionamento errado: é 3 × 2
+
+**Pedido:** "os posicionamentos estão mal: é 3 × 2 — duas linhas, três
+colunas: back, mid e frontline".
+**Decisões:** D38; valores provisórios A30–A31.
+**Resultado:**
+
+- Motor: posições 0–1 front, 2–3 mid, 4–5 back; alcance "primeira coluna ocupada" / "qualquer posição" / colunas específicas; habilidades de coluna atingem as 2 linhas.
+- Inimigos reposicionados (sala 2 com o Shard Spitter na coluna mid); jogadores começam na front (corpo-a-corpo) ou na back (distância/magia).
+- Ecrãs de combate e de lobby com 3 colunas × 2 linhas; intenções iguais agrupadas para não se sobreporem; registo de combate com as últimas 40 linhas; quem sai aparece com "(left)".
+- Equilíbrio inalterado na simulação (média a solo ~49%).
+- Testes: 40 unitários no game-core, 58 de integração, 7 e2e (corridos 2× seguidas).
+- Docs: CHANGE_MAP ("Formação / posições"), ARCHITECTURE §7, ADR-027, ROADMAP, CLAUDE.md.
+
+### #24 — 2026-11-18 — Ataques por coluna; inimigos jogam com a formação
+
+**Pedido:** (1) sim, a mid está a salvo; (2) há habilidades que atingem tudo;
+"no ataque não escolhemos alvos, escolhemos linhas — um ataque contra o da
+frente atinge sempre os dois da frente"; os inimigos devem jogar com isso
+(ocupar as 3 colunas e/ou, na mesma coluna, 1 bloqueia e outro ataca),
+conforme a dificuldade do Rift.
+**Decisões:** D39–D42; valores provisórios A32–A33.
+**Resultado:**
+
+- Motor: todos os ataques escolhem uma coluna e atingem as 2 unidades dessa coluna; o apoio a aliados continua a escolher a pessoa; Volley passa a atingir todos os inimigos.
+- IA: os inimigos escolhem a coluna com mais valor; um tanque valoriza Block quando partilha a coluna; intenções mostram a coluna ("→ front column (A, B)").
+- Conteúdo: novo inimigo **Rift Bulwark** (bloqueia a coluna); salas redesenhadas com formação (bloqueador + atacante na front, inimigos espalhados por front/mid/back); escudo com **Shield Wall** (Block para uma coluna de aliados).
+- Ecrã: ao escolher um ataque, passar o rato acende a coluna inteira; se só houver uma coluna ao alcance, o ataque sai logo.
+- Equilíbrio refeito (corpo-a-corpo mais forte, distância/magia mais fraca): média a solo 46%, todas as armas entre 31% e 63%.
+- Simulador guardado no projeto: `pnpm sim` (`scripts/simulate-balance.ts`).
+- Testes: 42 unitários no game-core, 58 de integração, 7 e2e.
+- Docs: CHANGE_MAP, ARCHITECTURE §7, ADR-028, ROADMAP, CLAUDE.md.
+
+### #25 — 2026-11-18 — "Dá full commit para eu experimentar"
+
+**Pedido:** garantir que tudo está commitado para testar.
+**Resultado:** confirmado: sem alterações pendentes; `main` no GitHub = commit
+`7d8fa39` (ataques por coluna) com CI verde. O Railway publica a partir do `main`.

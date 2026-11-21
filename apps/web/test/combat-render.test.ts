@@ -1,7 +1,7 @@
 import type { CombatLogEntry } from '@realms/shared';
 import { describe, expect, it } from 'vitest';
-import { combatLayout, unitRect } from '../src/features/rifts/combat-layout';
-import { abilityFxKind, applyStep, buildTimeline } from '../src/features/rifts/combat-timeline';
+import { combatLayout, unitRect } from '../src/features/combat/combat-layout';
+import { abilityFxKind, applyStep, buildTimeline } from '../src/features/combat/combat-timeline';
 
 describe('combat layout', () => {
   const l = combatLayout(1050, 440);

@@ -5,7 +5,7 @@ import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { useActiveRun, useRifts, useStartRun } from './api';
 import { useLobbyActions, useLobbyOverview } from './lobby-api';
-import './combat.css';
+import './rifts.css';
 
 /** Rift list (D31: a list for now; portals on the map in phase 4). Solo or lobby. */
 export function RiftsPage() {

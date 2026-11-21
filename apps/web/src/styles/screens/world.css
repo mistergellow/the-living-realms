@@ -1,0 +1,263 @@
+/* ---------- world (HUD over a full-bleed map) ---------- */
+.world {
+  position: absolute;
+  inset: 0;
+  background: #07060a;
+}
+.world-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 50%, #1b1824 0%, #0d0c12 70%, #050407 100%);
+}
+.world-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, rgb(0 0 0 / 0.75) 100%);
+}
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'top top' '. side' 'bottom side';
+  gap: var(--hud-gap);
+  padding: var(--hud-gap);
+  z-index: 2;
+}
+.hud > * {
+  pointer-events: auto;
+}
+.hud-top {
+  grid-area: top;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hud-gap);
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+.hud-top > * {
+  pointer-events: auto;
+}
+.hud-plate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+}
+.hud-plate .token {
+  border: 2px solid var(--frame-hi);
+  box-shadow: 0 0 0.8rem var(--frame-glow);
+}
+.hud-plate .self-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+.hud-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.hud-banner {
+  margin: 0 auto;
+  text-align: center;
+  padding: var(--space-2) var(--space-6);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 1.2rem) 100%, 1.2rem 100%);
+  border: 0;
+}
+.hud-banner .panel-title {
+  margin: 0;
+}
+.hud-banner .title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.hud-menu {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.hud-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hud-gap);
+  min-height: 0;
+}
+.hud-side .panel {
+  min-height: 0;
+  overflow-y: auto;
+}
+.hud-side .chronicle {
+  flex: 1;
+}
+.hud-bottom {
+  grid-area: bottom;
+  justify-self: start;
+  align-self: end;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.9rem;
+}
+.status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--text-faint);
+  box-shadow: 0 0 0.4rem currentColor;
+}
+.status-dot[data-status='online'] {
+  background: var(--success);
+  color: var(--success);
+}
+.status-dot[data-status='connecting'],
+.status-dot[data-status='reconnecting'] {
+  background: var(--warning);
+  color: var(--warning);
+}
+.status-dot[data-status='replaced'],
+.status-dot[data-status='unauthenticated'],
+.status-dot[data-status='offline'] {
+  background: var(--danger);
+  color: var(--danger);
+}
+.player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.95rem;
+}
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+}
+.log time {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  margin-right: 0.4rem;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(6 5 9 / 0.82);
+  backdrop-filter: blur(3px);
+  z-index: 5;
+  padding: var(--hud-gap);
+}
+.hex-map {
+  position: absolute;
+  inset: 0;
+  user-select: none;
+}
+.hex-map-canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  outline: none;
+}
+.hex-map-canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.hex-map-canvas canvas {
+  display: block;
+}
+.hex-map-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  text-align: center;
+}
+.map-controls {
+  position: absolute;
+  /* left edge, mid height: clear of the HUD (top bar, side panels, bottom info) */
+  left: var(--hud-gap, var(--space-3));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.map-controls .btn {
+  min-width: 34px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* tablets / narrow windows: side panels slide under the map as a drawer */
+@media (max-width: 56em) {
+  .hud {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'top' '.' 'bottom' 'side';
+  }
+  .hud-side {
+    flex-direction: row;
+    max-height: 32dvh;
+  }
+  .hud-side .panel {
+    flex: 1;
+  }
+  .hud-banner {
+    order: -1;
+    width: 100%;
+    margin: 0;
+  }
+  .hud-plate {
+    flex: 1;
+  }
+}
+@media (max-width: 34em) {
+  .hud-side {
+    flex-direction: column;
+    max-height: 38dvh;
+  }
+  .hud-side .panel {
+    flex: none;
+    max-height: 18dvh;
+  }
+  .hud-side .chronicle {
+    flex: 1;
+  }
+  .hud-menu .btn .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .hud-menu .btn {
+    padding: 0 var(--space-2);
+    min-width: 2.6rem;
+  }
+}

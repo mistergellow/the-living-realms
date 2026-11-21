@@ -24,7 +24,7 @@ import { uuidv7 } from 'uuidv7';
  *    there is a single shared world today.
  *  - JSONB only for data whose shape is expected to evolve (e.g. appearance,
  *    event payloads), never for data we need to join or constrain on.
- *  - Text enums are constrained in the application (zod); see DATABASE.md.
+ *  - Text enums are constrained in the application (zod); see docs/DATABASE.md.
  */
 
 const id = () =>

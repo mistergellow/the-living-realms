@@ -2,7 +2,7 @@ import type { AbilitySource, Attributes, CombatColumn, StatusId } from '@realms/
 
 /*
  * Ability definitions (data). PROVISIONAL CONTENT — names and numbers are
- * placeholders tuned by simulation (see docs/REQUESTS.md).
+ * placeholders tuned by simulation (see docs/GAME_DESIGN.md).
  *
  * Battlefield (D38): per side 3 columns (front, mid, back) × 2 lines. Each
  * ability states its reach: 'first' = the first *occupied* column (melee,

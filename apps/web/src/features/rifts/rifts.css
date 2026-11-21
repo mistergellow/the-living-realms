@@ -1,0 +1,67 @@
+/* Rift list and portals (RiftsPage, LobbyPage). */
+.rift-card {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+.rift-portal {
+  width: 7rem;
+  height: 9.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 2.5rem rgb(108 92 231 / 0.45);
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    #c7f0ff 0%,
+    #6c5ce7 35%,
+    #2b1d55 65%,
+    transparent 72%
+  );
+  animation: portal 3s ease-in-out infinite;
+}
+@keyframes portal {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: scale(1.06) rotate(4deg);
+    filter: hue-rotate(25deg);
+  }
+}
+.rift-rooms {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.rift-rooms li {
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 0.35);
+}
+.rift-rooms li[data-boss='true'] {
+  border-color: var(--danger);
+}
+@media (max-width: 36em) {
+  .rift-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  .rift-card .row {
+    justify-content: center;
+  }
+  .rift-rooms {
+    justify-content: center;
+  }
+}
+.rift-rooms li[data-boss='true'] {
+  color: var(--danger);
+  font-weight: 700;
+}

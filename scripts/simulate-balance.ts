@@ -4,7 +4,7 @@
  *
  *   pnpm sim
  *
- * Targets live in docs/REQUESTS.md (A23). The bot is not a real player: use
+ * Targets live in docs/GAME_DESIGN.md (A23). The bot is not a real player: use
  * the numbers to compare builds and spot outliers, not as absolute truth.
  */
 import {
