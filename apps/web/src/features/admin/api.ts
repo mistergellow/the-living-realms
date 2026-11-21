@@ -15,7 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
 /*
- * Admin tools (request #32) and the custom content every client needs.
+ * Admin tools (request #41) and the custom content every client needs.
  * Admin-made items/abilities are loaded into the game-core registry so that
  * getItemDef/getAbility (sheet, combat bar, combat log, art) know them.
  */

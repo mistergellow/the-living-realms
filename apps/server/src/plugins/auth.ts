@@ -27,7 +27,7 @@ export async function requireAuth(request: FastifyRequest, _reply: FastifyReply)
   if (!request.auth) throw errors.unauthenticated();
 }
 
-/** Is this email one of the admins in ADMIN_EMAILS (request #32)? */
+/** Is this email one of the admins in ADMIN_EMAILS (request #41)? */
 export const isAdminEmail = (adminEmails: readonly string[], email: string) =>
   adminEmails.includes(email.toLowerCase());
 

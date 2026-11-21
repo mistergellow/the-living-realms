@@ -190,7 +190,7 @@ who invited). Rows are locked (`FOR UPDATE`) on every change.
 
 ### `custom_content`
 
-Admin-made items and abilities (request #32, ADR-036), for testing.
+Admin-made items and abilities (request #41, ADR-044), for testing.
 
 | Column     | Type         | Notes                                                                   |
 | ---------- | ------------ | ----------------------------------------------------------------------- |
@@ -217,7 +217,7 @@ are never deleted (old runs and items may reference them).
 | payload            | jsonb            | event-specific data                                        |
 | created_at         | timestamptz      |                                                            |
 
-Admin tools (request #32) write `admin.item_created`, `admin.item_updated`,
+Admin tools (request #41) write `admin.item_created`, `admin.item_updated`,
 `admin.ability_created`, `admin.ability_updated`, `admin.item_granted`,
 `admin.item_removed`, `admin.skill_taught`, `admin.skill_forgotten` and
 `admin.character_updated` (actor = the admin account; character = the target).

@@ -20,7 +20,7 @@ const itemParams = z.object({ id: z.uuid(), itemId: z.uuid() });
 const skillParams = z.object({ id: z.uuid(), abilityId: z.string().min(1).max(64) });
 const contentParams = z.object({ id: z.string().min(1).max(64) });
 
-/** Admin tools (request #32), under /api/admin. Only accounts in ADMIN_EMAILS. */
+/** Admin tools (request #41), under /api/admin. Only accounts in ADMIN_EMAILS. */
 export async function adminRoutes(
   app: FastifyInstance,
   {

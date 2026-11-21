@@ -1,4 +1,4 @@
-/* Admin tools (request #32): functional, compact, consistent with the game theme. */
+/* Admin tools (request #41): functional, compact, consistent with the game theme. */
 .adm-tabs {
   display: flex;
   gap: var(--space-2);

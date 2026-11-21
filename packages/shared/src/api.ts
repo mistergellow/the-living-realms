@@ -36,7 +36,7 @@ export interface AccountDto {
   id: string;
   email: string;
   createdAt: string;
-  /** Owner/admin tools (request #32): accounts listed in the server's ADMIN_EMAILS. */
+  /** Owner/admin tools (request #41): accounts listed in the server's ADMIN_EMAILS. */
   isAdmin: boolean;
 }
 export interface MeResponse {

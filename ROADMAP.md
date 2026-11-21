@@ -53,7 +53,7 @@ Rifts are portals that lead to raids. A player enters **solo or with a lobby**;
 - [x] **The Rift (request #31):** dungeons with a procedural branching map (≥ 10 rooms, converging branches, optional rooms, hidden secret rooms, boss); Combat, Elite, Campsite, Random Event, Loot, Secret and Boss rooms; events with attribute tests on BASE stats; lasting debuffs/boons; group votes; rewards mostly after the boss
 - [x] **Combat rounds (request #31):** planning phase + alternating resolution by team initiative (roll + Agility), Focus from Precision (min 3, carry-over with a cap), 1-Focus Block (stacks, resets each round), 1-Focus change of position
 - [x] **Weapon catalogue (request #31):** sword, axe, dagger, spear, mace, bow, staff, wand (+ tome); identical stats per type and level; upgrades; 5 special slots and 2 locked rune slots (data only)
-- [x] **Admin tools (request #32, ADR-036):** `/admin` for accounts in `ADMIN_EMAILS` — create/edit custom weapons, items and abilities; give items, teach abilities and change attributes/reputation of any character
+- [x] **Admin tools (request #41, ADR-044):** `/admin` for accounts in `ADMIN_EMAILS` — create/edit custom weapons, items and abilities; give items, teach abilities and change attributes/reputation of any character
 - ❓ Dungeon Threat (ADR-035: evaluated, waiting for design decisions); Runemaster, runes and weapon specials content
 - Enemy AI; combat log and replay from `game-core`
 - First playable test Rift to tune numbers

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /*
- * Admin tools (request #32). The e2e server runs with
+ * Admin tools (request #41). The e2e server runs with
  * ADMIN_EMAILS=e2e-admin@example.com (playwright.config.ts). The test database
  * is not reset between runs, so the admin account may already exist.
  */

@@ -28,7 +28,7 @@ export type ControlMessage =
   | { kind: 'account.replace'; accountId: string; keepConnectionId: string }
   /** A session was revoked (logout); close every connection opened with it. */
   | { kind: 'session.revoked'; sessionId: string }
-  /** Admin-made content changed (request #32); reload the game-core content registry. */
+  /** Admin-made content changed (request #41); reload the game-core content registry. */
   | { kind: 'content.changed' };
 
 export async function publishToWorld(

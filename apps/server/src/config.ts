@@ -30,7 +30,7 @@ export const configSchema = z.object({
   /** Max auth attempts (login/register) per IP per minute. */
   AUTH_RATE_LIMIT: z.coerce.number().int().min(1).default(10),
   /**
-   * Admin tools (request #32): comma-separated account emails allowed to use
+   * Admin tools (request #41): comma-separated account emails allowed to use
    * /api/admin (create items/abilities, grant them to characters). Empty = no admin.
    */
   ADMIN_EMAILS: z

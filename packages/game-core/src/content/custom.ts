@@ -4,7 +4,7 @@ import type { ItemDef } from './items.js';
 import { getWeaponType, type WeaponType } from './weapons.js';
 
 /*
- * Custom content registry (admin tools, request #32). Items and abilities
+ * Custom content registry (admin tools, request #41). Items and abilities
  * created by the admin live in the database; the server and every client load
  * them here, and `getItemDef`/`getAbility` fall back to this registry. Built-in
  * content always wins: a custom id can never replace a built-in one.

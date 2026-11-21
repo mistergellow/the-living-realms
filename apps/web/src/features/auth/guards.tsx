@@ -7,7 +7,7 @@ import { useMe } from './api';
 export function RequireAuth() {
   const me = useMe();
   const location = useLocation();
-  // Admin-made items/abilities (request #32) must be known before any game screen renders.
+  // Admin-made items/abilities (request #41) must be known before any game screen renders.
   const custom = useCustomContent(!!me.data);
   if (me.isPending || (me.data && custom.isPending))
     return <FullPageMessage>Loading…</FullPageMessage>;

@@ -57,7 +57,7 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   const characters = new CharactersService(ctx);
   const sheets = new CharacterSheetService(deps.db);
   const gateway = new RealtimeGateway(ctx, characters, app.log);
-  // Admin-made items/abilities (request #32) must be in the registry before any request.
+  // Admin-made items/abilities (request #41) must be in the registry before any request.
   const content = new CustomContentService(ctx, app.log);
   await content.reload();
   gateway.onContentChanged = () => content.reload();

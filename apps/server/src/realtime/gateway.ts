@@ -226,7 +226,7 @@ export class RealtimeGateway {
     }
   }
 
-  /** Set by app.ts: reloads admin-made content when another instance changed it (request #32). */
+  /** Set by app.ts: reloads admin-made content when another instance changed it (request #41). */
   onContentChanged: (() => Promise<void>) | null = null;
 
   private onControl(msg: ControlMessage): void {

@@ -359,7 +359,7 @@ export const riftLobbyInvites = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Custom content (admin tools, request #32): items and abilities made by the
+// Custom content (admin tools, request #41): items and abilities made by the
 // admin for testing. `definition` is validated by the zod schemas in
 // @realms/shared (customItemInputSchema / customAbilityInputSchema) and loaded
 // into the game-core content registry. Ids start with 'custom_'.

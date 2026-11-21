@@ -179,7 +179,7 @@ export class CharacterSheetService {
     };
   }
 
-  /** Admin tools (request #32): the sheet of any living character. */
+  /** Admin tools (request #41): the sheet of any living character. */
   async sheetOf(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
     return this.buildSheet(db, c);
   }

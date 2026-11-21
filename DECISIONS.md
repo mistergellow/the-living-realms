@@ -618,9 +618,9 @@ it. **Open questions for the owner:** what raises (and lowers) Threat, whether
 players see it, the tiers and their effects, and whether it changes rewards.
 Not implemented until those are decided.
 
-## ADR-036 — Admin tools and custom content in a registry
+## ADR-044 — Admin tools and custom content in a registry
 
-**Status:** accepted (request #32)
+**Status:** accepted (request #41)
 
 **Context.** The owner wants to create weapons and abilities and give them to
 characters to test the game, without a deploy for each change. Content lives

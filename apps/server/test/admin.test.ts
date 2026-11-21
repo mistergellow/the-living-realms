@@ -49,7 +49,7 @@ const nova = {
   scaling: { intellect: 1 },
 };
 
-describe('admin tools (request #32)', () => {
+describe('admin tools (request #41)', () => {
   it('only accounts in ADMIN_EMAILS are admins', async () => {
     const { admin, player } = await setup();
     const me = await req(admin.cookie, 'GET', '/api/auth/me');

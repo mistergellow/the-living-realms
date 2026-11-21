@@ -205,7 +205,7 @@ export const ITEMS = {
 export type ItemDefId = keyof typeof ITEMS;
 
 export function getItemDef(id: string): ItemDef | undefined {
-  // Built-in content first; then admin-made items (request #32).
+  // Built-in content first; then admin-made items (request #41).
   return Object.hasOwn(ITEMS, id) ? (ITEMS as Record<string, ItemDef>)[id] : customItemDef(id);
 }
 

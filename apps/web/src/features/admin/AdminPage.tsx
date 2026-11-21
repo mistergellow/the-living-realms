@@ -10,7 +10,7 @@ import { ItemEditor } from './ItemEditor';
 import './admin.css';
 
 /*
- * Admin tools (request #32), /admin. Only for accounts listed in the server's
+ * Admin tools (request #41), /admin. Only for accounts listed in the server's
  * ADMIN_EMAILS; the server enforces it on every /api/admin call.
  */
 

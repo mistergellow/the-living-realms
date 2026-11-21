@@ -380,7 +380,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas, especiais (só a estrutura existe)
 
-## Admin e conteúdo personalizado (pedido #32, ADR-036)
+## Admin e conteúdo personalizado (pedido #41, ADR-044)
 
 - Quem é admin: variável `ADMIN_EMAILS` (`apps/server/src/config.ts`, `.env.example`, `playwright.config.ts`, `docs/DEPLOY_RAILWAY.md`) → `isAdminEmail`/`requireAdmin` (`apps/server/src/plugins/auth.ts`) → `AccountDto.isAdmin` (`auth.routes.ts`)
 - Contrato: `packages/shared/src/admin.ts` (`customItemInputSchema`, `customAbilityInputSchema`, `customAbilityEffectSchema`, `CustomContentDto`, `AdminCharacterDto`, pedidos `adminGrantItemSchema`/`adminUpdateItemSchema`/`adminTeachSkillSchema`/`adminUpdateCharacterSchema`)
@@ -390,7 +390,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Tempo real: `ControlMessage` `content.changed` (`packages/server-kit/src/bus.ts`) → `RealtimeGateway.onContentChanged` (`gateway.ts`)
 - Web: `apps/web/src/features/admin/` (`api.ts` com `useCustomContent`, `AdminPage.tsx`, `CharacterTools.tsx`, `ItemEditor.tsx`, `AbilityEditor.tsx`, `catalog.ts`, `fields.tsx`, `admin.css`); `auth/guards.tsx` (`RequireAuth` carrega o conteúdo antes dos ecrãs); rota `/admin` em `router.tsx`; link "Admin" em `CharacterSelectPage.tsx`
 - Testes: `game-core/test/custom-content.test.ts`, `apps/server/test/admin.test.ts`, `e2e/admin.spec.ts`; TRUNCATE de `custom_content` em `helpers.ts` e `worker.test.ts`
-- Docs: `DATABASE.md` (custom_content, eventos `admin.*`), `DECISIONS.md` ADR-036, `ARCHITECTURE.md` §9
+- Docs: `DATABASE.md` (custom_content, eventos `admin.*`), `DECISIONS.md` ADR-044, `ARCHITECTURE.md` §9
 - **Tipo de arma novo / espaço novo / tipo de item novo:** rever `validateCustomItem` (`SLOTS_BY_KIND`, `OFFHAND_TYPES`) e os selects de `ItemEditor.tsx`
 - **Estado novo (`STATUS_IDS`):** aparece sozinho nos formulários (vêm de `STATUS_IDS`/`STATUS_NAMES`)
 

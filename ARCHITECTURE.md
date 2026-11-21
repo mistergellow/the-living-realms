@@ -333,9 +333,9 @@ DATABASE.md).
 - **Routing:** `/login`, `/register` (guests) → `/characters`, `/characters/new`
   (account area) → the in-game shell (`GameShell`, ADR-031): `/home` (hub),
   `/world` (map), `/rifts`, `/friends` → `/rifts/lobbies/:id`, `/rifts/runs/:id`
-  (combat, own screen). `/admin` (ADR-036): admin tools, only for accounts in
+  (combat, own screen). `/admin` (ADR-044): admin tools, only for accounts in
   `ADMIN_EMAILS`.
-- **Custom content (ADR-036):** after login, `RequireAuth` loads
+- **Custom content (ADR-044):** after login, `RequireAuth` loads
   `GET /api/content/custom` into the game-core content registry, so admin-made
   items and abilities work everywhere `getItemDef`/`getAbility` are used.
 - **State:**

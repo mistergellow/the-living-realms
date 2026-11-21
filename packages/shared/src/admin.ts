@@ -3,7 +3,7 @@ import { attributesSchema, EQUIP_SLOTS, type CharacterSheetDto } from './api.js'
 import { COMBAT_COLUMNS, STATUS_IDS } from './combat.js';
 
 /* ---------------------------------------------------------------------------
- * Admin tools (request #32): testing controls for the project owner only.
+ * Admin tools (request #41): testing controls for the project owner only.
  * Admins are listed in the server's ADMIN_EMAILS variable. Custom content
  * (items and abilities) is stored in the database and loaded into the
  * game-core content registry by the server and by every client.

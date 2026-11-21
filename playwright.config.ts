@@ -21,7 +21,7 @@ const env = {
   WORLD_TICK_MS: '1000',
   // Every test registers/logs in from the same IP: keep the auth rate limit out of the way.
   AUTH_RATE_LIMIT: '100',
-  // Admin tools (request #32): e2e/admin.spec.ts logs in with this account.
+  // Admin tools (request #41): e2e/admin.spec.ts logs in with this account.
   ADMIN_EMAILS: 'e2e-admin@example.com',
 } as Record<string, string>;
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/* Small form controls for the admin tools (request #32). */
+/* Small form controls for the admin tools (request #41). */
 
 export function Num(props: {
   label: string;

@@ -24,7 +24,7 @@ import { errors } from '../../lib/errors.js';
 type Kind = 'item' | 'ability';
 
 /**
- * Admin-made items and abilities (request #32). The database is the source of
+ * Admin-made items and abilities (request #41). The database is the source of
  * truth; this service keeps the game-core content registry of this process in
  * sync and tells the other server instances to reload.
  */

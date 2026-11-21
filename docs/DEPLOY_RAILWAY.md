@@ -48,7 +48,7 @@ variáveis abaixo usam-nos.
    ADMIN_EMAILS=o-teu-email@exemplo.com
    ```
 
-   `ADMIN_EMAILS` (pedido #32): o email da conta com acesso ao painel `/admin`
+   `ADMIN_EMAILS` (pedido #41): o email da conta com acesso ao painel `/admin`
    (criar armas e habilidades, dar itens). Vários emails separados por vírgula.
    Sem esta variável ninguém é admin.
 

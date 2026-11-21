@@ -40,7 +40,7 @@ const ability = (over: Partial<CustomAbilityInput> = {}) =>
 
 afterEach(() => setCustomContent({ items: [], abilities: [] }));
 
-describe('custom content (admin tools, request #32)', () => {
+describe('custom content (admin tools, request #41)', () => {
   it('ids are prefixed and slugged', () => {
     expect(customIdFor('Blade of Óz!', 'a1b2c3')).toBe('custom_blade_of_z_a1b2c3');
   });

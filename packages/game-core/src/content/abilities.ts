@@ -517,7 +517,7 @@ export const ABILITIES = {
 export type AbilityId = keyof typeof ABILITIES;
 
 export function getAbility(id: string): AbilityDef | undefined {
-  // Built-in content first; then admin-made abilities (request #32).
+  // Built-in content first; then admin-made abilities (request #41).
   return Object.hasOwn(ABILITIES, id)
     ? (ABILITIES as Record<string, AbilityDef>)[id]
     : customAbilityDef(id);

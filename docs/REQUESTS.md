@@ -554,11 +554,11 @@ ações dentro da equipa = ordem planeada (D49); decisões de grupo por votaçã
 - Docs: CHANGE_MAP, DECISIONS (ADR-032–035), ARCHITECTURE §7, DATABASE,
   ROADMAP, CLAUDE.md.
 
-### #32 — 2026-11-21 — Controlo de "admin" para testar
+### #41 — 2026-11-21 — Controlo de "admin" para testar
 
 **Pedido:** "Cria uma forma de admin control. O user conseguir criar armas /
 adicionar poderes etc. para testar. Eu sou o único admin."
-**Decisões (técnicas, ADR-036):**
+**Decisões (técnicas, ADR-044):**
 
 - Admin = contas cujo email está na variável `ADMIN_EMAILS` do servidor (não
   há forma de alguém se tornar admin pelo jogo). **No Railway, o dono tem de
@@ -588,6 +588,6 @@ adicionar poderes etc. para testar. Eu sou o único admin."
     pré-visualização do texto.
 - Todas as ações do admin ficam em `world_events` (`admin.*`).
 - Testes: 6 unitários (game-core), 5 de integração (servidor), 2 e2e.
-- Docs: CHANGE_MAP ("Admin e conteúdo personalizado"), DECISIONS ADR-036,
+- Docs: CHANGE_MAP ("Admin e conteúdo personalizado"), DECISIONS ADR-044,
   DATABASE, ARCHITECTURE §9, ROADMAP, DEPLOY_RAILWAY, `.env.example`.
 

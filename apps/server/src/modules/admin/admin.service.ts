@@ -23,7 +23,7 @@ import type { CharacterSheetService } from '../characters/sheet.service.js';
 import { riftsRepository } from '../rifts/rifts.repository.js';
 
 /**
- * Admin character tools (request #32): give and change items, teach and forget
+ * Admin character tools (request #41): give and change items, teach and forget
  * abilities, overwrite attributes and reputation. Works on any living
  * character. Every change is written to world_events (`admin.*`) in the same
  * transaction. Changes made during a Rift apply to the next fight/run (the

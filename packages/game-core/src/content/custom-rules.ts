@@ -4,7 +4,7 @@ import { CUSTOM_ID_PREFIX } from './custom.js';
 import { getWeaponType } from './weapons.js';
 
 /*
- * Rules for admin-made content (request #32): a custom item or ability must
+ * Rules for admin-made content (request #41): a custom item or ability must
  * respect the same equipment and weapon rules as built-in content.
  */
 
