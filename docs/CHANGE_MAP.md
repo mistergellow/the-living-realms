@@ -132,9 +132,17 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `HexCoord` em `packages/shared/src/api.ts`; `position` em `CharacterDto` e `PresencePlayer`
 - BD: `characters.hex_q/hex_r`, `worlds.spawn_q/spawn_r`
 - Servidor: `characters.service.ts` (spawn, `toCharacterDto`), `gateway.ts` (presença)
-- Web: `apps/web/src/features/world/map-scene.ts` (desenho em PixiJS: `HEX_SIZE`, `GRID_RADIUS`, cores, tokens, rato/teclado), `map-camera.ts` (zoom, arrastar, limites `MIN_ZOOM`/`MAX_ZOOM`), `HexMap.tsx` (componente React + botões de zoom), `WorldPage.tsx` (seleção, hexágono por baixo do rato, `HexInfo`)
+- Web: `apps/web/src/features/world/map-scene.ts` (desenho em PixiJS: `HEX_SIZE`, `REGION_COLORS`, `MAP_BOUNDS`, tokens, rato/teclado), `map-camera.ts` (zoom, arrastar, limites `MIN_ZOOM`/`MAX_ZOOM`), `HexMap.tsx` (componente React + botões de zoom), `WorldPage.tsx` (seleção, hexágono por baixo do rato, `HexInfo`)
 - Testes: `game-core/test/hex.test.ts`, `characters.test.ts` (posição inicial), `apps/web/test/map-camera.test.ts`
 - Futuro (AP, terreno): `ARCHITECTURE.md` §8, `DATABASE.md` → map_hexes
+
+## Mapa do mundo: continente, regiões (países + Riftlands), capitais
+
+- Dados/regras (puros, determinísticos): `packages/game-core/src/content/world-map.ts` (`REGIONS` com nome, tipo e capital; `CONTINENT_HALF_WIDTH/HEIGHT`, `RIFTLANDS_CENTER`, `RIFTLANDS_WEIGHT`; `worldMapHexes`, `mapHexAt`, `regionAt`)
+- Web: `map-scene.ts` (`REGION_COLORS` — **região nova precisa de cor aqui**; fronteiras/costa, `capitalMarker`, nomes das regiões, `MAP_BOUNDS` para a câmara), `WorldPage.tsx` (`HexInfo` mostra região/capital)
+- Spawn: `worlds.spawn_q/spawn_r` tem de cair em terra (hoje (0, 0) = Riftlands)
+- Testes: `game-core/test/world-map.test.ts` (forma, capitais, ligação, fronteiras), `e2e/foundation.spec.ts` ("The Riftlands" no hexágono inicial)
+- Mudar a forma ou as capitais muda que hexágonos existem: rever personagens guardados fora de terra e o teste do spawn
 
 ## Mundo (world) e relógio (tick)
 

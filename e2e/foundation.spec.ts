@@ -43,7 +43,14 @@ test('register → create character → enter the world → log out → log in',
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
+  // The continent: the spawn hex (centre of the view) lies in the neutral Riftlands.
+  await expect(async () => {
+    await page.locator('.world-map canvas').click(); // the scene may still be loading
+    await expect(page.getByTestId('hex-info')).toContainText('The Riftlands', { timeout: 500 });
+  }).toPass();
   await page.screenshot({ path: 'test-results/screens/02-world.png' });
+  for (let i = 0; i < 8; i++) await page.keyboard.press('-');
+  await page.screenshot({ path: 'test-results/screens/02-world-continent.png' });
 
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -191,6 +198,7 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
 });
 
 test('friends + private lobby + group Rift with two players', async ({ browser }) => {
+  test.setTimeout(90_000); // two players, a lobby and a replayed enemy phase on a software-rendered canvas
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
   const nameA = randomName('Lead');
@@ -249,7 +257,12 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await expect(a.getByTestId('unit-party').filter({ hasText: nameB })).toContainText('(left)', {
     timeout: 10_000,
   });
-  await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`);
+  // The text log waits for the canvas to finish replaying the enemy phase, and
+  // a page in the background barely animates: bring A to the front first.
+  await a.bringToFront();
+  await expect(a.getByTestId('combat-log')).toContainText(`${nameB} left the Rift.`, {
+    timeout: 20_000,
+  });
 });
 
 test('professions: practise fishing and gain XP', async ({ page }) => {
