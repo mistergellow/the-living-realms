@@ -198,6 +198,7 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
 });
 
 test('friends + private lobby + group Rift with two players', async ({ browser }) => {
+  test.setTimeout(90_000); // two players, a lobby and a replayed enemy phase on a software-rendered canvas
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
   const nameA = randomName('Lead');

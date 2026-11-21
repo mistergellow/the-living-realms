@@ -663,7 +663,7 @@ AP" (tempo das atividades; mover gasta AP; ganha-se X AP por hora real).
   se afasta o zoom (zoom mínimo 0.45 → 0.2); o mar não se seleciona.
 - Painel do hexágono: mostra a região (e a capital), ex. "The Riftlands · Hex (0, 0)".
 - Spawn continua em (0, 0), agora no centro das Riftlands (A65).
-- e2e do Rift em grupo: traz a página A para a frente e espera até 20 s pela linha "left the Rift" (o registo espera pela animação da fase inimiga, que quase pára numa página em segundo plano; falhava no CI).
+- e2e do Rift em grupo: traz a página A para a frente e espera até 20 s pela linha "left the Rift" (o registo espera pela animação da fase inimiga, que quase pára numa página em segundo plano; falhava no CI); o teste passa a ter 90 s (eram 30 s).
 - Testes: 81 unitários (+6 do mapa), 65 de integração, 18 web, 9 e2e (o e2e
   verifica a região do hexágono inicial e tira captura do continente).
 - Docs: CHANGE_MAP, DECISIONS (ADR-040), ROADMAP, ARCHITECTURE.
