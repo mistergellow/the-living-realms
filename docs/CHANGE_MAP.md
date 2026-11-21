@@ -209,6 +209,21 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Web: `features/worldboss/WorldBossPage.tsx` (rota `/world-boss`), `world/api.ts` (`useWorldBoss`, `useWorldBossFight`), `map-scene.ts` (`placeBoss`), `CombatPage.tsx`/`EndOverlay.tsx` (dano)
 - Testes: `apps/server/test/world-boss.test.ts`, `world-systems.test.ts`
 
+## Inimigos com mecânicas, estados novos e ícones (pedido #44)
+
+- Estados: `STATUS_IDS` (`shared/combat.ts`) → `STATUS_NAMES`, `STATUS_DESCRIPTIONS` (`abilities.ts`) → regras em `engine.ts` (`startRound`: ritual, rastilho; `applyEffect`: força, intangível, espinhos, dreno; `summon`, `explode`) → ícone em `shared/ui/EffectIcon.tsx` (`ICONS`) → cor em `combat-scene.ts` (`STATUS_COLORS`). **Estado novo: tocar em todos estes.**
+- Efeitos de habilidade: `AbilityEffect` (`drain`, `summon`), `describeEffects`, `abilityEffectIcons` (`EffectIcon.tsx`), IA `expectedValue` (`engine.ts`)
+- Inimigos: `ENEMIES` (`startStatuses`, `mechanic`), `enemyCombatant` (`combat/state.ts`), salas em `content/rifts.ts`, arte em `EnemyAvatar.tsx` (`ART`). **Inimigo novo: dados + arte + sala + `pnpm sim`.**
+- Log: `summon` / `explode` (`CombatLogEntry`) → `combat-text.ts`, `combat-timeline.ts`, `combat-scene.ts`
+- Ícones na interface: `UnitChips.tsx` (estados e intenções), `CombatPage.tsx` (lista de inimigos + mecânica), `AbilityBar.tsx`, `sheet/AbilitiesTab.tsx`
+- Dodge + Agilidade: `BASIC_ACTIONS.block.perAgility`
+- Testes: `game-core/test/combat.test.ts` ("enemy mechanics")
+
+## Recompensa da época do world boss (pedido #44)
+
+- `WORLD_BOSS_SEASONS[].endsAt/reward` (`world-boss.ts`), item `hollow_heart` (`items.ts`), `world_bosses.rewarded_at` (migração 0014), `WorldBossService.settleSeason`/`seasonOver`, `WorldBossDto.endsAt/seasonOver/rewardedAt/reward`, `WorldBossPage.tsx`
+- Testes: `world-boss.test.ts` ("season reward")
+
 ## Combate sem Dodge aleatório; Block chama-se Dodge (pedido #43)
 
 - Regras: `engine.ts` (`applyEffect` sem esquiva), `stats.ts` (sem `dodgeChance`), `affixes.ts` (sem o efeito "dodge"), `enemies.ts`

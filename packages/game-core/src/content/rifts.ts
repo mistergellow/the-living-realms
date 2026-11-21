@@ -130,6 +130,45 @@ export const RIFTS = {
             { enemy: 'shard_spitter', slot: 2 },
           ],
         },
+        // Request #44: rooms built around the new enemies' mechanics.
+        {
+          name: 'Leech Pools',
+          enemies: [
+            { enemy: 'rift_leech', slot: 0 },
+            { enemy: 'rift_leech', slot: 1 },
+            { enemy: 'shard_spitter', slot: 2 },
+          ],
+        },
+        {
+          name: 'Thorn Thicket',
+          enemies: [
+            { enemy: 'thornback', slot: 0 },
+            { enemy: 'rift_husk', slot: 1 },
+            { enemy: 'void_shaman', slot: 2 },
+          ],
+        },
+        {
+          name: 'Brood Chamber',
+          enemies: [
+            { enemy: 'brood_mother', slot: 0 },
+            { enemy: 'shard_spitter', slot: 2 },
+          ],
+        },
+        {
+          name: 'Phase Hall',
+          enemies: [
+            { enemy: 'phase_stalker', slot: 0 },
+            { enemy: 'hollow_hound', slot: 1 },
+          ],
+        },
+        {
+          name: 'Zealot Shrine',
+          enemies: [
+            { enemy: 'rift_husk', slot: 0 },
+            { enemy: 'rift_zealot', slot: 1 },
+            { enemy: 'void_shaman', slot: 2 },
+          ],
+        },
       ],
       elite: [
         {
@@ -138,6 +177,22 @@ export const RIFTS = {
             { enemy: 'rift_bulwark', slot: 0, elite: true },
             { enemy: 'rift_husk', slot: 1, elite: true },
             { enemy: 'shard_spitter', slot: 2 },
+          ],
+        },
+        {
+          name: 'The Mite Hive',
+          enemies: [
+            { enemy: 'brood_mother', slot: 0, elite: true },
+            { enemy: 'volatile_mite', slot: 1 },
+            { enemy: 'volatile_mite', slot: 2 },
+          ],
+        },
+        {
+          name: 'Stalker Pack',
+          enemies: [
+            { enemy: 'phase_stalker', slot: 0, elite: true },
+            { enemy: 'phase_stalker', slot: 1 },
+            { enemy: 'rift_zealot', slot: 2 },
           ],
         },
         {
@@ -152,9 +207,9 @@ export const RIFTS = {
       boss: {
         name: "Warden's Seal",
         isBoss: true,
+        // Request #44 (balance): the Warden stands in front, so melee can reach it.
         enemies: [
           { enemy: 'rift_warden', slot: 0 },
-          { enemy: 'rift_bulwark', slot: 1 },
           { enemy: 'shard_spitter', slot: 2 },
         ],
       },

@@ -4,6 +4,7 @@ import { FormError } from '../../../shared/ui/FormError';
 import { AbilityIcon, abilitySchool, type AbilitySchool } from '../../rifts/AbilityIcon';
 import { useLoadout } from '../api';
 import { DragGhost, Tooltip, useDragAndDrop, useHover } from './drag';
+import { AbilityEffects } from '../../../shared/ui/EffectIcon';
 
 /*
  * Abilities tab (request #39). Weapon abilities, Block and Swap are always
@@ -71,7 +72,11 @@ function AbilityCard(props: { a: AbilityDto; note?: string; prepared?: boolean; 
           <span className="spacer" />
           {props.note && <span className="field-hint">{props.note}</span>}
         </div>
-        <div className="field-hint">{[a.targeting, ...a.effects].join(' · ')}</div>
+        <div className="row" style={{ gap: '0.5rem' }}>
+          <AbilityEffects abilityId={a.id} />
+          <span className="field-hint">{a.targeting}</span>
+        </div>
+        <div className="field-hint">{a.effects.join(' · ')}</div>
       </div>
     </div>
   );

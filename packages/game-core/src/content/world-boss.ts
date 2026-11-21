@@ -19,6 +19,10 @@ export interface WorldBossSeason {
   name: string;
   description: string;
   maxHp: number;
+  /** When the season ends if the boss still stands (ISO date). PLACEHOLDER (A93). */
+  endsAt: string;
+  /** For every member of the party with the most damage when the season ends (request #44). */
+  reward: { reputation: number; item: string };
 }
 
 export const WORLD_BOSS_SEASONS: readonly WorldBossSeason[] = [
@@ -31,6 +35,8 @@ export const WORLD_BOSS_SEASONS: readonly WorldBossSeason[] = [
       'A giant of stone and Rift-light that walks the Riftlands. Every party that ' +
       'stands against it chips away at a life that will take months to end.',
     maxHp: 5_000_000,
+    endsAt: '2027-03-01T00:00:00Z',
+    reward: { reputation: 1000, item: 'hollow_heart' },
   },
 ];
 

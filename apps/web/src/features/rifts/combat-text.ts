@@ -46,6 +46,10 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
       return `${name(e.targetId)} gets back up with ${e.hp} HP.`;
     case 'timeout':
       return e.actorId ? `${name(e.actorId)} ran out of time.` : 'Time is up: the round resolves.';
+    case 'summon':
+      return `${name(e.actorId)} calls ${name(e.unitId)} into the fight!`;
+    case 'explode':
+      return `${name(e.actorId)} explodes!`;
     case 'room':
       return e.outcome === 'cleared' ? 'The room is clear.' : 'The party has fallen.';
   }

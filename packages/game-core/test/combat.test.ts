@@ -182,7 +182,11 @@ describe('Block', () => {
     expect(getAbility('block')!.focusCost).toBe(BASIC_ACTIONS.block.focusCost);
     s = plan(s, 'p:a', { abilityId: 'block' });
     s = plan(s, 'p:a', { abilityId: 'block' });
-    expect(unit(s, 'p:a').block).toBe(2 * BASIC_ACTIONS.block.amount);
+    // Request #44: + 1 per 2 Agility (the test member has the base 5 → +2).
+    const perUse =
+      BASIC_ACTIONS.block.amount +
+      Math.floor(unit(s, 'p:a').attributes!.agility * BASIC_ACTIONS.block.perAgility);
+    expect(unit(s, 'p:a').block).toBe(2 * perUse);
     const warden = s.combatants.find((c) => c.enemyDefId === 'rift_warden')!;
     warden.intents = [{ abilityId: 'warden_slam', targetIds: [], column: 'front' }];
     s = ok(setReady(s, 'p:a'));
@@ -480,5 +484,75 @@ describe('PvP (test mode)', () => {
     expect(s).toMatchObject({ phase: 'ended', outcome: 'victory' });
     expect(unit(s, 'p:b').downed).toBe(true);
     expect(s.log.some((l) => l.t === 'revived')).toBe(false);
+  });
+});
+
+describe('enemy mechanics (request #44)', () => {
+  const big = { maxHp: 999, armor: 0, physicalReduction: 0, magicReduction: 0 };
+  const enemyOf = (s: CombatState, id: string) => s.combatants.find((c) => c.enemyDefId === id)!;
+
+  it('Thorns: hitting a Thornback hurts the attacker', () => {
+    let s = calm(encounter([member('a', 0, big)], room([{ enemy: 'thornback', slot: 0 }])));
+    expect(enemyOf(s, 'thornback').statuses).toMatchObject([{ id: 'thorns', value: 3 }]);
+    const before = unit(s, 'p:a').hp;
+    s = plan(s, 'p:a', { abilityId: 'stab', targetColumn: 'front' });
+    expect(unit(s, 'p:a').hp).toBe(before - 3);
+  });
+
+  it('Intangible: every hit deals at most 1', () => {
+    let s = calm(encounter([member('a', 0, big)], room([{ enemy: 'phase_stalker', slot: 0 }])));
+    const stalker = enemyOf(s, 'phase_stalker');
+    stalker.statuses.push({ id: 'intangible', turns: 1, value: 0 });
+    const hp = stalker.hp;
+    s = plan(s, 'p:a', { abilityId: 'slash', targetColumn: 'front' });
+    expect(unit(s, stalker.id).hp).toBe(hp - 1);
+  });
+
+  it('Drain heals the leech; Strength adds damage; Ritual grows Strength every round', () => {
+    let s = calm(
+      encounter(
+        [member('a', 0, big)],
+        room([
+          { enemy: 'rift_leech', slot: 0 },
+          { enemy: 'rift_zealot', slot: 1 },
+        ]),
+      ),
+    );
+    const leech = enemyOf(s, 'rift_leech');
+    leech.hp = 5;
+    leech.intents = [{ abilityId: 'leech_drain', targetIds: ['p:a'], column: 'front' }];
+    const zealot = enemyOf(s, 'rift_zealot');
+    zealot.intents = [{ abilityId: 'zealot_ritual', targetIds: [zealot.id], column: null }];
+    s = ok(setReady(s, 'p:a'));
+    expect(unit(s, leech.id).hp).toBeGreaterThan(5);
+    // Round 2 began: the ritual gave 2 Strength.
+    expect(unit(s, zealot.id).statuses.find((x) => x.id === 'strength')?.value).toBe(2);
+  });
+
+  it('Fuse: a Volatile Mite explodes two rounds later unless killed', () => {
+    let s = calm(encounter([member('a', 0, big)], room([{ enemy: 'volatile_mite', slot: 0 }])));
+    const mite = enemyOf(s, 'volatile_mite');
+    mite.intents = [{ abilityId: 'mite_fuse', targetIds: [mite.id], column: null }];
+    s = ok(setReady(s, 'p:a')); // fuse lit
+    for (const c of s.combatants) if (c.side === 'enemies') c.intents = [];
+    s = ok(setReady(s, 'p:a'));
+    expect(unit(s, mite.id).downed).toBe(false);
+    for (const c of s.combatants) if (c.side === 'enemies') c.intents = [];
+    const hp = unit(s, 'p:a').hp;
+    s = ok(setReady(s, 'p:a'));
+    expect(s.log.some((l) => l.t === 'explode' && l.actorId === mite.id)).toBe(true);
+    expect(unit(s, 'p:a').hp).toBeLessThan(hp);
+    expect(unit(s, mite.id).downed).toBe(true);
+  });
+
+  it('Summon: the Brood Mother calls a mite into an empty position', () => {
+    let s = calm(encounter([member('a', 0, big)], room([{ enemy: 'brood_mother', slot: 0 }])));
+    const mother = enemyOf(s, 'brood_mother');
+    mother.intents = [{ abilityId: 'brood_spawn', targetIds: [mother.id], column: null }];
+    s = ok(setReady(s, 'p:a'));
+    const mites = s.combatants.filter((c) => c.enemyDefId === 'volatile_mite');
+    expect(mites).toHaveLength(1);
+    expect(mites[0]!.slot).toBe(1);
+    expect(s.log.some((l) => l.t === 'summon')).toBe(true);
   });
 });

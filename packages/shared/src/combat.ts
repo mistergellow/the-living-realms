@@ -27,14 +27,33 @@ export const columnOfSlot = (slot: number): CombatColumn =>
 /** Kept for drawing order; everyone stands on one line now. */
 export const lineOfSlot = (_slot: number) => 0;
 
-export const STATUS_IDS = ['bleed', 'burn', 'mark', 'weaken', 'stun'] as const;
+/**
+ * Statuses (request #44 adds strength, thorns, intangible, ritual and fuse,
+ * the mechanics of the new enemies). Shown as icons, Slay-the-Spire style.
+ */
+export const STATUS_IDS = [
+  'bleed',
+  'burn',
+  'mark',
+  'weaken',
+  'stun',
+  'strength',
+  'thorns',
+  'intangible',
+  'ritual',
+  'fuse',
+] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
 
 export interface StatusView {
   id: StatusId;
   /** Rounds left (counted down at the start of every round). */
   turns: number;
-  /** Damage per tick for bleed/burn. */
+  /**
+   * Bleed/burn: damage per tick; strength: extra damage per hit; thorns:
+   * damage back to attackers; ritual: strength gained per round; fuse:
+   * explosion damage when it runs out.
+   */
   value: number;
 }
 
@@ -107,7 +126,11 @@ export type CombatLogEntry =
   | { t: 'downed'; targetId: string }
   | { t: 'revived'; targetId: string; hp: number }
   | { t: 'timeout'; actorId: string | null }
-  | { t: 'room'; outcome: 'cleared' | 'wiped' };
+  | { t: 'room'; outcome: 'cleared' | 'wiped' }
+  /** A unit called another into the fight (request #44). */
+  | { t: 'summon'; actorId: string; unitId: string }
+  /** A unit's fuse ran out: it explodes, hurting the other side (request #44). */
+  | { t: 'explode'; actorId: string };
 
 /**
  * Round structure (combat spec, request #31): `planning` = players choose

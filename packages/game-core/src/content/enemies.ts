@@ -1,3 +1,4 @@
+import type { StatusId } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 
 /*
@@ -19,6 +20,10 @@ export interface EnemyDef {
   power: number;
   abilities: AbilityId[];
   isBoss?: boolean;
+  /** Statuses it starts every fight with (e.g. Thorns), request #44. */
+  startStatuses?: Array<{ id: StatusId; value: number }>;
+  /** One line on its mechanic, shown to players (request #44). */
+  mechanic?: string;
 }
 
 const enemy = (e: EnemyDef) => e;
@@ -27,34 +32,34 @@ export const ENEMIES = {
   rift_husk: enemy({
     id: 'rift_husk',
     name: 'Rift Husk',
-    maxHp: 26,
+    maxHp: 30,
     armor: 8,
     magicResist: 0,
     initiative: 3,
     critChance: 5,
-    power: 1,
+    power: 1.15,
     abilities: ['husk_claw'],
   }),
   shard_spitter: enemy({
     id: 'shard_spitter',
     name: 'Shard Spitter',
-    maxHp: 18,
+    maxHp: 20,
     armor: 0,
     magicResist: 10,
     initiative: 7,
     critChance: 5,
-    power: 1,
+    power: 1.15,
     abilities: ['spit_shard'],
   }),
   hollow_hound: enemy({
     id: 'hollow_hound',
     name: 'Hollow Hound',
-    maxHp: 22,
+    maxHp: 26,
     armor: 4,
     magicResist: 4,
     initiative: 9,
     critChance: 10,
-    power: 1,
+    power: 1.1,
     abilities: ['hound_lunge'],
   }),
   rift_bulwark: enemy({
@@ -71,15 +76,102 @@ export const ENEMIES = {
   rift_warden: enemy({
     id: 'rift_warden',
     name: 'Rift Warden',
-    maxHp: 125,
-    armor: 15,
+    maxHp: 130,
+    armor: 10,
     magicResist: 15,
     initiative: 5,
     critChance: 5,
-    power: 1,
+    power: 1.2,
     precision: 7,
     abilities: ['warden_slam', 'warden_pulse', 'warden_seal'],
     isBoss: true,
+  }),
+  // ---- request #44: enemies with their own mechanics (PROVISIONAL numbers) ----
+  rift_leech: enemy({
+    id: 'rift_leech',
+    name: 'Rift Leech',
+    maxHp: 26,
+    armor: 4,
+    magicResist: 4,
+    initiative: 5,
+    critChance: 5,
+    power: 1.15,
+    abilities: ['leech_drain'],
+    mechanic: 'Heals itself for the damage it deals.',
+  }),
+  thornback: enemy({
+    id: 'thornback',
+    name: 'Thornback',
+    maxHp: 30,
+    armor: 12,
+    magicResist: 0,
+    initiative: 2,
+    critChance: 0,
+    power: 1.15,
+    abilities: ['thorn_lash'],
+    startStatuses: [{ id: 'thorns', value: 3 }],
+    mechanic: 'Thorns: whoever hits it takes 3 damage back. Use spells or ranged hits wisely.',
+  }),
+  void_shaman: enemy({
+    id: 'void_shaman',
+    name: 'Void Shaman',
+    maxHp: 20,
+    armor: 0,
+    magicResist: 12,
+    initiative: 6,
+    critChance: 0,
+    power: 1,
+    abilities: ['shaman_empower', 'shaman_mend'],
+    mechanic: 'Gives its allies Strength and heals them. Kill it first.',
+  }),
+  brood_mother: enemy({
+    id: 'brood_mother',
+    name: 'Brood Mother',
+    maxHp: 40,
+    armor: 6,
+    magicResist: 6,
+    initiative: 2,
+    critChance: 0,
+    power: 1,
+    abilities: ['brood_spawn', 'brood_slam'],
+    mechanic: 'Calls Volatile Mites into the fight.',
+  }),
+  volatile_mite: enemy({
+    id: 'volatile_mite',
+    name: 'Volatile Mite',
+    maxHp: 9,
+    armor: 0,
+    magicResist: 0,
+    initiative: 8,
+    critChance: 0,
+    power: 1,
+    precision: 3,
+    abilities: ['mite_fuse'],
+    mechanic: 'Lights a fuse and explodes 2 rounds later, hurting your whole party.',
+  }),
+  phase_stalker: enemy({
+    id: 'phase_stalker',
+    name: 'Phase Stalker',
+    maxHp: 26,
+    armor: 4,
+    magicResist: 4,
+    initiative: 9,
+    critChance: 10,
+    power: 1,
+    abilities: ['stalker_phase', 'stalker_strike'],
+    mechanic: 'Turns Intangible (every hit deals 1) on some rounds: strike when it is solid.',
+  }),
+  rift_zealot: enemy({
+    id: 'rift_zealot',
+    name: 'Rift Zealot',
+    maxHp: 26,
+    armor: 2,
+    magicResist: 8,
+    initiative: 4,
+    critChance: 0,
+    power: 1,
+    abilities: ['zealot_ritual', 'zealot_strike'],
+    mechanic: 'Its ritual makes it stronger every round. End it fast.',
   }),
   /**
    * World boss, season 1 (request #43). Its real HP is the shared pool in the
@@ -109,8 +201,8 @@ export type EnemyId = keyof typeof ENEMIES;
  */
 export const ELITE_RULES = {
   namePrefix: 'Elite',
-  hpMultiplier: 1.6,
-  powerMultiplier: 1.3,
+  hpMultiplier: 1.75,
+  powerMultiplier: 1.4,
   /** Extra Precision (more Focus per round). */
   precisionBonus: 2,
 } as const;

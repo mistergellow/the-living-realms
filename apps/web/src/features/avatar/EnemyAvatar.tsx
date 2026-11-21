@@ -92,11 +92,198 @@ function Warden() {
   );
 }
 
+/* ---- request #44: new enemies (PROVISIONAL art) ---- */
+function Bulwark() {
+  return (
+    <>
+      <path d="M30 150 L34 92 C36 74 50 66 64 66 C80 66 92 76 92 94 L96 150 Z" fill="#4b5263" />
+      <rect
+        x="14"
+        y="78"
+        width="40"
+        height="66"
+        rx="6"
+        fill="#6b7590"
+        stroke="#c3ccdf"
+        strokeWidth="3"
+      />
+      <path d="M34 90 L34 132 M20 110 L48 110" stroke="#c3ccdf" strokeWidth="3" />
+      <circle cx="66" cy="54" r="16" fill="#5b6376" />
+      <rect x="56" y="50" width="20" height="5" rx="2" fill="#7fd3ff" className="av-glow" />
+    </>
+  );
+}
+
+function Leech() {
+  return (
+    <>
+      <path
+        d="M20 140 C20 110 40 92 64 92 C92 92 108 112 104 140 C96 150 30 152 20 140 Z"
+        fill="#7a2b3c"
+      />
+      <path
+        d="M26 124 C34 118 44 118 52 124 M60 120 C70 114 82 114 92 120"
+        stroke="#a84a5e"
+        strokeWidth="3"
+        fill="none"
+      />
+      <circle cx="24" cy="112" r="14" fill="#8e3448" />
+      <circle cx="20" cy="112" r="8" fill="#2a0c12" />
+      <path
+        d="M14 106 L18 110 M14 118 L18 114 M26 104 L22 108 M26 120 L22 116"
+        stroke="#ffd0d6"
+        strokeWidth="2"
+      />
+    </>
+  );
+}
+
+function Thornback() {
+  return (
+    <>
+      <path d="M22 148 C18 112 40 88 66 88 C92 88 106 112 102 148 Z" fill="#3f5a2c" />
+      <path
+        d="M30 100 L22 80 L40 96 M46 90 L44 66 L58 88 M66 88 L72 62 L78 90 M86 96 L102 78 L94 104 M98 116 L114 108 L102 124"
+        fill="#8fd16a"
+        stroke="#cdf0b0"
+        strokeWidth="1.5"
+      />
+      <circle cx="34" cy="122" r="4" fill="#ffd166" className="av-glow" />
+      <circle cx="48" cy="124" r="4" fill="#ffd166" className="av-glow" />
+    </>
+  );
+}
+
+function Shaman() {
+  return (
+    <>
+      <path d="M34 150 L44 90 C46 74 56 66 64 66 C74 66 82 74 84 90 L94 150 Z" fill="#2c2148" />
+      <path d="M44 90 L64 150 L84 90" fill="#3b2b66" />
+      <circle cx="64" cy="56" r="16" fill="#3b2b66" />
+      <path d="M48 48 C52 30 76 30 80 48" fill="#2c2148" />
+      <circle cx="58" cy="58" r="3" fill="#c77dff" className="av-glow" />
+      <circle cx="70" cy="58" r="3" fill="#c77dff" className="av-glow" />
+      <path d="M20 150 L28 54" stroke="#6b4f2a" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="28" cy="48" r="9" fill="#d06bff" className="av-glow" />
+    </>
+  );
+}
+
+function BroodMother() {
+  return (
+    <>
+      <ellipse cx="66" cy="118" rx="44" ry="32" fill="#5a4a2a" />
+      <ellipse cx="74" cy="122" rx="24" ry="18" fill="#8a7240" />
+      <circle cx="68" cy="116" r="6" fill="#f0c674" className="av-glow" />
+      <circle cx="86" cy="126" r="5" fill="#f0c674" className="av-glow" />
+      <circle cx="26" cy="98" r="16" fill="#4a3c22" />
+      <circle cx="20" cy="94" r="3" fill="#ff7a59" className="av-glow" />
+      <circle cx="28" cy="92" r="3" fill="#ff7a59" className="av-glow" />
+      <path
+        d="M34 142 L28 154 M52 148 L50 156 M84 148 L88 156 M100 140 L108 150"
+        stroke="#3a2e18"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+    </>
+  );
+}
+
+function Mite() {
+  return (
+    <>
+      <ellipse cx="60" cy="132" rx="22" ry="16" fill="#4a1f1f" />
+      <ellipse cx="60" cy="128" rx="12" ry="9" fill="#ff5d5d" className="av-glow" />
+      <path d="M60 112 C60 102 66 98 72 96" stroke="#c9b98a" strokeWidth="2.5" fill="none" />
+      <circle cx="74" cy="95" r="3" fill="#ffd166" className="av-glow" />
+      <path
+        d="M40 140 L32 148 M48 146 L44 154 M72 146 L76 154 M80 140 L88 148"
+        stroke="#2a0f0f"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <circle cx="44" cy="126" r="2.5" fill="#fff" />
+    </>
+  );
+}
+
+function Stalker() {
+  return (
+    <g opacity="0.85">
+      <path d="M40 150 C36 120 40 90 56 72 C72 90 80 120 76 150 Z" fill="#1d2a3a" />
+      <path d="M56 72 C46 60 48 42 60 36 C72 42 74 60 64 72 Z" fill="#26384e" />
+      <path
+        d="M54 52 L58 54 M64 54 L68 52"
+        stroke="#bfe8ff"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        className="av-glow"
+      />
+      <path
+        d="M36 100 L14 84 M78 100 L100 86"
+        stroke="#26384e"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <path d="M14 84 L6 80 M100 86 L110 82" stroke="#bfe8ff" strokeWidth="2" />
+    </g>
+  );
+}
+
+function Zealot() {
+  return (
+    <>
+      <path d="M36 150 L42 92 C44 76 54 68 64 68 C74 68 84 76 86 92 L92 150 Z" fill="#5c1a1a" />
+      <path
+        d="M50 92 L64 120 L78 92"
+        stroke="#d06bff"
+        strokeWidth="3"
+        fill="none"
+        className="av-glow"
+      />
+      <circle cx="64" cy="56" r="15" fill="#3a1010" />
+      <path d="M48 44 L64 26 L80 44" fill="#5c1a1a" />
+      <circle cx="64" cy="58" r="4" fill="#d06bff" className="av-glow" />
+      <path d="M90 96 L104 78" stroke="#c9b98a" strokeWidth="4" strokeLinecap="round" />
+    </>
+  );
+}
+
+function Colossus() {
+  return (
+    <>
+      <path d="M14 150 L22 74 C26 40 46 24 62 24 C80 24 100 40 104 74 L110 150 Z" fill="#4a4a52" />
+      <path
+        d="M40 60 L52 90 L44 120 M84 60 L74 92 L82 124"
+        stroke="#ff4d4d"
+        strokeWidth="3"
+        fill="none"
+        className="av-glow"
+      />
+      <circle cx="50" cy="48" r="5" fill="#ff4d4d" className="av-glow" />
+      <circle cx="74" cy="48" r="5" fill="#ff4d4d" className="av-glow" />
+      <path
+        d="M14 96 C2 110 2 134 8 148 L24 146 M106 96 C118 110 118 134 112 148 L96 146"
+        fill="#3a3a42"
+      />
+    </>
+  );
+}
+
 const ART: Record<string, () => React.JSX.Element> = {
   rift_husk: Husk,
   shard_spitter: Spitter,
   hollow_hound: Hound,
   rift_warden: Warden,
+  rift_bulwark: Bulwark,
+  rift_leech: Leech,
+  thornback: Thornback,
+  void_shaman: Shaman,
+  brood_mother: BroodMother,
+  volatile_mite: Mite,
+  phase_stalker: Stalker,
+  rift_zealot: Zealot,
+  hollow_colossus: Colossus,
 };
 
 export function EnemyAvatar({

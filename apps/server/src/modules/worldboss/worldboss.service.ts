@@ -1,13 +1,22 @@
-import { worldBossAttempts, worldBosses, type Character, type DbOrTx } from '@realms/db';
+import {
+  characters,
+  items,
+  worldBossAttempts,
+  worldBosses,
+  worldEvents,
+  type Character,
+  type DbOrTx,
+} from '@realms/db';
 import {
   CURRENT_WORLD_BOSS_SEASON,
+  getItemDef,
   nextBossHex,
   partyKeyOf,
   WORLD_BOSS_RULES,
   worldBossSeason,
 } from '@realms/game-core';
 import { ErrorCode, type WorldBossDto } from '@realms/shared';
-import { and, desc, eq, gte, isNotNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { AppError } from '../../lib/errors.js';
@@ -58,7 +67,81 @@ export class WorldBossService {
       .from(worldBosses)
       .where(and(eq(worldBosses.worldId, worldId), eq(worldBosses.season, season.season)));
     const [boss] = lock ? await q.for('update') : await q;
-    return this.roam(db, boss!);
+    const moved = await this.roam(db, boss!);
+    return this.settleSeason(db, moved);
+  }
+
+  /** The season is over when the boss falls or its end date passes (request #44). */
+  seasonOver(boss: Boss, now = new Date()): boolean {
+    const season = worldBossSeason(boss.season) ?? CURRENT_WORLD_BOSS_SEASON;
+    return !!boss.defeatedAt || now.getTime() >= new Date(season.endsAt).getTime();
+  }
+
+  /**
+   * Season reward (request #44): when the season is over, every member of
+   * the party with the most damage gets the season's reward, once.
+   */
+  private async settleSeason(db: DbOrTx, boss: Boss): Promise<Boss> {
+    if (boss.rewardedAt || !this.seasonOver(boss)) return boss;
+    const [claimed] = await db
+      .update(worldBosses)
+      .set({ rewardedAt: new Date() })
+      .where(and(eq(worldBosses.id, boss.id), isNull(worldBosses.rewardedAt)))
+      .returning();
+    if (!claimed) return boss; // another reader settled it
+    const season = worldBossSeason(boss.season) ?? CURRENT_WORLD_BOSS_SEASON;
+    const [top] = await this.leaderboard(db, boss.id, 1);
+    for (const m of top?.members ?? []) {
+      const [alive] = await db
+        .select({ id: characters.id })
+        .from(characters)
+        .where(and(eq(characters.id, m.characterId), isNull(characters.deletedAt)));
+      if (!alive) continue;
+      await db
+        .update(characters)
+        .set({ reputation: sql`${characters.reputation} + ${season.reward.reputation}` })
+        .where(eq(characters.id, m.characterId));
+      await db
+        .insert(items)
+        .values({ characterId: m.characterId, itemDefId: season.reward.item, source: 'drop' });
+      await db.insert(worldEvents).values({
+        worldId: this.ctx.world.id,
+        type: 'worldboss.season_reward',
+        actorCharacterId: m.characterId,
+        payload: { season: boss.season, damage: top!.damage, reward: season.reward },
+      });
+    }
+    return claimed;
+  }
+
+  private async leaderboard(
+    db: DbOrTx,
+    bossId: string,
+    limit: number,
+  ): Promise<
+    Array<{
+      damage: number;
+      attempts: number;
+      members: Array<{ characterId: string; name: string }>;
+    }>
+  > {
+    const rows = await db
+      .select({
+        partyKey: worldBossAttempts.partyKey,
+        damage: sql<number>`sum(${worldBossAttempts.damage})::bigint`,
+        attempts: sql<number>`count(*)::int`,
+        members: sql<unknown>`(array_agg(${worldBossAttempts.members} order by ${worldBossAttempts.createdAt} desc))[1]`,
+      })
+      .from(worldBossAttempts)
+      .where(and(eq(worldBossAttempts.bossId, bossId), isNotNull(worldBossAttempts.finishedAt)))
+      .groupBy(worldBossAttempts.partyKey)
+      .orderBy(desc(sql`sum(${worldBossAttempts.damage})`))
+      .limit(limit);
+    return rows.map((r) => ({
+      damage: Number(r.damage),
+      attempts: r.attempts,
+      members: r.members as Array<{ characterId: string; name: string }>,
+    }));
   }
 
   private async roam(db: DbOrTx, boss: Boss): Promise<Boss> {
@@ -111,18 +194,7 @@ export class WorldBossService {
         here: c.hexQ === boss.hexQ && c.hexR === boss.hexR,
       };
     }
-    const rows = await db
-      .select({
-        partyKey: worldBossAttempts.partyKey,
-        damage: sql<number>`sum(${worldBossAttempts.damage})::bigint`,
-        attempts: sql<number>`count(*)::int`,
-        members: sql<unknown>`(array_agg(${worldBossAttempts.members} order by ${worldBossAttempts.createdAt} desc))[1]`,
-      })
-      .from(worldBossAttempts)
-      .where(and(eq(worldBossAttempts.bossId, boss.id), isNotNull(worldBossAttempts.finishedAt)))
-      .groupBy(worldBossAttempts.partyKey)
-      .orderBy(desc(sql`sum(${worldBossAttempts.damage})`))
-      .limit(LEADERBOARD_SIZE);
+    const rows = await this.leaderboard(db, boss.id, LEADERBOARD_SIZE);
     return {
       season: boss.season,
       theme: season.theme,
@@ -137,10 +209,17 @@ export class WorldBossService {
       you,
       leaderboard: rows.map((r, i) => ({
         rank: i + 1,
-        members: (r.members as Array<{ name: string }>).map((m) => m.name),
-        damage: Number(r.damage),
+        members: r.members.map((m) => m.name),
+        damage: r.damage,
         attempts: r.attempts,
       })),
+      endsAt: season.endsAt,
+      seasonOver: this.seasonOver(boss),
+      rewardedAt: boss.rewardedAt?.toISOString() ?? null,
+      reward: {
+        reputation: season.reward.reputation,
+        item: getItemDef(season.reward.item)?.name ?? season.reward.item,
+      },
     };
   }
 
@@ -154,8 +233,8 @@ export class WorldBossService {
     leaderId: string,
   ): Promise<string> {
     const boss = await this.current(tx, true);
-    if (boss.defeatedAt || boss.hp <= 0)
-      throw new AppError(409, ErrorCode.CONFLICT, 'The world boss has fallen this season.');
+    if (this.seasonOver(boss) || boss.hp <= 0)
+      throw new AppError(409, ErrorCode.CONFLICT, 'This world boss season is over.');
     for (const { character: c } of members) {
       if (c.hexQ !== boss.hexQ || c.hexR !== boss.hexR)
         throw new AppError(

@@ -40,6 +40,8 @@ export type Combatant = CombatantView;
 export interface CombatState extends Omit<CombatView, 'log'> {
   rng: number;
   logSeq: number;
+  /** Summoned units so far (request #44), for their ids. */
+  summonSeq?: number;
   log: CombatView['log'];
   tiebreak: Record<string, number>;
   /** This round's individual initiative results (roll + Agility). */
@@ -138,43 +140,55 @@ export function enemyCombatants(
   roomIndex: number,
   mods: EnemyModifiers = {},
 ): Combatant[] {
-  return room.enemies.map(({ enemy, slot, elite }, i) => {
-    const def = getEnemy(enemy)!;
-    const precision =
-      (def.precision ?? 5) + (elite ? ELITE_RULES.precisionBonus : 0) + (mods.precisionBonus ?? 0);
-    const maxHp = Math.round(
-      def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1) * (mods.hpMultiplier ?? 1),
-    );
-    const stats = { ...enemyStats(def, precision), maxHp };
-    return {
-      id: `e:${roomIndex}:${i}`,
-      side: 'enemies',
-      kind: 'enemy',
-      name: elite ? `${ELITE_RULES.namePrefix} ${def.name}` : def.name,
-      characterId: null,
-      appearance: null,
-      enemyDefId: def.id,
-      slot,
-      hp: maxHp,
-      maxHp,
-      mana: 0,
-      maxMana: 0,
-      focus: 0,
-      focusPerRound: stats.focusPerRound,
-      left: false,
-      block: 0,
-      stunned: false,
-      statuses: [],
-      attributes: null,
-      power: def.power * (elite ? ELITE_RULES.powerMultiplier : 1) * (mods.powerMultiplier ?? 1),
-      abilityMultipliers: {},
-      intents: [],
-      downed: false,
-      isBoss: !!def.isBoss,
-      abilityIds: def.abilities,
-      stats,
-    };
-  });
+  return room.enemies.map(({ enemy, slot, elite }, i) =>
+    enemyCombatant(enemy, `e:${roomIndex}:${i}`, slot, !!elite, mods),
+  );
+}
+
+/** One enemy fighter (also used for summons, request #44). */
+export function enemyCombatant(
+  enemyId: string,
+  id: string,
+  slot: number,
+  elite = false,
+  mods: EnemyModifiers = {},
+): Combatant {
+  const def = getEnemy(enemyId)!;
+  const precision =
+    (def.precision ?? 5) + (elite ? ELITE_RULES.precisionBonus : 0) + (mods.precisionBonus ?? 0);
+  const maxHp = Math.round(
+    def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1) * (mods.hpMultiplier ?? 1),
+  );
+  const stats = { ...enemyStats(def, precision), maxHp };
+  return {
+    id,
+    side: 'enemies',
+    kind: 'enemy',
+    name: elite ? `${ELITE_RULES.namePrefix} ${def.name}` : def.name,
+    characterId: null,
+    appearance: null,
+    enemyDefId: def.id,
+    slot,
+    hp: maxHp,
+    maxHp,
+    mana: 0,
+    maxMana: 0,
+    focus: 0,
+    focusPerRound: stats.focusPerRound,
+    left: false,
+    block: 0,
+    stunned: false,
+    // Innate statuses (e.g. Thorns) last the whole fight.
+    statuses: (def.startStatuses ?? []).map((st) => ({ id: st.id, value: st.value, turns: 99 })),
+    attributes: null,
+    power: def.power * (elite ? ELITE_RULES.powerMultiplier : 1) * (mods.powerMultiplier ?? 1),
+    abilityMultipliers: {},
+    intents: [],
+    downed: false,
+    isBoss: !!def.isBoss,
+    abilityIds: def.abilities,
+    stats,
+  };
 }
 
 export function pushLog(state: CombatState, entry: CombatLogEntry): void {

@@ -179,6 +179,15 @@ export const ITEMS = {
     slots: RING,
     bonuses: { endurance: 2 },
   }),
+  /** World boss season 1 reward (request #44), for the party that dealt the most damage. */
+  hollow_heart: item({
+    id: 'hollow_heart',
+    name: 'Heart of the Hollow',
+    description: 'Taken from the Hollow Colossus by the party that hurt it most. Season 1.',
+    kind: 'accessory',
+    slots: PENDANT,
+    bonuses: { might: 2, agility: 2, precision: 2, endurance: 2, intellect: 2, will: 2 },
+  }),
   charm_of_focus: item({
     id: 'charm_of_focus',
     name: 'Charm of Focus',

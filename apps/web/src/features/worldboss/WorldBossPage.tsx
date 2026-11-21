@@ -56,8 +56,8 @@ export function WorldBossPage() {
                   })}
                 </span>
               </div>
-              {b.defeatedAt ? (
-                <p>It has fallen this season.</p>
+              {b.seasonOver ? (
+                <p>{b.defeatedAt ? 'It has fallen this season.' : 'This season is over.'}</p>
               ) : b.you?.here ? (
                 <div className="row" style={{ flexWrap: 'wrap' }}>
                   <button
@@ -100,6 +100,11 @@ export function WorldBossPage() {
               <div className="panel-title">
                 <span>Leaderboard · damage by party</span>
               </div>
+              <p className="muted" style={{ marginTop: 0 }} data-testid="season-reward">
+                {b.rewardedAt
+                  ? 'The season is over: the top party received its reward.'
+                  : `When the season ends (${new Date(b.endsAt).toLocaleDateString()} or when the boss falls), every member of the top party receives ${b.reward.item} and ${b.reward.reputation} reputation.`}
+              </p>
               {b.leaderboard.length ? (
                 <ol className="leaderboard" data-testid="leaderboard">
                   {b.leaderboard.map((r) => (

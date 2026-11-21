@@ -18,6 +18,12 @@ export interface WorldBossDto {
   /** For the character asking: fights left today, and whether it stands on the boss's hex. */
   you: { attemptsLeft: number; here: boolean } | null;
   leaderboard: WorldBossRankDto[];
+  /** Season end (request #44): the date, whether it is over, when the reward was given. */
+  endsAt: string;
+  seasonOver: boolean;
+  rewardedAt: string | null;
+  /** Given to every member of the party with the most damage when the season ends. */
+  reward: { reputation: number; item: string };
 }
 
 export interface WorldBossRankDto {
