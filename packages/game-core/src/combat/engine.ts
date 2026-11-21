@@ -12,6 +12,7 @@ import { AFFIX_RULES } from '../content/affixes.js';
 import {
   BASIC_ACTIONS,
   getAbility,
+  HARMFUL_STATUSES,
   type AbilityDef,
   type AbilityEffect,
 } from '../content/abilities.js';
@@ -180,6 +181,15 @@ function startRound(state: CombatState): void {
     // Fuse (request #44): when the counter runs out, the unit explodes.
     const fuse = u.statuses.find((s) => s.id === 'fuse');
     if (fuse && fuse.turns <= 1 && !u.downed) explode(state, u, fuse.value);
+    // Regeneration (request #47): heals at the start of the round.
+    const regen = u.statuses.find((s) => s.id === 'regen');
+    if (regen && !u.downed) {
+      const healed = Math.min(u.maxHp - u.hp, regen.value);
+      if (healed > 0) {
+        u.hp += healed;
+        pushLog(state, { t: 'heal', targetId: u.id, amount: healed });
+      }
+    }
     for (const s of u.statuses) {
       if ((s.id === 'bleed' || s.id === 'burn') && !u.downed) {
         const amount = Math.min(u.hp, s.value);
@@ -480,6 +490,12 @@ function applyEffect(
     case 'summon':
       summon(state, actor, effect.enemy);
       return true;
+    case 'cleanse': {
+      const remove = effect.statuses ?? HARMFUL_STATUSES;
+      target.statuses = target.statuses.filter((s) => !remove.includes(s.id));
+      if (remove.includes('stun')) target.stunned = false;
+      return true;
+    }
   }
 }
 
@@ -611,6 +627,7 @@ function expectedValue(a: AbilityDef, targets: Combatant[]): number {
       if (e.kind === 'block' && t.block === 0) v += avg * (targets.length > 1 ? 0.8 : 0.3);
       if (e.kind === 'heal' && t.hp < t.maxHp * 0.6) v += avg;
       if (e.kind === 'summon') v += 6;
+      if (e.kind === 'cleanse' && t.statuses.some((s) => HARMFUL_STATUSES.includes(s.id))) v += 5;
     }
   }
   return v;

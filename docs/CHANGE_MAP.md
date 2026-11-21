@@ -219,6 +219,16 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Dodge + Agilidade: `BASIC_ACTIONS.block.perAgility`
 - Testes: `game-core/test/combat.test.ts` ("enemy mechanics")
 
+## Skills e livros de skill (pedido #47)
+
+- Dados: `packages/game-core/src/content/skills.ts` (`SKILLS`, `SkillDef.requirements`, `getSkill`, `skillBookId`); `getAbility` procura também aqui (`abilities.ts`)
+- Livros: `SKILL_BOOKS` (`items.ts`, `ItemDef.teaches`), saque em `rifts.ts` (`books()`)
+- Efeitos/estados: `cleanse` (`AbilityEffect`), estado `regen` (`STATUS_IDS`) → `engine.ts`, `EffectIcon.tsx`, `combat-scene.ts`
+- Servidor: `sheet.service.ts` (`useItem`, `toAbilityDto.requirements`), rota `POST /characters/:id/items/:itemId/use`; contrato `AbilityDto.requirements`
+- Web: `characters/api.ts` (`use`), `sheet/EquipmentTab.tsx` (duplo clique no livro), `sheet/ItemTooltip.tsx` ("Teaches …")
+- Testes: `combat.test.ts` ("skills"), `character-sheet.test.ts` ("Skill Books")
+- **Skill nova:** só dados em `SKILLS` (o livro e o saque aparecem sozinhos); ícone opcional em `AbilityIcon.tsx`
+
 ## Recompensa da época do world boss (pedido #44)
 
 - `WORLD_BOSS_SEASONS[].endsAt/reward` (`world-boss.ts`), item `hollow_heart` (`items.ts`), `world_bosses.rewarded_at` (migração 0014), `WorldBossService.settleSeason`/`seasonOver`, `WorldBossDto.endsAt/seasonOver/rewardedAt/reward`, `WorldBossPage.tsx`

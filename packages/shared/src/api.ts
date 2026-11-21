@@ -390,6 +390,8 @@ export interface AbilityDto {
   effects: string[];
   /** Attributes it scales with, e.g. "Might 60% · Agility 40%". */
   scaling: string;
+  /** BASE attributes needed to learn it (skills, request #47); empty = free. */
+  requirements: Array<{ attribute: AttributeKey; value: number }>;
 }
 
 export interface DerivedStatsDto {

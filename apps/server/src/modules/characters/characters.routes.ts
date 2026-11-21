@@ -15,6 +15,7 @@ import { toCharacterDto, type CharactersService } from './characters.service.js'
 import type { CharacterSheetService } from './sheet.service.js';
 
 const idParams = z.object({ id: z.uuid() });
+const useItemParams = z.object({ id: z.uuid(), itemId: z.uuid() });
 
 export async function charactersRoutes(
   app: FastifyInstance,
@@ -62,6 +63,12 @@ export async function charactersRoutes(
     const { id } = parse(idParams, request.params);
     const { slots } = parse(loadoutRequestSchema, request.body);
     return sheets.setLoadout(request.auth!.account.id, id, slots);
+  });
+
+  /** Use an item from the bag, e.g. read a Skill Book (request #47). */
+  app.post('/:id/items/:itemId/use', async (request) => {
+    const { id, itemId } = parse(useItemParams, request.params);
+    return sheets.useItem(request.auth!.account.id, id, itemId);
   });
 
   app.post('/:id/unequip', async (request) => {

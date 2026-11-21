@@ -99,6 +99,11 @@ const ICONS: Record<EffectKind, { color: string; path: string; label: string }> 
     label: 'Ritual',
     path: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Zm0 3-4.5 11h9L12 6Zm0 0v15',
   },
+  regen: {
+    color: '#6fe0a2',
+    label: 'Regeneration',
+    path: 'M12 3c4 4 7 7 7 11a7 7 0 0 1-14 0c0-4 3-7 7-11Zm0 7v7M8.5 13.5h7',
+  },
   fuse: {
     color: '#ff5d5d',
     label: 'Fuse',
@@ -200,6 +205,18 @@ export function abilityEffectIcons(a: AbilityDef, power = 1) {
         ];
       case 'swap':
         return [<EffectIcon key={key} kind="swap" />];
+      case 'cleanse':
+        return [
+          <EffectIcon
+            key={key}
+            kind="buff"
+            title={
+              e.statuses
+                ? `Removes ${e.statuses.map((x) => STATUS_NAMES[x]).join(', ')}`
+                : 'Removes harmful statuses'
+            }
+          />,
+        ];
     }
   });
 }

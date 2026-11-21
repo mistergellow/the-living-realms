@@ -1,3 +1,4 @@
+import { getItemDef } from '@realms/game-core';
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
@@ -47,10 +48,16 @@ export function EquipmentTab({
   sheet: CharacterSheetDto;
   characterId: string;
 }) {
-  const { equip, unequip } = useEquipment(characterId);
+  const { equip, unequip, use } = useEquipment(characterId);
   const allocate = useAllocateAttributes(characterId);
   const [filter, setFilter] = useState<Filter>('all');
-  const busy = equip.isPending || unequip.isPending;
+  const busy = equip.isPending || unequip.isPending || use.isPending;
+  /** Skill Books (request #47): double-click to read and learn. */
+  const read = (item: ItemDto) => {
+    if (busy) return;
+    tip.clear();
+    use.mutate(item.id);
+  };
   const tip = useHover<ItemDto>();
 
   const doEquip = (item: ItemDto, slot: EquipSlot | undefined) => {
@@ -124,7 +131,7 @@ export function EquipmentTab({
 
   return (
     <div className="equip-tab">
-      <FormError error={equip.error ?? unequip.error ?? allocate.error} />
+      <FormError error={equip.error ?? unequip.error ?? use.error ?? allocate.error} />
       <div className="equip-grid">
         <section className="panel paperdoll" data-testid="equipment">
           <div className="doll-col">{LEFT_SLOTS.map(renderSlot)}</div>
@@ -206,7 +213,9 @@ export function EquipmentTab({
                   data-testid={`bag-${item.defId}`}
                   {...dnd.bind({ item, from: 'inventory' }, !busy && isGear(item) && !item.broken)}
                   {...tip.props(item)}
-                  onDoubleClick={() => doEquip(item, quickSlot(item, s))}
+                  onDoubleClick={() =>
+                    getItemDef(item.defId)?.teaches ? read(item) : doEquip(item, quickSlot(item, s))
+                  }
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') doEquip(item, quickSlot(item, s));
                   }}

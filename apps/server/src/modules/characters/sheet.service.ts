@@ -1,4 +1,13 @@
-import { characters, type Character, type Database, type DbOrTx, type Item } from '@realms/db';
+import {
+  characters,
+  characterSkills,
+  items,
+  worldEvents,
+  type Character,
+  type Database,
+  type DbOrTx,
+  type Item,
+} from '@realms/db';
 import {
   abilityMultipliers,
   asBaseAttributes,
@@ -12,7 +21,9 @@ import {
   validateAllocation,
   emptyEquipment,
   getAbility,
+  ATTRIBUTE_NAMES,
   getItemDef,
+  getSkill,
   planLoadout,
   isBroken,
   isGear,
@@ -28,6 +39,7 @@ import {
 import {
   ErrorCode,
   MAX_PREPARED_SKILLS,
+  type AttributeKey,
   type AbilityDto,
   type Attributes,
   type CharacterAppearance,
@@ -127,6 +139,10 @@ function toAbilityDto(ability: AbilityDef, grantedBy: string | null): AbilityDto
     targeting: describeTargeting(ability.targeting),
     effects: describeEffects(ability),
     scaling: describeScaling(ability.scaling),
+    requirements: Object.entries(getSkill(ability.id)?.requirements ?? {}).map(([k, v]) => ({
+      attribute: k as AttributeKey,
+      value: v ?? 0,
+    })),
   };
 }
 
@@ -186,6 +202,60 @@ export class CharacterSheetService {
         .where(eq(characters.id, c.id))
         .returning();
       return this.buildSheet(tx, updated!);
+    });
+  }
+
+  /**
+   * Use an item from the bag (request #47): reading a Skill Book teaches its
+   * skill — if the BASE attributes meet its requirements — prepares it in the
+   * first free slot, and uses the book up.
+   */
+  async useItem(accountId: string, characterId: string, itemId: string) {
+    return this.db.transaction(async (tx) => {
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
+      const [item] = await tx
+        .select()
+        .from(items)
+        .where(and(eq(items.id, itemId), eq(items.characterId, c.id)));
+      if (!item) throw errors.notFound('Item');
+      const def = getItemDef(item.itemDefId);
+      const skill = def?.teaches ? getSkill(def.teaches) : undefined;
+      if (!skill) throw errors.validation('This item cannot be used.');
+      const base = baseAttributesOf(c);
+      const missing = Object.entries(skill.requirements ?? {}).filter(
+        ([k, v]) => base[k as AttributeKey] < (v ?? 0),
+      );
+      if (missing.length)
+        throw errors.validation(
+          `${skill.name} needs ${missing
+            .map(([k, v]) => `${ATTRIBUTE_NAMES[k as AttributeKey]} ${v}`)
+            .join(' and ')} (base attributes).`,
+        );
+      const learned = await itemsRepository.learnedSkills(tx, c.id);
+      if (learned.some((s) => s.id === skill.id))
+        throw errors.validation(`You already know ${skill.name}.`);
+      const used = new Set(learned.map((s) => s.loadoutSlot));
+      const free = Array.from({ length: MAX_PREPARED_SKILLS }, (_, i) => i).find(
+        (i) => !used.has(i),
+      );
+      await tx
+        .insert(characterSkills)
+        .values({ characterId: c.id, skillId: skill.id, loadoutSlot: free ?? null });
+      if (item.quantity > 1)
+        await tx
+          .update(items)
+          .set({ quantity: item.quantity - 1 })
+          .where(eq(items.id, item.id));
+      else await tx.delete(items).where(eq(items.id, item.id));
+      await tx.insert(worldEvents).values({
+        worldId: c.worldId,
+        type: 'skill.learned',
+        actorAccountId: accountId,
+        actorCharacterId: c.id,
+        payload: { skillId: skill.id, from: item.itemDefId },
+      });
+      return this.buildSheet(tx, c);
     });
   }
 

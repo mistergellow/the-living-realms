@@ -30,3 +30,4 @@ export * from './content/world-map.js';
 export * from './content/locations.js';
 export * from './ap.js';
 export * from './content/world-boss.js';
+export * from './content/skills.js';

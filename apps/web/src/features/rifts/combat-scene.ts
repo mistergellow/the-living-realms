@@ -67,6 +67,7 @@ const STATUS_COLORS: Record<StatusId, number> = {
   intangible: 0xbfe8ff,
   ritual: 0xd06bff,
   fuse: 0xff5d5d,
+  regen: 0x6fe0a2,
 };
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';

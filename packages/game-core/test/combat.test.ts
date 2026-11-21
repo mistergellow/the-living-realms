@@ -10,6 +10,10 @@ import {
   focusPerRound,
   FOCUS_RULES,
   getAbility,
+  ITEMS,
+  SKILLS,
+  skillBookId,
+  type SkillDef,
   leaveParty,
   planAction,
   reservedBy,
@@ -554,5 +558,58 @@ describe('enemy mechanics (request #44)', () => {
     expect(mites).toHaveLength(1);
     expect(mites[0]!.slot).toBe(1);
     expect(s.log.some((l) => l.t === 'summon')).toBe(true);
+  });
+});
+
+describe('skills (request #47)', () => {
+  it('there are many, free and with BASE-attribute requirements, each with a book', () => {
+    const all = Object.values(SKILLS) as SkillDef[];
+    expect(all.length).toBeGreaterThanOrEqual(30);
+    expect(all.some((s) => !s.requirements)).toBe(true);
+    expect(all.some((s) => Object.keys(s.requirements ?? {}).length === 2)).toBe(true);
+    for (const s of all) {
+      expect(getAbility(s.id), s.id).toBe(s);
+      expect(ITEMS[skillBookId(s.id) as keyof typeof ITEMS], s.id).toMatchObject({
+        kind: 'consumable',
+        teaches: s.id,
+      });
+      for (const v of Object.values(s.requirements ?? {})) expect(v).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('Whirlwind hits the two nearest; Regeneration heals each round; Purify removes debuffs', () => {
+    const line = room([
+      { enemy: 'rift_husk', slot: 0 },
+      { enemy: 'rift_husk', slot: 1 },
+      { enemy: 'rift_husk', slot: 2 },
+    ]);
+    let s = calm(
+      encounter(
+        [
+          member('a', 0, { maxHp: 999 }, ['whirlwind', 'regeneration', 'purify', 'block']),
+          member('b', 1, { maxHp: 999 }),
+        ],
+        line,
+      ),
+    );
+    s = plan(s, 'p:a', { abilityId: 'whirlwind', targetColumn: 'front' });
+    const hit = s.log
+      .filter((l) => l.t === 'damage')
+      .map((l) => (l as { targetId: string }).targetId);
+    expect(new Set(hit).size).toBe(2);
+
+    const b = unit(s, 'p:b');
+    b.hp = 50;
+    b.statuses.push({ id: 'bleed', turns: 3, value: 2 }, { id: 'weaken', turns: 2, value: 0 });
+    unit(s, 'p:a').mana = 99;
+    unit(s, 'p:a').focus = 9;
+    s = plan(s, 'p:a', { abilityId: 'purify', targetId: 'p:b' });
+    expect(unit(s, 'p:b').statuses).toEqual([]);
+    s = plan(s, 'p:a', { abilityId: 'regeneration', targetId: 'p:b' });
+    const before = unit(s, 'p:b').hp;
+    for (const c of s.combatants) if (c.side === 'enemies') c.intents = [];
+    s = ok(setReady(s, 'p:a'));
+    s = ok(setReady(s, 'p:b'));
+    expect(unit(s, 'p:b').hp).toBeGreaterThan(before);
   });
 });
