@@ -30,7 +30,7 @@ function useSecondsUntil(iso: string | null): number {
  */
 export function ProfessionsPage() {
   const characterId = useActiveCharacter((s) => s.characterId);
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
   return (
     <div className="screen-body">
       <div className="contain" style={{ maxWidth: '72rem' }}>

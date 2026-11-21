@@ -26,7 +26,7 @@ export const configSchema = z.object({
   /** Apply pending DB migrations at startup (advisory-locked; safe with many instances). */
   MIGRATE_ON_START: bool.default(true),
   WORLD_SLUG: z.string().min(1).default('main'),
-  MAX_CHARACTERS_PER_ACCOUNT: z.coerce.number().int().min(1).max(50).default(5),
+  MAX_CHARACTERS_PER_ACCOUNT: z.coerce.number().int().min(1).max(50).default(2),
   /** Max auth attempts (login/register) per IP per minute. */
   AUTH_RATE_LIMIT: z.coerce.number().int().min(1).default(10),
 });

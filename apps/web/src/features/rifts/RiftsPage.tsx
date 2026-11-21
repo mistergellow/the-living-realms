@@ -17,7 +17,7 @@ export function RiftsPage() {
   const lobby = useLobbyActions(characterId);
   const [visibility, setVisibility] = useState<LobbyVisibility>('public');
   const navigate = useNavigate();
-  if (!characterId) return <Navigate to="/characters" replace />;
+  if (!characterId) return <Navigate to="/" replace />;
 
   const mine = overview.data?.mine;
   const busy = !!active.data || !!mine;

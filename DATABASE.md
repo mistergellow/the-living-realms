@@ -37,7 +37,7 @@ characters *───1 worlds 1───* world_events
 
 - An **account** is the real person's login (out-of-game identity).
 - A **character** is an in-game identity. An account owns many characters
-  (limit `MAX_CHARACTERS_PER_ACCOUNT`, default 5) but **plays only one at a
+  (limit `MAX_CHARACTERS_PER_ACCOUNT`, default 2) but **plays only one at a
   time**. This is enforced in real time by the gateway, not by the schema,
   because it is a property of the live connection.
 - A **world** is the shared persistent world. One row today (`slug = main`).

@@ -129,4 +129,38 @@ describe('realtime gateway', () => {
     });
     expect((await s.next('world.tick')).data.tick).toBe(99);
   });
+  it('hex chat: players on the same hex hear each other; history on arrival', async () => {
+    const a = await playerWithCharacter('Talker');
+    const b = await playerWithCharacter('Hearer');
+    const sa = await open(a.cookie);
+    sa.send({ type: 'world.enter', data: { characterId: a.character.id } });
+    expect((await sa.next('world.entered')).data.chat).toEqual([]);
+    const sb = await open(b.cookie);
+    sb.send({ type: 'world.enter', data: { characterId: b.character.id } });
+    await sb.next('world.entered');
+
+    sa.send({ type: 'chat.send', data: { text: '  Well met!\u0007 ' } });
+    const heard = (await sb.next('chat.message')).data.message;
+    expect(heard).toMatchObject({ name: 'Talker', text: 'Well met!', hex: { q: 0, r: 0 } });
+    expect((await sa.next('chat.message')).data.message.id).toBe(heard.id);
+
+    // A newcomer gets the recent chat of the hex.
+    const c = await playerWithCharacter('Latecomer');
+    const sc = await open(c.cookie);
+    sc.send({ type: 'world.enter', data: { characterId: c.character.id } });
+    expect((await sc.next('world.entered')).data.chat.map((m) => m.text)).toEqual(['Well met!']);
+  });
+
+  it('hex chat: rejects empty or too long messages and chatting outside the world', async () => {
+    const a = await playerWithCharacter('Quiet');
+    const s = await open(a.cookie);
+    s.send({ type: 'chat.send', data: { text: 'hello' } });
+    expect((await s.next('error')).data.code).toBe('VALIDATION_FAILED');
+    s.send({ type: 'world.enter', data: { characterId: a.character.id } });
+    await s.next('world.entered');
+    s.send({ type: 'chat.send', data: { text: '   ' } });
+    expect((await s.next('error')).data.code).toBe('VALIDATION_FAILED');
+    s.send({ type: 'chat.send', data: { text: 'x'.repeat(201) } });
+    expect((await s.next('error')).data.code).toBe('VALIDATION_FAILED');
+  });
 });

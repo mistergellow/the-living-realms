@@ -28,6 +28,7 @@ export function CharacterSheetPage() {
   const [params, setParams] = useSearchParams();
   const sheet = useCharacterSheet(id);
   const select = useActiveCharacter((s) => s.select);
+  const activeId = useActiveCharacter((s) => s.characterId);
   const navigate = useNavigate();
   const tab: TabId = TABS.some((t) => t.id === params.get('tab'))
     ? (params.get('tab') as TabId)
@@ -41,9 +42,9 @@ export function CharacterSheetPage() {
   return (
     <Screen>
       <header className="topbar">
-        <Link className="btn btn-ghost btn-sm" to="/characters">
+        <Link className="btn btn-ghost btn-sm" to={activeId ? '/home' : '/characters'}>
           <Icon name="back" />
-          Characters
+          Back
         </Link>
         <div className="sheet-header">
           <CharacterToken appearance={s.character.appearance} size={52} />
@@ -55,15 +56,17 @@ export function CharacterSheetPage() {
           </div>
         </div>
         <span className="spacer" />
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            select(s.character.id);
-            navigate('/home');
-          }}
-        >
-          Play
-        </button>
+        {activeId !== s.character.id && (
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              select(s.character.id);
+              navigate('/home');
+            }}
+          >
+            Play
+          </button>
+        )}
       </header>
 
       <main className="screen-body">

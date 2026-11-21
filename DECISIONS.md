@@ -184,7 +184,7 @@ Action Points (amount to be defined; mechanic not implemented in phase 1).
 
 **Status:** accepted (game design decision by the project owner)
 
-**Decision.** Accounts may own several characters (default limit 5, set by
+**Decision.** Accounts may own several characters (default limit 2 since request #40, set by
 `MAX_CHARACTERS_PER_ACCOUNT`). Only one may be in the world at a time per
 account: entering with a new connection replaces the old one cluster-wide (WS
 close code `4002`). The limit is enforced transactionally (account row lock).
@@ -732,3 +732,24 @@ keeps drag-and-drop swaps atomic. Migration 0011 moves old slots
 **Sheet UI.** Three tabs (Equipment, Abilities, Professions) in the URL.
 Drag and drop is pointer-based (`sheet/drag.tsx`), not HTML5 drag events,
 so it also works on touch screens; drop targets are `data-drop` elements.
+
+## ADR-043 — The game opens on your hex; hex chat
+
+**Status:** accepted (request #40)
+
+**Decision.** `/` is a front door (`PlayEntry`) that resumes the character
+played last (this tab's active one, else the newest `lastPlayedAt`) and
+opens `/home`, which is now the screen of the hex you stand on: a picture,
+the place's actions and the hex chat. Places are data in game-core
+(`locationAt`): a few named hexes, everything else "open wilds". Character
+select is a secondary screen behind a small corner button.
+
+Hex chat goes over the existing WebSocket: `chat.send` → the gateway pushes
+the message on the world bus with `onlyHex`, and every instance delivers it
+only to connections whose presence stands on that hex. The last 50 messages
+of a hex are kept in a Redis list (24 h TTL) and sent in `world.entered`.
+Chat is ephemeral by design (not in PostgreSQL); moderation tools come later.
+
+**Consequences.** When movement arrives, a hex change must refresh the
+presence position and send the new hex's history. The default character
+limit is now 2 (D73); extra slots are a later feature.

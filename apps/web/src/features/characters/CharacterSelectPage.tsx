@@ -8,8 +8,13 @@ import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { useActiveCharacter } from './active-character';
 import { useCharacters, useDeleteCharacter } from './api';
 import { CharacterToken } from './CharacterToken';
+import { lastPlayed } from './PlayEntry';
 
-/** Hero select: the focused character stands on a pedestal, the roster sits below. */
+/**
+ * Hero select (secondary since request #40: the game opens with the last
+ * character played; this screen is for switching and creating). The focused
+ * character stands on a pedestal, the roster sits below.
+ */
 export function CharacterSelectPage() {
   const me = useMe();
   const characters = useCharacters();
@@ -27,10 +32,7 @@ export function CharacterSelectPage() {
   const list = characters.data?.characters ?? [];
   const limit = characters.data?.limit ?? 0;
   // Default focus: the most recently played character.
-  const lastPlayed = [...list].sort((a, b) =>
-    (b.lastPlayedAt ?? '').localeCompare(a.lastPlayedAt ?? ''),
-  )[0];
-  const focused = list.find((c) => c.id === focusId) ?? lastPlayed;
+  const focused = list.find((c) => c.id === focusId) ?? lastPlayed(list);
 
   return (
     <Screen>
@@ -137,6 +139,17 @@ export function CharacterSelectPage() {
                 New character
               </Link>
             )}
+            <div
+              className="roster-card roster-locked"
+              aria-disabled="true"
+              title="More character slots will be unlockable later."
+              data-testid="locked-slot"
+            >
+              <span className="plus" aria-hidden>
+                <Icon name="lock" />
+              </span>
+              More slots soon
+            </div>
             <span className="roster-count">
               {list.length} / {limit}
             </span>

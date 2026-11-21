@@ -1,10 +1,11 @@
-import { createBrowserRouter, Link, Navigate } from 'react-router';
+import { createBrowserRouter, Link } from 'react-router';
 import { GuestOnly, RequireAuth } from '../features/auth/guards';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { CharacterCreatePage } from '../features/characters/CharacterCreatePage';
 import { CharacterSelectPage } from '../features/characters/CharacterSelectPage';
 import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
+import { PlayEntry } from '../features/characters/PlayEntry';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
 import { RunPage } from '../features/rifts/RunPage';
@@ -18,10 +19,11 @@ import { HomePage } from '../features/game/HomePage';
 /*
  * Route map
  *   /login, /register        guests only
- *   /characters              account area: pick a character
+ *   /                        front door: back into the game with the last character played
+ *   /characters              account area: switch / create characters (secondary)
  *   /characters/new          character creation
  *   /characters/:id          character sheet (attributes, stats, equipment, abilities)
- *   /home                    hub (requires an active character; in GameShell)
+ *   /home                    the hex you are on: its scene, actions and hex chat (in GameShell)
  *   /world                   exploration map (in GameShell)
  *   /rifts                   Rift list, lobbies (in GameShell)
  *   /rifts/runs/:runId       a Rift run: map/exploration screen, combat screen for fights
@@ -29,7 +31,6 @@ import { HomePage } from '../features/game/HomePage';
  *   /friends                 friends list and requests (in GameShell)
  */
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/characters" replace /> },
   {
     element: <GuestOnly />,
     children: [
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      { path: '/', element: <PlayEntry /> },
       { path: '/characters', element: <CharacterSelectPage /> },
       { path: '/characters/new', element: <CharacterCreatePage /> },
       { path: '/characters/:id', element: <CharacterSheetPage /> },

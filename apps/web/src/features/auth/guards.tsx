@@ -17,10 +17,10 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Only for guests; logged-in accounts go straight to character selection. */
+/** Only for guests; logged-in accounts go straight back into the game. */
 export function GuestOnly() {
   const me = useMe();
   if (me.isPending) return <FullPageMessage>Loading…</FullPageMessage>;
-  if (me.data) return <Navigate to="/characters" replace />;
+  if (me.data) return <Navigate to="/" replace />;
   return <Outlet />;
 }

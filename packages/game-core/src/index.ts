@@ -25,3 +25,4 @@ export * from './rift/run.js';
 export * from './content/professions.js';
 export * from './professions.js';
 export * from './content/world-map.js';
+export * from './content/locations.js';

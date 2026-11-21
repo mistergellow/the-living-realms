@@ -27,7 +27,7 @@ describe('world state reducer', () => {
   it('tracks players joining and leaving', () => {
     let s = applyServerMessage(initialWorldState, {
       type: 'world.entered',
-      data: { world, character: self, players: [player('a', 'Alda')] },
+      data: { world, character: self, players: [player('a', 'Alda')], chat: [] },
     });
     expect(s.tick).toBe(7);
     s = applyServerMessage(s, { type: 'player.joined', data: { player: player('b', 'Brann') } });
@@ -48,6 +48,25 @@ describe('world state reducer', () => {
     });
     expect(s).toBe(initialWorldState);
     expect(applyServerMessage(s, { type: 'world.tick', data: { tick: 3, at: '' } }).tick).toBe(3);
+  });
+
+  it('keeps the hex chat: history on entering, new messages appended once', () => {
+    const msg = (id: string, text: string) => ({
+      id,
+      characterId: 'b',
+      name: 'Brann',
+      text,
+      at: '',
+      hex: { q: 0, r: 0 },
+    });
+    let s = applyServerMessage(initialWorldState, {
+      type: 'world.entered',
+      data: { world, character: self, players: [], chat: [msg('1', 'hello')] },
+    });
+    s = applyServerMessage(s, { type: 'chat.message', data: { message: msg('2', 'anyone?') } });
+    s = applyServerMessage(s, { type: 'chat.message', data: { message: msg('2', 'anyone?') } });
+    expect(s.chat.map((m) => m.text)).toEqual(['hello', 'anyone?']);
+    expect(applyServerMessage(s, { type: 'world.left' }).chat).toEqual([]);
   });
 
   it('logs notable connection status changes', () => {
