@@ -553,3 +553,9 @@ ações dentro da equipa = ordem planeada (D49); decisões de grupo por votaçã
   `pnpm sim` refeito para corridas completas.
 - Docs: CHANGE_MAP, DECISIONS (ADR-032–035), ARCHITECTURE §7, DATABASE,
   ROADMAP, CLAUDE.md.
+
+### #32 — 2026-11-21 — Pôr o The Rift online
+
+**Pedido:** fazer commit/merge para experimentar no site.
+**Resultado:** PR #4 com CI verde, merge no `main` (`ce467b7`); deploy no
+Railway concluído com sucesso. A migração 0008 é aplicada no arranque.
