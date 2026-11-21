@@ -1011,3 +1011,14 @@ Status change. Espada rotativa. Investida. Funciona como spells."
 - Estado novo Regeneration e efeito de purificar; o tooltip do livro mostra os
   ícones dos efeitos e os requisitos.
 - Testes: 122 unitários, 86 de integração, 20 web, 11 e2e.
+
+### #48 — 2026-11-21 — Como dar coisas ao meu personagem (admin)
+
+**Pedido:** "Como spawno coisas para o meu personagem, visto que sou admin?"
+**Resultado:**
+
+- Explicado o painel `/admin` (botão "Admin" no ecrã de escolha de personagem
+  → separador Characters → "Give item" / "Teach ability").
+- O painel passou a listar também os livros de skill, consumíveis e materiais
+  ("Give item") e as 34 skills ("Teach ability"); antes só tinha equipamento e
+  habilidades de armas/inimigos.
