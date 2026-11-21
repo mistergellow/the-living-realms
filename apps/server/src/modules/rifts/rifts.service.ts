@@ -45,6 +45,7 @@ import {
 } from '@realms/game-core';
 import {
   ErrorCode,
+  SLOTS_PER_SIDE,
   type CombatAction,
   type RiftDto,
   type RunDto,
@@ -77,12 +78,12 @@ export const toRiftDto = (r: RiftDef): RiftDto => ({
   bossName: bossName(r),
 });
 
-/** Ranged and caster weapons start in the back column; everything else in front (A31). */
+/** Ranged and caster weapons start at the back of the line; everything else in front (A31). */
 export function startingSlot(abilityIds: string[]): number {
   const backline = ['aimed_shot', 'arcane_bolt', 'spark', 'wand_bolt', 'staff_strike'].some((a) =>
     abilityIds.includes(a),
   );
-  return backline ? 4 : 0;
+  return backline ? SLOTS_PER_SIDE - 1 : 0;
 }
 
 /** Runs created before request #31 have no `version`; they were closed by migration 0008. */
@@ -220,7 +221,8 @@ export class RiftsService {
     for (const m of members) {
       const profile = await this.sheets.combatProfile(tx, m.character);
       let slot = m.slot ?? startingSlot(profile.abilityIds);
-      if (used.has(slot)) slot = [0, 1, 2, 3, 4, 5].find((s) => !used.has(s))!;
+      if (used.has(slot))
+        slot = Array.from({ length: SLOTS_PER_SIDE }, (_, i) => i).find((s) => !used.has(s))!;
       used.add(slot);
       party.push({
         characterId: m.character.id,

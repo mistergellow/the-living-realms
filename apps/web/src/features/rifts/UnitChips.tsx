@@ -39,7 +39,7 @@ export function IntentChips({
           a.targeting.area === 'all'
             ? 'everyone'
             : a.targeting.area === 'column'
-              ? `${it.column ?? ''} column (${names})`
+              ? `${it.column ?? ''} (${names})`
               : names;
         const extra = a.effects.some((e) => e.kind === 'status') ? ' +' : '';
         return (
@@ -51,7 +51,7 @@ export function IntentChips({
             <i>{dmg ? '⚔' : '✦'}</i>
             {value}
             {it.count > 1 ? ` ×${it.count}` : ''}
-            {extra} <em>→ {targets}</em>
+            {extra} <em>→ {a.targeting.area === 'all' ? 'all' : (it.column ?? names)}</em>
           </span>
         );
       })}

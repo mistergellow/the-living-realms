@@ -218,7 +218,10 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contratos em `packages/shared`, regras em `packages/game-core`
 - Testes em `apps/server/test/<domínio>.test.ts`; `ROADMAP.md`, `DECISIONS.md` se houver decisão
 
-## Formação / posições (3 colunas × 2 linhas, D38)
+## Formação / posições (uma linha de 4, D60 — antes 3 × 2, D38)
+
+- **Agora:** `SLOTS_PER_SIDE = 4`, `COMBAT_COLUMNS = front, second, third, back` (uma "coluna" = uma posição), `LOBBY_MAX_MEMBERS = 4`, PvP `PVP_MAX_MEMBERS = 8`/`PVP_TEAM_B_OFFSET = 4`; ecrã: `combat-layout.ts` (`place`), `LobbyPage.tsx` (`COLUMNS`) + `.lobby-formation` em `global.css`; migração 0010 (fecha corridas/lobbies antigos)
+- O que se segue descreve o modelo antigo e continua válido nos nomes das funções:
 
 - Fonte única: `columnOfSlot`, `lineOfSlot`, `COMBAT_COLUMNS` em `packages/shared/src/combat.ts` (0–1 front, 2–3 mid, 4–5 back)
 - Alcance das habilidades: `reach` (`first`/`any`/colunas) e `area` (`single`/`column`/`all`) em `content/abilities.ts`; `validTargets`/`resolveTargets`/`targetColumns`/`intentTargets` no motor

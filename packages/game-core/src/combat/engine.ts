@@ -1,10 +1,11 @@
-import type {
-  CombatColumn,
-  CombatSide,
-  IntentView,
-  PlanActionInput,
-  PlannedActionView,
-  StatusId,
+import {
+  COMBAT_COLUMNS,
+  type CombatColumn,
+  type CombatSide,
+  type IntentView,
+  type PlanActionInput,
+  type PlannedActionView,
+  type StatusId,
 } from '@realms/shared';
 import { getAbility, type AbilityDef, type AbilityEffect } from '../content/abilities.js';
 import type { RiftRoomDef } from '../content/rifts.js';
@@ -245,7 +246,7 @@ export function validTargets(
   if (t.reach === 'first' || t.reach === 'first2') {
     const wanted = t.reach === 'first' ? 1 : 2;
     const cols: CombatColumn[] = [];
-    for (const col of ['front', 'mid', 'back'] as const)
+    for (const col of COMBAT_COLUMNS)
       if (cols.length < wanted && units.some((u) => columnOfSlot(u.slot) === col)) cols.push(col);
     return units.filter((u) => cols.includes(columnOfSlot(u.slot)));
   }

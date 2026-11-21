@@ -31,12 +31,13 @@ export const friendRequestSchema = z.object({
 });
 
 // ---- Lobbies ----
-export const LOBBY_MAX_MEMBERS = 6;
-/** PvP arena lobbies (request #33, test mode): two teams of up to 6. */
+/** Request #35: a party is 4 (one line of 4 positions). */
+export const LOBBY_MAX_MEMBERS = 4;
+/** PvP arena lobbies (request #33, test mode): two teams of up to 4. */
 export const PVP_ARENA_ID = 'pvp_arena';
-export const PVP_MAX_MEMBERS = 12;
-/** PvP slots: 0–5 = team A formation, 6–11 = team B formation (slot − 6). */
-export const PVP_TEAM_B_OFFSET = 6;
+export const PVP_MAX_MEMBERS = 8;
+/** PvP slots: 0–3 = team A line, 4–7 = team B line (slot − 4). */
+export const PVP_TEAM_B_OFFSET = 4;
 export type LobbyVisibility = 'public' | 'private';
 export type LobbyStatus = 'open' | 'started' | 'closed';
 

@@ -394,12 +394,12 @@ export class LobbiesService {
       const inA = taken.filter((s) => s < PVP_TEAM_B_OFFSET).length;
       const inB = taken.length - inA;
       const base = inB < inA ? PVP_TEAM_B_OFFSET : 0;
-      const order = (preferred < 2 ? [0, 1, 2, 3, 4, 5] : [4, 5, 2, 3, 0, 1]).map((s) => s + base);
+      const order = (preferred === 0 ? [0, 1, 2, 3] : [3, 2, 1, 0]).map((s) => s + base);
       const other = order.map((s) => (s + PVP_TEAM_B_OFFSET) % PVP_MAX_MEMBERS);
       return [...order, ...other].find((s) => !taken.includes(s)) ?? base;
     }
-    // Front fighters fill front → mid → back; ranged/casters back → mid → front.
-    const row = preferred < 2 ? [0, 1, 2, 3, 4, 5] : [4, 5, 2, 3, 0, 1];
+    // One line of 4 (request #35): fighters fill from the front, ranged/casters from the back.
+    const row = preferred === 0 ? [0, 1, 2, 3] : [3, 2, 1, 0];
     return row.find((s) => !taken.includes(s)) ?? preferred;
   }
 

@@ -4,20 +4,21 @@ import type { AttributeKey, Attributes, CharacterAppearance, DerivedStatsDto } f
 /* ---------------------------------------------------------------------------
  * Combat and Rift contracts.
  *
- * Battlefield (decision D38): each side has 3 columns (front, mid, back) of
- * 2 lines each = 6 slots. Slots 0–1 = front, 2–3 = mid, 4–5 = back
- * (even slot = top line, odd slot = bottom line).
+ * Battlefield (owner, request #35 — replaces the 3 × 2 formation of D38):
+ * each side stands in ONE LINE of 4 positions, like Darkest Dungeon.
+ * Slot 0 = front (nearest the enemy), 1 = second, 2 = third, 3 = back.
+ * A "column" in the code is one of these positions.
  * ------------------------------------------------------------------------- */
 
-export const SLOTS_PER_SIDE = 6;
+export const SLOTS_PER_SIDE = 4;
 export type CombatSide = 'party' | 'enemies';
-export const COMBAT_COLUMNS = ['front', 'mid', 'back'] as const;
+export const COMBAT_COLUMNS = ['front', 'second', 'third', 'back'] as const;
 export type CombatColumn = (typeof COMBAT_COLUMNS)[number];
-/** Column of a slot (0–1 front, 2–3 mid, 4–5 back). */
+/** Position name of a slot (0 front … 3 back). */
 export const columnOfSlot = (slot: number): CombatColumn =>
-  COMBAT_COLUMNS[Math.floor(slot / 2)] ?? 'back';
-/** Line of a slot: 0 = top, 1 = bottom. */
-export const lineOfSlot = (slot: number) => slot % 2;
+  COMBAT_COLUMNS[Math.max(0, Math.min(SLOTS_PER_SIDE - 1, slot))]!;
+/** Kept for drawing order; everyone stands on one line now. */
+export const lineOfSlot = (_slot: number) => 0;
 
 export const STATUS_IDS = ['bleed', 'burn', 'mark', 'weaken', 'stun'] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
@@ -339,7 +340,7 @@ export const combatActionSchema = z.discriminatedUnion('type', [
     /** Target ally (single-target support abilities). */
     targetId: z.string().max(64).optional(),
     /** Target column (attacks hit both units of a column, D41). */
-    targetColumn: z.enum(['front', 'mid', 'back']).optional(),
+    targetColumn: z.enum(COMBAT_COLUMNS).optional(),
     /** Destination slot (Swap Position). */
     targetSlot: slotSchema.optional(),
   }),

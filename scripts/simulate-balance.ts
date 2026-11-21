@@ -103,7 +103,7 @@ function party(names: string[]): Array<Omit<RunMember, 'conditions' | 'left'>> {
       abilityMultipliers: {},
       hp: stats.maxHp,
       mana: stats.maxMana,
-      slot: (backline ? [4, 5, 2, 3] : [0, 1, 2, 3])[i % 4]!,
+      slot: (backline ? [3, 2, 1, 0] : [0, 1, 2, 3])[i % 4]!,
     };
   });
 }
