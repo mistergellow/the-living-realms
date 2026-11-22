@@ -32,3 +32,4 @@ export * from './ap.js';
 export * from './content/world-boss.js';
 export * from './content/skills.js';
 export * from './reputation.js';
+export * from './content/economy.js';

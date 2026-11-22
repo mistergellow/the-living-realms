@@ -10,7 +10,10 @@ import { mapHexAt } from './content/world-map.js';
 export const AP_RULES = {
   max: 120,
   perHour: 10,
-  moveCostPerHex: 2,
+  /** Request #50: travel was too costly (was 2). */
+  moveCostPerHex: 1,
+  /** Request #50: entering a Rift costs a little time. */
+  riftEntryCost: 2,
 } as const;
 
 const HOUR_MS = 3_600_000;

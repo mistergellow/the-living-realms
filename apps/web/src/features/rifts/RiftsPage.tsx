@@ -28,7 +28,7 @@ export function RiftsPage() {
 
   return (
     <div className="screen-body">
-      <div className="contain stack" style={{ maxWidth: '64rem' }}>
+      <div className="contain stack">
         <h1 className="page-title">Rifts</h1>
         <p className="muted" style={{ margin: 0, fontSize: '1.05rem', fontStyle: 'italic' }}>
           Rifts are dungeons with branching paths: choose your way, avoid or pick fights, rest,

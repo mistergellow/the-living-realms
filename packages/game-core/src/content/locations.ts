@@ -20,7 +20,8 @@ export type LocationScene = 'town' | 'wilds';
  * What you can do in a place. `available: false` = shown but not built yet
  * (NPCs and shops come with the economy and NPC phases).
  */
-export type LocationActionId = 'npcs' | 'shop' | 'rifts' | 'workshop' | 'map' | 'worldboss';
+export type LocationActionId =
+  'npcs' | 'shop' | 'storage' | 'blacksmith' | 'rifts' | 'workshop' | 'map' | 'worldboss';
 
 export interface LocationAction {
   id: LocationActionId;
@@ -50,11 +51,24 @@ const ACTION: Record<Exclude<LocationActionId, 'rifts' | 'workshop'>, LocationAc
     description: 'The townsfolk will have stories, quests and gossip.',
     available: false,
   },
+  // Request #50: city services.
   shop: {
     id: 'shop',
-    label: 'Market',
-    description: 'Buy and sell goods.',
-    available: false,
+    label: 'General store',
+    description: 'Buy basic supplies; sell gear you do not need.',
+    available: true,
+  },
+  storage: {
+    id: 'storage',
+    label: 'Storage',
+    description: 'Keep items safe here, out of your bag.',
+    available: true,
+  },
+  blacksmith: {
+    id: 'blacksmith',
+    label: 'Blacksmith',
+    description: 'Upgrade your weapons (+1 to +10). They can break!',
+    available: true,
   },
   map: {
     id: 'map',
@@ -123,7 +137,15 @@ export function locationAt(hex: HexCoord, opts: { worldBossHere?: boolean } = {}
       terrain: 'city',
       region: region.name,
       description: `${TERRAIN_TEXT.city} ${region.name}.`,
-      actions: [ACTION.npcs, ACTION.shop, workshop('city'), ...boss, ACTION.map],
+      actions: [
+        ACTION.shop,
+        ACTION.storage,
+        ACTION.blacksmith,
+        workshop('city'),
+        ACTION.npcs,
+        ...boss,
+        ACTION.map,
+      ],
       riftId: null,
     };
   const corrupted =

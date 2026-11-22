@@ -29,7 +29,7 @@ export function WorldBossPage() {
 
   return (
     <div className="screen-body">
-      <div className="contain stack" style={{ maxWidth: '56rem' }}>
+      <div className="contain stack">
         <FormError error={boss.error ?? fight.error ?? lobby.create.error} />
         {b && (
           <>

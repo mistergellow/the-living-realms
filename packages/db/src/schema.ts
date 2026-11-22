@@ -130,6 +130,8 @@ export const characters = pgTable(
     attributePoints: smallint('attribute_points').notNull().default(0),
     /** Per-character currency earned through activities. */
     reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
+    /** Gold (request #50): from Rifts; spent in shops and at the blacksmith. */
+    gold: bigint('gold', { mode: 'number' }).notNull().default(0),
     /** Axial hex coordinates of the character on the world map. */
     hexQ: integer('hex_q').notNull(),
     hexR: integer('hex_r').notNull(),
@@ -176,6 +178,8 @@ export const items = pgTable(
     quantity: integer('quantity').notNull().default(1),
     /** EquipSlot when equipped, null when in the inventory. */
     equippedSlot: text('equipped_slot'),
+    /** In the character's city storage instead of the bag (request #50). */
+    inStorage: boolean('in_storage').notNull().default(false),
     /** Where it came from: 'starter', 'drop', 'loot_room', 'secret_room', 'event', … */
     source: text('source').notNull().default('starter'),
     /** Weapons: upgrade level (+0, +1, …). Same type + level = same stats (request #31). */
@@ -238,6 +242,8 @@ export const characterSkills = pgTable(
       .references(() => characters.id, { onDelete: 'cascade' }),
     skillId: text('skill_id').notNull(),
     loadoutSlot: smallint('loadout_slot'),
+    /** Skill level (request #50): reading the book again raises it (1 … SKILL_RULES.maxLevel). */
+    level: smallint('level').notNull().default(1),
     learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

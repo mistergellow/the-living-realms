@@ -480,5 +480,16 @@ export function getSkill(id: string): SkillDef | undefined {
   return Object.hasOwn(SKILLS, id) ? (SKILLS as Record<string, SkillDef>)[id] : undefined;
 }
 
+/**
+ * Skill levels (request #50): reading the book of a skill you already know
+ * raises its level; each level above 1 makes its numbers stronger.
+ * PROVISIONAL (A110).
+ */
+export const SKILL_RULES = { maxLevel: 5, perLevel: 0.1 } as const;
+
+/** Multiplier for a skill's damage, healing, Dodge and status values at a level. */
+export const skillLevelMultiplier = (level: number) =>
+  1 + SKILL_RULES.perLevel * (Math.max(1, Math.min(SKILL_RULES.maxLevel, level)) - 1);
+
 /** Item id of the Skill Book that teaches a skill. */
 export const skillBookId = (skillId: string) => `book_${skillId}`;

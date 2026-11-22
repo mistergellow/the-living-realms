@@ -18,12 +18,17 @@ const ACTION_ICON: Record<LocationActionId, IconName> = {
   workshop: 'gear',
   map: 'compass',
   worldboss: 'skull',
+  storage: 'lock',
+  blacksmith: 'sword',
 };
 const ACTION_TO: Partial<Record<LocationActionId, string>> = {
   rifts: '/rifts',
   workshop: '/professions',
   map: '/world',
   worldboss: '/world-boss',
+  shop: '/city/shop',
+  storage: '/city/storage',
+  blacksmith: '/city/blacksmith',
 };
 
 const KIND_LABEL: Record<LocationKind, string> = {

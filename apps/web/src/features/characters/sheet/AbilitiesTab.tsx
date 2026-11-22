@@ -67,7 +67,10 @@ function AbilityCard(props: { a: AbilityDto; note?: string; prepared?: boolean; 
       </span>
       <div className="ability-card-body">
         <div className="row" style={{ gap: '0.4rem' }}>
-          <strong>{a.name}</strong>
+          <strong>
+            {a.name}
+            {a.level && a.level > 1 ? <span className="skill-level"> Lv {a.level}</span> : null}
+          </strong>
           <Costs a={a} />
           <span className="spacer" />
           {props.note && <span className="field-hint">{props.note}</span>}

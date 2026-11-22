@@ -1,0 +1,77 @@
+/* City services (request #50) */
+.city-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--space-3);
+}
+.city-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.city-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 0.25);
+  border: 1px solid color-mix(in srgb, var(--rarity, #555) 35%, transparent);
+}
+.city-icon {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+}
+.city-name {
+  position: relative;
+}
+.city-tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 30;
+  width: 18rem;
+  padding: 0.6rem;
+  border-radius: var(--radius-sm);
+  background: #141320;
+  border: 1px solid var(--border-strong);
+}
+.city-name:hover .city-tip {
+  display: block;
+}
+.gold-tag {
+  color: #f0c674;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.city-purse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f0c674;
+}
+.city-purse svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.city-message {
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 0.35);
+  border-left: 4px solid var(--accent);
+}
+.city-message[data-result='destroyed'] {
+  border-left-color: var(--danger);
+}
+.city-message[data-result='downgraded'] {
+  border-left-color: var(--warning);
+}
+.city-message[data-result='success'] {
+  border-left-color: var(--success);
+}

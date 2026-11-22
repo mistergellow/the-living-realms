@@ -42,7 +42,7 @@ export function FriendsPage() {
 
   return (
     <div className="screen-body">
-      <div className="contain stack" style={{ maxWidth: '56rem' }}>
+      <div className="contain stack">
         <h1 className="page-title">Friends</h1>
         <FormError
           error={request.error ?? accept.error ?? remove.error ?? lobbyActions.invite.error}

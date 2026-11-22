@@ -33,7 +33,7 @@ export function ProfessionsPage() {
   if (!characterId) return <Navigate to="/" replace />;
   return (
     <div className="screen-body">
-      <div className="contain" style={{ maxWidth: '72rem' }}>
+      <div className="contain">
         <ProfessionsPanel characterId={characterId} />
       </div>
     </div>

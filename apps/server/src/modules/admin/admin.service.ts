@@ -19,6 +19,7 @@ import { MAX_PREPARED_SKILLS } from '@realms/shared';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { errors } from '../../lib/errors.js';
+import { giveItem } from '../characters/bag.js';
 import { itemsRepository } from '../characters/items.repository.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
 import { riftsRepository } from '../rifts/rifts.repository.js';
@@ -65,16 +66,12 @@ export class AdminService {
     return this.change(adminId, characterId, async (tx, c) => {
       const def = getItemDef(input.defId);
       if (!def) throw errors.validation(`Unknown item: ${input.defId}.`);
-      const [row] = await tx
-        .insert(items)
-        .values({
-          characterId: c.id,
-          itemDefId: input.defId,
-          quality: input.quality ?? 100,
-          upgradeLevel: input.upgradeLevel ?? 0,
-          source: 'admin',
-        })
-        .returning({ id: items.id });
+      // Request #50: a full bag sends it to storage.
+      const row = await giveItem(tx, c.id, input.defId, {
+        source: 'admin',
+        quality: input.quality ?? 100,
+        upgradeLevel: input.upgradeLevel ?? 0,
+      });
       return {
         type: 'admin.item_granted',
         payload: { itemId: row!.id, defId: input.defId, upgradeLevel: input.upgradeLevel ?? 0 },

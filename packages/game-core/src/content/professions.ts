@@ -212,18 +212,7 @@ export const PROFESSIONS = {
         inputs: [{ item: 'iron_ingot', qty: 1 }],
         effect: 'repair',
       }),
-      act({
-        id: 'upgrade_weapon',
-        name: 'Improve a weapon',
-        description: 'Forge a weapon one level up (+1). Each level is harder.',
-        minLevel: 2,
-        baseChance: 55,
-        xpSuccess: 30,
-        xpFailure: 10,
-        cooldownSeconds: 40,
-        inputs: [{ item: 'iron_ingot', qty: 3 }],
-        effect: 'upgrade',
-      }),
+      // Weapon upgrades moved to the city blacksmith (request #50, Metin2 style).
     ],
   }),
   runesmithing: prof({

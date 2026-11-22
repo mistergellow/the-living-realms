@@ -9,6 +9,7 @@ import { CharacterToken } from '../characters/CharacterToken';
 import { useRun, useRunAction } from './api';
 import { CombatScreen } from './CombatPage';
 import './combat.css';
+import { LootList } from './LootList';
 import { EndOverlay } from './EndOverlay';
 import { MapLegend, RiftMap } from './RiftMap';
 import './rift-map.css';
@@ -291,23 +292,35 @@ function ExplorationScreen({
             </div>
           )}
           {run.phase === 'room' && run.outcome && (
-            <div className="panel stack" data-testid="room-outcome">
-              <h2>{run.outcome.title}</h2>
-              {run.outcome.search && <TestLine test={run.outcome.search} />}
-              <p>{run.outcome.text}</p>
-              <ul className="effects">
-                {run.outcome.effects.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
-                {run.outcome.items.map((it, i) => (
-                  <li key={`i${i}`}>
-                    {nameOf(it.characterId)} found <strong>{it.name}</strong>
-                  </li>
-                ))}
-              </ul>
-              <button className="btn btn-primary" onClick={() => send({ type: 'continue' })}>
-                Continue
-              </button>
+            // Request #50: what was found pops up, coloured by rarity.
+            <div
+              className={run.outcome.items.length || run.outcome.gold ? 'loot-popup' : undefined}
+            >
+              <div className="panel stack" data-testid="room-outcome">
+                <h2>{run.outcome.title}</h2>
+                {run.outcome.search && <TestLine test={run.outcome.search} />}
+                <p>{run.outcome.text}</p>
+                {run.outcome.effects.length > 0 && (
+                  <ul className="effects">
+                    {run.outcome.effects.map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                )}
+                {(run.outcome.items.length > 0 || !!run.outcome.gold) && (
+                  <LootList
+                    gold={run.outcome.gold}
+                    items={run.outcome.items.map((it) => ({
+                      name: it.name,
+                      rarity: it.rarity,
+                      who: nameOf(it.characterId),
+                    }))}
+                  />
+                )}
+                <button className="btn btn-primary" onClick={() => send({ type: 'continue' })}>
+                  Continue
+                </button>
+              </div>
             </div>
           )}
           {run.phase === 'map' && (

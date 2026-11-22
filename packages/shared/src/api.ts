@@ -259,6 +259,9 @@ export const EQUIP_SLOTS = [
   'ring1',
   'ring2',
   'pendant',
+  // request #50
+  'belt',
+  'face',
 ] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
@@ -390,6 +393,8 @@ export interface AbilityDto {
   effects: string[];
   /** Attributes it scales with, e.g. "Might 60% · Agility 40%". */
   scaling: string;
+  /** Skill level (learned skills, request #50): 1 … 5. */
+  level?: number;
   /** BASE attributes needed to learn it (skills, request #47); empty = free. */
   requirements: Array<{ attribute: AttributeKey; value: number }>;
 }
@@ -436,6 +441,8 @@ export interface CharacterSheetDto {
   loadout: Array<string | null>;
   /** Reputation is a per-character currency earned through activities. */
   reputation: number;
+  /** Gold (request #50). */
+  gold: number;
   /** Extra % on reputation gains from the equipped gear (request #49). */
   reputationBonusPct: number;
   /** Attribute points not yet distributed. */

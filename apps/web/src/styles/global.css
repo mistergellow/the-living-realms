@@ -236,9 +236,13 @@ input {
   overflow-x: hidden;
   padding: var(--hud-gap);
 }
+/*
+ * Request #50: every screen uses the whole window the same way (the hub and
+ * the world map already did); only very wide screens keep a little margin.
+ */
 .screen-body > .contain {
   width: 100%;
-  max-width: 90rem;
+  max-width: min(100%, 160rem);
   margin: 0 auto;
 }
 

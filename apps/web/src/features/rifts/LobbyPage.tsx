@@ -115,7 +115,7 @@ export function LobbyPage() {
         </button>
       </header>
       <main className="screen-body">
-        <div className="contain stack" style={{ maxWidth: '64rem' }}>
+        <div className="contain stack">
           <FormError error={err} />
           <p className="muted" style={{ marginTop: -8 }}>
             Click an empty slot to move there, or a taken one to swap. Difficulty does not change

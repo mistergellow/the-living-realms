@@ -229,6 +229,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `combat.test.ts` ("skills"), `character-sheet.test.ts` ("Skill Books")
 - **Skill nova:** só dados em `SKILLS` (o livro e o saque aparecem sozinhos); ícone opcional em `AbilityIcon.tsx`
 
+## Ouro, cidade (loja, armazém, ferreiro) e mochila (pedido #50)
+
+- Regras: `content/economy.ts` (`INVENTORY_RULES`, `SHOP_STOCK`, `npcSellPrice`, `WEAPON_FAMILIES`, `weaponFamily`, `UPGRADE_STEPS`, `upgradeQuote`, `upgradeOutcome`), ouro dos Rifts `RIFT_GOLD_RULES` (`rifts.ts`), raridade por tier `dropAffixWeightsByTier` (`affixes.ts`)
+- BD: `characters.gold`, `items.in_storage`, `character_skills.level` (migração 0015)
+- Servidor: `modules/city/` (`CityService`, rotas `/characters/:id/city/...`), `characters/bag.ts` (`giveItem`, `assertBagRoom`, `bagUsed` — **toda a entrada de itens deve passar por `giveItem`**), `characters/ap.ts` (`spendAp`); `itemsRepository.listByCharacter` exclui o armazém
+- Contrato: `CityDto` (`shared/city.ts`), erros `BAG_FULL`, `NOT_ENOUGH_GOLD`, `NOT_ENOUGH_AP`; `RunRewardsDto.gold/items[].rarity/inStorage`; `RoomOutcomeView.gold`
+- Web: `features/city/` (`CityPage.tsx`, `api.ts`), `rifts/LootList.tsx` (popup), `GameShell.tsx` (ouro na barra), `sheet/EquipmentTab.tsx` (pesquisa, 20 espaços, tooltips dos atributos)
+- Testes: `apps/server/test/city.test.ts`
+
 ## Reputação (pedido #49)
 
 - Regras: `packages/game-core/src/reputation.ts` (`REPUTATION_RULES`, `riftClearFactor`, `gearReputationBonusPct`, `riftReputation`)

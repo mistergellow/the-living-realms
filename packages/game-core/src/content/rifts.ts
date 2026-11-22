@@ -65,6 +65,19 @@ export interface RiftDef {
 
 const rift = (r: RiftDef) => r;
 
+/** Blacksmith materials for +4…+10 (request #50), one per weapon family. */
+const familyMaterials = (weight: number): LootEntry[] =>
+  (
+    [
+      'blade_shard',
+      'axe_iron',
+      'heavy_core',
+      'polearm_haft',
+      'sinew_string',
+      'arcane_focus',
+    ] as ItemDefId[]
+  ).map((item) => ({ item, weight }));
+
 /** Skill Books in the loot (request #47), with a weight each. */
 const books = (weight: number): LootEntry[] =>
   Object.keys(SKILLS).map((id) => ({ item: skillBookId(id) as ItemDefId, weight }));
@@ -257,6 +270,7 @@ export const RIFTS = {
         { item: 'reaper_scythe', weight: 1 },
         { item: 'leather_sling', weight: 1 },
         ...books(0.5),
+        ...familyMaterials(1),
       ],
     },
     lootRoom: {
@@ -264,6 +278,8 @@ export const RIFTS = {
       loot: [
         { item: 'leather_cap', weight: 3 },
         { item: 'leather_boots', weight: 3 },
+        { item: 'leather_belt', weight: 2 },
+        { item: 'bone_mask', weight: 2 },
         { item: 'wooden_shield', weight: 2 },
         { item: 'bone_talisman', weight: 2 },
         { item: 'iron_mace', weight: 1 },
@@ -275,6 +291,7 @@ export const RIFTS = {
         { item: 'light_crossbow', weight: 1 },
         { item: 'leather_sling', weight: 1 },
         { item: 'oak_scepter', weight: 1 },
+        ...familyMaterials(1.5),
       ],
     },
     secretRoom: {
@@ -304,6 +321,20 @@ export const RIFT_TIER_RULES = {
   reputationPerTier: 0.5,
   names: ['Fringe Rift', 'Shallow Rift', 'Deep Rift', 'Abyssal Rift', 'Heart Rift'],
 } as const;
+
+/**
+ * Gold (request #50): every won Rift pays gold; Loot and Secret rooms hold
+ * some too (kept only if the party wins, like items). Scaled by tier.
+ * PROVISIONAL (A104).
+ */
+export const RIFT_GOLD_RULES = {
+  victory: { min: 25, max: 40 },
+  lootRoom: { min: 5, max: 12 },
+  secretRoom: { min: 12, max: 25 },
+  perTier: 0.5,
+} as const;
+
+export const goldTierMultiplier = (tier = 1) => 1 + RIFT_GOLD_RULES.perTier * Math.max(0, tier - 1);
 
 /** Extra enemy strength for a tier (1 = none). */
 export function riftTierModifiers(tier = 1): { hpMultiplier: number; powerMultiplier: number } {

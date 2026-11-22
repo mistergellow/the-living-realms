@@ -1,4 +1,9 @@
-import { getItemDef } from '@realms/game-core';
+import {
+  getItemDef,
+  INVENTORY_RULES,
+  ATTRIBUTE_SUMMARIES,
+  attributeEffects,
+} from '@realms/game-core';
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
@@ -51,6 +56,7 @@ export function EquipmentTab({
   const { equip, unequip, use } = useEquipment(characterId);
   const allocate = useAllocateAttributes(characterId);
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const busy = equip.isPending || unequip.isPending || use.isPending;
   /** Skill Books (request #47): double-click to read and learn. */
   const read = (item: ItemDto) => {
@@ -83,7 +89,11 @@ export function EquipmentTab({
   });
   const dragging = dnd.drag?.payload.item ?? null;
 
-  const items = s.inventory.filter((i) => matches(i, filter));
+  // Request #50: search the bag by name.
+  const q = search.trim().toLowerCase();
+  const items = s.inventory.filter(
+    (i) => matches(i, filter) && (!q || i.name.toLowerCase().includes(q)),
+  );
   // The tooltip follows the live sheet: an item that just moved closes it.
   const hovered = tip.hover
     ? [...s.inventory, ...Object.values(s.equipment)].find(
@@ -185,8 +195,18 @@ export function EquipmentTab({
           }
         >
           <div className="panel-title">
-            <span>Inventory ({s.inventory.length})</span>
+            <span data-testid="bag-count">
+              Inventory ({s.inventory.length}/{INVENTORY_RULES.bagSlots})
+            </span>
           </div>
+          <input
+            className="bag-search"
+            type="search"
+            placeholder="Search the bag…"
+            aria-label="Search the bag"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <div className="bag-filters" role="tablist" aria-label="Inventory filter">
             {FILTERS.map((f) => (
               <button
@@ -266,8 +286,27 @@ export function EquipmentTab({
                   {ATTRIBUTE_KEYS.map((k) => {
                     const bonus = s.attributes[k] - s.baseAttributes[k];
                     return (
-                      <tr key={k}>
-                        <th>{ATTRIBUTE_NAMES[k]}</th>
+                      <tr key={k} className="attr-row">
+                        <th>
+                          <span className="attr-name" tabIndex={0} data-testid={`attr-help-${k}`}>
+                            {ATTRIBUTE_NAMES[k]}
+                            {/* Request #50: what the attribute does, for new players. */}
+                            <span className="attr-tip" role="tooltip">
+                              <strong>{ATTRIBUTE_NAMES[k]}</strong>
+                              <span className="muted">{ATTRIBUTE_SUMMARIES[k]}</span>
+                              <ul>
+                                {attributeEffects(k).map((line) => (
+                                  <li key={line}>{line}</li>
+                                ))}
+                              </ul>
+                              <span className="muted small">
+                                Base {s.baseAttributes[k]}
+                                {bonus !== 0 ? `, gear ${fmt(bonus)}` : ''}. Requirements and
+                                exploration tests use the base value only.
+                              </span>
+                            </span>
+                          </span>
+                        </th>
                         <td data-testid={`sheet-attr-${k}`}>
                           {s.attributes[k]}
                           {bonus !== 0 && <span className="bonus"> ({fmt(bonus)})</span>}

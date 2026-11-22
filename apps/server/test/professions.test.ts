@@ -83,8 +83,6 @@ describe('professions', () => {
     const h = await hero();
     const noOre = await perform(h, 'blacksmithing', 'smelt');
     expect(noOre.json().error.message).toContain('Iron Ore');
-    const locked = await perform(h, 'blacksmithing', 'upgrade_weapon');
-    expect(locked.json().error.message).toContain('level 2');
 
     await give(h, 'iron_ingot', 20);
     await t.dbHandle
