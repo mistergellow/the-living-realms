@@ -105,6 +105,22 @@ const ICONS: Record<EffectKind, { color: string; path: string; label: string }> 
     label: 'Regeneration',
     path: 'M12 3c4 4 7 7 7 11a7 7 0 0 1-14 0c0-4 3-7 7-11Zm0 7v7M8.5 13.5h7',
   },
+  // Request #64 (gear bonuses).
+  chill: {
+    color: '#8fd8ff',
+    label: 'Chilled',
+    path: 'M12 2v20M4 6l16 12M20 6 4 18M9 3l3 3 3-3M9 21l3-3 3 3',
+  },
+  blind: {
+    color: '#9aa3b2',
+    label: 'Blinded',
+    path: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10-3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM3 3l18 18',
+  },
+  impale: {
+    color: '#e0a36b',
+    label: 'Impaled',
+    path: 'M3 21 15 9M15 9l6-6M15 9l-2-5M15 9l5 2M8 12l4 4',
+  },
   fuse: {
     color: '#ff5d5d',
     label: 'Fuse',

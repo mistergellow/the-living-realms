@@ -68,7 +68,7 @@ describe('named items (request #62)', () => {
 
   it('named-only effects never roll on random drops', () => {
     for (let seed = 1; seed < 200; seed++)
-      for (const a of rollAffixes(new Rng(seed), 'armor', 5))
+      for (const a of rollAffixes(new Rng(seed), 'body', 5))
         expect(['ignite_attackers', 'bleed_attackers']).not.toContain(a.id);
   });
 

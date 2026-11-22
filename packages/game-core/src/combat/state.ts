@@ -192,6 +192,7 @@ export function enemyCombatant(
     intents: [],
     downed: false,
     isBoss: !!def.isBoss,
+    family: def.family,
     abilityIds: def.abilities,
     stats,
   };

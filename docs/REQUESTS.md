@@ -132,6 +132,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                                                                                                                                          | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
 | D121 | **Famílias de inimigos** (para os bónus "Strong against X"): Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift Zealot, jogadores)                                                                                                                | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
 | D122 | **Bónus do equipamento:** 5 bónus aleatórios da pool do slot (sem limite por grupo, sem bónus fixo por tipo de arma; por tipo de equipamento talvez); **até 2 slots de runa** por item (abrem-se depois ou o item já cai com 1); bónus novos do PoE e estados novos entram todos para depois cortar/afinar; arma de 1 mão nas duas mãos dá mais dano; materiais de crafting vêm de caça e profissões, alguns são drop de monstros | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
+| D123 | **Bónus do equipamento (implementação):** sem defesas por família de arma (só defesa física e mágica); o valor de cada bónus vem do tier do Rift (Rift mais difícil = melhor equipamento); sem bónus de economia; o limite é por bónus e por item (somam-se entre itens diferentes); armas de duas mãos com bónus de ataque ×1,5; materiais de crafting: por agora só os de recolha                                               | 2026-11-22 | `content/affixes.ts`, `combat/engine.ts`, `docs/EQUIPMENT_SPECIALS.md`                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -264,6 +265,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
 | A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
 | A127 | Mercado                                                         | só nas capitais (ainda não há aldeias); sem taxa; o vendedor recebe o ouro mesmo offline; tirar de volta só na cidade onde está à venda; uma pilha vende-se inteira                                                                                                                                                                                                                                                                                                                                                                                        | `MARKET_RULES`                                                                   |
+| A128 | Bónus do equipamento (pedido #64)                               | valores T1–T5 de `AFFIXES` (`tiers`); 10 % de chance de um tier acima; duas armas de 1 mão: +40 % de dano do ataque básico; Chill = −1 Focus por ronda, Blind = 25 % de falhar, Impale = 30 % do golpe, 3 rondas; "Casting speed" = chance de devolver 1 Focus (não há cooldowns); "Onslaught" = Strength ao matar (no PvE não há iniciativa); "+níveis de skill" só para todas as skills; Focus por ronda só a partir de T4                                                                                                                               | `AFFIX_RULES`, `DUAL_WIELD_RULES`, `AFFIXES`                                     |
 
 ---
 
@@ -1372,3 +1374,20 @@ profissões / drops). Documento atualizado: coluna de slots nos bónus do PoE,
 Chill/Blind com resistências, implícito por tipo de equipamento como proposta.
 Em aberto: tier do valor, defesa por família de arma (explicada), bónus de
 economia, limites, matriz, duas mãos ×1,5, lista de materiais.
+
+**Implementação (mesmo dia):** o dono respondeu às últimas perguntas (D123) e
+pediu para implementar. `content/affixes.ts` reescrito: ~75 bónus em Attack /
+Resistance / Other, cada um com 5 tiers e a lista de slots onde pode sair
+(`GEAR_SLOTS`, `gearSlotOf`, `poolFor`, `affixValueRange`, `rollItemAffixes`);
+o valor vem do tier do Rift; duas mãos ×1,5 no ataque; armas só rolam o seu
+atributo primário/secundário. Famílias de inimigos em `ENEMIES.family`
+(`ENEMY_FAMILIES` em shared). Motor de combate: dano vs família, vs bosses,
+vs estados, skill/ataque básico/arma, dano adicionado físico/mágico,
+piercing, penetração, Culling Strike, Impale, roubo de vida/mana, vida/mana/
+Focus/Strength ao matar, devolver Focus, defesa física/mágica, resistência a
+bosses/humanoides/jogadores, block, reflect, dano pago com Mana, guarda com
+HP cheio, resistência a estados, regeneração de HP e Mana, +níveis de skill;
+estados novos Chill, Blind e Impale (ícones e cores). Duas armas de uma mão =
+mais dano. Ainda não: runas como bónus 6 e 7 (não há itens de runa), bónus
+fixo por tipo de equipamento, crafting. Testes: `affixes.test.ts` (pools,
+tiers, duas mãos, combate), `named.test.ts`, `character-sheet.test.ts`.

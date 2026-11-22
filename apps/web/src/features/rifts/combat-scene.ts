@@ -68,6 +68,9 @@ const STATUS_COLORS: Record<StatusId, number> = {
   ritual: 0xd06bff,
   fuse: 0xff5d5d,
   regen: 0x6fe0a2,
+  chill: 0x8fd8ff,
+  blind: 0x9aa3b2,
+  impale: 0xe0a36b,
 };
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';

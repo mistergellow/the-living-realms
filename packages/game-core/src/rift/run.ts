@@ -29,7 +29,7 @@ import {
   type LootTable,
   type RiftDef,
 } from '../content/rifts.js';
-import { isGear, rarityOf, rollAffixCount, rollAffixes } from '../content/affixes.js';
+import { isGear, rarityOf, rollAffixCount, rollItemAffixes } from '../content/affixes.js';
 import {
   CONDITIONS,
   EXPLORATION_RULES,
@@ -480,8 +480,11 @@ function grant(
   for (const m of who) {
     for (const itemDefId of rollLoot(rng, table)) {
       // Request #50: rarity rolled now (by tier) so the popup can show it.
-      const kind = getItemDef(itemDefId)?.kind;
-      const affixes = isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng, tier)) : [];
+      // Request #64: bonuses from the slot's pool, values by the Rift tier.
+      const def = getItemDef(itemDefId);
+      const affixes = isGear(def?.kind)
+        ? rollItemAffixes(rng, def, rollAffixCount(rng, tier), tier)
+        : [];
       s.grants.push({ characterId: m.characterId, itemDefId, source, affixes });
       items.push({
         characterId: m.characterId,

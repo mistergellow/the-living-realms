@@ -409,21 +409,28 @@ export class CharacterSheetService {
       itemsRepository.learnedSkills(db, c.id),
     ]);
     const owned = rows.map(toOwned);
+    const computed = computeStats(baseAttributesOf(c), owned);
+    // Request #64: gear can raise the level of every skill (up to the max).
+    const bonus = computed.gear.skillLevels ?? 0;
+    const leveled = skills.map((s) => ({
+      ...s,
+      level: Math.min(SKILL_RULES.maxLevel, s.level + bonus),
+    }));
     return {
       appearance: c.appearance as CharacterAppearance,
       baseAttributes: baseAttributesOf(c),
-      ...computeStats(baseAttributesOf(c), owned),
+      ...computed,
       abilityIds: availableAbilities(owned, preparedIds(skills)).map((a) => a.ability.id),
       // Request #50/#53: skill levels raise their numbers like weapon upgrades
       // do, and from M1 their statuses last longer.
       abilityMultipliers: {
         ...abilityMultipliers(owned),
         ...Object.fromEntries(
-          skills.filter((s) => s.level > 1).map((s) => [s.id, skillLevelMultiplier(s.level)]),
+          leveled.filter((s) => s.level > 1).map((s) => [s.id, skillLevelMultiplier(s.level)]),
         ),
       },
       abilityExtraTurns: Object.fromEntries(
-        skills
+        leveled
           .filter((s) => skillExtraTurns(s.level) > 0)
           .map((s) => [s.id, skillExtraTurns(s.level)]),
       ),

@@ -1,7 +1,7 @@
 import type { Attributes, DerivedStatsDto, GearCombatEffects } from '@realms/shared';
 import { namedEffects } from './content/named.js';
 import { addAttributes } from './attributes.js';
-import { gearTotals } from './content/affixes.js';
+import { DUAL_WIELD_RULES, gearTotals } from './content/affixes.js';
 import { activeEquipment, type OwnedItem } from './equipment.js';
 
 /*
@@ -114,7 +114,13 @@ export function computeStats(base: Attributes, items: OwnedItem[] = []): Charact
     critChance: Math.min(STAT_RULES.maxCrit, d.critChance + g.stats.critChance),
     critDamage: d.critDamage + g.stats.critDamage,
     focusPerRound: Math.min(FOCUS_RULES.maxPerRound, d.focusPerRound + g.stats.focusPerRound),
+    manaRegen: d.manaRegen + g.stats.manaRegen,
   };
+  // Request #64 (D122): a one-handed weapon in each hand hits harder.
+  const main = equipped.find((i) => i.equippedSlot === 'mainHand');
+  const off = equipped.find((i) => i.equippedSlot === 'offHand');
+  if (main?.def.kind === 'weapon' && !main.def.twoHanded && off?.def.kind === 'weapon')
+    g.combat.basicDamagePct = (g.combat.basicDamagePct ?? 0) + DUAL_WIELD_RULES.basicDamagePct;
   return { attributes, stats, gear: g.combat };
 }
 

@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   AFFIX_RULES,
   AFFIXES,
+  affixValueRange,
+  describeAffix,
+  DUAL_WIELD_RULES,
+  GEAR_SLOTS,
+  ITEMS,
+  poolFor,
+  rollItemAffixes,
   checkRequirements,
   computeStats,
   createEncounter,
@@ -18,6 +25,7 @@ import {
   rollAffixes,
   Rng,
   type CombatState,
+  type EnemyId,
   type OwnedItem,
   type PartyMemberInput,
 } from '../src/index.js';
@@ -56,21 +64,86 @@ describe('bonus effects (request #37)', () => {
     expect(normalizeAffixes('junk')).toEqual([]);
   });
 
-  it('rolls different effects allowed on that kind of gear, deterministically', () => {
-    const a = rollAffixes(new Rng(7), 'weapon', 5);
-    expect(a).toEqual(rollAffixes(new Rng(7), 'weapon', 5));
+  it('rolls different effects from the pool of the slot, deterministically (request #64)', () => {
+    const a = rollAffixes(new Rng(7), 'weapon', 5, 3, { weaponType: 'sword' });
+    expect(a).toEqual(rollAffixes(new Rng(7), 'weapon', 5, 3, { weaponType: 'sword' }));
     expect(new Set(a.map((x) => x.id)).size).toBe(5);
     for (const x of a) {
       const def = AFFIXES[x.id]!;
-      expect(def.kinds).toContain('weapon');
+      expect(def.slots).toContain('weapon');
       expect(x.value).toBeGreaterThanOrEqual(def.min);
       expect(x.value).toBeLessThanOrEqual(def.max);
     }
-    for (let s = 0; s < 50; s++)
-      for (const x of rollAffixes(new Rng(s), 'armor', 3))
-        expect(AFFIXES[x.id]!.kinds).toContain('armor');
+    for (const slot of GEAR_SLOTS)
+      for (let s = 0; s < 30; s++)
+        for (const x of rollAffixes(new Rng(s), slot, 5))
+          expect(AFFIXES[x.id]!.slots).toContain(slot);
     const counts = new Set(Array.from({ length: 2000 }, (_, i) => rollAffixCount(new Rng(i))));
     expect([...counts].every((c) => c >= 0 && c <= 5)).toBe(true);
+  });
+
+  it('every slot has its own pool; family defences and economy bonuses are gone (D122)', () => {
+    for (const slot of GEAR_SLOTS) expect(poolFor(slot).length).toBeGreaterThanOrEqual(10);
+    expect(poolFor('offhand').map((a) => a.id)).toContain('block_chance');
+    expect(poolFor('ring').map((a) => a.id)).not.toContain('block_chance');
+    for (const id of ['def_blades', 'gold_find', 'item_find', 'travel_ap', 'ranged_defence'])
+      expect(AFFIXES[id]).toBeUndefined();
+    // Weapons only roll their own primary / secondary attribute.
+    const sword = poolFor('weapon', { weaponType: 'sword' }).filter(
+      (a) => a.effect.kind === 'attribute',
+    );
+    expect(sword.length).toBeGreaterThan(0);
+    expect(sword.length).toBeLessThanOrEqual(2);
+  });
+
+  it('values come from the Rift tier: harder Rifts give better bonuses', () => {
+    const def = AFFIXES.crit_chance!;
+    expect(affixValueRange(def, 1)).toEqual({ min: 1, max: 1 });
+    expect(affixValueRange(def, 5)).toEqual({ min: 6, max: 8 });
+    const avg = (tier: number) => {
+      let sum = 0;
+      let n = 0;
+      for (let s = 0; s < 400; s++)
+        for (const x of rollAffixes(new Rng(s), 'face', 5, tier)) {
+          sum += x.value! / AFFIXES[x.id]!.tiers[4];
+          n++;
+        }
+      return sum / n;
+    };
+    expect(avg(5)).toBeGreaterThan(avg(1));
+    // Focus only rolls at T4 or better.
+    for (let s = 0; s < 200; s++)
+      for (const x of rollAffixes(new Rng(s), 'pendant', 5, 1))
+        if (x.id === 'focus') expect(x.value).toBe(1);
+  });
+
+  it('two-handed weapons roll attack bonuses ×1.5', () => {
+    const great = getItemDef(
+      Object.keys(ITEMS).find(
+        (id) => getItemDef(id)?.twoHanded && getItemDef(id)?.kind === 'weapon',
+      )!,
+    )!;
+    let seen = false;
+    for (let s = 0; s < 200; s++) {
+      const one = rollAffixes(new Rng(s), 'weapon', 5, 5, { weaponType: great.weaponType });
+      const two = rollItemAffixes(new Rng(s), great, 5, 5);
+      one.forEach((x, i) => {
+        expect(two[i]!.id).toBe(x.id);
+        if (AFFIXES[x.id]!.category === 'attack') {
+          expect(two[i]!.value).toBe(Math.round(x.value! * AFFIX_RULES.twoHandedMultiplier));
+          seen = true;
+        } else expect(two[i]!.value).toBe(x.value);
+      });
+    }
+    expect(seen).toBe(true);
+  });
+
+  it('describes bonuses for the item card', () => {
+    expect(describeAffix({ id: 'crit_chance', value: 3 })!.display).toBe('+3%');
+    expect(describeAffix({ id: 'stun_on_hit', value: 3 })!.display).toBe('3%');
+    expect(describeAffix({ id: 'added_damage', value: 6 })!.display).toBe('3–6');
+    expect(describeAffix({ id: 'health', value: 8 })!.display).toBe('+8');
+    expect(describeAffix({ id: 'vs_beast', value: 4 })!.label).toBe('Strong against Beasts');
   });
 
   it('equipped effects change attributes, stats and combat bonuses', () => {
@@ -180,5 +253,97 @@ describe('gear effects in combat (request #37)', () => {
     );
     const enemy = s.combatants.find((c) => c.side === 'enemies')!;
     expect(enemy.statuses.some((x) => x.id === 'bleed')).toBe(true);
+  });
+
+  // ---- request #64 ----
+  const startVs = (m: PartyMemberInput, enemy: EnemyId = 'rift_warden', seed = 1): CombatState => {
+    const s = createEncounter({
+      party: [m],
+      room: { name: 'T', enemies: [{ enemy, slot: 0 }] },
+      roomIndex: 0,
+      isLastRoom: false,
+      seed,
+    });
+    for (const c of s.combatants) c.stats = { ...c.stats, critChance: 0 };
+    return s;
+  };
+  const foe = (s: CombatState) => s.combatants.find((c) => c.side === 'enemies')!;
+  const dealt = (gear: ReturnType<typeof noGearEffects>, enemy: EnemyId = 'rift_warden') => {
+    const s0 = startVs(member(gear), enemy);
+    const before = foe(s0).hp;
+    return before - foe(stab(s0)).hp;
+  };
+
+  it('every enemy has a family (D121)', () => {
+    const s = startVs(member());
+    expect(foe(s).family).toBe('construct');
+    expect(
+      startVs(member(), 'hollow_hound').combatants.find((c) => c.side === 'enemies')!.family,
+    ).toBe('beast');
+  });
+
+  it('"strong against" a family, piercing and weapon damage raise the damage', () => {
+    const plain = dealt(noGearEffects());
+    expect(dealt({ ...noGearEffects(), vsFamily: { construct: 100 } })).toBeGreaterThan(plain);
+    expect(dealt({ ...noGearEffects(), vsFamily: { beast: 100 } })).toBe(plain);
+    expect(dealt({ ...noGearEffects(), pierceChance: 100 })).toBeGreaterThan(plain);
+    expect(dealt({ ...noGearEffects(), basicDamagePct: 100 })).toBeGreaterThan(plain);
+    expect(dealt({ ...noGearEffects(), skillDamagePct: 100 })).toBe(plain);
+  });
+
+  it('Culling Strike kills a weakened non-boss, never a boss', () => {
+    const s = stab(startVs(member({ ...noGearEffects(), cullingPct: 100 }), 'hollow_hound'));
+    expect(foe(s).downed).toBe(true);
+    const b = stab(startVs(member({ ...noGearEffects(), cullingPct: 100 })));
+    expect(foe(b).downed).toBe(false);
+  });
+
+  it('new on-hit statuses stick, and gear can resist them', () => {
+    const s = stab(
+      startVs(member({ ...noGearEffects(), onHit: [{ status: 'chill', chance: 100 }] })),
+    );
+    expect(foe(s).statuses.some((x) => x.id === 'chill')).toBe(true);
+    const s0 = startVs(member({ ...noGearEffects(), onHit: [{ status: 'bleed', chance: 100 }] }));
+    foe(s0).gear = { ...noGearEffects(), statusResist: { bleed: 100 } };
+    expect(foe(stab(s0)).statuses.some((x) => x.id === 'bleed')).toBe(false);
+  });
+
+  it('a chance to block stops a melee hit completely', () => {
+    const s0 = startVs(member());
+    foe(s0).gear = { ...noGearEffects(), blockChance: 100 };
+    const before = foe(s0).hp;
+    expect(foe(stab(s0)).hp).toBe(before);
+  });
+
+  it('physical defence lowers physical damage taken', () => {
+    const s0 = startVs(member());
+    const plain = foe(s0).hp - foe(stab(s0)).hp;
+    const s1 = startVs(member());
+    foe(s1).gear = { ...noGearEffects(), physicalDefencePct: 50 };
+    expect(foe(s1).hp - foe(stab(s1)).hp).toBeLessThan(plain);
+  });
+
+  it('a one-handed weapon in each hand gives more basic attack damage', () => {
+    const daggers: OwnedItem[] = [
+      { id: 'a', defId: 'rusty_dagger', quality: 100, equippedSlot: 'mainHand' },
+      { id: 'b', defId: 'rusty_dagger', quality: 100, equippedSlot: 'offHand' },
+    ];
+    expect(computeStats(base, daggers).gear.basicDamagePct).toBe(DUAL_WIELD_RULES.basicDamagePct);
+    expect(computeStats(base, daggers.slice(0, 1)).gear.basicDamagePct).toBeUndefined();
+  });
+
+  it('gear sums new bonuses: families, resistances, regen and Mana regen', () => {
+    const t = gearTotals([
+      { id: 'vs_void', value: 4 },
+      { id: 'burn_resist', value: 6 },
+      { id: 'hp_regen', value: 2 },
+      { id: 'mana_regen', value: 1 },
+      { id: 'skill_levels', value: 1 },
+    ]);
+    expect(t.combat.vsFamily).toEqual({ void: 4 });
+    expect(t.combat.statusResist).toEqual({ burn: 6 });
+    expect(t.combat.hpRegen).toBe(2);
+    expect(t.combat.skillLevels).toBe(1);
+    expect(t.stats.manaRegen).toBe(1);
   });
 });

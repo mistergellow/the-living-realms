@@ -5,6 +5,7 @@ import type {
   CharacterAppearance,
   HexCoord,
   DerivedStatsDto,
+  EnemyFamily,
   GearCombatEffects,
   ItemRarity,
 } from './api.js';
@@ -45,6 +46,10 @@ export const STATUS_IDS = [
   'fuse',
   // request #47
   'regen',
+  // request #64 (gear bonuses)
+  'chill',
+  'blind',
+  'impale',
 ] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
 
@@ -105,6 +110,8 @@ export interface CombatantView {
   intents: IntentView[];
   downed: boolean;
   isBoss: boolean;
+  /** Enemies only (request #64): family for "strong against" bonuses. */
+  family?: EnemyFamily;
   abilityIds: string[];
   stats: DerivedStatsDto;
   /** Player characters: combat bonuses from gear effects (request #37). */

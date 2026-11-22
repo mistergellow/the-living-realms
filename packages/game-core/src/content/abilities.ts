@@ -968,6 +968,9 @@ export const STATUS_NAMES: Record<StatusId, string> = {
   ritual: 'Ritual',
   fuse: 'Fuse',
   regen: 'Regeneration',
+  chill: 'Chilled',
+  blind: 'Blinded',
+  impale: 'Impaled',
 };
 
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
@@ -982,10 +985,23 @@ export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
   ritual: 'Gains that much Strength at the start of every round.',
   fuse: 'Explodes when the counter runs out, hurting every foe. Kill it first!',
   regen: 'Regains that much health at the start of every round.',
+  chill: 'Gets that much less Focus at the start of every round.',
+  blind: 'Its attacks have that % chance to miss.',
+  impale: 'The next hit it takes deals that much extra damage.',
 };
 
 /** Statuses that hurt the one who has them: what a cleanse removes (request #47). */
-export const HARMFUL_STATUSES: StatusId[] = ['bleed', 'burn', 'mark', 'weaken', 'stun'];
+export const HARMFUL_STATUSES: StatusId[] = [
+  'bleed',
+  'burn',
+  'mark',
+  'weaken',
+  'stun',
+  // request #64
+  'chill',
+  'blind',
+  'impale',
+];
 
 export function describeTargeting(t: AbilityTargeting): string {
   if (t.side === 'self') return 'Self';

@@ -30,7 +30,7 @@ import {
   qualityAfterDefeat,
   riftDepth,
   rollAffixCount,
-  rollAffixes,
+  rollItemAffixes,
   Rng,
   riftSites,
   isRiftOpen,
@@ -179,8 +179,9 @@ const statusOf = (state: RunState): RunStatus => state.status;
 
 /** Bonus effects of a new piece of gear (request #37); materials get none. */
 const rollDropAffixes = (rng: Rng, defId: string, tier: number) => {
-  const kind = getItemDef(defId)?.kind;
-  return isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng, tier)) : [];
+  const def = getItemDef(defId);
+  // Request #64: bonuses from the slot's pool, values by the Rift tier.
+  return isGear(def?.kind) ? rollItemAffixes(rng, def, rollAffixCount(rng, tier), tier) : [];
 };
 
 /** A dropped item for the reward popup (request #50): name and rarity. */

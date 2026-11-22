@@ -347,8 +347,26 @@ export interface ItemRequirementDto {
 }
 
 /**
- * Combat bonuses from gear (request #37), carried by player combatants.
- * Percentages are whole numbers (15 = 15%).
+ * Enemy families (request #64, D121): gear can be "strong against" a family.
+ * Players count as humanoids.
+ */
+export const ENEMY_FAMILIES = [
+  'beast',
+  'hollow',
+  'void',
+  'construct',
+  'brood',
+  'humanoid',
+] as const;
+export type EnemyFamily = (typeof ENEMY_FAMILIES)[number];
+
+/** Statuses gear can apply on hit / resist (request #64). */
+export type GearStatus = 'bleed' | 'burn' | 'stun' | 'weaken' | 'mark' | 'chill' | 'blind';
+
+/**
+ * Combat bonuses from gear (requests #37, #64), carried by player combatants.
+ * Percentages are whole numbers (15 = 15%). Fields added by request #64 are
+ * optional: runs saved before it do not have them (read them as 0).
  */
 export interface GearCombatEffects {
   /** +% to all damage dealt. */
@@ -360,12 +378,80 @@ export interface GearCombatEffects {
   /** Damage returned to an attacker that hits this unit. */
   thorns: number;
   /** Chance to apply a status when dealing damage. */
-  onHit: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
+  onHit: Array<{ status: GearStatus; chance: number }>;
   /**
    * Request #62 (named gear): chance that a melee attacker who hits this unit
    * gets a status. Optional: runs saved before it do not have it.
    */
-  whenHit?: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
+  whenHit?: Array<{ status: GearStatus; chance: number }>;
+  // ---- request #64: attack ----
+  /** +% damage against each enemy family. */
+  vsFamily?: Partial<Record<EnemyFamily, number>>;
+  /** +% damage of skills (everything but the basic attack). */
+  skillDamagePct?: number;
+  /** +% damage of the basic attack (includes the dual-wield bonus). */
+  basicDamagePct?: number;
+  /** +% damage of abilities granted by the weapon. */
+  weaponDamagePct?: number;
+  /** +% damage to other players (PvP). */
+  pvpDamagePct?: number;
+  /** Basic attack: extra physical / magic damage (up to this value, at least half). */
+  addedPhysical?: number;
+  addedMagic?: number;
+  /** % chance a hit ignores Armor / Magic Resist. */
+  pierceChance?: number;
+  /** % of the target's Armor / Magic Resist ignored. */
+  armorPenPct?: number;
+  magicPenPct?: number;
+  /** % of damage dealt restored as Mana. */
+  manaStealPct?: number;
+  /** HP healed on every hit / on kill; Mana on kill. */
+  lifeOnHit?: number;
+  lifeOnKill?: number;
+  manaOnKill?: number;
+  /** % chance of +1 Focus on kill. */
+  focusOnKillChance?: number;
+  /** On kill: Strength for 2 rounds. */
+  onslaught?: number;
+  /** % chance to refund 1 Focus after using a skill ("casting speed"). */
+  focusRefundChance?: number;
+  /** +% damage of the Bleed / Burn you apply. */
+  dotDamagePct?: number;
+  /** % chance that a status you apply lasts 1 more round. */
+  statusDurationChance?: number;
+  /** % chance that a Stun you apply lasts 1 more round. */
+  stunDurationChance?: number;
+  /** A hit that leaves a non-boss enemy at or below this % of its HP kills it. */
+  cullingPct?: number;
+  /** +% damage to enemies with Bleed / Burn / Stun. */
+  vsBleedingPct?: number;
+  vsBurningPct?: number;
+  vsStunnedPct?: number;
+  /** % chance to Impale: 30% of the hit is dealt again on the target's next hit. */
+  impaleChance?: number;
+  /** +1 level to every prepared skill per point. */
+  skillLevels?: number;
+  // ---- request #64: resistance ----
+  /** −% damage taken from physical and ranged hits / from magic hits. */
+  physicalDefencePct?: number;
+  magicDefencePct?: number;
+  /** −% damage taken from bosses / humanoids (and players) / players (PvP). */
+  bossResistPct?: number;
+  humanoidResistPct?: number;
+  pvpResistPct?: number;
+  /** % chance to ignore each harmful status. */
+  statusResist?: Partial<Record<GearStatus, number>>;
+  /** % chance to block a melee hit completely. */
+  blockChance?: number;
+  /** % chance to send a melee hit's damage back to the attacker. */
+  reflectChance?: number;
+  /** % of the damage taken that is paid with Mana instead. */
+  damageToManaPct?: number;
+  /** −% damage taken while at 90% HP or more. */
+  fullHpGuardPct?: number;
+  // ---- request #64: other ----
+  /** HP healed at the start of every round. */
+  hpRegen?: number;
 }
 
 /** A special property on a weapon (max 5). Catalogue of specials: future. */

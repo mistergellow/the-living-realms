@@ -1,4 +1,4 @@
-import type { StatusId } from '@realms/shared';
+import type { EnemyFamily, StatusId } from '@realms/shared';
 import type { AbilityId } from './abilities.js';
 
 /*
@@ -9,6 +9,8 @@ import type { AbilityId } from './abilities.js';
 export interface EnemyDef {
   id: string;
   name: string;
+  /** Request #64 (D121): for "strong against {family}" gear bonuses. */
+  family: EnemyFamily;
   maxHp: number;
   armor: number;
   magicResist: number;
@@ -32,6 +34,7 @@ export const ENEMIES = {
   rift_husk: enemy({
     id: 'rift_husk',
     name: 'Rift Husk',
+    family: 'hollow',
     maxHp: 30,
     armor: 8,
     magicResist: 0,
@@ -43,6 +46,7 @@ export const ENEMIES = {
   shard_spitter: enemy({
     id: 'shard_spitter',
     name: 'Shard Spitter',
+    family: 'void',
     maxHp: 20,
     armor: 0,
     magicResist: 10,
@@ -54,6 +58,7 @@ export const ENEMIES = {
   hollow_hound: enemy({
     id: 'hollow_hound',
     name: 'Hollow Hound',
+    family: 'beast',
     maxHp: 26,
     armor: 4,
     magicResist: 4,
@@ -65,6 +70,7 @@ export const ENEMIES = {
   rift_bulwark: enemy({
     id: 'rift_bulwark',
     name: 'Rift Bulwark',
+    family: 'construct',
     maxHp: 30,
     armor: 20,
     magicResist: 5,
@@ -76,6 +82,7 @@ export const ENEMIES = {
   rift_warden: enemy({
     id: 'rift_warden',
     name: 'Rift Warden',
+    family: 'construct',
     maxHp: 130,
     armor: 10,
     magicResist: 15,
@@ -90,6 +97,7 @@ export const ENEMIES = {
   rift_leech: enemy({
     id: 'rift_leech',
     name: 'Rift Leech',
+    family: 'beast',
     maxHp: 26,
     armor: 4,
     magicResist: 4,
@@ -102,6 +110,7 @@ export const ENEMIES = {
   thornback: enemy({
     id: 'thornback',
     name: 'Thornback',
+    family: 'beast',
     maxHp: 30,
     armor: 12,
     magicResist: 0,
@@ -115,6 +124,7 @@ export const ENEMIES = {
   void_shaman: enemy({
     id: 'void_shaman',
     name: 'Void Shaman',
+    family: 'void',
     maxHp: 20,
     armor: 0,
     magicResist: 12,
@@ -127,6 +137,7 @@ export const ENEMIES = {
   brood_mother: enemy({
     id: 'brood_mother',
     name: 'Brood Mother',
+    family: 'brood',
     maxHp: 40,
     armor: 6,
     magicResist: 6,
@@ -139,6 +150,7 @@ export const ENEMIES = {
   volatile_mite: enemy({
     id: 'volatile_mite',
     name: 'Volatile Mite',
+    family: 'brood',
     maxHp: 9,
     armor: 0,
     magicResist: 0,
@@ -152,6 +164,7 @@ export const ENEMIES = {
   phase_stalker: enemy({
     id: 'phase_stalker',
     name: 'Phase Stalker',
+    family: 'void',
     maxHp: 26,
     armor: 4,
     magicResist: 4,
@@ -164,6 +177,7 @@ export const ENEMIES = {
   rift_zealot: enemy({
     id: 'rift_zealot',
     name: 'Rift Zealot',
+    family: 'humanoid',
     maxHp: 26,
     armor: 2,
     magicResist: 8,
@@ -181,6 +195,7 @@ export const ENEMIES = {
   hollow_colossus: enemy({
     id: 'hollow_colossus',
     name: 'The Hollow Colossus',
+    family: 'hollow',
     maxHp: 1000,
     armor: 30,
     magicResist: 30,

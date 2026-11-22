@@ -289,7 +289,7 @@ describe('item cards (request #37): bonus effects, rarity, requirements, runes',
     const card = before.inventory.find((i) => i.id === ring!.id)!;
     expect(card.rarity).toBe('rare');
     expect(card.affixes.map((a) => [a.label, a.display])).toEqual([
-      ['Health', '+10'],
+      ['Max. HP', '+10'],
       ['Agility', '+2'],
     ]);
     expect(card.runeSlots).toEqual({ used: 0, total: 1 });

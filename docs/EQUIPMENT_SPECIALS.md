@@ -1,8 +1,12 @@
 # Equipment bonuses — pool per slot (request #64)
 
-**Status: PROPOSAL, not implemented.** Entries marked ✅ already exist in
-`packages/game-core/src/content/affixes.ts` (request #37); the rest are new.
-All names, values and slot assignments are placeholders for the owner.
+**Status: IMPLEMENTED (request #64, D122–D123)** in
+`packages/game-core/src/content/affixes.ts` and `combat/engine.ts`, except:
+runes as bonuses 6 and 7 (no rune items yet), the fixed bonus per equipment
+type (5.1, "maybe") and crafting (5.5). Owner changes since the proposal:
+weapon-family defences and economy bonuses were cut (only physical / magic
+defence); values come from the Rift tier; limits are per bonus per item.
+The code is the source of truth for ids, tiers and slots.
 
 Model: the Metin2 bonus tables (a fixed pool per item type, every bonus with a
 ladder of values), with Path of Exile's idea of value tiers, adapted to this
