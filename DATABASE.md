@@ -161,6 +161,16 @@ Migration 0016 renamed old ids (`blacksmithing` → `blacksmith`, `runesmithing`
 levels into ranks and gave every living character the four basic tools.
 Rank-ups are `world_events` of type `profession.rank_up` {professionId, rank}.
 
+### `profession_jobs`
+
+Real-time profession jobs (request #56); at most one per character
+(`profession_jobs_character_uq`). Inputs and node charges are taken at the
+start; when read after `finishes_at` the attempts are resolved, the items
+given, `status` becomes `done` and `result` holds the summary until dismissed.
+Columns: `id`, `character_id` (FK, cascade), `profession_id`, `activity_id`,
+`count` (1–50), `node_q`/`node_r`/`node_richness` (gathering), `tool_tier`,
+`attribute_bonus`, `status`, `result` (jsonb), `started_at`, `finishes_at`.
+
 ### `resource_nodes`
 
 Resource nodes (request #52). One per hex and gathering profession, derived

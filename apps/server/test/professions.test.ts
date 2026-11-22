@@ -1,4 +1,9 @@
-import type { ActivityResultDto, ProfessionProfileDto, ProfessionsDto } from '@realms/shared';
+import type {
+  ActivityResultDto,
+  JobResponseDto,
+  ProfessionProfileDto,
+  ProfessionsDto,
+} from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AP_RULES, worldMapHexes } from '@realms/game-core';
 import {
@@ -51,11 +56,16 @@ describe('professions', () => {
     const res = (await list(h)).json() as ProfessionsDto;
     expect(res.professions).toHaveLength(15);
     const ids = res.professions.map((p) => p.id);
-    expect(ids).toEqual(expect.arrayContaining(['blacksmith', 'runecrafter', 'scribing', 'crafter']));
+    expect(ids).toEqual(
+      expect.arrayContaining(['blacksmith', 'runecrafter', 'scribing', 'crafter']),
+    );
     expect(res.professions.every((p) => p.rank === 0 && p.rankName === 'Novice')).toBe(true);
     const fishing = res.professions.find((p) => p.id === 'fishing')!;
     // New characters carry the basic tools (request #51).
-    expect(fishing.tool).toMatchObject({ type: 'fishing_rod', best: { name: 'Fishing Rod', tier: 1 } });
+    expect(fishing.tool).toMatchObject({
+      type: 'fishing_rod',
+      best: { name: 'Fishing Rod', tier: 1 },
+    });
     expect(fishing.attributes.length).toBeGreaterThan(0);
     expect(fishing.stats).toEqual({ attempts: 0, successes: 0, itemsMade: 0 });
     expect(fishing.resources.map((r) => r.itemDefId)).toContain('raw_fish');
@@ -170,7 +180,8 @@ describe('professions', () => {
     )!.node!;
     expect(node.amount).toBe(node.max);
     // Leave one charge, written now: a success empties it.
-    await t.dbHandle.sql`insert into resource_nodes (world_id, hex_q, hex_r, profession_id, amount, updated_at)
+    await t.dbHandle
+      .sql`insert into resource_nodes (world_id, hex_q, hex_r, profession_id, amount, updated_at)
       select world_id, hex_q, hex_r, 'fishing', 1, now() from characters where id = ${h.id}`;
     let emptied = false;
     for (let i = 0; i < 20 && !emptied; i++) {
@@ -191,6 +202,84 @@ describe('professions', () => {
     await t.dbHandle
       .sql`update resource_nodes set updated_at = now() - interval '2 hours' where profession_id = 'fishing'`;
     expect((await perform(other, 'fishing', 'fish')).statusCode).toBe(200);
+  });
+
+  it('jobs paid in AP give everything at once (request #56)', async () => {
+    const h = await hero();
+    const job = (count: number) =>
+      t.app.inject({
+        method: 'POST',
+        url: `/api/characters/${h.id}/professions/fishing/activities/fish/jobs`,
+        headers: { cookie: h.cookie },
+        payload: { mode: 'ap', count },
+      });
+    const r = (await job(5)).json() as JobResponseDto;
+    expect(r.result!.attempts).toBe(5);
+    expect(r.result!.apSpent).toBe(5 * AP_RULES.gatherCost);
+    expect(r.job).toBeNull();
+    expect(r.profession.stats.attempts).toBe(5);
+    // Not enough AP for 5 more attempts.
+    await t.dbHandle.sql`update characters set ap = 3, ap_updated_at = now() where id = ${h.id}`;
+    const tooMany = await job(5);
+    expect(tooMany.json().error.code).toBe('NOT_ENOUGH_AP');
+  });
+
+  it('jobs in real time take the inputs now and give the items when they end (request #56)', async () => {
+    const h = await hero();
+    await give(h, 'log', 3);
+    const start = await t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.id}/professions/carpentry/activities/saw_planks/jobs`,
+      headers: { cookie: h.cookie },
+      payload: { mode: 'time', count: 3 },
+    });
+    expect(start.statusCode).toBe(200);
+    const r = start.json() as JobResponseDto;
+    expect(r.job).toMatchObject({ status: 'running', count: 3, activityName: 'Saw planks' });
+    const logs = await t.dbHandle
+      .sql`select count(*)::int as n from items where character_id = ${h.id} and item_def_id = 'log'`;
+    expect(logs[0]!.n).toBe(0);
+    // Busy until it ends: no other activity.
+    expect((await perform(h, 'fishing', 'fish')).json().error.message).toContain('busy');
+    let listed = (await list(h)).json() as ProfessionsDto;
+    expect(listed.job!.status).toBe('running');
+    // Time passes.
+    await t.dbHandle
+      .sql`update profession_jobs set finishes_at = now() - interval '1 second' where character_id = ${h.id}`;
+    listed = (await list(h)).json() as ProfessionsDto;
+    expect(listed.job!.status).toBe('done');
+    expect(listed.job!.result!.attempts).toBe(3);
+    const planks = await t.dbHandle
+      .sql`select coalesce(sum(quantity), 0)::int as n from items where character_id = ${h.id} and item_def_id = 'plank'`;
+    expect(planks[0]!.n).toBe(listed.job!.result!.produced.reduce((n, p) => n + p.qty, 0));
+    expect(listed.professions.find((p) => p.id === 'carpentry')!.stats.attempts).toBe(3);
+    // Dismiss the summary; free to work again.
+    const dismissed = await t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.id}/professions/jobs/dismiss`,
+      headers: { cookie: h.cookie },
+    });
+    expect((dismissed.json() as ProfessionsDto).job).toBeNull();
+    expect((await perform(h, 'fishing', 'fish')).statusCode).toBe(200);
+  });
+
+  it('real-time gathering reserves node charges and returns the unused ones', async () => {
+    const h = await hero();
+    const r = (
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/characters/${h.id}/professions/fishing/activities/fish/jobs`,
+        headers: { cookie: h.cookie },
+        payload: { mode: 'time', count: 4 },
+      })
+    ).json() as JobResponseDto;
+    const max = r.profession.node!.max;
+    expect(r.profession.node!.amount).toBe(max - 4);
+    await t.dbHandle
+      .sql`update profession_jobs set finishes_at = now() - interval '1 second' where character_id = ${h.id}`;
+    const listed = (await list(h)).json() as ProfessionsDto;
+    const node = listed.professions.find((p) => p.id === 'fishing')!.node!;
+    expect(node.amount).toBe(max - listed.job!.result!.successes);
   });
 
   it('crafting needs materials and level; blacksmiths repair gear', async () => {

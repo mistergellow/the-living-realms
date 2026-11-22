@@ -131,3 +131,27 @@ export function resolveActivity(a: ActivityDef, input: ChanceInput, seed: number
     repaired: success && a.effect === 'repair' ? repairAmount(input.rank) : 0,
   };
 }
+
+/*
+ * Jobs (request #56): instead of one click per attempt, choose how many
+ * attempts and pay either in AP (everything at once) or in real time (the
+ * items arrive when the job ends). PROVISIONAL numbers (A122).
+ */
+export const JOB_RULES = {
+  maxCount: 50,
+  /** AP per attempt: gathering uses AP_RULES.gatherCost; crafting this. */
+  craftApCost: 1,
+  /** Real time per gathering attempt (crafting uses the recipe's own time). */
+  gatherSeconds: 600,
+} as const;
+
+/** AP a job of `count` attempts costs, paid in AP. */
+export const jobApCost = (category: 'gathering' | 'crafting', count: number, gatherCost: number) =>
+  (category === 'gathering' ? gatherCost : JOB_RULES.craftApCost) * count;
+
+/** Seconds a job of `count` attempts takes, paid in real time. */
+export const jobSeconds = (
+  category: 'gathering' | 'crafting',
+  a: Pick<ActivityDef, 'cooldownSeconds'>,
+  count: number,
+) => (category === 'gathering' ? JOB_RULES.gatherSeconds : a.cooldownSeconds) * count;

@@ -441,6 +441,38 @@ export const customContent = pgTable(
   ],
 );
 
+// Profession jobs in real time (request #56): one per character. Inputs (and
+// node charges) are taken at the start; the attempts are resolved when the job
+// is read after `finishes_at`, and the summary is kept in `result` until the
+// player dismisses it or starts another job.
+export const professionJobs = pgTable(
+  'profession_jobs',
+  {
+    id: id(),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    professionId: text('profession_id').notNull(),
+    activityId: text('activity_id').notNull(),
+    count: smallint('count').notNull(),
+    /** Gathering: the node used (charges reserved at the start) and its richness. */
+    nodeQ: integer('node_q'),
+    nodeR: integer('node_r'),
+    nodeRichness: smallint('node_richness'),
+    /** Tool tier and BASE-attribute bonus when the job started. */
+    toolTier: smallint('tool_tier').notNull().default(0),
+    attributeBonus: smallint('attribute_bonus').notNull().default(0),
+    status: text('status').notNull().default('running'),
+    result: jsonb('result'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishesAt: timestamp('finishes_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex('profession_jobs_character_uq').on(t.characterId),
+    check('profession_jobs_count_range', sql`${t.count} between 1 and 50`),
+  ],
+);
+
 // Resource nodes (request #52, professions phase 2). One per hex and gathering
 // profession; a row appears the first time it is gathered from (no row = full).
 // `amount` is the charges when `updated_at` was written; the current amount

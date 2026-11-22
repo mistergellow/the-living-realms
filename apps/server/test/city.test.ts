@@ -114,8 +114,13 @@ describe('city services (request #50)', () => {
     for (let i = 0; i < 30; i++) {
       const r = (
         await post(h, 'blacksmith/upgrade', { itemId: blade, blessing: true })
-      ).json() as CityDto;
-      expect(r.upgrade!.result).not.toBe('destroyed');
+      ).json() as CityDto & { error?: { message: string } };
+      // It can reach the highest level (+10) before 30 tries: then it stops.
+      if (!r.upgrade) {
+        expect(r.error!.message).toContain('already +10');
+        break;
+      }
+      expect(r.upgrade.result).not.toBe('destroyed');
     }
   });
 });

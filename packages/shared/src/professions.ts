@@ -92,6 +92,46 @@ export interface ProfessionDto {
 
 export interface ProfessionsDto {
   professions: ProfessionDto[];
+  /** The running (or finished, not yet dismissed) real-time job (request #56). */
+  job: ProfessionJobDto | null;
+}
+
+/** Summary of several attempts (request #56). */
+export interface JobResultDto {
+  attempts: number;
+  successes: number;
+  pointsGained: number;
+  ranksGained: number;
+  produced: Array<{ name: string; qty: number; grade: string | null }>;
+  consumed: Array<{ name: string; qty: number }>;
+  apSpent: number;
+  message: string;
+}
+
+export interface ProfessionJobDto {
+  id: string;
+  professionId: string;
+  professionName: string;
+  activityId: string;
+  activityName: string;
+  count: number;
+  startedAt: string;
+  finishesAt: string;
+  status: 'running' | 'done';
+  result: JobResultDto | null;
+}
+
+/** Start a job: `ap` = all at once for AP; `time` = real time, no AP. */
+export const startJobSchema = z.object({
+  mode: z.enum(['ap', 'time']),
+  count: z.number().int().min(1).max(50),
+});
+
+export interface JobResponseDto {
+  /** Filled at once for an AP job. */
+  result: JobResultDto | null;
+  job: ProfessionJobDto | null;
+  profession: ProfessionDto;
 }
 
 export const performActivitySchema = z.object({

@@ -361,6 +361,10 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('activity-result')).toContainText('Mastery');
   await expect(page.getByTestId('activity-result')).toContainText('AP');
   await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
+  // Request #56: several attempts at once, paid in AP.
+  await page.getByLabel('Attempts of Fish').fill('3');
+  await page.getByTestId('job-fish').getByRole('button', { name: /Now · 6 AP/ }).click();
+  await expect(page.getByTestId('job-result')).toContainText('Fish × 3');
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
   await page.getByTestId('profession-carpentry').click();
@@ -369,7 +373,7 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.getByLabel('Character to inspect').fill(angler);
   await page.getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByTestId('profession-profile')).toContainText(angler);
-  await expect(page.getByTestId('profile-fishing')).toContainText('1 attempt');
+  await expect(page.getByTestId('profile-fishing')).toContainText('4 attempts');
   await page.screenshot({ path: 'test-results/screens/10b-profession-profile.png' });
 });
 

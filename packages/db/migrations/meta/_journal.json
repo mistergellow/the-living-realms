@@ -127,6 +127,13 @@
       "when": 1795309647228,
       "tag": "0017_gathering_nodes_grades",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795311382532,
+      "tag": "0018_profession_jobs",
+      "breakpoints": true
     }
   ]
 }
