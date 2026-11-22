@@ -405,8 +405,10 @@ export interface AbilityDto {
   effects: string[];
   /** Attributes it scales with, e.g. "Might 60% · Agility 40%". */
   scaling: string;
-  /** Skill level (learned skills, request #50): 1 … 5. */
+  /** Skill level (learned skills, requests #50/#53): 1 … 21. */
   level?: number;
+  /** The level as shown: "1" … "10", "M1" … "M10", "P". */
+  levelLabel?: string;
   /** BASE attributes needed to learn it (skills, request #47); empty = free. */
   requirements: Array<{ attribute: AttributeKey; value: number }>;
 }

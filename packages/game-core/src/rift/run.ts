@@ -93,6 +93,8 @@ export interface RunMember {
   stats: DerivedStatsDto;
   abilityIds: string[];
   abilityMultipliers: Record<string, number>;
+  /** Skill levels (request #53); absent in runs saved before it. */
+  abilityExtraTurns?: Record<string, number>;
   /** Gear effects (request #37); missing on runs saved before it. */
   gear?: GearCombatEffects;
   hp: number;
@@ -445,6 +447,7 @@ function toPartyInput(m: RunMember): PartyMemberInput {
     stats: m.stats,
     abilityIds: m.abilityIds,
     abilityMultipliers: m.abilityMultipliers,
+    abilityExtraTurns: m.abilityExtraTurns ?? {},
     gear: m.gear,
     hp: m.left ? 0 : m.hp,
     mana: m.mana,

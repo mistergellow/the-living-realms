@@ -27,6 +27,9 @@ import {
   getSkill,
   SKILL_RULES,
   skillLevelMultiplier,
+  skillAtLevel,
+  skillExtraTurns,
+  skillLevelLabel,
   planLoadout,
   isBroken,
   isGear,
@@ -91,6 +94,13 @@ const toOwned = (i: Item): OwnedItem => ({
 });
 
 /** `base`: the viewer's BASE attributes, to mark which requirements are met. */
+/** A learned skill at its level (request #53): leveled numbers and the label (1 … M10, P). */
+const leveledSkillDto = (a: AbilityDef, level: number) => ({
+  ...toAbilityDto(skillAtLevel(a, level), null),
+  level,
+  levelLabel: skillLevelLabel(level),
+});
+
 export function toItemDto(i: Item, base?: Attributes): ItemDto {
   const def = getItemDef(i.itemDefId);
   const gear = isGear(def?.kind);
@@ -277,7 +287,7 @@ export class CharacterSheetService {
       if (known) {
         if (known.level >= SKILL_RULES.maxLevel)
           throw errors.validation(
-            `${skill.name} is already at its highest level (${SKILL_RULES.maxLevel}).`,
+            `${skill.name} is already at its highest level (${skillLevelLabel(SKILL_RULES.maxLevel)}).`,
           );
         await tx
           .update(characterSkills)
@@ -382,13 +392,19 @@ export class CharacterSheetService {
       baseAttributes: baseAttributesOf(c),
       ...computeStats(baseAttributesOf(c), owned),
       abilityIds: availableAbilities(owned, preparedIds(skills)).map((a) => a.ability.id),
-      // Request #50: skill levels raise their numbers like weapon upgrades do.
+      // Request #50/#53: skill levels raise their numbers like weapon upgrades
+      // do, and from M1 their statuses last longer.
       abilityMultipliers: {
         ...abilityMultipliers(owned),
         ...Object.fromEntries(
           skills.filter((s) => s.level > 1).map((s) => [s.id, skillLevelMultiplier(s.level)]),
         ),
       },
+      abilityExtraTurns: Object.fromEntries(
+        skills
+          .filter((s) => skillExtraTurns(s.level) > 0)
+          .map((s) => [s.id, skillExtraTurns(s.level)]),
+      ),
     };
   }
 
@@ -421,12 +437,14 @@ export class CharacterSheetService {
       stats,
       equipment,
       inventory,
-      abilities: availableAbilities(owned, preparedIds(skills)).map(({ ability, grantedBy }) =>
-        toAbilityDto(ability, grantedBy),
-      ),
+      // Request #53: skills are shown with the numbers of their level.
+      abilities: availableAbilities(owned, preparedIds(skills)).map(({ ability, grantedBy }) => {
+        const sk = skills.find((s) => s.id === ability.id);
+        return sk ? leveledSkillDto(ability, sk.level) : toAbilityDto(ability, grantedBy);
+      }),
       learnedSkills: skills.flatMap((sk) => {
         const a = getAbility(sk.id);
-        return a ? [{ ...toAbilityDto(a, null), level: sk.level }] : [];
+        return a ? [leveledSkillDto(a, sk.level)] : [];
       }),
       loadout: loadoutOf(skills),
       reputation: c.reputation,

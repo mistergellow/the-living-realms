@@ -69,7 +69,12 @@ function AbilityCard(props: { a: AbilityDto; note?: string; prepared?: boolean; 
         <div className="row" style={{ gap: '0.4rem' }}>
           <strong>
             {a.name}
-            {a.level && a.level > 1 ? <span className="skill-level"> Lv {a.level}</span> : null}
+            {a.level ? (
+              <span className="skill-level" data-testid="skill-level" data-level={a.level}>
+                {' '}
+                Lv {a.levelLabel ?? a.level}
+              </span>
+            ) : null}
           </strong>
           <Costs a={a} />
           <span className="spacer" />

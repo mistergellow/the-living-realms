@@ -127,7 +127,7 @@ export const SKILLS = {
     targeting: NEAREST_TWO,
     effects: [
       { kind: 'damage', damageType: 'physical', min: 6, max: 8 },
-      { kind: 'status', status: 'weaken', turns: 2 },
+      { kind: 'status', status: 'weaken', turns: 2, value: 25 },
     ],
     scaling: { might: 1 },
     requirements: { might: 8 },
@@ -180,7 +180,7 @@ export const SKILLS = {
     targeting: ANY_ENEMY,
     effects: [
       { kind: 'damage', damageType: 'physical', min: 9, max: 11 },
-      { kind: 'status', status: 'mark', turns: 2 },
+      { kind: 'status', status: 'mark', turns: 2, value: 25 },
     ],
     scaling: { agility: 0.6, precision: 0.4 },
     requirements: { agility: 8 },
@@ -209,13 +209,14 @@ export const SKILLS = {
   expose_weakness: skill({
     id: 'expose_weakness',
     name: 'Expose Weakness',
-    description: 'Point out the gaps in an enemy’s guard: Marked and Weakened.',
+    description:
+      'Point out the gaps in an enemy’s guard: Marked (takes more damage) and Weakened (deals less). Both grow with the skill level.',
     focusCost: 1,
     manaCost: 0,
     targeting: ANY_ENEMY,
     effects: [
-      { kind: 'status', status: 'mark', turns: 2 },
-      { kind: 'status', status: 'weaken', turns: 2 },
+      { kind: 'status', status: 'mark', turns: 2, value: 25 },
+      { kind: 'status', status: 'weaken', turns: 2, value: 25 },
     ],
     scaling: {},
     requirements: { precision: 6 },
@@ -305,7 +306,7 @@ export const SKILLS = {
     targeting: ALL_ENEMIES,
     effects: [
       { kind: 'damage', damageType: 'magic', min: 4, max: 5 },
-      { kind: 'status', status: 'weaken', turns: 1 },
+      { kind: 'status', status: 'weaken', turns: 1, value: 25 },
     ],
     scaling: { intellect: 1 },
     requirements: { intellect: 7 },
@@ -439,7 +440,7 @@ export const SKILLS = {
     targeting: NEAREST,
     effects: [
       { kind: 'damage', damageType: 'magic', min: 8, max: 10 },
-      { kind: 'status', status: 'weaken', turns: 2 },
+      { kind: 'status', status: 'weaken', turns: 2, value: 25 },
     ],
     scaling: { might: 0.5, will: 0.5 },
     requirements: { might: 6, will: 6 },
@@ -485,11 +486,81 @@ export function getSkill(id: string): SkillDef | undefined {
  * raises its level; each level above 1 makes its numbers stronger.
  * PROVISIONAL (A110).
  */
-export const SKILL_RULES = { maxLevel: 5, perLevel: 0.1 } as const;
+/*
+ * Skill levels (request #50, reworked by request #53): 21 levels shown as
+ * 1 … 10, M1 … M10 and P (Perfect). Reading the book of a skill you know raises
+ * it by one. Every level makes the skill stronger: its numbers (damage,
+ * healing, Dodge, status values — including Mark and Weaken) grow, and from M1
+ * its statuses last longer. PROVISIONAL numbers (A120).
+ */
+export const SKILL_RULES = {
+  /** Highest level: P. */
+  maxLevel: 21,
+  /** Power gained per level from 2 to 10, per level from M1 to M10, and at P. */
+  perLevel: 0.1,
+  perMasterLevel: 0.08,
+  perfectBonus: 0.3,
+  /** Extra status turns (not Stun) at M1 and again at P. */
+  extraTurnsAt: [11, 21] as readonly number[],
+} as const;
+
+/** "1" … "10", "M1" … "M10", "P". */
+export function skillLevelLabel(level: number): string {
+  const l = Math.max(1, Math.min(SKILL_RULES.maxLevel, Math.round(level)));
+  if (l <= 10) return String(l);
+  if (l < SKILL_RULES.maxLevel) return `M${l - 10}`;
+  return 'P';
+}
 
 /** Multiplier for a skill's damage, healing, Dodge and status values at a level. */
-export const skillLevelMultiplier = (level: number) =>
-  1 + SKILL_RULES.perLevel * (Math.max(1, Math.min(SKILL_RULES.maxLevel, level)) - 1);
+export function skillLevelMultiplier(level: number): number {
+  const l = Math.max(1, Math.min(SKILL_RULES.maxLevel, Math.round(level)));
+  const normal = Math.min(l, 10) - 1;
+  const master = Math.max(0, Math.min(l, 20) - 10);
+  const perfect = l === SKILL_RULES.maxLevel ? SKILL_RULES.perfectBonus : 0;
+  return (
+    1 +
+    Math.round(
+      (normal * SKILL_RULES.perLevel + master * SKILL_RULES.perMasterLevel + perfect) * 100,
+    ) /
+      100
+  );
+}
+
+/** Extra turns a skill's statuses last at a level (Stun never lasts longer). */
+export const skillExtraTurns = (level: number) =>
+  SKILL_RULES.extraTurnsAt.filter((at) => level >= at).length;
+
+/**
+ * A skill as it is at a level: the numbers the player sees (and the engine
+ * uses through the level multiplier and `skillExtraTurns`).
+ */
+export function skillAtLevel<A extends AbilityDef>(a: A, level: number): A {
+  if (level <= 1) return a;
+  const m = skillLevelMultiplier(level);
+  const extra = skillExtraTurns(level);
+  /**
+   * One decimal, like in combat (request #53): damage, healing and Dodge are
+   * rolled and then multiplied, and status values keep a decimal, so a level
+   * always shows (and is) an improvement. For display only: combat applies
+   * the multiplier itself.
+   */
+  const r1 = (n: number) => Math.max(1, Math.round(n * m * 10) / 10);
+  return {
+    ...a,
+    effects: a.effects.map((e) => {
+      if (e.kind === 'damage' || e.kind === 'heal' || e.kind === 'block')
+        return { ...e, min: r1(e.min), max: r1(e.max) };
+      if (e.kind === 'status')
+        return {
+          ...e,
+          ...(e.value ? { value: r1(e.value) } : {}),
+          turns: e.status === 'stun' ? e.turns : e.turns + extra,
+        };
+      return e;
+    }),
+  };
+}
 
 /** Item id of the Skill Book that teaches a skill. */
 export const skillBookId = (skillId: string) => `book_${skillId}`;

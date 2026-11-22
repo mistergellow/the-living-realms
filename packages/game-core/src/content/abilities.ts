@@ -973,8 +973,8 @@ export const STATUS_NAMES: Record<StatusId, string> = {
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
   bleed: 'Takes damage at the start of each round (ignores armor).',
   burn: 'Takes damage at the start of each round (ignores resistance).',
-  mark: 'Takes 25% more damage.',
-  weaken: 'Deals 25% less damage.',
+  mark: 'Takes more damage: 25%, or more from a higher-level skill.',
+  weaken: 'Deals less damage: 25%, or more from a higher-level skill.',
   stun: 'Cannot act next round.',
   strength: 'Deals that much extra damage with every hit.',
   thorns: 'Attackers that hit it take that much damage.',

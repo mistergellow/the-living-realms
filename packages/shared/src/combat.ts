@@ -99,6 +99,8 @@ export interface CombatantView {
   power: number;
   /** Multiplier on ability values per ability id (weapon upgrades +1, +2…). */
   abilityMultipliers: Record<string, number>;
+  /** Skill levels (request #53): extra status turns per ability id. */
+  abilityExtraTurns?: Record<string, number>;
   /** Enemies only: planned actions for this round (D36). */
   intents: IntentView[];
   downed: boolean;
