@@ -225,11 +225,15 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   await register(page, `e2e-rift-${unique()}@example.com`);
   const raider = randomName('Raider');
   await createCharacter(page, raider);
-  // Rifts open on certain hexes (request #43): none in the capital.
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Rifts' }).click();
-  await expect(page.getByTestId('no-rift-here')).toBeVisible();
+  // Rifts open on certain hexes (request #43) and there is no Rifts tab
+  // (request #50): you go there and enter from the hex.
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Rifts' }),
+  ).toHaveCount(0);
   await travel(page, raider, 'rift');
+  await page.getByRole('link', { name: /Enter the Rift/ }).click();
   await expect(page.getByTestId('rift-card')).toContainText('Tier 1');
+  await expect(page.getByTestId('top-ap')).toHaveText(/^1\d\d\/120$/);
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
   // The Rift map: branching paths; the first row is always a fight.
