@@ -64,7 +64,7 @@ describe('bonus effects (request #37)', () => {
     expect(normalizeAffixes('junk')).toEqual([]);
   });
 
-  it('rolls different effects from the pool of the slot, deterministically (request #64)', () => {
+  it('rolls different effects from the pool of the slot, deterministically (request #67)', () => {
     const a = rollAffixes(new Rng(7), 'weapon', 5, 3, { weaponType: 'sword' });
     expect(a).toEqual(rollAffixes(new Rng(7), 'weapon', 5, 3, { weaponType: 'sword' }));
     expect(new Set(a.map((x) => x.id)).size).toBe(5);
@@ -82,7 +82,7 @@ describe('bonus effects (request #37)', () => {
     expect([...counts].every((c) => c >= 0 && c <= 5)).toBe(true);
   });
 
-  it('every slot has its own pool; family defences and economy bonuses are gone (D122)', () => {
+  it('every slot has its own pool; family defences and economy bonuses are gone (D124)', () => {
     for (const slot of GEAR_SLOTS) expect(poolFor(slot).length).toBeGreaterThanOrEqual(10);
     expect(poolFor('offhand').map((a) => a.id)).toContain('block_chance');
     expect(poolFor('ring').map((a) => a.id)).not.toContain('block_chance');
@@ -255,7 +255,7 @@ describe('gear effects in combat (request #37)', () => {
     expect(enemy.statuses.some((x) => x.id === 'bleed')).toBe(true);
   });
 
-  // ---- request #64 ----
+  // ---- request #67 ----
   const startVs = (m: PartyMemberInput, enemy: EnemyId = 'rift_warden', seed = 1): CombatState => {
     const s = createEncounter({
       party: [m],
@@ -274,7 +274,7 @@ describe('gear effects in combat (request #37)', () => {
     return before - foe(stab(s0)).hp;
   };
 
-  it('every enemy has a family (D121)', () => {
+  it('every enemy has a family (D123)', () => {
     const s = startVs(member());
     expect(foe(s).family).toBe('construct');
     expect(

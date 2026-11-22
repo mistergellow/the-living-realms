@@ -185,7 +185,7 @@ function startRound(state: CombatState): void {
     // Fuse (request #44): when the counter runs out, the unit explodes.
     const fuse = u.statuses.find((s) => s.id === 'fuse');
     if (fuse && fuse.turns <= 1 && !u.downed) explode(state, u, fuse.value);
-    // Request #64: HP regeneration from gear.
+    // Request #67: HP regeneration from gear.
     if ((u.gear?.hpRegen ?? 0) > 0 && !u.downed) heal(state, u, u.gear!.hpRegen!);
     // Regeneration (request #47): heals at the start of the round.
     const regen = u.statuses.find((s) => s.id === 'regen');
@@ -207,7 +207,7 @@ function startRound(state: CombatState): void {
     if (u.downed) continue;
     u.stunned = hasStatus(u, 'stun');
     if (u.stunned) pushLog(state, { t: 'stunned', targetId: u.id });
-    // Request #64: Chill — less Focus this round.
+    // Request #67: Chill — less Focus this round.
     const chill = statusValue(u, 'chill');
     u.statuses = u.statuses.map((s) => ({ ...s, turns: s.turns - 1 })).filter((s) => s.turns > 0);
     u.focus = Math.max(
@@ -372,14 +372,14 @@ function addStatus(
   pushLog(state, { t: 'status', targetId: target.id, status, turns });
 }
 
-/** Request #64: basic attacks (one per weapon type, plus unarmed). */
+/** Request #67: basic attacks (one per weapon type, plus unarmed). */
 const BASIC_ATTACK_IDS = new Set<string>([
   ...Object.values(WEAPON_TYPES).map((w) => w.basicAttack),
   ...UNARMED_ABILITIES,
 ]);
 export const isBasicAttack = (abilityId: string) => BASIC_ATTACK_IDS.has(abilityId);
 
-/** Players count as humanoids for "strong against" bonuses (D121). */
+/** Players count as humanoids for "strong against" bonuses (D123). */
 const familyOf = (c: Combatant): EnemyFamily | undefined =>
   c.kind === 'player' ? 'humanoid' : c.family;
 
@@ -394,7 +394,7 @@ const GEAR_STATUSES = new Set<StatusId>([
 ]);
 
 /**
- * A harmful status from a foe (request #64): gear may resist it, and the
+ * A harmful status from a foe (request #67): gear may resist it, and the
  * attacker's gear may make it stronger (Bleed/Burn) or longer.
  */
 function inflict(
@@ -439,7 +439,7 @@ const hurt = (state: CombatState, u: Combatant, n: number) => {
 };
 
 /**
- * Gear effects after a hit lands (requests #37, #64): life / mana steal and
+ * Gear effects after a hit lands (requests #37, #67): life / mana steal and
  * life on hit heal the attacker, thorns hurt the attacker, on-hit statuses
  * may stick to the target, Impale stores part of the hit, kills give rewards.
  */
@@ -488,7 +488,7 @@ function gearOnHit(
     hurt(state, actor, thorns);
 }
 
-/** Request #64: +% damage multiplier from the attacker's gear for this hit. */
+/** Request #67: +% damage multiplier from the attacker's gear for this hit. */
 function gearDamageFactor(
   state: CombatState,
   actor: Combatant,
@@ -512,7 +512,7 @@ function gearDamageFactor(
   return 1 + pct / 100;
 }
 
-/** Request #64: −% damage taken from the defender's gear for this hit. */
+/** Request #67: −% damage taken from the defender's gear for this hit. */
 function gearDefenceFactor(
   state: CombatState,
   actor: Combatant,
@@ -532,7 +532,7 @@ function gearDefenceFactor(
   return Math.max(0, 1 - pct / 100);
 }
 
-/** Armor / Magic Resist after piercing and penetration (request #64). */
+/** Armor / Magic Resist after piercing and penetration (request #67). */
 function effectiveReduction(
   rng: Rng,
   actor: Combatant,
@@ -570,14 +570,14 @@ function applyEffect(
       const g = actor.gear;
       const foe = actor.side !== target.side;
       const basic = isBasicAttack(ability.id);
-      // Request #64: Blind — the blinded unit's hits may miss.
+      // Request #67: Blind — the blinded unit's hits may miss.
       if (foe && hasStatus(actor, 'blind') && rng.chance(statusValue(actor, 'blind'))) {
         pushLog(state, { t: 'damage', targetId: target.id, amount: 0, crit: false, blocked: 0 });
         return true;
       }
       // 1. Incoming damage.
       let dmg = roll(rng, effect.min, effect.max) * mult;
-      // Request #64: "adds X damage" on the basic attack (same type as the attack).
+      // Request #67: "adds X damage" on the basic attack (same type as the attack).
       if (basic && g) dmg += addedRoll(rng, g.addedPhysical);
       // Request #53: Weaken and Mark carry their strength (percent) as value;
       // without one they use the default multipliers.
@@ -588,7 +588,7 @@ function applyEffect(
       if (effect.bonusVsBlock && target.block > 0) dmg *= effect.bonusVsBlock;
       // Strength (request #44): flat extra damage per hit.
       dmg += statusValue(actor, 'strength');
-      // Gear effects (requests #37, #64): +% damage, vs bosses, vs families…
+      // Gear effects (requests #37, #67): +% damage, vs bosses, vs families…
       const factor = gearDamageFactor(state, actor, ability, target);
       dmg *= factor;
       const crit = rng.chance(actor.stats.critChance);
@@ -601,7 +601,7 @@ function applyEffect(
           dmg * (1 - effectiveReduction(rng, actor, target, effect.damageType, pierced)) * defence,
         ),
       );
-      // Request #64: "adds X magic damage" on the basic attack, against Magic Resist.
+      // Request #67: "adds X magic damage" on the basic attack, against Magic Resist.
       const magicAdd = basic && g ? addedRoll(rng, g.addedMagic) : 0;
       if (magicAdd > 0)
         dmg += Math.round(
@@ -611,13 +611,13 @@ function applyEffect(
             (1 - effectiveReduction(rng, actor, target, 'magic', pierced)) *
             gearDefenceFactor(state, actor, target, 'magic'),
         );
-      // Request #64: Impale — damage stored by an earlier hit comes out now.
+      // Request #67: Impale — damage stored by an earlier hit comes out now.
       const impaled = statusValue(target, 'impale');
       if (impaled > 0) {
         dmg += Math.round(impaled);
         target.statuses = target.statuses.filter((s) => s.id !== 'impale');
       }
-      // Request #64: a chance to block a melee hit completely.
+      // Request #67: a chance to block a melee hit completely.
       const tg = target.gear;
       if (
         foe &&
@@ -633,14 +633,14 @@ function applyEffect(
       target.block = blockLeft;
       // Intangible (request #44): every hit deals at most 1.
       let capped = hasStatus(target, 'intangible') ? Math.min(1, toHp) : toHp;
-      // Request #64: part of the damage can be paid with Mana.
+      // Request #67: part of the damage can be paid with Mana.
       if (foe && (tg?.damageToManaPct ?? 0) > 0 && capped > 0) {
         const paid = Math.min(target.mana, Math.round((capped * tg!.damageToManaPct!) / 100));
         target.mana -= paid;
         capped -= paid;
       }
       let amount = Math.min(target.hp, capped);
-      // Request #64: Culling Strike — a non-boss left this low dies.
+      // Request #67: Culling Strike — a non-boss left this low dies.
       const cull = foe && !target.isBoss ? (g?.cullingPct ?? 0) : 0;
       if (cull > 0 && target.hp - amount > 0 && target.hp - amount <= (target.maxHp * cull) / 100)
         amount = target.hp;
@@ -652,7 +652,7 @@ function applyEffect(
       gearOnHit(state, rng, actor, target, amount, killed);
       // Drain (request #44): heals the attacker for the damage dealt.
       if (effect.drain && amount > 0 && !actor.downed) heal(state, actor, amount);
-      // Request #64: a chance to send a melee hit back.
+      // Request #67: a chance to send a melee hit back.
       if (
         foe &&
         effect.damageType === 'physical' &&
@@ -709,7 +709,7 @@ function applyEffect(
       const value = effect.value ? Math.max(1, Math.floor(effect.value * mult * potency)) : 0;
       // Skill levels (request #53): statuses (not Stun) last longer from M1.
       const extra = effect.status === 'stun' ? 0 : (actor.abilityExtraTurns?.[ability.id] ?? 0);
-      // Request #64: harmful statuses on a foe go through gear (resist, duration).
+      // Request #67: harmful statuses on a foe go through gear (resist, duration).
       if (actor.side !== target.side && HARMFUL_STATUSES.includes(effect.status))
         inflict(state, rng, actor, target, effect.status, effect.turns + extra, value);
       else addStatus(state, target, effect.status, effect.turns + extra, value);
@@ -786,7 +786,7 @@ function applyAbility(
 ): void {
   actor.focus -= ability.focusCost;
   actor.mana -= ability.manaCost;
-  // Request #64: "casting speed" — a skill may give 1 Focus back.
+  // Request #67: "casting speed" — a skill may give 1 Focus back.
   const refund = actor.gear?.focusRefundChance ?? 0;
   if (
     refund > 0 &&

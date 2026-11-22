@@ -180,7 +180,7 @@ const statusOf = (state: RunState): RunStatus => state.status;
 /** Bonus effects of a new piece of gear (request #37); materials get none. */
 const rollDropAffixes = (rng: Rng, defId: string, tier: number) => {
   const def = getItemDef(defId);
-  // Request #64: bonuses from the slot's pool, values by the Rift tier.
+  // Request #67: bonuses from the slot's pool, values by the Rift tier.
   return isGear(def?.kind) ? rollItemAffixes(rng, def, rollAffixCount(rng, tier), tier) : [];
 };
 

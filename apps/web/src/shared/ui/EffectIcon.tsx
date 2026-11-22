@@ -1,4 +1,10 @@
-import { getAbility, STATUS_DESCRIPTIONS, STATUS_NAMES, type AbilityDef } from '@realms/game-core';
+import {
+  getAbility,
+  STATUS_DESCRIPTIONS,
+  STATUS_NAMES,
+  type AbilityDef,
+  damageTypeLabel,
+} from '@realms/game-core';
 import { Rich } from './Rich';
 import type { StatusId } from '@realms/shared';
 import './effect-icons.css';
@@ -105,7 +111,7 @@ const ICONS: Record<EffectKind, { color: string; path: string; label: string }> 
     label: 'Regeneration',
     path: 'M12 3c4 4 7 7 7 11a7 7 0 0 1-14 0c0-4 3-7 7-11Zm0 7v7M8.5 13.5h7',
   },
-  // Request #64 (gear bonuses).
+  // Request #67 (gear bonuses).
   chill: {
     color: '#8fd8ff',
     label: 'Chilled',
@@ -209,7 +215,7 @@ export function abilityEffectIcons(a: AbilityDef, power = 1) {
             key={key}
             kind={kind}
             value={v}
-            title={`${v} ${e.damageType} damage${e.drain ? ', heals for the damage dealt' : ''}`}
+            title={`${v} ${damageTypeLabel(e.damageType)} damage${e.drain ? ', heals for the damage dealt' : ''}`}
           />,
         ];
       }

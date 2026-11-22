@@ -72,7 +72,7 @@ export async function charactersRoutes(
     return sheets.useItem(request.auth!.account.id, id, itemId);
   });
 
-  /** Request #65: drop (throw away) an item from the bag, anywhere — also on an adventure. */
+  /** Request #68: drop (throw away) an item from the bag, anywhere — also on an adventure. */
   app.post('/:id/items/:itemId/drop', async (request) => {
     const { id, itemId } = parse(useItemParams, request.params);
     const { qty } = parse(dropItemRequestSchema, request.body ?? {});

@@ -55,7 +55,7 @@ export function EquipmentTab({
   const [search, setSearch] = useState('');
   const inv = useInventoryActions(characterId);
   const [split, setSplit] = useState<{ item: ItemDto; slot: number } | null>(null);
-  // Request #65: right-click menu on a bag item, and the drop confirmation.
+  // Request #68: right-click menu on a bag item, and the drop confirmation.
   const [menu, setMenu] = useState<{ item: ItemDto; at: { x: number; y: number } } | null>(null);
   const [dropping, setDropping] = useState<ItemDto | null>(null);
   const busy =
@@ -152,6 +152,16 @@ export function EquipmentTab({
 
   return (
     <div className="equip-tab">
+      {use.data?.notice && (
+        <p
+          className="city-message"
+          data-testid="read-notice"
+          data-ok={use.data.notice.ok}
+          style={{ margin: 0 }}
+        >
+          {use.data.notice.message}
+        </p>
+      )}
       <FormError
         error={
           equip.error ??

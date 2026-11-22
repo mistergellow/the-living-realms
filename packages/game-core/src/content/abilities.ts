@@ -22,6 +22,13 @@ export type Column = CombatColumn;
 export type Reach = 'first' | 'first2' | 'any' | Column[];
 export type DamageType = 'physical' | 'ranged' | 'magic';
 
+/**
+ * Request #65: damage is either physical or magic. 'ranged' is only how an
+ * attack travels (a projectile); it is physical damage (Armor reduces it).
+ */
+export const damageTypeLabel = (t: DamageType): 'physical' | 'magic' =>
+  t === 'magic' ? 'magic' : 'physical';
+
 export interface AbilityTargeting {
   side: 'enemy' | 'ally' | 'self';
   reach: Reach;
@@ -997,7 +1004,7 @@ export const HARMFUL_STATUSES: StatusId[] = [
   'mark',
   'weaken',
   'stun',
-  // request #64
+  // request #67
   'chill',
   'blind',
   'impale',
@@ -1027,7 +1034,7 @@ export function describeEffects(a: AbilityDef): string[] {
     switch (e.kind) {
       case 'damage':
         return [
-          `${e.min}–${e.max} ${e.damageType} damage` +
+          `${e.min}–${e.max} ${damageTypeLabel(e.damageType)} damage` +
             (e.bonusVs
               ? ` (×${e.bonusVs.multiplier} vs ${STATUS_NAMES[e.bonusVs.status].toLowerCase()})`
               : '') +

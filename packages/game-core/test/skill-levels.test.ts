@@ -3,6 +3,8 @@ import {
   COMBAT_RULES,
   markFactor,
   SKILL_RULES,
+  booksToReach,
+  readChance,
   SKILLS,
   skillAtLevel,
   skillExtraTurns,
@@ -73,5 +75,17 @@ describe('skill levels (request #53)', () => {
       (e) => e.kind === 'status' && e.status === 'stun',
     )!;
     expect(stun).toMatchObject({ turns: 1 });
+  });
+
+  it('reaching level N takes N books (request #66); harder levels fail more often', () => {
+    expect(booksToReach(1)).toBe(1);
+    expect(booksToReach(2)).toBe(2);
+    expect(booksToReach(10)).toBe(10);
+    expect(booksToReach(11)).toBe(11); // M1
+    expect(booksToReach(20)).toBe(20); // M10
+    expect(booksToReach(21)).toBe(21); // P
+    expect(readChance(1)).toBe(100);
+    for (let l = 3; l <= 21; l++) expect(readChance(l)).toBeLessThanOrEqual(readChance(l - 1));
+    expect(readChance(21)).toBe(SKILL_RULES.readChanceMin);
   });
 });

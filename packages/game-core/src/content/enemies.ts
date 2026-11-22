@@ -9,7 +9,7 @@ import type { AbilityId } from './abilities.js';
 export interface EnemyDef {
   id: string;
   name: string;
-  /** Request #64 (D121): for "strong against {family}" gear bonuses. */
+  /** Request #67 (D123): for "strong against {family}" gear bonuses. */
   family: EnemyFamily;
   maxHp: number;
   armor: number;

@@ -480,7 +480,7 @@ function grant(
   for (const m of who) {
     for (const itemDefId of rollLoot(rng, table)) {
       // Request #50: rarity rolled now (by tier) so the popup can show it.
-      // Request #64: bonuses from the slot's pool, values by the Rift tier.
+      // Request #67: bonuses from the slot's pool, values by the Rift tier.
       const def = getItemDef(itemDefId);
       const affixes = isGear(def?.kind)
         ? rollItemAffixes(rng, def, rollAffixCount(rng, tier), tier)

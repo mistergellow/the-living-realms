@@ -387,3 +387,35 @@
   text-transform: uppercase;
   color: #ff9f43;
 }
+
+/* Request #64: pages with little on them stay a readable width, centred. */
+:root .screen-body > .contain.narrow {
+  max-width: min(100%, 60rem);
+}
+
+/* Request #65: abilities an item grants, as their icons. */
+.tip-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+}
+.tip-ability {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+.tip-ability-icon {
+  position: relative;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+}
+.tip-yours {
+  font-size: 1.05rem;
+}
+/* Request #66: a failed attempt reads as a failure. */
+:root .city-message[data-ok='false'] {
+  border-left-color: var(--danger);
+  color: #ffb3a7;
+}

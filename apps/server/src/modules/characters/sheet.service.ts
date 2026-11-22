@@ -8,6 +8,7 @@ import {
   type DbOrTx,
   type Item,
 } from '@realms/db';
+import { randomInt } from 'node:crypto';
 import {
   abilityMultipliers,
   asBaseAttributes,
@@ -30,6 +31,8 @@ import {
   skillAtLevel,
   skillExtraTurns,
   skillLevelLabel,
+  booksToReach,
+  readChance,
   planLoadout,
   isBroken,
   isGear,
@@ -100,6 +103,14 @@ const leveledSkillDto = (a: AbilityDef, level: number) => ({
   ...toAbilityDto(skillAtLevel(a, level), null),
   level,
   levelLabel: skillLevelLabel(level),
+  nextLevel:
+    level < SKILL_RULES.maxLevel
+      ? {
+          label: skillLevelLabel(level + 1),
+          books: booksToReach(level + 1),
+          chance: readChance(level + 1),
+        }
+      : null,
 });
 
 export function toItemDto(i: Item, base?: Attributes): ItemDto {
@@ -292,33 +303,74 @@ export class CharacterSheetService {
         );
       const learned = await itemsRepository.learnedSkills(tx, c.id);
       const known = learned.find((s) => s.id === skill.id);
-      const useBook = async () => {
-        if (item.quantity > 1)
-          await tx
-            .update(items)
-            .set({ quantity: item.quantity - 1 })
-            .where(eq(items.id, item.id));
-        else await tx.delete(items).where(eq(items.id, item.id));
-      };
-      // Request #50: a book of a skill you know raises its level.
+      // Request #50/#66: books of a skill you know try to raise its level.
+      // Reaching level N takes N books (all used up), and it can fail.
       if (known) {
         if (known.level >= SKILL_RULES.maxLevel)
           throw errors.validation(
             `${skill.name} is already at its highest level (${skillLevelLabel(SKILL_RULES.maxLevel)}).`,
           );
-        await tx
-          .update(characterSkills)
-          .set({ level: known.level + 1 })
-          .where(and(eq(characterSkills.characterId, c.id), eq(characterSkills.skillId, skill.id)));
-        await useBook();
+        const next = known.level + 1;
+        const need = booksToReach(next);
+        const stacks = (
+          await tx
+            .select()
+            .from(items)
+            .where(
+              and(
+                eq(items.characterId, c.id),
+                eq(items.itemDefId, item.itemDefId),
+                isNull(items.equippedSlot),
+                eq(items.inStorage, false),
+              ),
+            )
+        ).sort((a, b) => (a.id === item.id ? -1 : b.id === item.id ? 1 : 0));
+        const have = stacks.reduce((n, r) => n + r.quantity, 0);
+        if (have < need)
+          throw errors.validation(
+            `${skill.name} ${skillLevelLabel(next)} needs ${need} books (you carry ${have}).`,
+          );
+        let left = need;
+        for (const r of stacks) {
+          if (left <= 0) break;
+          const take = Math.min(left, r.quantity);
+          left -= take;
+          if (take === r.quantity) await tx.delete(items).where(eq(items.id, r.id));
+          else
+            await tx
+              .update(items)
+              .set({ quantity: r.quantity - take })
+              .where(eq(items.id, r.id));
+        }
+        const chance = readChance(next);
+        const success = randomInt(100) < chance;
+        if (success)
+          await tx
+            .update(characterSkills)
+            .set({ level: next })
+            .where(
+              and(eq(characterSkills.characterId, c.id), eq(characterSkills.skillId, skill.id)),
+            );
         await tx.insert(worldEvents).values({
           worldId: c.worldId,
-          type: 'skill.leveled',
+          type: success ? 'skill.leveled' : 'skill.read_failed',
           actorAccountId: accountId,
           actorCharacterId: c.id,
-          payload: { skillId: skill.id, level: known.level + 1 },
+          payload: { skillId: skill.id, level: next, books: need, chance },
         });
-        return this.buildSheet(tx, c);
+        const sheet = await this.buildSheet(tx, c);
+        return {
+          ...sheet,
+          notice: success
+            ? {
+                ok: true,
+                message: `${skill.name} is now level ${skillLevelLabel(next)}! (${need} books, ${chance}% chance)`,
+              }
+            : {
+                ok: false,
+                message: `The reading failed: ${skill.name} stays at level ${skillLevelLabel(known.level)} and the ${need} books are lost (${chance}% chance).`,
+              },
+        };
       }
       const used = new Set(learned.map((s) => s.loadoutSlot));
       const free = Array.from({ length: MAX_PREPARED_SKILLS }, (_, i) => i).find(
@@ -361,7 +413,7 @@ export class CharacterSheetService {
   }
 
   /**
-   * Request #65: throw an item away from the bag (it is gone for good). Works
+   * Request #68: throw an item away from the bag (it is gone for good). Works
    * anywhere, also during a Rift; equipped and stored items cannot be dropped.
    * A stack drops whole unless `qty` is given.
    */
@@ -437,7 +489,7 @@ export class CharacterSheetService {
     ]);
     const owned = rows.map(toOwned);
     const computed = computeStats(baseAttributesOf(c), owned);
-    // Request #64: gear can raise the level of every skill (up to the max).
+    // Request #67: gear can raise the level of every skill (up to the max).
     const bonus = computed.gear.skillLevels ?? 0;
     const leveled = skills.map((s) => ({
       ...s,

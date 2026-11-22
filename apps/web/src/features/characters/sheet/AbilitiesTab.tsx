@@ -97,6 +97,15 @@ function AbilityCard(props: { a: AbilityDto; note?: string; prepared?: boolean; 
           <span className="field-hint">{a.targeting}</span>
         </div>
         <div className="field-hint">{a.effects.join(' · ')}</div>
+        {a.nextLevel && (
+          // Request #66: what the next level takes.
+          <div className="field-hint" data-testid="next-level">
+            Next:{' '}
+            <Rich
+              text={`Lv ${a.nextLevel.label} · ${a.nextLevel.books} books · ${a.nextLevel.chance}% chance`}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

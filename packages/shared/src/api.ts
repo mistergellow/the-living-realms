@@ -347,7 +347,7 @@ export interface ItemRequirementDto {
 }
 
 /**
- * Enemy families (request #64, D121): gear can be "strong against" a family.
+ * Enemy families (request #67, D123): gear can be "strong against" a family.
  * Players count as humanoids.
  */
 export const ENEMY_FAMILIES = [
@@ -360,12 +360,12 @@ export const ENEMY_FAMILIES = [
 ] as const;
 export type EnemyFamily = (typeof ENEMY_FAMILIES)[number];
 
-/** Statuses gear can apply on hit / resist (request #64). */
+/** Statuses gear can apply on hit / resist (request #67). */
 export type GearStatus = 'bleed' | 'burn' | 'stun' | 'weaken' | 'mark' | 'chill' | 'blind';
 
 /**
- * Combat bonuses from gear (requests #37, #64), carried by player combatants.
- * Percentages are whole numbers (15 = 15%). Fields added by request #64 are
+ * Combat bonuses from gear (requests #37, #67), carried by player combatants.
+ * Percentages are whole numbers (15 = 15%). Fields added by request #67 are
  * optional: runs saved before it do not have them (read them as 0).
  */
 export interface GearCombatEffects {
@@ -384,7 +384,7 @@ export interface GearCombatEffects {
    * gets a status. Optional: runs saved before it do not have it.
    */
   whenHit?: Array<{ status: GearStatus; chance: number }>;
-  // ---- request #64: attack ----
+  // ---- request #67: attack ----
   /** +% damage against each enemy family. */
   vsFamily?: Partial<Record<EnemyFamily, number>>;
   /** +% damage of skills (everything but the basic attack). */
@@ -431,7 +431,7 @@ export interface GearCombatEffects {
   impaleChance?: number;
   /** +1 level to every prepared skill per point. */
   skillLevels?: number;
-  // ---- request #64: resistance ----
+  // ---- request #67: resistance ----
   /** −% damage taken from physical and ranged hits / from magic hits. */
   physicalDefencePct?: number;
   magicDefencePct?: number;
@@ -449,7 +449,7 @@ export interface GearCombatEffects {
   damageToManaPct?: number;
   /** −% damage taken while at 90% HP or more. */
   fullHpGuardPct?: number;
-  // ---- request #64: other ----
+  // ---- request #67: other ----
   /** HP healed at the start of every round. */
   hpRegen?: number;
 }
@@ -509,6 +509,8 @@ export interface AbilityDto {
   level?: number;
   /** The level as shown: "1" … "10", "M1" … "M10", "P". */
   levelLabel?: string;
+  /** Request #66: what the next level takes (null at P). */
+  nextLevel?: { label: string; books: number; chance: number } | null;
   /** BASE attributes needed to learn it (skills, request #47); empty = free. */
   requirements: Array<{ attribute: AttributeKey; value: number }>;
 }
@@ -551,6 +553,8 @@ export interface CharacterSheetDto {
   abilities: AbilityDto[];
   /** All skills the character has learned (from books), prepared or not. */
   learnedSkills: AbilityDto[];
+  /** Request #66: the result of the last action that may not succeed (reading books). */
+  notice?: { ok: boolean; message: string };
   /** The prepared skills, by loadout slot (length MAX_PREPARED_SKILLS; null = empty). */
   loadout: Array<string | null>;
   /** Reputation is a per-character currency earned through activities. */
@@ -568,7 +572,7 @@ export type EquipRequest = z.infer<typeof equipRequestSchema>;
 export const unequipRequestSchema = z.object({ slot: z.enum(EQUIP_SLOTS) });
 export type UnequipRequest = z.infer<typeof unequipRequestSchema>;
 
-/** Request #65: throw away an item from the bag (all of a stack unless `qty`). */
+/** Request #68: throw away an item from the bag (all of a stack unless `qty`). */
 export const dropItemRequestSchema = z.object({ qty: z.number().int().positive().optional() });
 export type DropItemRequest = z.infer<typeof dropItemRequestSchema>;
 

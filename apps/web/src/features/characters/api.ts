@@ -62,7 +62,7 @@ export function useEquipment(id: string) {
         api<CharacterSheetDto>('POST', `/characters/${id}/unequip`, input),
       onSuccess,
     }),
-    /** Request #65: throw an item away from the bag. */
+    /** Request #68: throw an item away from the bag. */
     drop: useMutation({
       mutationFn: (v: { itemId: string; qty?: number }) =>
         api<CharacterSheetDto>('POST', `/characters/${id}/items/${v.itemId}/drop`, {

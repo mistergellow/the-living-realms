@@ -46,7 +46,7 @@ export function ItemGrid({
   tip?: (item: ItemDto) => HTMLAttributes<HTMLElement>;
   onDoubleClick?: (item: ItemDto) => void;
   onClick?: (item: ItemDto) => void;
-  /** Request #65: right click on an item (opens its menu). */
+  /** Request #68: right click on an item (opens its menu). */
   onContextMenu?: (item: ItemDto, at: { x: number; y: number }) => void;
   /** Id of the selected item (shop). */
   selected?: string | null;
@@ -212,7 +212,7 @@ export function GridTools({
   );
 }
 
-/** Request #65: small menu at the pointer (right click on an item). */
+/** Request #68: small menu at the pointer (right click on an item). */
 export function ItemMenu({
   at,
   actions,
@@ -266,7 +266,7 @@ export function ItemMenu({
   );
 }
 
-/** Request #65: confirm throwing an item away (choose how many of a stack). */
+/** Request #68: confirm throwing an item away (choose how many of a stack). */
 export function DropDialog({
   item,
   onConfirm,

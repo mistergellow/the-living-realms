@@ -116,7 +116,7 @@ export function computeStats(base: Attributes, items: OwnedItem[] = []): Charact
     focusPerRound: Math.min(FOCUS_RULES.maxPerRound, d.focusPerRound + g.stats.focusPerRound),
     manaRegen: d.manaRegen + g.stats.manaRegen,
   };
-  // Request #64 (D122): a one-handed weapon in each hand hits harder.
+  // Request #67 (D124): a one-handed weapon in each hand hits harder.
   const main = equipped.find((i) => i.equippedSlot === 'mainHand');
   const off = equipped.find((i) => i.equippedSlot === 'offHand');
   if (main?.def.kind === 'weapon' && !main.def.twoHanded && off?.def.kind === 'weapon')

@@ -1,6 +1,6 @@
-# Equipment bonuses — pool per slot (request #64)
+# Equipment bonuses — pool per slot (request #67)
 
-**Status: IMPLEMENTED (request #64, D122–D123)** in
+**Status: IMPLEMENTED (request #67, D124–D125)** in
 `packages/game-core/src/content/affixes.ts` and `combat/engine.ts`, except:
 runes as bonuses 6 and 7 (no rune items yet), the fixed bonus per equipment
 type (5.1, "maybe") and crafting (5.5). Owner changes since the proposal:
@@ -195,7 +195,7 @@ Default: every slot uses the T1–T5 ladder of the catalogue. Exceptions (propos
 
 ## 4. Bonuses 6 and 7 — runes
 
-**Decided (owner, D122):** every item can have **up to 2 rune slots**. Slots are
+**Decided (owner, D124):** every item can have **up to 2 rune slots**. Slots are
 opened later (Runecrafter) or the item can already drop with 1 slot open. A rune
 in a slot gives one bonus from the rune pool below (proposal); the rune's own
 quality decides the value.
@@ -311,7 +311,7 @@ some also **drop from monsters**.
 
 ## Questions for the owner
 
-1. ~~Enemy families~~ — **decided (D121)**: Beast (Hollow Hound, Thornback,
+1. ~~Enemy families~~ — **decided (D123)**: Beast (Hollow Hound, Thornback,
    Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase
    Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood
    Mother, Volatile Mite), Humanoid (Rift Zealot, players).
@@ -321,7 +321,7 @@ some also **drop from monsters**.
    damage from **players** (PvP). Options: (a) cut them and keep Melee / Ranged /
    Magic defence; (b) give every monster ability a weapon family too (claws =
    Blades, slam = Blunt, spit = Ranged, spells = Arcane) so they work in PvE.
-4. ~~Runes~~ — **decided (D122)**: up to 2 rune slots per item, opened later or
+4. ~~Runes~~ — **decided (D124)**: up to 2 rune slots per item, opened later or
    dropped with 1 open.
 5. **Economy bonuses 🧭** (double gold, double items, reputation, gathering, AP) — allow?
 6. **Caps** on totals (e.g. crit chance 30%, life steal 15%, block 25%)?

@@ -220,7 +220,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await page.getByRole('tab', { name: /Abilities/ }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
 
-  // Request #65: right click on a bag item → Drop → confirm; it is gone.
+  // Request #68: right click on a bag item → Drop → confirm; it is gone.
   await page.getByRole('tab', { name: /Equipment/ }).click();
   await page
     .getByRole('button', { name: 'Main hand: Hunting Bow' })

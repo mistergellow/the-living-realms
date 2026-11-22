@@ -130,9 +130,11 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                                                                                                                              | 2026-11-22 | `GameShell.tsx`                                                                                       |
 | D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                                                                                                                               | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
 | D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                                                                                                                                          | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
-| D121 | **Famílias de inimigos** (para os bónus "Strong against X"): Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift Zealot, jogadores)                                                                                                                | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
-| D122 | **Bónus do equipamento:** 5 bónus aleatórios da pool do slot (sem limite por grupo, sem bónus fixo por tipo de arma; por tipo de equipamento talvez); **até 2 slots de runa** por item (abrem-se depois ou o item já cai com 1); bónus novos do PoE e estados novos entram todos para depois cortar/afinar; arma de 1 mão nas duas mãos dá mais dano; materiais de crafting vêm de caça e profissões, alguns são drop de monstros | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
-| D123 | **Bónus do equipamento (implementação):** sem defesas por família de arma (só defesa física e mágica); o valor de cada bónus vem do tier do Rift (Rift mais difícil = melhor equipamento); sem bónus de economia; o limite é por bónus e por item (somam-se entre itens diferentes); armas de duas mãos com bónus de ataque ×1,5; materiais de crafting: por agora só os de recolha                                               | 2026-11-22 | `content/affixes.ts`, `combat/engine.ts`, `docs/EQUIPMENT_SPECIALS.md`                                |
+| D121 | **O conteúdo principal ocupa o espaço; a mochila (20) é uma coluna compacta**; o que acontece numa sala do Rift abre **num popup à frente de tudo**; páginas coerentes e óbvias                                                                                                                                                                                                                                                   | 2026-11-22 | `city.css`, `sheet.css`, `RunPage.tsx`                                                                |
+| D122 | **Livros por nível**: chegar ao nível N pede N livros (1, 2 … 10, M1 = 11 … M10 = 20, P = 21); **a leitura pode falhar**                                                                                                                                                                                                                                                                                                          | 2026-11-22 | `booksToReach`, `readChance`                                                                          |
+| D123 | **Famílias de inimigos** (para os bónus "Strong against X"): Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift Zealot, jogadores)                                                                                                                | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
+| D124 | **Bónus do equipamento:** 5 bónus aleatórios da pool do slot (sem limite por grupo, sem bónus fixo por tipo de arma; por tipo de equipamento talvez); **até 2 slots de runa** por item (abrem-se depois ou o item já cai com 1); bónus novos do PoE e estados novos entram todos para depois cortar/afinar; arma de 1 mão nas duas mãos dá mais dano; materiais de crafting vêm de caça e profissões, alguns são drop de monstros | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
+| D125 | **Bónus do equipamento (implementação):** sem defesas por família de arma (só defesa física e mágica); o valor de cada bónus vem do tier do Rift (Rift mais difícil = melhor equipamento); sem bónus de economia; o limite é por bónus e por item (somam-se entre itens diferentes); armas de duas mãos com bónus de ataque ×1,5; materiais de crafting: por agora só os de recolha                                               | 2026-11-22 | `content/affixes.ts`, `combat/engine.ts`, `docs/EQUIPMENT_SPECIALS.md`                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -265,8 +267,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
 | A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
 | A127 | Mercado                                                         | só nas capitais (ainda não há aldeias); sem taxa; o vendedor recebe o ouro mesmo offline; tirar de volta só na cidade onde está à venda; uma pilha vende-se inteira                                                                                                                                                                                                                                                                                                                                                                                        | `MARKET_RULES`                                                                   |
-| A128 | Bónus do equipamento (pedido #64)                               | valores T1–T5 de `AFFIXES` (`tiers`); 10 % de chance de um tier acima; duas armas de 1 mão: +40 % de dano do ataque básico; Chill = −1 Focus por ronda, Blind = 25 % de falhar, Impale = 30 % do golpe, 3 rondas; "Casting speed" = chance de devolver 1 Focus (não há cooldowns); "Onslaught" = Strength ao matar (no PvE não há iniciativa); "+níveis de skill" só para todas as skills; Focus por ronda só a partir de T4                                                                                                                               | `AFFIX_RULES`, `DUAL_WIELD_RULES`, `AFFIXES`                                     |
-| A129 | Deitar itens fora (pedido #65)                                  | o item desaparece de vez (não fica no chão do hexágono); só da mochila (equipados: tirar primeiro; armazém: não); uma pilha cai inteira, ou escolhe-se a quantidade na confirmação; funciona em qualquer lado, também dentro de um Rift                                                                                                                                                                                                                                                                                                                    | `dropItem` (`sheet.service.ts`), `DropDialog`                                    |
+| A128 | Falha da leitura                                                | 96 % para o nível 2, −4 por nível, mínimo 20 % (10 = 64 %, M1 = 60 %, P = 20 %); falhar gasta os livros                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `SKILL_RULES.readChance*`                                                        |
+| A129 | Bónus do equipamento (pedido #67)                               | valores T1–T5 de `AFFIXES` (`tiers`); 10 % de chance de um tier acima; duas armas de 1 mão: +40 % de dano do ataque básico; Chill = −1 Focus por ronda, Blind = 25 % de falhar, Impale = 30 % do golpe, 3 rondas; "Casting speed" = chance de devolver 1 Focus (não há cooldowns); "Onslaught" = Strength ao matar (no PvE não há iniciativa); "+níveis de skill" só para todas as skills; Focus por ronda só a partir de T4                                                                                                                               | `AFFIX_RULES`, `DUAL_WIELD_RULES`, `AFFIXES`                                     |
+| A130 | Deitar itens fora (pedido #68)                                  | o item desaparece de vez (não fica no chão do hexágono); só da mochila (equipados: tirar primeiro; armazém: não); uma pilha cai inteira, ou escolhe-se a quantidade na confirmação; funciona em qualquer lado, também dentro de um Rift                                                                                                                                                                                                                                                                                                                    | `dropItem` (`sheet.service.ts`), `DropDialog`                                    |
 
 ---
 
@@ -541,7 +544,7 @@ conforme a dificuldade do Rift.
 **Resultado:** confirmado: sem alterações pendentes; `main` no GitHub = commit
 `7d8fa39` (ataques por coluna) com CI verde. O Railway publica a partir do `main`.
 
-### #26 — 2026-11-18 — Servidor a crashar no Railway ("Can't find meta/\_journal.json")
+### #26 — 2026-11-18 — Servidor a crashar no Railway ("Can't find meta/_journal.json")
 
 **Pedido:** logs do Railway com o servidor a reiniciar em ciclo.
 **Causa:** o mesmo do #10. O Railway não usou o Dockerfile: construiu o
@@ -1336,7 +1339,57 @@ venda em todas as cidades. Tabela `market_listings` (migração 0021); rotas
 (4) e passo no e2e. Também neste pedido: artefacto "Living Realms Arsenal" com
 todas as armas, itens com nome, armaduras e skills (níveis 1, 10 e P).
 
-### #64 — 2026-11-22 — Lista de especiais por tipo de equipamento
+### #64 — 2026-11-22 — Revisão de todas as páginas (proporções, popups, clareza)
+
+**Pedido:** as janelas estavam desproporcionadas (a loja é mais importante do
+que a mochila de 20 espaços); rever todas as páginas, incluindo as dungeons,
+para serem coerentes e óbvias (ex. uma sala de desafio aparecia no canto em vez
+de ser um popup à frente de tudo); o mais "user friendly" possível.
+**Decisões:** D121.
+**Resultado:**
+
+- Loja, mercado e armazém: o painel principal (ofertas, itens à venda, armazém)
+  à esquerda e a encher o espaço; a mochila numa coluna compacta à direita
+  (o armazém passou para a esquerda). As grelhas principais enchem a largura.
+- Ficha: o boneco e os atributos ocupam o espaço; o inventário é uma coluna
+  compacta (como na loja).
+- Rifts: eventos/desafios, salas de saque, fogueiras e salas secretas abrem
+  num popup centrado à frente do mapa (antes ficavam no painel do canto).
+- Profissões: cada receita diz porque não se pode fazer agora (ir a um rio,
+  falta a ferramenta, faltam materiais, sítio esgotado, trabalho a decorrer).
+- Amigos, world boss e fundar guilda: largura legível e centrada em vez de
+  caixas de 1900 px quase vazias.
+
+### #65 — 2026-11-22 — Tooltip das armas mais clara; dano só físico ou mágico
+
+**Pedido:** a tooltip do item era confusa — o "13–16" era o dano já com os
+meus atributos? Mostrar o dano base e o dano real quando equipado; tirar a
+descrição ("Balanced…") mas dizer que é dano físico; "Grants" com os ícones
+das habilidades. Depois: não há dano "ranged" (ou é físico ou é mágico); e o
+"Scales with" tem de ficar.
+**Resultado:** a tooltip das armas mostra "Damage type", "Base damage" (da
+arma, com o upgrade), "With your attributes" (o teu dano real com os teus
+atributos totais), "Scales with" e "Basic attack"; upgrade só quando há; as
+runas só quando há espaços desbloqueados; "Abilities while equipped" com os
+ícones e nomes; a descrição das armas base saiu (as das armas com nome ficam).
+"Ranged" passou a ser só a forma do ataque: o dano mostra-se sempre como
+físico ou mágico (`damageTypeLabel`), como já era no cálculo (a Armadura
+reduz o dano à distância).
+
+### #66 — 2026-11-22 — Livros por nível e leitura que pode falhar
+
+**Pedido:** para subir uma skill de nível são precisos cada vez mais livros:
+nível 1 = 1 livro, 2 = 2, 3 = 3 … 10 = 10, M1 = 11 … M10 = 20, P = 21; e a
+leitura tem probabilidade de falhar.
+**Decisões:** D122; valores provisórios A128.
+**Resultado:** ao ler o livro de uma skill que já tens, são precisos (e
+gastos) N livros para chegar ao nível N; a probabilidade desce com o nível;
+se falhar, a skill fica no nível e os livros perdem-se. A aba Abilities e a
+tooltip do livro dizem quantos livros e que probabilidade tem o próximo
+nível; depois de ler aparece o resultado (verde ou vermelho). Testes:
+`skill-levels.test.ts`, `character-sheet.test.ts`.
+
+### #67 — 2026-11-22 — Lista de especiais por tipo de equipamento
 
 **Pedido:** criar uma lista de especiais inspirada em MOBAs, MMORPGs e Path of
 Exile, para cada tipo de equipamento: Weapon, Head, Face, Pendant, Body, Belt,
@@ -1357,7 +1410,7 @@ Boots, Ring, Off-hand), runas como bónus 6 e 7, e perguntas (famílias de
 inimigos, tier do valor, defesas por família de arma, bónus de economia,
 limites). Continua a ser só proposta.
 
-**Revisão 2 (mesmo dia):** o dono aceitou as famílias de inimigos (D121) e pediu
+**Revisão 2 (mesmo dia):** o dono aceitou as famílias de inimigos (D123) e pediu
 ideias do Path of Exile (wiki de armas). A wiki não abriu a partir do ambiente
 (o Cloudflare bloqueia pedidos automáticos), por isso a secção nova foi escrita
 a partir do conhecimento geral do PoE: implícito por tipo de arma, divisão
@@ -1368,7 +1421,7 @@ de crafting (bancada, materiais para rerolar/acrescentar, bónus bloqueado,
 "veiled", corrupção, bónus por Rift). Ambiente novo `the-living-realms` com
 acesso às wikis do PoE.
 
-**Revisão 3 (mesmo dia):** respostas do dono registadas em D122 (runas, sem
+**Revisão 3 (mesmo dia):** respostas do dono registadas em D124 (runas, sem
 bónus fixo por tipo de arma, 5 bónus aleatórios da pool do slot, todos os bónus
 novos do PoE com estados novos, dual wield com mais dano, materiais de caça /
 profissões / drops). Documento atualizado: coluna de slots nos bónus do PoE,
@@ -1376,7 +1429,7 @@ Chill/Blind com resistências, implícito por tipo de equipamento como proposta.
 Em aberto: tier do valor, defesa por família de arma (explicada), bónus de
 economia, limites, matriz, duas mãos ×1,5, lista de materiais.
 
-**Implementação (mesmo dia):** o dono respondeu às últimas perguntas (D123) e
+**Implementação (mesmo dia):** o dono respondeu às últimas perguntas (D125) e
 pediu para implementar. `content/affixes.ts` reescrito: ~75 bónus em Attack /
 Resistance / Other, cada um com 5 tiers e a lista de slots onde pode sair
 (`GEAR_SLOTS`, `gearSlotOf`, `poolFor`, `affixValueRange`, `rollItemAffixes`);
@@ -1393,11 +1446,11 @@ mais dano. Ainda não: runas como bónus 6 e 7 (não há itens de runa), bónus
 fixo por tipo de equipamento, crafting. Testes: `affixes.test.ts` (pools,
 tiers, duas mãos, combate), `named.test.ts`, `character-sheet.test.ts`.
 
-### #65 — 2026-11-22 — Deitar itens fora em aventura
+### #68 — 2026-11-22 — Deitar itens fora em aventura
 
 **Pedido:** tem de haver uma forma de largar itens quando se está em aventura:
 na ficha do personagem, clicar com o botão direito no item e escolher "Drop".
-**Decisões:** valores provisórios A129 (o item desaparece de vez; só da mochila;
+**Decisões:** valores provisórios A130 (o item desaparece de vez; só da mochila;
 funciona em qualquer lado).
 **Resultado:** botão direito num item da mochila abre um menu (Equip / Read e
 Drop); "Drop" pede confirmação (com a quantidade, se for uma pilha). Rota

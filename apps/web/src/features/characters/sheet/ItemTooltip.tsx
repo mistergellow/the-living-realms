@@ -1,4 +1,9 @@
 import {
+  getAbility,
+  getWeaponType,
+  scalingMultiplier,
+  WEAPON_TYPES,
+  weaponScaling,
   AFFIX_RULES,
   ARMOR_CLASS_NAMES,
   ATTRIBUTE_NAMES,
@@ -10,6 +15,16 @@ import { Rich } from '../../../shared/ui/Rich';
 import { AbilityEffects } from '../../../shared/ui/EffectIcon';
 import type { AttributeKey, EquipSlot, ItemDto } from '@realms/shared';
 import { SLOT_LABELS } from './slots';
+import { useActiveCharacter } from '../active-character';
+import { useCharacterSheet } from '../api';
+import { AbilityIcon } from '../../rifts/AbilityIcon';
+
+const DAMAGE_TYPE_NAMES: Record<string, string> = {
+  physical: 'Physical',
+  magic: 'Magic',
+  // Request #65: ranged weapons deal physical damage.
+  ranged: 'Physical',
+};
 
 const KIND_LABEL: Record<ItemDto['kind'], string> = {
   weapon: 'Weapon',
@@ -35,6 +50,25 @@ function slotsText(slots: EquipSlot[]): string {
  */
 export function ItemTooltipBody({ item }: { item: ItemDto }) {
   const w = item.weapon;
+  // Request #65: your own damage with this weapon (your total attributes).
+  const characterId = useActiveCharacter((s) => s.characterId);
+  const sheet = useCharacterSheet(characterId);
+  const def = getItemDef(item.defId);
+  const type = def?.weaponType ? getWeaponType(def.weaponType) : undefined;
+  const yours =
+    w && sheet.data && type && WEAPON_TYPES[type.type as keyof typeof WEAPON_TYPES]
+      ? (() => {
+          const m = scalingMultiplier(
+            sheet.data.attributes,
+            weaponScaling(type.type as Parameters<typeof weaponScaling>[0]),
+          );
+          return {
+            min: Math.floor(w.baseDamage.min * m),
+            max: Math.floor(w.baseDamage.max * m),
+          };
+        })()
+      : null;
+  const abilityIds = def?.abilities ?? [];
   const bonuses = Object.entries(item.bonuses).filter(([, v]) => v);
   const tone =
     item.quality <= 0 ? 'var(--danger)' : item.quality <= 25 ? 'var(--warning)' : 'var(--success)';
@@ -68,24 +102,49 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
       </header>
 
       {w && (
-        <div className="tip-block">
-          <div className="tip-big">
-            {w.baseDamage.min}–{w.baseDamage.max} <span>{w.attackType} damage</span>
+        // Request #65: the weapon's own damage, and what it does in your hands.
+        <div className="tip-block" data-testid="weapon-damage">
+          <div className="tip-row">
+            <span>Damage type</span>
+            <b className={`kw kw-${w.attackType === 'magic' ? 'magic' : 'physical'}`}>
+              {DAMAGE_TYPE_NAMES[w.attackType]}
+              {w.attackType === 'ranged' ? ' · ranged attack' : ''}
+            </b>
           </div>
           <div className="tip-row">
-            <span>Basic attack</span>
-            <b>{w.basicAttackCost} Focus</b>
+            <span>Base damage</span>
+            <b className="v">
+              {w.baseDamage.min}–{w.baseDamage.max}
+            </b>
           </div>
+          {yours && (
+            <div className="tip-row" data-testid="your-damage">
+              <span>With your attributes</span>
+              <b className="v tip-yours">
+                {yours.min}–{yours.max}
+              </b>
+            </div>
+          )}
           <div className="tip-row">
             <span>Scales with</span>
             <b>
-              {ATTRIBUTE_NAMES[w.primaryAttribute]}
-              {w.secondaryAttribute && ` · ${ATTRIBUTE_NAMES[w.secondaryAttribute]}`}
+              <Rich
+                text={`${ATTRIBUTE_NAMES[w.primaryAttribute]}${w.secondaryAttribute ? ` · ${ATTRIBUTE_NAMES[w.secondaryAttribute]}` : ''}`}
+              />
             </b>
           </div>
-          <p className="tip-identity">
-            <Rich text={`${w.attackStyle} · ${w.identity}`} />
-          </p>
+          <div className="tip-row">
+            <span>Basic attack</span>
+            <b>
+              <Rich text={`${w.basicAttackCost} Focus`} />
+            </b>
+          </div>
+          {w.upgradeLevel > 0 && (
+            <div className="tip-row">
+              <span>Upgrade</span>
+              <b className="v">+{w.upgradeLevel}</b>
+            </div>
+          )}
         </div>
       )}
 
@@ -203,36 +262,52 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
                 <b>{v}</b>
               </div>
             ))}
-            <p className="tip-identity">Double-click to read it and learn the skill.</p>
+            {(() => {
+              const known = sheet.data?.learnedSkills.find((x) => x.id === sk.id);
+              if (!known)
+                return <p className="tip-identity">Double-click to read it and learn the skill.</p>;
+              if (!known.nextLevel)
+                return <p className="tip-identity">You know it at its highest level (P).</p>;
+              return (
+                <p className="tip-identity" data-testid="book-next-level">
+                  <Rich
+                    text={`You know it at Lv ${known.levelLabel}. Lv ${known.nextLevel.label} takes ${known.nextLevel.books} books at once (${known.nextLevel.chance}% chance; on failure the books are lost). Double-click to read.`}
+                  />
+                </p>
+              );
+            })()}
           </div>
         );
       })()}
 
-      {item.grantsAbilities.length > 0 && (
+      {abilityIds.length > 0 && (
         <div className="tip-block">
-          <span className="tip-label">Grants</span>
-          <div className="tip-chips">
-            {item.grantsAbilities.map((a) => (
-              <span key={a} className="tip-chip">
-                {a}
+          <span className="tip-label">Abilities while equipped</span>
+          <div className="tip-abilities" data-testid="item-abilities">
+            {abilityIds.map((id) => (
+              <span key={id} className="tip-ability">
+                <span className="tip-ability-icon">
+                  <AbilityIcon abilityId={id} />
+                </span>
+                <span>{getAbility(id)?.name ?? id}</span>
               </span>
             ))}
           </div>
         </div>
       )}
 
-      {w && (
-        <div className="tip-row muted">
-          <span>
-            Upgrade +{w.upgradeLevel} · specials {w.specials.length}/{w.maxSpecials}
-          </span>
-          <span>
-            runes {w.runeSlots.filter((r) => r.unlocked).length}/{w.runeSlots.length}
-          </span>
+      {w && w.runeSlots.some((r) => r.unlocked) && (
+        <div className="tip-row">
+          <span>Rune slots</span>
+          <b>
+            {w.runeSlots.filter((r) => r.runeId).length}/
+            {w.runeSlots.filter((r) => r.unlocked).length}
+          </b>
         </div>
       )}
 
-      {item.description && (
+      {/* Base weapons' descriptions only repeat the card; named items keep their story. */}
+      {item.description && (!w || item.named) && (
         <p className="tip-desc">
           <Rich text={item.description} />
         </p>

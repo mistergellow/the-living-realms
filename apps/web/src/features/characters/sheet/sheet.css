@@ -800,7 +800,7 @@ button.bag-cell:focus-visible {
   place-items: center;
   background: rgb(0 0 0 / 0.55);
 }
-/* Request #65: right-click menu on a bag item. */
+/* Request #68: right-click menu on a bag item. */
 .item-menu-backdrop {
   position: fixed;
   inset: 0;
@@ -909,4 +909,26 @@ button.bag-cell:focus-visible {
 .bag .bag-grid {
   grid-template-columns: repeat(var(--cols), minmax(0, 4.4rem));
   justify-content: center;
+}
+
+/* Request #64: the paperdoll and stats take the room; the 20-slot bag is a compact column. */
+.equip-grid {
+  grid-template-columns: minmax(0, 1fr) min(27rem, 42%);
+}
+.bag {
+  width: 100%;
+}
+.bag .bag-grid {
+  grid-template-columns: repeat(5, minmax(0, 4.6rem));
+}
+@media (max-width: 70em) {
+  .equip-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bag {
+    width: 100%;
+  }
+}
+.equip-grid {
+  width: 100%;
 }

@@ -46,7 +46,7 @@ export const STATUS_IDS = [
   'fuse',
   // request #47
   'regen',
-  // request #64 (gear bonuses)
+  // request #67 (gear bonuses)
   'chill',
   'blind',
   'impale',
@@ -110,7 +110,7 @@ export interface CombatantView {
   intents: IntentView[];
   downed: boolean;
   isBoss: boolean;
-  /** Enemies only (request #64): family for "strong against" bonuses. */
+  /** Enemies only (request #67): family for "strong against" bonuses. */
   family?: EnemyFamily;
   abilityIds: string[];
   stats: DerivedStatsDto;

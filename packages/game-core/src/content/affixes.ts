@@ -18,9 +18,9 @@ import type { ItemDef } from './items.js';
 import { getWeaponType } from './weapons.js';
 
 /*
- * Bonus effects on gear (requests #37, #64). PROVISIONAL CONTENT AND NUMBERS.
+ * Bonus effects on gear (requests #37, #67). PROVISIONAL CONTENT AND NUMBERS.
  *
- * Request #64 (owner, D122): Metin2-style pools. Every piece of gear holds
+ * Request #67 (owner, D124): Metin2-style pools. Every piece of gear holds
  * 0–5 bonuses rolled from the pool of its SLOT (weapon, head, face, …), never
  * the same one twice on one item (the same bonus may sit on several items and
  * then adds up). Every bonus has 5 value tiers (T1–T5); the tier comes from
@@ -47,9 +47,9 @@ export const AFFIX_RULES = {
     4: [40, 32, 18, 7, 2.4, 0.6],
     5: [25, 30, 25, 13, 5, 2],
   } as Record<number, readonly number[]>,
-  /** Request #64: chance (%) that a bonus rolls one value tier above the Rift tier. */
+  /** Request #67: chance (%) that a bonus rolls one value tier above the Rift tier. */
   tierUpChance: 10,
-  /** Request #64: attack bonuses on two-handed weapons are worth this much more. */
+  /** Request #67: attack bonuses on two-handed weapons are worth this much more. */
   twoHandedMultiplier: 1.5,
   /** On-hit statuses: duration and value (bleed/burn: damage per round; weaken/mark/blind: %; chill: Focus lost). */
   onHitTurns: { bleed: 2, burn: 2, stun: 1, weaken: 2, mark: 2, chill: 2, blind: 2 },
@@ -64,7 +64,7 @@ export const AFFIX_RULES = {
 } as const;
 
 /**
- * Request #64 (owner, D122): a one-handed weapon in each hand deals more
+ * Request #67 (owner, D124): a one-handed weapon in each hand deals more
  * damage. PROVISIONAL: +40% basic attack damage while dual wielding.
  */
 export const DUAL_WIELD_RULES = { basicDamagePct: 40 } as const;
@@ -84,7 +84,7 @@ export const rarityOf = (affixCount: number): ItemRarity =>
 type GearKind = Extract<ItemKind, 'weapon' | 'offhand' | 'armor' | 'accessory'>;
 const GEAR_KINDS: GearKind[] = ['weapon', 'offhand', 'armor', 'accessory'];
 
-/** Request #64: each slot has its own pool of bonuses. */
+/** Request #67: each slot has its own pool of bonuses. */
 export const GEAR_SLOTS = [
   'weapon',
   'head',
@@ -150,10 +150,10 @@ export type AffixEffect =
   | { kind: 'onHit'; status: GearStatus }
   /** Request #62: a melee attacker that hits you gets the status (named gear only). */
   | { kind: 'whenHit'; status: GearStatus }
-  /** Request #64: chance to ignore the status. */
+  /** Request #67: chance to ignore the status. */
   | { kind: 'resist'; status: GearStatus };
 
-/** Request #64: the three groups of the Metin2 tables. */
+/** Request #67: the three groups of the Metin2 tables. */
 export type AffixCategory = 'attack' | 'resistance' | 'other';
 
 export interface AffixDef {
@@ -163,7 +163,7 @@ export interface AffixDef {
   group: AffixGroup;
   category: AffixCategory;
   effect: AffixEffect;
-  /** Best value of each tier, T1…T5 (request #64). */
+  /** Best value of each tier, T1…T5 (request #67). */
   tiers: readonly [number, number, number, number, number];
   /** Lowest tier it can roll at (e.g. Focus only from T4). */
   minTier?: number;
