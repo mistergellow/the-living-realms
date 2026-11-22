@@ -277,3 +277,113 @@
   min-height: 0;
   overflow-y: auto;
 }
+
+/*
+ * Request #59: one tooltip look everywhere (the item card's): dark card,
+ * thin gold frame, gold title. Values and keywords are coloured (<Rich>).
+ */
+:root .game-tooltip,
+:root .ability-tooltip,
+:root .attr-tip,
+:root .city-tip,
+:root .fx-tip {
+  background: linear-gradient(180deg, rgb(26 23 32 / 0.98), rgb(11 10 15 / 0.98));
+  border: 1px solid var(--gold-3);
+  border-radius: 0.25rem;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.8),
+    inset 0 0 0 2px rgb(212 168 73 / 0.12),
+    0 0.6rem 1.6rem rgb(0 0 0 / 0.7);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+:root .tip-name,
+:root .attr-tip > strong,
+:root .fx-tip > strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--gold-1);
+}
+:root .tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+:root .tip-row > b,
+:root .tip-row > span:last-child {
+  color: #fff;
+}
+:root .v {
+  color: var(--gold-1);
+  font-weight: 700;
+}
+:root .kw {
+  font-weight: 700;
+}
+:root .kw-attr {
+  color: #8cc4ff;
+}
+:root .kw-status {
+  color: #d59cff;
+}
+:root .kw-physical {
+  color: #ef9a6d;
+}
+:root .kw-magic {
+  color: #a995ff;
+}
+:root .kw-ranged {
+  color: #91d675;
+}
+:root .kw-focus {
+  color: #ffd166;
+}
+:root .kw-mana {
+  color: #6fa8ff;
+}
+:root .kw-hp {
+  color: #ff7f6e;
+}
+:root .kw-res {
+  color: #f1e3b5;
+}
+/* Effect icons: hover card instead of the browser's title tooltip. */
+.fx-hover {
+  position: relative;
+  display: inline-flex;
+}
+.fx-tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.4rem);
+  transform: translateX(-50%);
+  z-index: 60;
+  width: max-content;
+  max-width: 16rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  pointer-events: none;
+  text-align: left;
+}
+.fx-hover:hover > .fx-tip,
+.fx-hover:focus-within > .fx-tip {
+  display: flex;
+}
+
+/* Request #62: named items stand out (name and tile). */
+:root .item-tip[data-named] .tip-name {
+  color: #ff9f43;
+  text-shadow: 0 0 0.6rem rgb(255 159 67 / 0.35);
+}
+.tip-named {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ff9f43;
+}

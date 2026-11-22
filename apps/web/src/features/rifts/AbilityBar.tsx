@@ -1,4 +1,5 @@
 import { describeEffects, describeScaling, describeTargeting, getAbility } from '@realms/game-core';
+import { Rich } from '../../shared/ui/Rich';
 import { AbilityEffects } from '../../shared/ui/EffectIcon';
 import { useEffect, useId, useRef } from 'react';
 import { AbilityIcon, abilitySchool } from './AbilityIcon';
@@ -116,12 +117,18 @@ function AbilitySlot(props: {
         <AbilityEffects abilityId={a.id} />
         <ul className="tip-effects">
           {describeEffects(a).map((e) => (
-            <li key={e}>{e}</li>
+            <li key={e}>
+              <Rich text={e} />
+            </li>
           ))}
         </ul>
-        <p className="tip-desc">{a.description}</p>
+        <p className="tip-desc">
+          <Rich text={a.description} />
+        </p>
         {Object.keys(a.scaling).length > 0 && (
-          <div className="tip-scaling">Scales with {describeScaling(a.scaling)}</div>
+          <div className="tip-scaling">
+            Scales with <Rich text={describeScaling(a.scaling)} />
+          </div>
         )}
         {!props.affordable && <div className="tip-warn">Not enough Focus or Mana</div>}
       </div>

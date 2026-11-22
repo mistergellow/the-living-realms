@@ -591,6 +591,22 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - `RIFT_SIZE_RULES`, `riftLength`, `mapTemplateForTier` (`content/rifts.ts`, usado em `siteRift`); `MapTemplate.maxCampsitesPerPath`, `maxOnAnyPath`, `validateMap` (`rift/map.ts`); testes `rift-size.test.ts`, `rifts.test.ts` (servidor)
 
+## Itens com nome e classes de armadura (pedido #62, D119)
+
+- Dados: `packages/game-core/src/content/named.ts` (`NAMED_ITEMS`, `buildNamedItems`, `namedEffects`); `ItemDef.named`, `ItemDef.armorClass`, `ARMOR_CLASS_NAMES`, `NAMED_ITEM_DEFS` (`items.ts`)
+- Efeitos: catálogo `AFFIXES` (+ `ignite_attackers`, `bleed_attackers`, tipo `whenHit`, nunca sorteados) em `affixes.ts`; `computeStats` soma `namedEffects` (`stats.ts`); `GearCombatEffects.whenHit` (`shared/api.ts`) → `engine.ts` (dano físico)
+- Contrato: `ItemDto.named`, `ItemDto.armorClass` (`toItemDto` em `sheet.service.ts`)
+- Web: `ItemTooltip.tsx` (Named · base, efeitos fixos, classe), filtro `named` e pesquisa pelo tipo base (`item-filters.ts`), cor em `theme.css`
+- Saque: `namedLoot`, `armorLoot` (`content/rifts.ts`)
+- **Item com nome novo:** só uma linha em `NAMED_ITEMS`; **efeito novo:** acrescentar a `AFFIXES` (+ `gearTotals`/`engine` se for um tipo novo)
+- Testes: `game-core/test/named.test.ts`
+
+## Tooltips (pedido #61)
+
+- Aspeto único: `theme.css` (`.game-tooltip`, `.ability-tooltip`, `.attr-tip`, `.city-tip`, `.fx-tip`, `.v`, `.kw-*`); texto colorido com `Rich` (`shared/ui/Rich.tsx`: palavras-chave de `ATTRIBUTE_NAMES`, `STATUS_NAMES`, tipos de dano, recursos)
+- Usado em `ItemTooltip.tsx`, `AbilitiesTab.tsx`, `AbilityBar.tsx`, `EquipmentTab.tsx` (atributos), `EffectIcon.tsx` (cartão `.fx-hover`/`.fx-tip` em vez de `title`)
+- **Atributo/estado novo:** entra sozinho em `Rich`; **tooltip nova:** usar estas classes e `Rich`
+
 ## Tema visual (pedido #58, D113)
 
 - Tokens: `apps/web/src/styles/tokens.css` (`--gold-1…4`, `--frame*`, `--glass*`, `--accent*`)

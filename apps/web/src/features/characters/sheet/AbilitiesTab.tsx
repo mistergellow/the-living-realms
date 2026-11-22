@@ -1,4 +1,5 @@
 import { MAX_PREPARED_SKILLS, type AbilityDto, type CharacterSheetDto } from '@realms/shared';
+import { Rich } from '../../../shared/ui/Rich';
 import { useMemo, useState } from 'react';
 import { FormError } from '../../../shared/ui/FormError';
 import { AbilityIcon, abilitySchool, type AbilitySchool } from '../../rifts/AbilityIcon';
@@ -48,12 +49,23 @@ export function AbilityTooltipBody({ a }: { a: AbilityDto }) {
       {a.effects.length > 0 && (
         <ul className="tip-stats">
           {a.effects.map((e) => (
-            <li key={e}>{e}</li>
+            <li key={e}>
+              <Rich text={e} />
+            </li>
           ))}
         </ul>
       )}
-      {a.scaling && <div className="tip-row muted">Scales with {a.scaling}</div>}
-      <p className="tip-desc">{a.description}</p>
+      {a.scaling && (
+        <div className="tip-row">
+          <span className="muted">Scales with</span>
+          <b>
+            <Rich text={a.scaling} />
+          </b>
+        </div>
+      )}
+      <p className="tip-desc">
+        <Rich text={a.description} />
+      </p>
     </div>
   );
 }

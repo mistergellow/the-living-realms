@@ -1,10 +1,12 @@
 import {
   AFFIX_RULES,
+  ARMOR_CLASS_NAMES,
   ATTRIBUTE_NAMES,
   getItemDef,
   getSkill,
   RARITY_NAMES,
 } from '@realms/game-core';
+import { Rich } from '../../../shared/ui/Rich';
 import { AbilityEffects } from '../../../shared/ui/EffectIcon';
 import type { AttributeKey, EquipSlot, ItemDto } from '@realms/shared';
 import { SLOT_LABELS } from './slots';
@@ -37,7 +39,12 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
   const tone =
     item.quality <= 0 ? 'var(--danger)' : item.quality <= 25 ? 'var(--warning)' : 'var(--success)';
   return (
-    <div className="item-tip" data-testid="item-tooltip" data-rarity={item.rarity}>
+    <div
+      className="item-tip"
+      data-testid="item-tooltip"
+      data-rarity={item.rarity}
+      data-named={item.named ? true : undefined}
+    >
       <header>
         <strong className="tip-name rarity-text" data-kind={item.kind}>
           {item.name}
@@ -47,8 +54,14 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
           {w
             ? `${w.typeName} · ${w.hands === 2 ? 'Two-handed' : 'One-handed'}`
             : KIND_LABEL[item.kind]}
+          {item.armorClass && ` · ${ARMOR_CLASS_NAMES[item.armorClass]}`}
           {item.slots.length > 0 && ` · ${slotsText(item.slots)}`}
         </span>
+        {item.named && (
+          <span className="tip-named" data-testid="item-named">
+            Named · {item.named.baseName}
+          </span>
+        )}
         {item.slots.length > 0 && (
           <span className="tip-rarity rarity-text">{RARITY_NAMES[item.rarity]}</span>
         )}
@@ -71,7 +84,7 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
             </b>
           </div>
           <p className="tip-identity">
-            {w.attackStyle} · {w.identity}
+            <Rich text={`${w.attackStyle} · ${w.identity}`} />
           </p>
         </div>
       )}
@@ -129,6 +142,22 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
         </div>
       )}
 
+      {item.named && item.named.effects.length > 0 && (
+        <div className="tip-block">
+          <span className="tip-label">Named effects (grow with upgrades)</span>
+          <ul className="tip-affixes" data-testid="named-effects">
+            {item.named.effects.map((a) => (
+              <li key={a.id}>
+                <span>
+                  <Rich text={a.label} />
+                </span>
+                <b>{a.display}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {item.affixes.length > 0 && (
         <div className="tip-block">
           <span className="tip-label">
@@ -137,7 +166,9 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
           <ul className="tip-affixes" data-testid="item-affixes">
             {item.affixes.map((a) => (
               <li key={a.id}>
-                <span>{a.label}</span>
+                <span>
+                  <Rich text={a.label.replace(/\s[+−-]?\d+%?$/, '')} />
+                </span>
                 <b>{a.display}</b>
               </li>
             ))}
@@ -201,7 +232,11 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
         </div>
       )}
 
-      {item.description && <p className="tip-desc">{item.description}</p>}
+      {item.description && (
+        <p className="tip-desc">
+          <Rich text={item.description} />
+        </p>
+      )}
 
       {item.slots.length > 0 && (
         <div className="tip-quality">
