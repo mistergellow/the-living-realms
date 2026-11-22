@@ -571,13 +571,25 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Tipo de ferramenta novo:** `ToolType`, `TOOL_TYPE_NAMES`, `TOOLS`, `STARTER_TOOLS`?, `BY_TOOL` (`ItemIcon.tsx`)
 - Testes: `game-core/test/professions.test.ts`, `game-core/test/world-systems.test.ts`, `apps/server/test/professions.test.ts` (+ `character-sheet`, `city`, `rifts` contam com as ferramentas na mochila), `e2e` ("professions")
 
-## Armazém e filtros de itens (pedidos #50, #52)
+## Armazém e filtros de itens (pedidos #50, #52, #59)
+
+- Posições (pedido #59): BD `items.slot`, `characters.storage_slots` (migração 0020); `ensureSlots`, `firstFreeSlot`, `placeWhere` (`bag.ts`, usados por `giveItem`, `buildSheet`, `equip`/`unequip`, cidade, guildas); `move`/`sort` (`city.service.ts`, rotas `/characters/:id/items/move|sort`, esquemas `moveItemSchema`/`sortItemsSchema`); `compareItemsForSort`, `INVENTORY_RULES.storageSlots` (`economy.ts`); `ItemDto.slot`, `CityDto.storageSlots`, `CityDto.shop[].item`
+- Web: `ItemGrid`, `SplitDialog`, `GridTools`, `parseCellKey` (`sheet/ItemGrid.tsx`); `useInventoryActions` (`city/api.ts`); `DropMods` (Shift) em `drag.tsx`; ficha (`EquipmentTab.tsx`), armazém e loja (`CityPage.tsx`)
 
 - Filtros/pesquisa partilhados: `apps/web/src/features/characters/sheet/item-filters.ts` (`ITEM_FILTERS`, `itemMatches`, `isGear`) usados por `EquipmentTab.tsx` e `CityPage.tsx`
 - Arrastar-e-largar: `useDragAndDrop`/`DragGhost` (`sheet/drag.tsx`); no armazém `data-drop="bag|storage"` → `storage/deposit|withdraw` (`city.routes.ts`)
 - Ferreiro, comparação (pedido #54): `CityDto.upgrades[id].compare/preview` (`shared/city.ts`, `city.service.ts` com `weaponInfo`/`upgradeMultiplier`), `UpgradeCompare` (`CityPage.tsx`)
 - **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
 - Testes: `apps/server/test/city.test.ts`, e2e "city storage"
+
+## Ecrãs sem scroll (pedido #59, D114)
+
+- `theme.css` (`.screen-body` sem scroll; `.contain` em coluna; painéis com scroll interno); `sheet.css`, `professions.css`, `city.css` (grelhas que enchem o ecrã)
+- Teste: `expectFitsViewport` (`e2e/foundation.spec.ts`) verifica `.screen-body` em todos os ecrãs; **ecrã novo:** acrescentar a `screens`/`paths` desse teste
+
+## Tamanho dos Rifts (pedido #60, D117)
+
+- `RIFT_SIZE_RULES`, `riftLength`, `mapTemplateForTier` (`content/rifts.ts`, usado em `siteRift`); `MapTemplate.maxCampsitesPerPath`, `maxOnAnyPath`, `validateMap` (`rift/map.ts`); testes `rift-size.test.ts`, `rifts.test.ts` (servidor)
 
 ## Tema visual (pedido #58, D113)
 

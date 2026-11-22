@@ -241,3 +241,39 @@
   color: var(--gold-1);
   background: rgb(212 168 73 / 0.12);
 }
+
+/*
+ * Request #59: no page ever scrolls. A screen fills the window; its panels
+ * share the height and scroll inside themselves when their content is long.
+ */
+:root .screen-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+:root .screen-body > .contain {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Anything big inside a screen may shrink; panels then scroll inside. */
+:root .screen-body > .contain > *,
+:root .screen-body > .contain > * > * {
+  min-height: 0;
+}
+:root .screen-body > .contain > :is(h1, h2, header, nav, p, .row, form, .grid-tools, .form-error) {
+  flex-shrink: 0;
+}
+:root .screen-body .panel {
+  overflow: auto;
+}
+:root .screen-body .panel:has(> .pane-scroll),
+:root .screen-body .panel:has(> .bag-scroll) {
+  overflow: hidden;
+}
+:root .bag-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}

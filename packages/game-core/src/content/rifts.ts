@@ -106,6 +106,51 @@ export const DEFAULT_MAP_TEMPLATE: MapTemplate = {
   secrets: { min: 1, max: 2, minRow: 1 },
 };
 
+/*
+ * Request #60: Rifts are longer and Campsites rare. A route from the entrance
+ * to the boss has 10 rooms at tier 1 and up to 20 at tier 5 (boss included);
+ * Campsites per route: at most 3 at tiers 1–2, 2 at tiers 3–4, 1 at tier 5
+ * (the one before the boss is always there). PROVISIONAL (A124).
+ */
+export const RIFT_SIZE_RULES = {
+  minLength: 10,
+  maxLength: 20,
+  campsitesPerRoute: [3, 3, 2, 2, 1] as readonly number[],
+} as const;
+
+/** Rooms on a route (boss included) at a tier. */
+export const riftLength = (tier: number) => {
+  const t = Math.max(1, Math.min(5, tier));
+  return Math.round(
+    RIFT_SIZE_RULES.minLength +
+      ((RIFT_SIZE_RULES.maxLength - RIFT_SIZE_RULES.minLength) * (t - 1)) / 4,
+  );
+};
+
+/** The map template of a tier: longer, harder, with fewer Campsites. */
+export function mapTemplateForTier(tier: number): MapTemplate {
+  const length = riftLength(tier);
+  const camps = RIFT_SIZE_RULES.campsitesPerRoute[Math.max(1, Math.min(5, tier)) - 1] ?? 1;
+  return {
+    ...DEFAULT_MAP_TEMPLATE,
+    rows: length - 1,
+    minRooms: Math.round(length * 1.6),
+    themes: {
+      safe: { combat: 4, campsite: camps > 1 ? 0.6 : 0, event: 3, loot: 1 },
+      explore: { combat: 3, event: 6, campsite: camps > 1 ? 0.2 : 0, loot: 1 },
+      loot: { combat: 4, loot: 3, event: 2 },
+      danger: { combat: 3, elite: 4, event: 1, loot: 2 },
+      mixed: { combat: 4, elite: 1.5, event: 2, campsite: camps > 2 ? 0.3 : 0, loot: 1 },
+    },
+    rules: {
+      ...DEFAULT_MAP_TEMPLATE.rules,
+      minCounts: { elite: 1 + Math.floor(tier / 2), event: 2, loot: 1, campsite: 1 },
+    },
+    secrets: { min: 1, max: 3, minRow: 1 },
+    maxCampsitesPerPath: camps,
+  };
+}
+
 export const RIFTS = {
   shattered_breach: rift({
     id: 'shattered_breach',
@@ -354,6 +399,7 @@ function siteRift(id: string): RiftDef | undefined {
   const t = tier - 1;
   return {
     ...base,
+    map: mapTemplateForTier(tier),
     id,
     name: `${RIFT_TIER_RULES.names[t] ?? 'Rift'} (${h.q}, ${h.r})`,
     description: `A Rift of tier ${tier}. The deeper into the Riftlands, the stronger what waits inside.`,

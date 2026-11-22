@@ -78,6 +78,7 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   await app.register(cookie);
   await app.register(securityPlugin, {
     allowedOrigins: config.WEB_ORIGIN,
+    rateLimitMax: config.RATE_LIMIT,
     ...(config.NODE_ENV === 'test' ? {} : { redis: deps.redis }),
   });
   await app.register(websocket, { options: { maxPayload: 16 * 1024 } });

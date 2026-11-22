@@ -770,3 +770,113 @@ button.bag-cell:focus-visible {
   color: var(--accent);
   font-size: 0.8em;
 }
+
+/* Request #59: fixed-position grids, search dims instead of hiding. */
+.bag-cell[data-dim='true'] {
+  opacity: 0.25;
+}
+.bag-cell[data-over='true'] {
+  border-color: var(--gold-1, #f3dc9a);
+  box-shadow: 0 0 0.6rem rgb(228 184 92 / 0.6);
+}
+.bag-cell[data-extra='true'] {
+  border-color: rgb(226 96 76 / 0.5);
+}
+.grid-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.grid-tools .bag-search {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+.split-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+}
+.split-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(22rem, 90vw);
+}
+
+/*
+ * Request #59: the character sheet fits the window — no page scroll, smaller
+ * pieces; the stats, the skill library and the profession lists scroll
+ * inside their own panels.
+ */
+.sheet > [role='tabpanel'] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.equip-tab,
+.abilities-tab {
+  flex: 1;
+  min-height: 0;
+}
+.equip-grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: stretch;
+}
+.paperdoll {
+  padding: var(--space-3);
+}
+.equip-slot {
+  --cell: 3.5rem;
+}
+.hero-stage {
+  padding: var(--space-2) 0;
+}
+.sheet-stats {
+  min-height: 0;
+  overflow-y: auto;
+}
+.bag {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.bag .bag-grid {
+  grid-template-columns: repeat(var(--cols), minmax(0, 4.4rem));
+  justify-content: center;
+}
+.bag .doll-hint {
+  flex: none;
+}
+.abilities-cols {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+.abilities-cols > .panel {
+  min-height: 0;
+  overflow-y: auto;
+}
+.sheet .professions {
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 70em) {
+  .equip-grid {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+/* Item grids keep item-sized cells on wide panes (request #59). */
+.pane-scroll .bag-grid,
+.bag .bag-grid {
+  grid-template-columns: repeat(var(--cols), minmax(0, 4.4rem));
+  justify-content: center;
+}

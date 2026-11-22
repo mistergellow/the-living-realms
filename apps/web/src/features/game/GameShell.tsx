@@ -38,6 +38,13 @@ export function GameShell() {
   const clearCharacter = useActiveCharacter((s) => s.clear);
   const location = useLocation();
   useWorldConnection(characterId);
+  // Request #59: actions that spend AP (gathering, jobs, Rifts) refresh the
+  // character; keep the header's AP in step with it right away.
+  const sheet = useCharacterSheet(characterId);
+  const updateSelf = useWorldStore((s) => s.updateSelf);
+  useEffect(() => {
+    if (sheet.data) updateSelf(sheet.data.character);
+  }, [sheet.data, updateSelf]);
   const { status, self, world, tick, lastError, online } = useWorldStore(
     useShallow((s) => ({
       status: s.status,

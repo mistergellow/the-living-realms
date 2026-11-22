@@ -26,7 +26,14 @@ interface DragState<T> {
   over: string | null;
 }
 
-export function useDragAndDrop<T>(onDrop: (payload: T, target: string | null) => void) {
+/** Keys held when the item was dropped (request #59: Shift splits a stack). */
+export interface DropMods {
+  shift: boolean;
+}
+
+export function useDragAndDrop<T>(
+  onDrop: (payload: T, target: string | null, mods: DropMods) => void,
+) {
   const [drag, setDrag] = useState<DragState<T> | null>(null);
   const dropRef = useRef(onDrop);
   useEffect(() => {
@@ -66,7 +73,7 @@ export function useDragAndDrop<T>(onDrop: (payload: T, target: string | null) =>
           suppressClick.current = true;
           window.setTimeout(() => (suppressClick.current = false), 0);
           setDrag(null);
-          dropRef.current(payload, targetAt(ev.clientX, ev.clientY));
+          dropRef.current(payload, targetAt(ev.clientX, ev.clientY), { shift: ev.shiftKey });
         };
         const cancel = () => {
           window.removeEventListener('pointermove', move);

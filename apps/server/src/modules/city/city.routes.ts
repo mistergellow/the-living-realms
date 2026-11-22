@@ -1,4 +1,10 @@
-import { buySchema, itemActionSchema, upgradeSchema } from '@realms/shared';
+import {
+  buySchema,
+  itemActionSchema,
+  moveItemSchema,
+  sortItemsSchema,
+  upgradeSchema,
+} from '@realms/shared';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { parse } from '../../lib/errors.js';
@@ -15,6 +21,19 @@ export async function cityRoutes(app: FastifyInstance, { city }: { city: CitySer
   app.get('/:id/city', async (request) => {
     const { id } = parse(params, request.params);
     return city.get(account(request), id);
+  });
+
+  // Request #59: arrange the bag and storage (moving bag ↔ storage needs a capital).
+  app.post('/:id/items/move', async (request) => {
+    const { id } = parse(params, request.params);
+    const { itemId, to, slot, qty } = parse(moveItemSchema, request.body);
+    return city.move(account(request), id, itemId, to, slot, qty);
+  });
+
+  app.post('/:id/items/sort', async (request) => {
+    const { id } = parse(params, request.params);
+    const { place } = parse(sortItemsSchema, request.body);
+    return city.sort(account(request), id, place);
   });
 
   app.post('/:id/city/storage/deposit', async (request) => {

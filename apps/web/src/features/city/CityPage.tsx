@@ -6,10 +6,16 @@ import { Icon } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { ItemIcon } from '../characters/sheet/ItemIcon';
 import { ItemTooltipBody } from '../characters/sheet/ItemTooltip';
-import { DragGhost, useDragAndDrop } from '../characters/sheet/drag';
+import { DragGhost, Tooltip, useDragAndDrop, useHover } from '../characters/sheet/drag';
+import {
+  ItemGrid,
+  parseCellKey,
+  SplitDialog,
+  type Place as GridPlace,
+} from '../characters/sheet/ItemGrid';
 import { ITEM_FILTERS, itemMatches, type ItemFilter } from '../characters/sheet/item-filters';
 import '../characters/sheet/sheet.css';
-import { useCity, useCityAction } from './api';
+import { useCity, useCityAction, useInventoryActions } from './api';
 import './city.css';
 
 type Tab = 'shop' | 'storage' | 'blacksmith';
@@ -122,119 +128,232 @@ function ItemRow({
   );
 }
 
+/**
+ * General store (request #50; grid with search and filters, request #59):
+ * the offers and your bag are grids of item tiles. Click a tile to pick it,
+ * then buy or sell; double-click buys or sells one at once.
+ */
 function Shop({ city, busy, run }: Props) {
-  const bag = city.sheet.inventory;
+  const [filter, setFilter] = useState<ItemFilter>('all');
+  const [search, setSearch] = useState('');
+  const [pick, setPick] = useState<{ kind: 'buy' | 'sell'; id: string } | null>(null);
+  const [qty, setQty] = useState(1);
+  const tip = useHover<ItemDto>();
+  const offers = city.shop.map((s, i) => ({ ...s, item: { ...s.item, slot: i } }));
+  const dim = (i: ItemDto) => !itemMatches(i, filter, search);
+  const offer = pick?.kind === 'buy' ? offers.find((o) => o.item.id === pick.id) : undefined;
+  const owned =
+    pick?.kind === 'sell' ? city.sheet.inventory.find((i) => i.id === pick.id) : undefined;
+  const sellPrice = owned ? city.sellPrices[owned.id] : undefined;
+  const n = Math.max(1, Math.floor(qty) || 1);
+  const buy = (defId: string, count: number) => run('shop/buy', { defId, qty: count });
+  const sell = (itemId: string) => run('shop/sell', { itemId });
+  const choose = (kind: 'buy' | 'sell', item: ItemDto) => {
+    setPick({ kind, id: item.id });
+    setQty(1);
+  };
+  const hovered = tip.hover?.value;
+  const noop = () => ({});
   return (
-    <div className="city-cols">
-      <section className="panel">
-        <div className="panel-title">
-          <span>For sale</span>
-        </div>
-        <ul className="city-list" data-testid="shop">
-          {city.shop.map((s) => (
-            <li key={s.defId} className="city-row">
-              <strong>{s.name}</strong>
-              <span className="spacer" />
-              <span className="gold-tag">{s.price} gold</span>
-              <button
-                className="btn btn-sm btn-primary"
-                disabled={busy || !city.capital || city.sheet.gold < s.price}
-                onClick={() => run('shop/buy', { defId: s.defId, qty: 1 })}
-                aria-label={`Buy ${s.name}`}
-              >
-                Buy
-              </button>
-            </li>
+    <div className="storage-tab">
+      <div className="grid-tools">
+        <input
+          className="bag-search"
+          type="search"
+          placeholder="Search the store and your bag…"
+          aria-label="Search the store"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="bag-filters" role="tablist" aria-label="Store filter">
+          {ITEM_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              role="tab"
+              aria-selected={filter === f.id}
+              className="chip-btn"
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
           ))}
-        </ul>
-      </section>
-      <section className="panel">
-        <div className="panel-title">
-          <span>Sell from your bag</span>
         </div>
-        <p className="muted small" style={{ marginTop: 0 }}>
-          The store buys used gear only. Materials and potions are worth more to other players.
-        </p>
-        <ul className="city-list">
-          {bag
-            .filter((i) => city.sellPrices[i.id] !== undefined)
-            .map((i) => (
-              <ItemRow key={i.id} item={i}>
-                <span className="gold-tag">{city.sellPrices[i.id]} gold</span>
+        <span className="muted small">Click to pick · double-click to buy or sell one</span>
+      </div>
+      <div className="storage-cols">
+        <section className="panel storage-pane" data-testid="shop">
+          <div className="panel-title">
+            <span>For sale</span>
+          </div>
+          <div className="pane-scroll">
+            <ItemGrid
+              place="storage"
+              items={offers.map((o) => o.item)}
+              size={offers.length}
+              cols={8}
+              over={null}
+              dimmed={dim}
+              bind={noop}
+              tip={(item) => tip.props(item)}
+              selected={offer?.item.id ?? null}
+              onClick={(item) => choose('buy', item)}
+              onDoubleClick={(item) => {
+                const o = offers.find((x) => x.item.id === item.id);
+                if (o && city.capital && city.sheet.gold >= o.price) buy(o.defId, 1);
+              }}
+              badge={(item) => (
+                <span className="price-tag">
+                  {offers.find((o) => o.item.id === item.id)?.price}
+                </span>
+              )}
+              testId="shop-grid"
+            />
+          </div>
+          <div className="pick-bar">
+            {offer ? (
+              <>
+                <strong className="rarity-text" data-rarity={offer.item.rarity}>
+                  {offer.name}
+                </strong>
+                <span className="gold-tag">{offer.price * n} gold</span>
+                {offer.item.quantity >= 1 &&
+                  (offer.item.kind === 'material' || offer.item.kind === 'consumable') && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={qty}
+                      onChange={(e) => setQty(Number(e.target.value))}
+                      aria-label="Quantity"
+                      style={{ width: '4.5rem' }}
+                    />
+                  )}
+                <span className="spacer" />
                 <button
-                  className="btn btn-sm"
-                  disabled={busy || !city.capital}
-                  onClick={() => run('shop/sell', { itemId: i.id })}
-                  aria-label={`Sell ${i.name}`}
+                  className="btn btn-sm btn-primary"
+                  disabled={busy || !city.capital || city.sheet.gold < offer.price * n}
+                  onClick={() => buy(offer.defId, n)}
+                  aria-label={`Buy ${offer.name}`}
                 >
-                  Sell
+                  Buy
                 </button>
-              </ItemRow>
-            ))}
-        </ul>
-      </section>
+              </>
+            ) : (
+              <span className="muted small">Pick something to buy.</span>
+            )}
+          </div>
+        </section>
+        <section className="panel storage-pane">
+          <div className="panel-title">
+            <span>Sell from your bag</span>
+          </div>
+          <div className="pane-scroll">
+            <ItemGrid
+              place="bag"
+              items={city.sheet.inventory}
+              size={city.bag.slots}
+              cols={5}
+              over={null}
+              dimmed={(i) => dim(i) || city.sellPrices[i.id] === undefined}
+              bind={noop}
+              tip={(item) => tip.props(item)}
+              selected={owned?.id ?? null}
+              onClick={(item) => choose('sell', item)}
+              onDoubleClick={(item) => {
+                if (city.capital && city.sellPrices[item.id] !== undefined) sell(item.id);
+              }}
+              badge={(item) =>
+                city.sellPrices[item.id] !== undefined ? (
+                  <span className="price-tag">{city.sellPrices[item.id]}</span>
+                ) : null
+              }
+              testId="sell-grid"
+            />
+          </div>
+          <div className="pick-bar">
+            {owned ? (
+              sellPrice !== undefined ? (
+                <>
+                  <strong className="rarity-text" data-rarity={owned.rarity}>
+                    {owned.name}
+                  </strong>
+                  <span className="gold-tag">{sellPrice} gold</span>
+                  <span className="spacer" />
+                  <button
+                    className="btn btn-sm"
+                    disabled={busy || !city.capital}
+                    onClick={() => {
+                      sell(owned.id);
+                      setPick(null);
+                    }}
+                    aria-label={`Sell ${owned.name}`}
+                  >
+                    Sell
+                  </button>
+                </>
+              ) : (
+                <span className="muted small">
+                  The store does not buy {owned.name}. Materials and potions are worth more to other
+                  players.
+                </span>
+              )
+            ) : (
+              <span className="muted small">The store buys used gear only.</span>
+            )}
+          </div>
+        </section>
+      </div>
+      {hovered && tip.hover && (
+        <Tooltip anchor={tip.hover.rect}>
+          <ItemTooltipBody item={hovered} />
+        </Tooltip>
+      )}
     </div>
   );
 }
 
-type Place = 'bag' | 'storage';
-
 /**
- * Storage (request #50; search, filter and drag and drop from request #52):
- * drag an item from the bag onto the storage (or back), or use the buttons.
+ * Storage (requests #50, #52, #59): two grids of fixed positions — the bag
+ * (20) and the storage (80). Drag between them, stack on the same item,
+ * Shift + drop to split, Sort each grid. Search dims what does not match.
  */
-function Storage({ city, busy, run }: Props) {
+function Storage({ city, busy }: Props) {
+  const characterId = useActiveCharacter((s) => s.characterId);
+  const inv = useInventoryActions(characterId);
   const [filter, setFilter] = useState<ItemFilter>('all');
   const [search, setSearch] = useState('');
-  const move = (itemId: string, from: Place) =>
-    run(from === 'bag' ? 'storage/deposit' : 'storage/withdraw', { itemId });
-  const dnd = useDragAndDrop<{ item: ItemDto; from: Place }>((d, target) => {
-    if (target && target !== d.from) move(d.item.id, d.from);
+  const [split, setSplit] = useState<{ item: ItemDto; to: GridPlace; slot: number } | null>(null);
+  const tip = useHover<ItemDto>();
+  const working = busy || inv.move.isPending || inv.sort.isPending || !city.capital;
+  const dnd = useDragAndDrop<{ item: ItemDto; from: GridPlace }>((d, target, mods) => {
+    tip.clear();
+    const cell = parseCellKey(target);
+    if (!cell || working) return;
+    if (cell.place === d.from && cell.slot === d.item.slot) return;
+    if (mods.shift && d.item.quantity > 1)
+      setSplit({ item: d.item, to: cell.place, slot: cell.slot });
+    else inv.move.mutate({ itemId: d.item.id, to: cell.place, slot: cell.slot });
   });
-  const enabled = !busy && !!city.capital;
-  const bag = city.sheet.inventory.filter((i) => itemMatches(i, filter, search));
-  const stored = city.storage.filter((i) => itemMatches(i, filter, search));
-
-  const column = (place: Place, title: string, list: ItemDto[], total: number) => {
-    const other: Place = place === 'bag' ? 'storage' : 'bag';
-    const accepting = dnd.drag?.payload.from === other;
-    return (
-      <section
-        className="panel city-drop"
-        data-drop={place}
-        data-accept={accepting ? true : undefined}
-        data-over={accepting && dnd.drag?.over === place ? true : undefined}
-      >
-        <div className="panel-title">
-          <span>{title}</span>
-        </div>
-        {total === 0 && (
-          <p className="muted small">
-            {place === 'bag' ? 'Your bag is empty.' : 'Nothing stored.'}
-          </p>
-        )}
-        {total > 0 && list.length === 0 && <p className="muted small">Nothing matches.</p>}
-        <ul className="city-list" data-testid={place}>
-          {list.map((i) => (
-            <ItemRow key={i.id} item={i} drag={dnd.bind({ item: i, from: place }, enabled)}>
-              <button
-                className="btn btn-sm"
-                disabled={!enabled}
-                onClick={dnd.click(() => move(i.id, place))}
-                aria-label={`${place === 'bag' ? 'Store' : 'Take'} ${i.name}`}
-              >
-                {place === 'bag' ? 'Store' : 'Take'}
-              </button>
-            </ItemRow>
-          ))}
-        </ul>
-      </section>
-    );
-  };
-
+  const dim = (i: ItemDto) => !itemMatches(i, filter, search);
+  const hovered = tip.hover
+    ? [...city.sheet.inventory, ...city.storage].find((i) => i.id === tip.hover!.value.id)
+    : undefined;
+  const grid = (place: GridPlace, items: ItemDto[], size: number, cols: number) => (
+    <ItemGrid
+      place={place}
+      items={items}
+      size={size}
+      cols={cols}
+      over={dnd.drag?.over ?? null}
+      dimmed={dim}
+      bind={(item) => dnd.bind({ item, from: place }, !working)}
+      tip={(item) => tip.props(item)}
+      testId={place}
+    />
+  );
   return (
-    <div className="stack">
-      <div className="row city-tools">
+    <div className="storage-tab">
+      <div className="grid-tools">
         <input
           className="bag-search"
           type="search"
@@ -256,23 +375,64 @@ function Storage({ city, busy, run }: Props) {
             </button>
           ))}
         </div>
+        <span className="muted small">
+          Drag between the grids · same item stacks · Shift + drop splits
+        </span>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>
-        Drag items between your bag and the storage, or use the buttons.
-      </p>
-      <div className="city-cols">
-        {column(
-          'bag',
-          `Bag (${city.bag.used}/${city.bag.slots})`,
-          bag,
-          city.sheet.inventory.length,
-        )}
-        {column('storage', `Storage (${city.storage.length})`, stored, city.storage.length)}
+      <FormError error={inv.move.error ?? inv.sort.error} />
+      <div className="storage-cols">
+        <section className="panel storage-pane">
+          <div className="panel-title">
+            <span>
+              Bag ({city.bag.used}/{city.bag.slots})
+            </span>
+          </div>
+          <div className="pane-scroll">{grid('bag', city.sheet.inventory, city.bag.slots, 5)}</div>
+          <button
+            className="btn btn-sm"
+            disabled={working}
+            onClick={() => inv.sort.mutate('bag')}
+            aria-label="Sort the bag"
+          >
+            Sort
+          </button>
+        </section>
+        <section className="panel storage-pane">
+          <div className="panel-title">
+            <span>
+              Storage ({city.storage.length}/{city.storageSlots})
+            </span>
+          </div>
+          <div className="pane-scroll">{grid('storage', city.storage, city.storageSlots, 10)}</div>
+          <button
+            className="btn btn-sm"
+            disabled={working}
+            onClick={() => inv.sort.mutate('storage')}
+            aria-label="Sort the storage"
+          >
+            Sort
+          </button>
+        </section>
       </div>
+      {hovered && tip.hover && !dnd.drag && (
+        <Tooltip anchor={tip.hover.rect}>
+          <ItemTooltipBody item={hovered} />
+        </Tooltip>
+      )}
       {dnd.drag && (
         <DragGhost x={dnd.drag.x} y={dnd.drag.y}>
           <ItemIcon item={dnd.drag.payload.item} />
         </DragGhost>
+      )}
+      {split && (
+        <SplitDialog
+          item={split.item}
+          onCancel={() => setSplit(null)}
+          onConfirm={(qty) => {
+            inv.move.mutate({ itemId: split.item.id, to: split.to, slot: split.slot, qty });
+            setSplit(null);
+          }}
+        />
       )}
     </div>
   );

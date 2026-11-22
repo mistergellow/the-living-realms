@@ -58,7 +58,7 @@ export function checkGuildName(name: string): string | null {
   const n = name.trim();
   if (n.length < GUILD_RULES.nameMin || n.length > GUILD_RULES.nameMax)
     return `A guild name has ${GUILD_RULES.nameMin} to ${GUILD_RULES.nameMax} characters.`;
-  if (!/^[A-Za-z0-9' -]+$/.test(n)) return 'Use letters, numbers, spaces, - and \' only.';
+  if (!/^[A-Za-z0-9' -]+$/.test(n)) return "Use letters, numbers, spaces, - and ' only.";
   return null;
 }
 

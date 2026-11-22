@@ -206,7 +206,7 @@ test('character system: attributes, starting weapon, sheet and equipment', async
     .getByRole('button', { name: 'Main hand: Hunting Bow' })
     .dragTo(page.getByTestId('inventory'));
   await expect(page.getByLabel('Main hand: empty')).toBeVisible();
-  const bow = page.getByTestId('bag-hunting_bow');
+  const bow = page.getByTestId('bag-item-hunting_bow');
   await bow.hover();
   await expect(page.getByTestId('item-tooltip')).toContainText('Basic attack');
   // Item card parts (request #37): rarity and BASE-attribute requirements.
@@ -355,6 +355,10 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
   await page.getByTestId('profession-fishing').click();
   await expect(page.getByTestId('profession-tool')).toContainText('Fishing Rod');
+  // The test travelled through the API, not the UI: reload to see the new AP.
+  await page.reload();
+  await expect(page.getByTestId('top-ap')).not.toHaveText('120/120');
+  const apBefore = Number((await page.getByTestId('top-ap').innerText()).split('/')[0]);
   // Request #52: gathering costs AP and uses the spot's resources.
   await expect(page.getByTestId('profession-node')).toContainText('left');
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
@@ -365,6 +369,8 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.getByLabel('Attempts of Fish').fill('3');
   await page.getByTestId('job-fish').getByRole('button', { name: /Now · 6 AP/ }).click();
   await expect(page.getByTestId('job-result')).toContainText('Fish × 3');
+  // Request #59: the header's AP follows at once (2 for the single fish + 6).
+  await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
   await page.getByTestId('profession-carpentry').click();
@@ -377,31 +383,33 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.screenshot({ path: 'test-results/screens/10b-profession-profile.png' });
 });
 
-test('city storage: search, filter and drag and drop (request #52)', async ({ page }) => {
+test('city storage: grids, drag and drop, search, sort (requests #52, #59)', async ({ page }) => {
   await register(page, `e2e-store-${unique()}@example.com`);
   await createCharacter(page, randomName('Keeper'));
   // New characters start in their capital, with the four basic tools in the bag.
   await page.goto('/city/storage');
   const bag = page.getByTestId('bag');
   const storage = page.getByTestId('storage');
-  await expect(bag.getByTestId('city-item-fishing_rod')).toBeVisible();
-  // Drag the rod onto the storage.
-  await bag.getByTestId('city-item-fishing_rod').dragTo(storage.locator('..'));
-  await expect(storage.getByTestId('city-item-fishing_rod')).toBeVisible();
-  await expect(bag.getByTestId('city-item-fishing_rod')).toHaveCount(0);
-  // Search and filter apply to both lists.
+  await expect(bag.getByTestId('bag-item-fishing_rod')).toBeVisible();
+  // Drag the rod onto storage slot 7: it stays there.
+  await bag.getByTestId('bag-item-fishing_rod').dragTo(storage.getByTestId('storage-cell-7'));
+  await expect(storage.getByTestId('storage-item-fishing_rod')).toHaveAttribute('data-slot', '7');
+  await expect(bag.getByTestId('bag-item-fishing_rod')).toHaveCount(0);
+  // Search dims what does not match (nothing moves).
   await page.getByLabel('Search the bag and storage').fill('pick');
-  await expect(bag.getByTestId('city-item-pickaxe')).toBeVisible();
-  await expect(bag.getByTestId('city-item-felling_axe')).toHaveCount(0);
-  await expect(storage.getByTestId('city-item-fishing_rod')).toHaveCount(0);
+  await expect(bag.getByTestId('bag-item-felling_axe')).toHaveAttribute('data-dim', 'true');
+  await expect(bag.getByTestId('bag-item-pickaxe')).not.toHaveAttribute('data-dim', 'true');
   await page.getByLabel('Search the bag and storage').fill('');
-  await page.getByRole('tab', { name: 'Materials' }).click();
-  await expect(bag.getByTestId('city-item-pickaxe')).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Tools' }).click();
-  // And back into the bag.
-  await storage.getByTestId('city-item-fishing_rod').dragTo(bag.locator('..'));
-  await expect(bag.getByTestId('city-item-fishing_rod')).toBeVisible();
+  // Back into the bag, at slot 12; then Sort packs the bag again.
+  await storage.getByTestId('storage-item-fishing_rod').dragTo(bag.getByTestId('bag-cell-12'));
+  await expect(bag.getByTestId('bag-item-fishing_rod')).toHaveAttribute('data-slot', '12');
+  await page.getByRole('button', { name: 'Sort the bag' }).click();
+  await expect(bag.getByTestId('bag-cell-12')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/12-storage.png' });
+  // Request #59: the store is a grid too.
+  await page.getByRole('tab', { name: 'General store' }).click();
+  await expect(page.getByTestId('shop-grid')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/12b-shop.png' });
   // Request #54: the blacksmith shows what an upgrade changes.
   await page.getByRole('tab', { name: 'Blacksmith' }).click();
   await page.getByTestId('blacksmith').locator('.city-row > .city-name > strong').first().hover();
@@ -435,7 +443,7 @@ const VIEWPORTS = [
 ];
 
 /** The page itself must never scroll or overflow: screens fit the viewport. */
-async function expectFitsViewport(page: Page) {
+async function expectFitsViewport(page: Page, label = '') {
   const box = await page.evaluate(() => ({
     sw: document.documentElement.scrollWidth,
     sh: document.documentElement.scrollHeight,
@@ -444,6 +452,17 @@ async function expectFitsViewport(page: Page) {
   }));
   expect(box.sw).toBeLessThanOrEqual(box.w);
   expect(box.sh).toBeLessThanOrEqual(box.h);
+  // Request #59: the screen area never scrolls either — only boxes inside it.
+  const bodies = await page.evaluate(() =>
+    [...document.querySelectorAll('.screen-body')].map((el) => ({
+      sh: el.scrollHeight,
+      ch: el.clientHeight,
+    })),
+  );
+  for (const b of bodies)
+    expect.soft(b.sh, `${label} at ${box.w}×${box.h}: the screen area scrolls`).toBeLessThanOrEqual(
+      b.ch + 1,
+    );
 }
 
 test('screens fit every screen size', async ({ page }) => {
@@ -465,6 +484,10 @@ test('screens fit every screen size', async ({ page }) => {
     ['rifts', () => expect(page.getByTestId('rift-sites')).toBeVisible()],
     ['worldboss', () => expect(page.getByTestId('world-boss')).toBeVisible()],
     ['professions', () => expect(page.getByTestId('profession-detail')).toBeVisible()],
+    ['storage', () => expect(page.getByTestId('storage')).toBeVisible()],
+    ['shop', () => expect(page.getByTestId('shop-grid')).toBeVisible()],
+    ['guild', () => expect(page.getByTestId('guild-found')).toBeVisible()],
+    ['friends', () => expect(page.getByTestId('friends-link')).toBeVisible()],
   ];
   const paths: Record<string, string> = {
     home: '/home',
@@ -475,6 +498,10 @@ test('screens fit every screen size', async ({ page }) => {
     sheet: characterUrl!,
     rifts: '/rifts',
     professions: '/professions',
+    storage: '/city/storage',
+    shop: '/city/shop',
+    guild: '/guild',
+    friends: '/friends',
   };
 
   for (const vp of VIEWPORTS) {
@@ -482,7 +509,7 @@ test('screens fit every screen size', async ({ page }) => {
     for (const [screen, ready] of screens) {
       await page.goto(paths[screen]!);
       await ready();
-      await expectFitsViewport(page);
+      await expectFitsViewport(page, screen);
       await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-${screen}.png` });
     }
   }

@@ -1,3 +1,4 @@
+import { riftLength } from '@realms/game-core';
 import type { RunDto, RiftDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -114,7 +115,7 @@ describe('Rifts', () => {
     const rifts = res.json().rifts as RiftDto[];
     expect(rifts.length).toBeGreaterThan(5);
     expect(rifts.find((r) => r.id === SITE.id)).toMatchObject({
-      depth: 8,
+      depth: riftLength(1), // request #60: tier 1 routes have 10 rooms
       bossName: 'Rift Warden',
       site: SITE.hex,
     });
@@ -219,7 +220,7 @@ describe('Rifts', () => {
     const { run, types } = await clearRift(h, id);
     expect(run.status).toBe('victory');
     expect(types.at(-1)).toBe('boss');
-    expect(types.length).toBe(8);
+    expect(types.length).toBe(riftLength(1));
     expect(run.rewards!.reputation).toBe(40);
     // 2 boss drops + anything found on the way (Loot rooms, events).
     expect(run.rewards!.items.length).toBeGreaterThanOrEqual(2);
@@ -284,7 +285,9 @@ describe('Rifts', () => {
           url: `/api/characters/${h.characterId}`,
           headers: { cookie: h.cookie },
         })
-      ).json().inventory.filter((i: { kind: string }) => i.kind !== 'tool') as Array<{
+      )
+        .json()
+        .inventory.filter((i: { kind: string }) => i.kind !== 'tool') as Array<{
         name: string;
       }>;
 

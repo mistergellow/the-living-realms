@@ -546,7 +546,12 @@ export const TOOLS = {
 Object.assign(ITEMS, TOOLS);
 export type ToolItemId = keyof typeof TOOLS;
 /** Every new character carries the basic tools (request #51, PROVISIONAL: see open decisions). */
-export const STARTER_TOOLS: ToolItemId[] = ['fishing_rod', 'felling_axe', 'pickaxe', 'hunting_knife'];
+export const STARTER_TOOLS: ToolItemId[] = [
+  'fishing_rod',
+  'felling_axe',
+  'pickaxe',
+  'hunting_knife',
+];
 
 /**
  * Skill Books (request #47): one per skill. Read one (double-click in the bag)

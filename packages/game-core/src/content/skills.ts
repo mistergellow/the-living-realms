@@ -540,12 +540,10 @@ export function skillAtLevel<A extends AbilityDef>(a: A, level: number): A {
   const m = skillLevelMultiplier(level);
   const extra = skillExtraTurns(level);
   /**
-   * One decimal, like in combat (request #53): damage, healing and Dodge are
-   * rolled and then multiplied, and status values keep a decimal, so a level
-   * always shows (and is) an improvement. For display only: combat applies
-   * the multiplier itself.
+   * Whole numbers, always rounded down (request #59), like in combat. For
+   * display only: combat applies the multiplier itself.
    */
-  const r1 = (n: number) => Math.max(1, Math.round(n * m * 10) / 10);
+  const r1 = (n: number) => Math.max(1, Math.floor(n * m));
   return {
     ...a,
     effects: a.effects.map((e) => {

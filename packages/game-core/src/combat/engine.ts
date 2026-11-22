@@ -483,14 +483,10 @@ function applyEffect(
     }
     case 'status': {
       const potency = 1 + actor.stats.effectPotency / 100;
-      // Request #53: values keep one decimal so every skill level counts
-      // (they are rounded where they deal damage or heal).
-      const value = effect.value
-        ? Math.max(1, Math.round(effect.value * mult * potency * 10) / 10)
-        : 0;
+      // Request #59: power values are whole numbers, rounded down.
+      const value = effect.value ? Math.max(1, Math.floor(effect.value * mult * potency)) : 0;
       // Skill levels (request #53): statuses (not Stun) last longer from M1.
-      const extra =
-        effect.status === 'stun' ? 0 : (actor.abilityExtraTurns?.[ability.id] ?? 0);
+      const extra = effect.status === 'stun' ? 0 : (actor.abilityExtraTurns?.[ability.id] ?? 0);
       addStatus(state, target, effect.status, effect.turns + extra, value);
       return true;
     }
@@ -513,9 +509,7 @@ export const markFactor = (value: number) =>
   value > 0 ? 1 + Math.min(COMBAT_RULES.maxMarkPct, value) / 100 : COMBAT_RULES.markMultiplier;
 /** Damage factor of Weaken: −value % (default from COMBAT_RULES), at most −75 %. */
 export const weakenFactor = (value: number) =>
-  value > 0
-    ? 1 - Math.min(COMBAT_RULES.maxWeakenPct, value) / 100
-    : COMBAT_RULES.weakenMultiplier;
+  value > 0 ? 1 - Math.min(COMBAT_RULES.maxWeakenPct, value) / 100 : COMBAT_RULES.weakenMultiplier;
 
 const statusValue = (c: Combatant, id: StatusId) => c.statuses.find((s) => s.id === id)?.value ?? 0;
 

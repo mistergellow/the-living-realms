@@ -124,3 +124,94 @@ describe('city services (request #50)', () => {
     }
   });
 });
+
+describe('bag and storage grids (request #59)', () => {
+  const move = (h: H, itemId: string, to: 'bag' | 'storage', slot: number, qty?: number) =>
+    t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.id}/items/move`,
+      headers: { cookie: h.cookie },
+      payload: { itemId, to, slot, ...(qty ? { qty } : {}) },
+    });
+  const sort = (h: H, place: 'bag' | 'storage') =>
+    t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.id}/items/sort`,
+      headers: { cookie: h.cookie },
+      payload: { place },
+    });
+  const at = (c: CityDto, slot: number) => c.sheet.inventory.find((i) => i.slot === slot);
+
+  it('every item has a place; moving keeps it there; dropping on another item swaps', async () => {
+    const h = await hero();
+    const city = (await get(h)).json() as CityDto;
+    expect(city.storageSlots).toBe(INVENTORY_RULES.storageSlots);
+    const slots = city.sheet.inventory.map((i) => i.slot);
+    expect(new Set(slots).size).toBe(slots.length);
+    const rod = city.sheet.inventory.find((i) => i.defId === 'fishing_rod')!;
+    let c = (await move(h, rod.id, 'bag', 15)).json() as CityDto;
+    expect(at(c, 15)!.defId).toBe('fishing_rod');
+    // Swap with the pickaxe.
+    const pick = c.sheet.inventory.find((i) => i.defId === 'pickaxe')!;
+    c = (await move(h, pick.id, 'bag', 15)).json() as CityDto;
+    expect(at(c, 15)!.defId).toBe('pickaxe');
+    expect(at(c, pick.slot!)!.defId).toBe('fishing_rod');
+    // Outside the bag: refused.
+    expect((await move(h, pick.id, 'bag', INVENTORY_RULES.bagSlots)).statusCode).toBe(400);
+  });
+
+  it('stacks split onto an empty slot and merge back', async () => {
+    const h = await hero();
+    const herb = await give(h, 'herb', 10);
+    let c = (await get(h)).json() as CityDto;
+    c = (await move(h, herb, 'bag', 18, 4)).json() as CityDto;
+    expect(at(c, 18)).toMatchObject({ defId: 'herb', quantity: 4 });
+    expect(c.sheet.inventory.find((i) => i.id === herb)!.quantity).toBe(6);
+    c = (
+      await move(h, at(c, 18)!.id, 'bag', c.sheet.inventory.find((i) => i.id === herb)!.slot!)
+    ).json() as CityDto;
+    expect(c.sheet.inventory.filter((i) => i.defId === 'herb')).toHaveLength(1);
+    expect(c.sheet.inventory.find((i) => i.defId === 'herb')!.quantity).toBe(10);
+  });
+
+  it('moves between bag and storage slots in a capital; sort merges and orders', async () => {
+    const h = await hero();
+    const rod = ((await get(h)).json() as CityDto).sheet.inventory.find(
+      (i) => i.defId === 'fishing_rod',
+    )!;
+    let c = (await move(h, rod.id, 'storage', 42)).json() as CityDto;
+    expect(c.storage.find((i) => i.slot === 42)!.defId).toBe('fishing_rod');
+    // Two stacks of the same herb and a sword: sorting merges and orders them.
+    await give(h, 'herb', 2);
+    await give(h, 'herb', 3);
+    await give(h, 'training_sword');
+    c = (await sort(h, 'bag')).json() as CityDto;
+    const herbs = c.sheet.inventory.filter((i) => i.defId === 'herb');
+    expect(herbs).toHaveLength(1);
+    expect(herbs[0]!.quantity).toBe(5);
+    expect(at(c, 0)!.defId).toBe('training_sword'); // weapons first
+    const order = [...c.sheet.inventory].sort((a, b) => a.slot! - b.slot!).map((i) => i.slot);
+    expect(order).toEqual(order.map((_, i) => i));
+    // Away from a capital: bag only.
+    await placeCharacter(t, h.id, {
+      q: REGIONS.west.capital!.hex.q + 3,
+      r: REGIONS.west.capital!.hex.r,
+    });
+    expect((await move(h, rod.id, 'bag', 19)).json().error.code).toBe('NOT_HERE');
+    expect((await sort(h, 'bag')).statusCode).toBe(200);
+  });
+
+  it('the storage holds 80 items', async () => {
+    const h = await hero();
+    await t.dbHandle.sql`update characters set storage_slots = 1 where id = ${h.id}`;
+    const rod = ((await get(h)).json() as CityDto).sheet.inventory.find(
+      (i) => i.defId === 'fishing_rod',
+    )!;
+    await post(h, 'storage/deposit', { itemId: rod.id });
+    const axe = ((await get(h)).json() as CityDto).sheet.inventory.find(
+      (i) => i.defId === 'felling_axe',
+    )!;
+    const full = await post(h, 'storage/deposit', { itemId: axe.id });
+    expect(full.json().error.message).toContain('storage is full');
+  });
+});

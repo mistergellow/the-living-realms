@@ -25,3 +25,26 @@ export function useCityAction(characterId: string | null) {
     },
   });
 }
+
+/**
+ * Request #59: arrange the bag and the storage (move, split, merge, swap,
+ * sort). Bag-only moves work anywhere; the storage only in a capital.
+ */
+export function useInventoryActions(characterId: string | null) {
+  const qc = useQueryClient();
+  const done = (city: CityDto) => {
+    qc.setQueryData(cityKey(characterId), city);
+    qc.setQueryData(sheetQueryKey(characterId!), city.sheet);
+  };
+  const move = useMutation({
+    mutationFn: (v: { itemId: string; to: 'bag' | 'storage'; slot: number; qty?: number }) =>
+      api<CityDto>('POST', `/characters/${characterId}/items/move`, v),
+    onSuccess: done,
+  });
+  const sort = useMutation({
+    mutationFn: (place: 'bag' | 'storage') =>
+      api<CityDto>('POST', `/characters/${characterId}/items/sort`, { place }),
+    onSuccess: done,
+  });
+  return { move, sort };
+}

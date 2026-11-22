@@ -1,5 +1,6 @@
 import { characters, items, worldEvents, type Character, type DbOrTx, type Item } from '@realms/db';
 import {
+  compareItemsForSort,
   getItemDef,
   INVENTORY_RULES,
   isStackable,
@@ -13,11 +14,27 @@ import {
   weaponInfo,
 } from '@realms/game-core';
 import { ErrorCode, type CityDto } from '@realms/shared';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
-import { assertBagRoom, bagUsed, giveItem, sameGrade } from '../characters/bag.js';
+import {
+  assertBagRoom,
+  bagUsed,
+  ensureSlots,
+  firstFreeSlot,
+  giveItem,
+  placeWhere,
+  sameGrade,
+  type Place,
+} from '../characters/bag.js';
+
+const storageFull = (slots: number) =>
+  new AppError(
+    409,
+    ErrorCode.BAG_FULL,
+    `Your storage is full (${slots} slots). More slots will be available later.`,
+  );
 import {
   assertNotInRift,
   baseAttributesOf,
@@ -95,6 +112,184 @@ export class CityService {
     }
   }
 
+  /** Adds `item` to the first stack of the same item and grade in `place`; returns it, if any. */
+  private async joinStack(tx: DbOrTx, c: Character, item: Item, place: Place) {
+    const [first] = await tx
+      .select({ id: items.id })
+      .from(items)
+      .where(
+        and(
+          placeWhere(c.id, place),
+          eq(items.itemDefId, item.itemDefId),
+          sameGrade(item.grade),
+          ne(items.id, item.id),
+        ),
+      )
+      .orderBy(asc(items.slot))
+      .limit(1);
+    if (!first) return undefined;
+    await tx
+      .update(items)
+      .set({ quantity: sql`${items.quantity} + ${item.quantity}` })
+      .where(eq(items.id, first.id));
+    return first;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Request #59: arrange the bag and the storage like a grid of slots.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Move an item (or `qty` of a stack) to a position of the bag or the
+   * storage. Empty target: move (or split). Same stack: merge. Another item:
+   * swap. Equipped items dropped on the bag come off. Bag ↔ storage only in
+   * a capital.
+   */
+  move(
+    accountId: string,
+    characterId: string,
+    itemId: string,
+    to: Place,
+    slot: number,
+    qty?: number,
+  ) {
+    return this.ctx.db.transaction(async (tx) => {
+      const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
+      await ensureSlots(tx, c.id);
+      const item = await this.owned(tx, c, itemId);
+      const from: Place | null = item.equippedSlot ? null : item.inStorage ? 'storage' : 'bag';
+      if (from === null && to === 'storage') throw errors.validation('Unequip it first.');
+      if ((from === 'storage' || to === 'storage') && from !== to) this.assertInCapital(c);
+      if (to === 'storage' && from === 'storage') this.assertInCapital(c);
+      const cap = to === 'bag' ? INVENTORY_RULES.bagSlots : c.storageSlots;
+      if (slot < 0 || slot >= cap)
+        throw errors.validation(
+          to === 'bag' ? 'That is not a bag slot.' : 'That is not a storage slot.',
+        );
+      const n = Math.min(item.quantity, Math.max(1, qty ?? item.quantity));
+      const [target] = await tx
+        .select()
+        .from(items)
+        .where(and(placeWhere(c.id, to), eq(items.slot, slot)));
+      const toStorage = to === 'storage';
+      if (target?.id === item.id) return this.view(tx, accountId, characterId);
+
+      if (!target) {
+        if (from === null) {
+          // Unequip onto this bag slot.
+          await tx
+            .update(items)
+            .set({ equippedSlot: null, inStorage: false, slot })
+            .where(eq(items.id, item.id));
+        } else if (n < item.quantity) {
+          // Split the stack.
+          await tx
+            .update(items)
+            .set({ quantity: item.quantity - n })
+            .where(eq(items.id, item.id));
+          await tx.insert(items).values({
+            characterId: c.id,
+            itemDefId: item.itemDefId,
+            quantity: n,
+            quality: item.quality,
+            grade: item.grade,
+            source: item.source,
+            inStorage: toStorage,
+            slot,
+          });
+        } else {
+          await tx.update(items).set({ inStorage: toStorage, slot }).where(eq(items.id, item.id));
+        }
+        return this.view(tx, accountId, characterId);
+      }
+
+      const sameStack =
+        target.itemDefId === item.itemDefId &&
+        target.grade === item.grade &&
+        isStackable(getItemDef(item.itemDefId));
+      if (sameStack && from !== null) {
+        await tx
+          .update(items)
+          .set({ quantity: target.quantity + n })
+          .where(eq(items.id, target.id));
+        if (n >= item.quantity) await tx.delete(items).where(eq(items.id, item.id));
+        else
+          await tx
+            .update(items)
+            .set({ quantity: item.quantity - n })
+            .where(eq(items.id, item.id));
+        return this.view(tx, accountId, characterId);
+      }
+      if (from === null) {
+        // Unequip onto an occupied slot: the item goes to the first free bag slot.
+        await assertBagRoom(tx, c.id);
+        await tx
+          .update(items)
+          .set({ equippedSlot: null, inStorage: false, slot: await firstFreeSlot(tx, c.id, 'bag') })
+          .where(eq(items.id, item.id));
+        return this.view(tx, accountId, characterId);
+      }
+      if (n < item.quantity)
+        throw errors.validation('Split a stack onto an empty slot or onto the same item.');
+      // Swap the two items.
+      await tx
+        .update(items)
+        .set({ inStorage: from === 'storage', slot: item.slot })
+        .where(eq(items.id, target.id));
+      await tx.update(items).set({ inStorage: toStorage, slot }).where(eq(items.id, item.id));
+      return this.view(tx, accountId, characterId);
+    });
+  }
+
+  /** Sort (request #59): merge equal stacks, then order by kind, best first, then name. */
+  sort(accountId: string, characterId: string, place: Place) {
+    return this.ctx.db.transaction(async (tx) => {
+      const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
+      if (place === 'storage') this.assertInCapital(c);
+      const rows = await tx.select().from(items).where(placeWhere(c.id, place));
+      const keep: Item[] = [];
+      for (const r of rows) {
+        const same = isStackable(getItemDef(r.itemDefId))
+          ? keep.find((k) => k.itemDefId === r.itemDefId && k.grade === r.grade)
+          : undefined;
+        if (same) {
+          same.quantity += r.quantity;
+          await tx.update(items).set({ quantity: same.quantity }).where(eq(items.id, same.id));
+          await tx.delete(items).where(eq(items.id, r.id));
+        } else keep.push({ ...r });
+      }
+      keep.sort((a, b) =>
+        compareItemsForSort(
+          {
+            itemDefId: a.itemDefId,
+            affixCount: normalizeAffixes(a.specials).length,
+            upgradeLevel: a.upgradeLevel,
+            grade: a.grade,
+          },
+          {
+            itemDefId: b.itemDefId,
+            affixCount: normalizeAffixes(b.specials).length,
+            upgradeLevel: b.upgradeLevel,
+            grade: b.grade,
+          },
+        ),
+      );
+      // Two passes avoid clashing positions while renumbering.
+      for (const [i, r] of keep.entries())
+        await tx
+          .update(items)
+          .set({ slot: 10_000 + i })
+          .where(eq(items.id, r.id));
+      for (const [i, r] of keep.entries())
+        await tx.update(items).set({ slot: i }).where(eq(items.id, r.id));
+      return this.view(tx, accountId, characterId, {
+        message: place === 'bag' ? 'Bag sorted.' : 'Storage sorted.',
+        upgrade: null,
+      });
+    });
+  }
+
   get(accountId: string, characterId: string): Promise<CityDto> {
     return this.view(this.ctx.db, accountId, characterId);
   }
@@ -106,6 +301,7 @@ export class CityService {
     outcome: Outcome = { message: null, upgrade: null },
   ): Promise<CityDto> {
     const c = await this.sheets.getOwnedCharacter(db, accountId, characterId);
+    await ensureSlots(db, c.id);
     const base = baseAttributesOf(c);
     const all = await db.select().from(items).where(eq(items.characterId, c.id));
     const carried = all.filter((i) => !i.inStorage);
@@ -153,10 +349,31 @@ export class CityService {
       sheet: await this.sheets.buildSheet(db, c),
       storage: all.filter((i) => i.inStorage).map((i) => toItemDto(i, base)),
       bag: { used: await bagUsed(db, c.id), slots: INVENTORY_RULES.bagSlots },
+      storageSlots: c.storageSlots,
       shop: SHOP_STOCK.map((s) => ({
         defId: s.item,
         name: getItemDef(s.item)?.name ?? s.item,
         price: s.price,
+        item: toItemDto(
+          {
+            id: `shop-${s.item}`,
+            characterId: c.id,
+            itemDefId: s.item,
+            quality: 100,
+            quantity: 1,
+            equippedSlot: null,
+            inStorage: false,
+            slot: null,
+            source: 'shop',
+            upgradeLevel: 0,
+            grade: null,
+            specials: [],
+            runeSlots: [],
+            createdAt: new Date(0),
+            updatedAt: new Date(0),
+          },
+          base,
+        ),
       })),
       sellPrices,
       upgrades,
@@ -186,26 +403,17 @@ export class CityService {
       if (item.equippedSlot) throw errors.validation('Unequip it first.');
       if (item.inStorage) throw errors.validation('It is already in storage.');
       const name = getItemDef(item.itemDefId)?.name ?? item.itemDefId;
+      const slot = await firstFreeSlot(tx, c.id, 'storage');
       // Stacks join a stack already in storage.
       if (isStackable(getItemDef(item.itemDefId))) {
-        const [stack] = await tx
-          .update(items)
-          .set({ quantity: sql`${items.quantity} + ${item.quantity}` })
-          .where(
-            and(
-              eq(items.characterId, c.id),
-              eq(items.itemDefId, item.itemDefId),
-              sameGrade(item.grade),
-              eq(items.inStorage, true),
-            ),
-          )
-          .returning({ id: items.id });
+        const stack = await this.joinStack(tx, c, item, 'storage');
         if (stack) {
           await tx.delete(items).where(eq(items.id, item.id));
           return { message: `${name} stored.`, upgrade: null };
         }
       }
-      await tx.update(items).set({ inStorage: true }).where(eq(items.id, item.id));
+      if (slot >= c.storageSlots) throw storageFull(c.storageSlots);
+      await tx.update(items).set({ inStorage: true, slot }).where(eq(items.id, item.id));
       return { message: `${name} stored.`, upgrade: null };
     });
   }
@@ -216,26 +424,17 @@ export class CityService {
       if (!item.inStorage) throw errors.validation('That item is not in storage.');
       const name = getItemDef(item.itemDefId)?.name ?? item.itemDefId;
       if (isStackable(getItemDef(item.itemDefId))) {
-        const [stack] = await tx
-          .update(items)
-          .set({ quantity: sql`${items.quantity} + ${item.quantity}` })
-          .where(
-            and(
-              eq(items.characterId, c.id),
-              eq(items.itemDefId, item.itemDefId),
-              sameGrade(item.grade),
-              eq(items.inStorage, false),
-              isNull(items.equippedSlot),
-            ),
-          )
-          .returning({ id: items.id });
+        const stack = await this.joinStack(tx, c, item, 'bag');
         if (stack) {
           await tx.delete(items).where(eq(items.id, item.id));
           return { message: `${name} taken out.`, upgrade: null };
         }
       }
       await assertBagRoom(tx, c.id);
-      await tx.update(items).set({ inStorage: false }).where(eq(items.id, item.id));
+      await tx
+        .update(items)
+        .set({ inStorage: false, slot: await firstFreeSlot(tx, c.id, 'bag') })
+        .where(eq(items.id, item.id));
       return { message: `${name} taken out.`, upgrade: null };
     });
   }

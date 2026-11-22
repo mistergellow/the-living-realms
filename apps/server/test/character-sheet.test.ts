@@ -348,7 +348,11 @@ describe('Skill Books (request #47)', () => {
     const copy = await give(id, 'book_second_wind');
     const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
     expect(healAt(res2).level).toBe(2);
-    expect(healAt(res2).effects[0]).not.toBe(healAt(sheet).effects[0]);
+    const third = await give(id, 'book_second_wind');
+    const res3 = (await useItem(cookie, id, third)).json() as CharacterSheetDto;
+    expect(healAt(res3).level).toBe(3);
+    // Whole numbers, rounded down (request #59): Heal 6–8 → 7–9 at level 3.
+    expect(healAt(res3).effects[0]).toBe('Heal 7–9');
     // Request #53: 21 levels, 1 … 10, M1 … M10, P.
     await t.dbHandle
       .sql`update character_skills set level = 20 where character_id = ${id} and skill_id = 'second_wind'`;
