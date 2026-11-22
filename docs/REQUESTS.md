@@ -121,6 +121,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D109 | **Skills com 21 níveis: 1–10, M1–M10, P**; fracas no início e a melhorar a cada nível; rever todas (ex. Expose Weakness)                                                                                                                                                                                               | 2026-11-22 | por fazer (pedido #53)                                                                                |
 | D110 | **Rifts mudam todos os dias** de posição e de ameaça; **mais Rifts**, alguns já dentro dos territórios; **pirâmide** (muitos de ameaça baixa, poucos de alta)                                                                                                                                                          | 2026-11-22 | `riftLayout`, `RIFT_LAYOUT_RULES`                                                                     |
 | D111 | **Trabalhos de profissão**: escolher quantas tentativas e pagar **em AP** (tudo já) ou **em tempo real** (os itens chegam no fim)                                                                                                                                                                                      | 2026-11-22 | `startJob`, `JOB_RULES`                                                                               |
+| D112 | **Guildas**: máx. 16 membros; reputação da guilda ganha a fazer coisas juntos (Rifts, raids); ícone e cor; armazém da guilda; o líder convida e expulsa; comprar terreno de guilda                                                                                                                                     | 2026-11-22 | `content/guilds.ts`, `guilds.service.ts`                                                              |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -248,6 +249,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A120 | Níveis de skill                                                 | 1–10: +10 % por nível (10 = ×1,9); M1–M10: +8 % por nível (M10 = ×2,7); P: +30 % (×3); estados (não Stun) +1 ronda em M1 e +1 em P; Mark/Weaken 25 % no nível 1, máx. +100 % / −75 %; números com uma casa decimal                                                                                                                                                                                                                                                                                                                                         | `SKILL_RULES`, `COMBAT_RULES`                                                    |
 | A121 | Rifts diários                                                   | mudam à meia-noite UTC; 30 por dia: 12 × T1, 8 × T2, 5 × T3, 3 × T4, 2 × T5; T1–T2 também nas nações; T4 a partir de 40 % de profundidade e T5 de 65 %; 3 hexágonos de distância entre Rifts e das capitais; uma corrida já começada continua depois da meia-noite                                                                                                                                                                                                                                                                                         | `RIFT_LAYOUT_RULES`                                                              |
 | A122 | Trabalhos                                                       | até 50 tentativas; em AP: recolher 2 AP e criar 1 AP por tentativa; em tempo real: recolher 10 min por tentativa, criar o tempo da receita (20 s); um trabalho de cada vez e enquanto corre não se pratica mais nada; materiais e cargas do nó tirados no início (as cargas das tentativas falhadas voltam)                                                                                                                                                                                                                                                | `JOB_RULES`                                                                      |
+| A123 | Guildas                                                         | fundar 500 ouro; terreno 2000 ouro do banco (hexágono onde o líder está; não capital, não rio, a ≥ 3 das capitais; um por guilda); armazém 40 espaços, usado em capitais ou no terreno; qualquer membro guarda e tira; reputação = a reputação dos membros num Rift vencido com ≥ 2 membros; 12 ícones e 10 cores; líder sai → passa ao membro mais antigo; último sai → guilda acaba                                                                                                                                                                      | `GUILD_RULES`                                                                    |
 
 ---
 
@@ -1206,3 +1208,20 @@ acaba, o ecrã volta a ler e mostra o resultado ("Job done", botão OK). A
 Mastery sobe entre tentativas. Tabela `profession_jobs` (migração 0018),
 resolvida quando é lida (sem tarefas no worker). Testes: 3 de integração novos
 e passo no e2e de profissões.
+
+### #57 — 2026-11-22 — Guildas
+
+**Pedido:** sistema de guildas com no máximo 16 membros; reputação da guilda
+ganha por fazer coisas em guilda (raids, Rifts…); escolher ícone e cor;
+armazém da guilda; o líder convida e expulsa membros; comprar um terreno de
+guilda, etc.
+**Decisões:** D112; valores provisórios A123.
+**Resultado:** separador "Guild" no menu de baixo. Sem guilda: convites
+(Join/Decline) e fundar (nome, 12 ícones, 10 cores, 500 ouro). Com guilda:
+emblema redondo na cor da guilda, reputação, membros (convidar por nome,
+expulsar, passar a liderança, sair), banco de ouro, terreno (o líder compra o
+hexágono onde está), armazém partilhado com pesquisa. A reputação cresce
+quando ≥ 2 membros vencem um Rift juntos. Tabelas `guilds`, `guild_members`,
+`guild_invites`, `guild_items` (migração 0019). Testes: `guilds.test.ts`
+(5) e e2e "guild". Ainda por fazer: edifícios no terreno (oficinas privadas,
+fase 5 das profissões), marcas das guildas no mapa, chat da guilda.

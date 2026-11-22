@@ -161,6 +161,15 @@ Migration 0016 renamed old ids (`blacksmithing` → `blacksmith`, `runesmithing`
 levels into ranks and gave every living character the four basic tools.
 Rank-ups are `world_events` of type `profession.rank_up` {professionId, rank}.
 
+### `guilds`, `guild_members`, `guild_invites`, `guild_items`
+
+Guilds (request #57). `guilds`: name (unique per world, case-insensitive),
+`icon`, `color`, `leader_character_id`, `reputation`, `gold` (bank, ≥ 0),
+`land_q`/`land_r` (unique per world when set). `guild_members`: one row per
+character (PK `character_id`), `role` leader/member. `guild_invites`: PK
+(guild, character). `guild_items`: the guild storage, with the same item
+fields as `items` (rows move between the two tables).
+
 ### `profession_jobs`
 
 Real-time profession jobs (request #56); at most one per character

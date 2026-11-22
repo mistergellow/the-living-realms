@@ -25,6 +25,7 @@ export * from './rift/map.js';
 export * from './rift/tests.js';
 export * from './rift/run.js';
 export * from './content/professions.js';
+export * from './content/guilds.js';
 export * from './professions.js';
 export * from './gathering.js';
 export * from './content/world-map.js';

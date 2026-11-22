@@ -20,6 +20,8 @@ import { charactersRoutes } from './modules/characters/characters.routes.js';
 import { CharactersService } from './modules/characters/characters.service.js';
 import { CharacterSheetService } from './modules/characters/sheet.service.js';
 import { riftsRoutes } from './modules/rifts/rifts.routes.js';
+import { guildsRoutes } from './modules/guilds/guilds.routes.js';
+import { GuildsService } from './modules/guilds/guilds.service.js';
 import { professionsRoutes } from './modules/professions/professions.routes.js';
 import { ProfessionsService } from './modules/professions/professions.service.js';
 import { RiftsService } from './modules/rifts/rifts.service.js';
@@ -103,6 +105,10 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
         lobbies: new LobbiesService(ctx, sheets, rifts, friends, worldBoss),
       });
       await api.register(cityRoutes, { prefix: '/characters', city: new CityService(ctx, sheets) });
+      await api.register(guildsRoutes, {
+        prefix: '/characters',
+        guilds: new GuildsService(ctx, sheets),
+      });
       await api.register(worldBossRoutes, { prefix: '/world-boss', service: worldBoss, rifts });
       await api.register(riftsRoutes, { prefix: '/rifts', service: rifts });
       await api.register(socialRoutes, { prefix: '/social', friends });

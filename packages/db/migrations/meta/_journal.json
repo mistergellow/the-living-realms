@@ -134,6 +134,13 @@
       "when": 1795311382532,
       "tag": "0018_profession_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795312107358,
+      "tag": "0019_guilds",
+      "breakpoints": true
     }
   ]
 }
