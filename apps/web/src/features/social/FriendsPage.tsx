@@ -1,4 +1,6 @@
 import type { CharacterRefDto } from '@realms/shared';
+import { PageHeader } from '../../shared/ui/PageHeader';
+import { AlliesTabs } from './AlliesTabs';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -50,7 +52,11 @@ export function FriendsPage() {
   return (
     <div className="screen-body">
       <div className="contain stack narrow">
-        <h1 className="page-title">Friends</h1>
+        <AlliesTabs />
+        <PageHeader
+          title="Friends"
+          lead="Add people by their character name. You see when they are online and can invite them to your Rift lobby."
+        />
         <FormError
           error={request.error ?? accept.error ?? remove.error ?? lobbyActions.invite.error}
         />

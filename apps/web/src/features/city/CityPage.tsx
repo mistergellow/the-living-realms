@@ -1,4 +1,5 @@
 import type { CityDto, ItemDto } from '@realms/shared';
+import { PageHeader } from '../../shared/ui/PageHeader';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -40,17 +41,17 @@ export function CityPage() {
   return (
     <div className="screen-body">
       <div className="contain stack city" data-testid="city">
-        <div className="row" style={{ alignItems: 'baseline' }}>
-          <h1 className="page-title" style={{ margin: 0 }}>
-            {c?.capital ?? 'City'}
-          </h1>
-          <span className="spacer" />
-          {c && (
-            <span className="city-purse" data-testid="city-gold">
-              <Icon name="coin" /> {c.sheet.gold} gold · bag {c.bag.used}/{c.bag.slots}
-            </span>
-          )}
-        </div>
+        <PageHeader
+          title={c?.capital ?? 'City'}
+          lead="Buy and sell, keep your things safe and have your weapons upgraded."
+          actions={
+            c && (
+              <span className="city-purse" data-testid="city-gold">
+                <Icon name="coin" /> {c.sheet.gold} gold · bag {c.bag.used}/{c.bag.slots}
+              </span>
+            )
+          }
+        />
         {c && !c.capital && (
           <p className="muted">
             City services are only in capitals. Travel to one on the{' '}

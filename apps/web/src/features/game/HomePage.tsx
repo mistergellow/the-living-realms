@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
+import { useCharacterSheet } from '../characters/api';
 import { useActiveRun } from '../rifts/api';
 import { useLobbyOverview } from '../rifts/lobby-api';
 import { useWorldBoss } from '../world/api';
@@ -74,6 +75,7 @@ export function HomePage() {
         <p className="place-desc">{place.description}</p>
 
         <ActivityCard characterId={characterId} />
+        <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
 
         <nav className="place-actions" aria-label={`What to do in ${place.name}`}>
           {place.actions.map((a) => {
@@ -197,7 +199,7 @@ function ActivityCard({ characterId }: { characterId: string }) {
   let action: { to: string; label: string };
   if (run) {
     title = `Inside ${run.riftName}`;
-    body = `${run.roomsVisited} rooms explored — your party is waiting.`;
+    body = `${run.roomsVisited} room${run.roomsVisited === 1 ? '' : 's'} explored — your party is waiting.`;
     action = { to: `/rifts/runs/${run.id}`, label: 'Resume' };
   } else if (lobby) {
     title = `Lobby: ${lobby.riftName}`;
@@ -222,6 +224,52 @@ function ActivityCard({ characterId }: { characterId: string }) {
           {action.label}
         </Link>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Request #69: a newcomer always sees one clear next step (until their first
+ * reputation): spend the attribute points, find a Rift, go in.
+ */
+function NextStep({ characterId, atRift }: { characterId: string; atRift: boolean }) {
+  const sheet = useCharacterSheet(characterId);
+  const active = useActiveRun(characterId);
+  const s = sheet.data;
+  if (!s || active.data || s.reputation > 0) return null;
+  const step =
+    s.attributePoints > 0
+      ? {
+          title: `Spend your ${s.attributePoints} attribute points`,
+          body: 'Make your hero stronger before the first fight. Might hits harder, Endurance keeps you standing.',
+          to: `/characters/${characterId}`,
+          label: 'Open your hero',
+        }
+      : atRift
+        ? {
+            title: 'Enter the Rift',
+            body: 'You stand at a Rift. Go in alone or gather a party, and pick your doors wisely.',
+            to: '/rifts',
+            label: 'Enter',
+          }
+        : {
+            title: 'Find a Rift',
+            body: 'Rifts are where heroes earn gold, gear and reputation. Open the world map and travel to a Tier 1 Rift (purple marks).',
+            to: '/world',
+            label: 'Open the map',
+          };
+  return (
+    <section className="panel next-step" aria-label="Next step" data-testid="next-step">
+      <span className="next-step-mark" aria-hidden>
+        !
+      </span>
+      <span className="next-step-text">
+        <strong>{step.title}</strong>
+        <span className="muted">{step.body}</span>
+      </span>
+      <Link className="btn btn-primary btn-sm" to={step.to}>
+        {step.label}
+      </Link>
     </section>
   );
 }

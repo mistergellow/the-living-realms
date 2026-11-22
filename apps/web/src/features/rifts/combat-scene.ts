@@ -41,12 +41,12 @@ export interface CombatSceneInput {
 }
 
 const COLORS = {
-  accent: 0xd4a64a,
-  accentStrong: 0xe8bd5f,
-  text: 0xe7e3d8,
-  hp: 0xd2513f,
+  accent: 0xd0912f,
+  accentStrong: 0xf0c06a,
+  text: 0xe2d6bb,
+  hp: 0xa3221a,
   hpBack: 0x000000,
-  mana: 0x4a7fe0,
+  mana: 0x4f78b8,
   damage: '#ff8a7a',
   crit: '#ffd166',
   heal: '#7ee2a8',
@@ -73,7 +73,7 @@ const STATUS_COLORS: Record<StatusId, number> = {
   impale: 0xe0a36b,
 };
 
-const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const FONT = '"Alegreya SC", "Alegreya", Georgia, serif';
 
 const easeOut = (p: number) => 1 - (1 - p) ** 3;
 const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
@@ -143,6 +143,8 @@ class UnitView {
   homeY = 0;
   scale = 1;
   plateScale = 1;
+  /** Narrow screens: names would overlap; the HUD's unit card shows them. */
+  showName = true;
   x = 0;
   y = 0;
   placed = false;
@@ -345,7 +347,7 @@ class UnitView {
     if (this.targetable) {
       this.ring.ellipse(this.offX * 0.6, 0, rx * 1.05, rx * 0.27).stroke({
         width: 2 + this.hover,
-        color: 0xffe2a0,
+        color: 0xf0c06a,
         alpha: 0.45 + 0.35 * pulse + 0.2 * this.hover,
       });
     }
@@ -381,22 +383,24 @@ class UnitView {
         const cx = start + i * gap;
         const cy = y + 3.5;
         const on = i < v.focus;
-        g.poly([cx, cy - 3.5, cx + 3.5, cy, cx, cy + 3.5, cx - 3.5, cy])
-          .fill({ color: on ? COLORS.accent : 0xffffff, alpha: on ? 1 : 0.12 })
-          .stroke({ width: 1, color: on ? COLORS.accentStrong : 0xffffff, alpha: on ? 1 : 0.25 });
+        g.rect(cx - 3, cy - 3, 6, 6)
+          .fill({ color: on ? COLORS.accentStrong : 0x000000, alpha: on ? 1 : 0.6 })
+          .stroke({ width: 1, color: on ? 0x3a2408 : 0xe2d6bb, alpha: on ? 1 : 0.3 });
       }
       if (v.maxMana > 0) {
         y -= 7;
-        g.roundRect(-W / 2, y, W, 5, 2.5).fill({ color: COLORS.hpBack, alpha: 0.6 });
-        g.roundRect(-W / 2, y, Math.max(0, W * clamp01(this.barMana)), 5, 2.5).fill(COLORS.mana);
+        g.rect(-W / 2 - 1, y - 1, W + 2, 6).fill({ color: 0x000000, alpha: 0.85 });
+        g.rect(-W / 2, y, Math.max(0, W * clamp01(this.barMana)), 4).fill(COLORS.mana);
       }
     }
     y -= 10;
-    g.roundRect(-W / 2 - 1, y - 1, W + 2, 10, 5).fill({ color: COLORS.hpBack, alpha: 0.65 });
-    g.roundRect(-W / 2, y, Math.max(0, W * clamp01(this.barHp)), 8, 4).fill(COLORS.hp);
-    g.roundRect(-W / 2, y, Math.max(0, W * clamp01(this.barHp)), 3, 1.5).fill({
-      color: 0xffffff,
-      alpha: 0.18,
+    // Darkest Dungeon-like bars: hard edges, an ink frame, a thin highlight.
+    g.rect(-W / 2 - 1.5, y - 1.5, W + 3, 10).fill({ color: 0x000000, alpha: 0.9 });
+    g.rect(-W / 2, y, W, 7).fill({ color: 0x2a0a07, alpha: 0.9 });
+    g.rect(-W / 2, y, Math.max(0, W * clamp01(this.barHp)), 7).fill(COLORS.hp);
+    g.rect(-W / 2, y, Math.max(0, W * clamp01(this.barHp)), 2).fill({
+      color: 0xff9f80,
+      alpha: 0.25,
     });
     const label = `${Math.round(this.shownHp)}/${v.maxHp}`;
     if (label !== this.lastHpLabel) {
@@ -405,6 +409,7 @@ class UnitView {
     }
     this.hpText.position.set(0, y + 4);
     this.nameText.position.set(0, y - 2);
+    this.nameText.visible = this.showName;
     const name = v.left ? `${v.name} (left)` : v.name;
     if (this.nameText.text !== name) this.nameText.text = name;
 
@@ -414,7 +419,7 @@ class UnitView {
       const my = y - 22 - 4 * Math.abs(Math.sin(t / 260)) - 3 * this.hover;
       this.marker
         .poly([-7, my - 7, 7, my - 7, 0, my + 2])
-        .fill({ color: 0xffe2a0, alpha: 0.85 + 0.15 * this.hover })
+        .fill({ color: 0xf0c06a, alpha: 0.85 + 0.15 * this.hover })
         .stroke({ width: 1.5, color: 0x5a4210 });
     }
   }
@@ -457,7 +462,7 @@ class Backdrop {
     }
     this.core.blendMode = 'add';
     this.rift.addChild(this.core);
-    for (let i = 0; i < 46; i++) {
+    for (let i = 0; i < 24; i++) {
       const s = new Sprite(glowTexture());
       s.anchor.set(0.5);
       s.blendMode = 'add';
@@ -490,102 +495,138 @@ class Backdrop {
     this.boss = boss;
     const { width: w, height: h, horizon } = layout;
 
+    // Request #69: a Darkest Dungeon-like corridor — a stone wall with arches,
+    // two torches, flagstones; boss rooms are lit red by a crack in the wall.
     this.sky.texture = verticalGradient(
-      boss ? 'sky-boss' : 'sky',
+      boss ? 'wall-boss' : 'wall',
       boss
         ? [
-            [0, '#0c090f'],
-            [0.6, '#2c1832'],
-            [1, '#46203f'],
+            [0, '#070404'],
+            [0.55, '#1e0d0a'],
+            [1, '#2e130d'],
           ]
         : [
-            [0, '#0a0b13'],
-            [0.6, '#211c40'],
-            [1, '#352b5e'],
+            [0, '#060504'],
+            [0.55, '#17120e'],
+            [1, '#241c15'],
           ],
     );
     this.sky.position.set(0, 0);
     this.sky.width = w;
     this.sky.height = horizon + 2;
 
-    this.ground.texture = verticalGradient(
-      boss ? 'ground-boss' : 'ground',
-      boss
-        ? [
-            [0, '#24142a'],
-            [1, '#08060a'],
-          ]
-        : [
-            [0, '#1c1931'],
-            [1, '#07080d'],
-          ],
-    );
+    this.ground.texture = verticalGradient(boss ? 'floor-boss' : 'floor', [
+      [0, boss ? '#1c0f0b' : '#1a1510'],
+      [1, '#040303'],
+    ]);
     this.ground.position.set(0, horizon);
     this.ground.width = w;
     this.ground.height = h - horizon;
 
-    // Mountain silhouettes (seeded, so the room looks the same each time).
+    // Arches along the wall: pillars and dark openings (seeded jitter).
     const rnd = seeded(seed);
-    const ridge = (g: Graphics, top: number, amp: number, steps: number, color: number) => {
-      const pts: number[] = [0, horizon + 1];
-      for (let i = 0; i <= steps; i++) {
-        const x = (w * i) / steps;
-        const mid = Math.abs(x - layout.riftX) < w * 0.06 ? 0.4 : 1;
-        pts.push(x, horizon - (top + amp * rnd()) * h * mid);
+    const far = this.far.clear();
+    const bays = Math.max(3, Math.round(w / Math.max(220, h * 0.55)));
+    const bayW = w / bays;
+    const top = horizon * 0.18;
+    for (let i = 0; i < bays; i++) {
+      const x0 = i * bayW;
+      const pw = bayW * 0.16;
+      const ax = x0 + pw;
+      const aw = bayW - pw;
+      const archTop = top + horizon * (0.08 + 0.05 * rnd());
+      far
+        .moveTo(ax, horizon)
+        .lineTo(ax, archTop + aw / 2)
+        .arc(ax + aw / 2, archTop + aw / 2, aw / 2, Math.PI, 0)
+        .lineTo(ax + aw, horizon)
+        .closePath()
+        .fill({ color: 0x000000, alpha: 0.55 });
+      // stone courses on the pillar
+      for (let y = top; y < horizon; y += h * 0.045) {
+        far.moveTo(x0, y).lineTo(x0 + pw, y);
       }
-      pts.push(w, horizon + 1);
-      g.clear().poly(pts).fill(color);
-    };
-    ridge(this.far, 0.1, 0.16, 16, boss ? 0x1e1022 : 0x181530);
-    ridge(this.near, 0.02, 0.07, 26, boss ? 0x140b17 : 0x100e1f);
+    }
+    far.stroke({ width: 1, color: 0xe2d6bb, alpha: 0.04 });
 
-    // Perspective floor lines.
+    // Skirting where wall meets floor.
+    this.near
+      .clear()
+      .rect(0, horizon - h * 0.025, w, h * 0.03)
+      .fill(boss ? 0x1a0c09 : 0x15110d)
+      .rect(0, horizon - h * 0.025, w, 1)
+      .fill({ color: 0xe2d6bb, alpha: 0.06 });
+
+    // Flagstones in perspective.
     const fl = this.floorLines.clear();
-    for (let i = 1; i <= 5; i++) {
-      const y = horizon + (h - horizon) * (i / 6) ** 1.6;
+    for (let i = 1; i <= 6; i++) {
+      const y = horizon + (h - horizon) * (i / 7) ** 1.5;
       fl.moveTo(0, y).lineTo(w, y);
     }
-    for (let i = -6; i <= 6; i++) {
-      fl.moveTo(layout.riftX + i * w * 0.02, horizon).lineTo(layout.riftX + i * w * 0.22, h);
+    for (let i = -9; i <= 9; i++) {
+      fl.moveTo(layout.riftX + i * w * 0.055, horizon).lineTo(layout.riftX + i * w * 0.2, h);
     }
-    fl.stroke({ width: 1, color: boss ? 0xff9ad9 : 0x9fb4ff, alpha: 0.05 });
+    fl.stroke({ width: 1, color: 0xe2d6bb, alpha: 0.045 });
 
-    const tint = boss ? 0xff6fbf : 0x7fd3ff;
-    this.riftGlow.tint = tint;
-    this.riftGlow.position.set(layout.riftX, horizon - h * 0.02);
-    this.riftGlow.scale.set((w * 0.36) / 128, (h * 0.9) / 128);
-    this.floorGlow.tint = tint;
-    this.floorGlow.position.set(layout.riftX, h * 0.78);
-    this.floorGlow.scale.set((w * 0.5) / 128, (h * 0.22) / 128);
-    this.rift.position.set(layout.riftX, horizon - h * 0.02);
+    const warm = boss ? 0xc8331f : 0xd0912f;
+    this.riftGlow.tint = warm;
+    this.riftGlow.position.set(layout.riftX, horizon * 0.55);
+    this.riftGlow.scale.set((w * 0.9) / 128, (h * 0.9) / 128);
+    this.floorGlow.tint = warm;
+    this.floorGlow.position.set(layout.riftX, h * 0.82);
+    this.floorGlow.scale.set((w * 0.85) / 128, (h * 0.3) / 128);
+    this.rift.position.set(0, 0);
 
-    const ringColors = boss ? [0xff6fbf, 0xb35cff, 0xffd0f0] : [0x7fd3ff, 0x8f7cff, 0xd6f3ff];
-    const rh = h * 0.24;
-    const rw = Math.max(18, w * 0.03);
+    // Two wall torches between the sides, and (boss) a burning crack.
+    const tx = [layout.riftX - w * 0.07, layout.riftX + w * 0.07];
+    const ty = horizon * 0.52;
+    const ts = Math.max(0.6, layout.base);
     this.rings.forEach((g, i) => {
-      g.clear()
-        .ellipse(0, 0, rw * (1 - i * 0.18), rh * (1 - i * 0.12))
-        .stroke({ width: 3 - i * 0.6, color: ringColors[i]!, alpha: 0.55 });
+      g.clear();
+      if (i < 2) {
+        const x = tx[i]!;
+        g.blendMode = 'normal';
+        g.rect(x - 2.5 * ts, ty, 5 * ts, 22 * ts)
+          .fill(0x0b0806)
+          .poly([x - 8 * ts, ty, x + 8 * ts, ty, x + 4 * ts, ty + 8 * ts, x - 4 * ts, ty + 8 * ts])
+          .fill(0x2a2018)
+          .stroke({ width: 1, color: 0x000000 });
+        g.poly([x - 6 * ts, ty, x, ty - 22 * ts, x + 6 * ts, ty])
+          .fill({ color: 0xf0a040, alpha: 0.95 })
+          .poly([x - 3 * ts, ty, x, ty - 12 * ts, x + 3 * ts, ty])
+          .fill({ color: 0xfff0c0, alpha: 0.95 });
+        g.pivot.set(x, ty);
+        g.position.set(x, ty);
+      } else if (boss) {
+        const x = layout.riftX;
+        const y0 = horizon * 0.15;
+        g.blendMode = 'add';
+        g.moveTo(x, y0)
+          .lineTo(x - 10 * ts, y0 + horizon * 0.2)
+          .lineTo(x + 6 * ts, y0 + horizon * 0.35)
+          .lineTo(x - 4 * ts, y0 + horizon * 0.55)
+          .lineTo(x + 3 * ts, horizon)
+          .stroke({ width: 3 * ts, color: 0xc8331f, alpha: 0.9 });
+        g.pivot.set(0, 0);
+        g.position.set(0, 0);
+      }
     });
-    this.core
-      .clear()
-      .ellipse(0, 0, rw * 0.45, rh * 0.82)
-      .fill({ color: boss ? 0xffe0f4 : 0xe0f6ff, alpha: 0.55 });
+    this.core.clear();
+    for (const x of tx) {
+      this.core.circle(x, ty - 8 * ts, 26 * ts).fill({ color: 0xd0912f, alpha: 0.12 });
+    }
 
     for (const m of this.motes) {
       if (resized || m.s.x === 0) {
-        m.s.position.set(Math.random() * w, horizon * 0.3 + Math.random() * (h - horizon * 0.3));
+        m.s.position.set(
+          layout.riftX + (Math.random() - 0.5) * w * 0.5,
+          horizon * 0.3 + Math.random() * (h - horizon * 0.3),
+        );
       }
-      m.s.tint = boss
-        ? Math.random() < 0.5
-          ? 0xff8fd0
-          : 0xffc38f
-        : Math.random() < 0.5
-          ? 0x9fdcff
-          : 0xb7a6ff;
-      const sc = 0.03 + Math.random() * 0.06;
+      m.s.tint = boss ? 0xc8331f : Math.random() < 0.6 ? 0xd0912f : 0xf0c06a;
+      const sc = 0.015 + Math.random() * 0.03;
       m.s.scale.set(sc);
-      m.s.alpha = 0.25 + Math.random() * 0.5;
+      m.s.alpha = 0.2 + Math.random() * 0.45;
     }
 
     this.vignette.width = w;
@@ -595,21 +636,21 @@ class Backdrop {
   animate(t: number, dt: number, reduced: boolean) {
     const l = this.layout;
     if (!l) return;
-    const pulse = Math.sin(t / 900);
-    this.riftGlow.alpha = 0.33 + 0.07 * pulse;
-    this.floorGlow.alpha = 0.16 + 0.05 * pulse;
-    this.core.alpha = 0.75 + 0.2 * Math.sin(t / 340);
+    // Torchlight flickers.
+    const flick = 0.5 * Math.sin(t / 97) + 0.3 * Math.sin(t / 53 + 1.3) + 0.2 * Math.sin(t / 211);
+    this.riftGlow.alpha = 0.2 + 0.03 * flick;
+    this.floorGlow.alpha = 0.16 + 0.03 * flick;
+    this.core.alpha = 0.8 + 0.2 * flick;
     if (!reduced) {
-      this.rings.forEach((g, i) => {
-        g.rotation = Math.sin(t / (1400 + i * 500) + i) * 0.22;
-        g.scale.set(1 + 0.05 * Math.sin(t / (600 + i * 210) + i), 1);
+      this.rings.slice(0, 2).forEach((g, i) => {
+        g.scale.set(1, 1 + 0.06 * Math.sin(t / (70 + i * 23) + i));
       });
       for (const m of this.motes) {
         m.s.y -= (m.vy * dt) / 1000;
         m.s.x += (Math.sin(t / 1000 + m.ph) * m.sway * dt) / 1000;
         if (m.s.y < l.height * 0.08) {
           m.s.y = l.height + 10;
-          m.s.x = Math.random() * l.width;
+          m.s.x = l.riftX + (Math.random() - 0.5) * l.width * 0.5;
         }
       }
     }
@@ -706,6 +747,7 @@ export class CombatScene implements PixiScene {
       u.homeY = p.y;
       u.scale = p.scale;
       u.plateScale = ps;
+      u.showName = layout.width >= 560;
       // Players still choosing their actions this round are highlighted.
       u.active =
         combat.phase === 'planning' &&
@@ -767,7 +809,7 @@ export class CombatScene implements PixiScene {
     const to = downed ? 1 : 0;
     this.tween(downed ? 520 : 420, (p) => (u.fall = lerp(from, to, easeOut(p))));
     if (downed) this.dust(u);
-    else this.burst(u.chest().x, u.chest().y, 0xffe2a0, 14, 1);
+    else this.burst(u.chest().x, u.chest().y, 0xf0c06a, 14, 1);
   }
 
   private drawSlotMarks() {

@@ -3,12 +3,15 @@ import { useId } from 'react';
 import './avatar.css';
 
 /*
- * Layered "paper doll" character, drawn in SVG (decision D32, ADR-021).
+ * Layered "paper doll" character, drawn in SVG (ADR-021; request #69 replaced
+ * the chibi look of D32 with gothic, Darkest Dungeon-like figures: adult
+ * proportions, a heavy ink outline, hard shadows and muted colours).
  * PROVISIONAL ART: each layer (back hair, legs, torso, arms, weapon, head,
  * face, front hair) is a separate group so it can be replaced by real artwork,
  * and equipment layers can later be drawn on top.
  *
- * viewBox 0 0 120 160 — feet at y≈150, head centre (60, 60).
+ * viewBox 0 0 120 160 — feet at y≈150, head centre (60, 34), weapon hand at
+ * (97, 113), off hand at (23, 110).
  */
 
 export type WeaponArt =
@@ -71,6 +74,8 @@ export interface CharacterAvatarProps {
   eyesClosed?: boolean;
 }
 
+const INK = '#050403';
+
 function shade(hex: string, amount: number): string {
   const n = parseInt(hex.slice(1), 16);
   const f = (v: number) => Math.max(0, Math.min(255, Math.round(v + amount * 255)));
@@ -80,73 +85,63 @@ function shade(hex: string, amount: number): string {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
-function BackHair({ a }: { a: AppearanceV2 }) {
-  const c = shade(a.hairColor, -0.06);
+/** Muted, grimy version of a colour (pull it toward its own grey, then darken). */
+function grim(hex: string, mute = 0.55, darken = 0.2): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = n >> 16,
+    g = (n >> 8) & 255,
+    b = n & 255;
+  const l = 0.3 * r + 0.59 * g + 0.11 * b;
+  const f = (v: number) =>
+    Math.max(0, Math.min(255, Math.round((v + (l - v) * mute) * (1 - darken))));
+  return `#${((1 << 24) | (f(r) << 16) | (f(g) << 8) | f(b)).toString(16).slice(1)}`;
+}
+
+function BackHair({ a, c }: { a: AppearanceV2; c: string }) {
+  const back = shade(c, -0.08);
   switch (a.hairStyle) {
     case 'long':
-      return <path d="M22 58 C18 10 102 10 98 58 L102 112 C88 120 32 120 18 112 Z" fill={c} />;
+      return <path d="M49 30 C46 15 74 15 71 30 L74 62 C66 66 54 66 46 62 Z" fill={back} />;
     case 'ponytail':
-      return <path d="M86 52 C110 56 112 92 98 112 C96 96 92 80 82 70 Z" fill={c} />;
+      return <path d="M67 27 C79 29 82 47 75 61 C74 50 71 41 65 34 Z" fill={back} />;
     case 'bun':
-      return <circle cx="60" cy="16" r="13" fill={c} />;
+      return <circle cx="60" cy="19" r="5.5" fill={back} />;
     default:
       return null;
   }
 }
 
-function FrontHair({ a }: { a: AppearanceV2 }) {
-  const c = a.hairColor;
-  const hi = shade(a.hairColor, 0.12);
+function FrontHair({ a, c }: { a: AppearanceV2; c: string }) {
   switch (a.hairStyle) {
     case 'shaved':
-      return <path d="M27 58 C24 10 96 10 93 58 C86 40 34 40 27 58 Z" fill={c} opacity="0.55" />;
+      return (
+        <path
+          d="M51 30 C51 20 69 20 69 30 C66 26 54 26 51 30 Z"
+          fill={c}
+          opacity="0.6"
+          stroke="none"
+        />
+      );
     case 'spiky':
       return (
-        <>
-          <path d="M24 64 C17 8 103 8 96 64 Z" fill={c} />
-          <path
-            d="M25 62 L22 40 L34 44 L34 24 L46 36 L52 16 L62 32 L72 16 L76 36 L88 26 L88 44 L99 42 L95 62 C90 48 82 44 72 46 C66 40 54 40 48 46 C38 44 30 50 25 62 Z"
-            fill={c}
-          />
-        </>
+        <path
+          d="M50.5 34 L49 24 L53 25.5 L53 18 L57 22 L60 14.5 L63 22 L67 18 L67 25.5 L71 24 L69.5 34 C68 27 52 27 50.5 34 Z"
+          fill={c}
+        />
       );
     case 'long':
       return (
         <>
+          <path d="M50 34 C48 18 72 18 70 34 L68 29 C64 25 56 25 52 29 Z" fill={c} />
           <path
-            d="M23 68 C16 4 104 4 97 68 C92 50 84 42 72 44 C64 38 52 38 46 44 C36 42 28 50 23 68 Z"
+            d="M50.5 31 C49 41 49 52 52 58 L54 37 Z M69.5 31 C71 41 71 52 68 58 L66 37 Z"
             fill={c}
-          />
-          <path
-            d="M24 60 C22 76 24 92 30 104 L36 70 Z M96 60 C98 76 96 92 90 104 L84 70 Z"
-            fill={c}
-          />
-          <path
-            d="M42 24 C52 18 68 18 78 23"
-            stroke={hi}
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
           />
         </>
       );
     default:
-      // short, ponytail and bun share the fringe
-      return (
-        <>
-          <path
-            d="M24 66 C17 4 103 4 96 66 C92 50 84 42 72 45 C66 38 52 38 46 45 C37 43 29 51 24 66 Z"
-            fill={c}
-          />
-          <path
-            d="M42 24 C52 18 68 18 78 23"
-            stroke={hi}
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
-          />
-        </>
-      );
+      // short, ponytail and bun share the cap
+      return <path d="M50 34 C48 18 72 18 70 34 L68 29.5 C64 25 55 26 52 30 Z" fill={c} />;
   }
 }
 
@@ -154,44 +149,44 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
   switch (weapon) {
     case 'sword':
       return (
-        <g className="av-weapon">
-          <rect x="94" y="62" width="6" height="44" rx="2" fill="#cfd6e0" stroke="#7d8896" />
-          <rect x="88" y="104" width="18" height="5" rx="2" fill="#8a6a3a" />
-          <rect x="95" y="109" width="4" height="12" rx="1.5" fill="#5a4026" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="94" y="62" width="6" height="44" rx="2" fill="#a7a392" stroke="#050403" />
+          <rect x="88" y="104" width="18" height="5" rx="2" fill="#6e5530" />
+          <rect x="95" y="109" width="4" height="12" rx="1.5" fill="#2e2016" />
         </g>
       );
     case 'bow':
       return (
-        <g className="av-weapon">
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
           <path
             d="M98 60 C118 84 118 112 98 136"
-            stroke="#8a5a2e"
+            stroke="#523620"
             strokeWidth="5"
             fill="none"
             strokeLinecap="round"
           />
-          <line x1="98" y1="60" x2="98" y2="136" stroke="#e8e2d0" strokeWidth="1.2" />
+          <line x1="98" y1="60" x2="98" y2="136" stroke="#cfc6ad" strokeWidth="1.2" />
         </g>
       );
     case 'axe':
       return (
-        <g className="av-weapon">
-          <rect x="95" y="60" width="5" height="70" rx="2" fill="#7a5530" />
-          <path d="M100 62 C116 60 118 82 100 84 Z" fill="#b8c2cf" stroke="#6f7a88" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95" y="60" width="5" height="70" rx="2" fill="#4a3220" />
+          <path d="M100 62 C116 60 118 82 100 84 Z" fill="#9c9887" stroke="#050403" />
         </g>
       );
     case 'dagger':
       return (
-        <g className="av-weapon">
-          <path d="M96 86 L99 86 L100 108 L95 108 Z" fill="#cfd6e0" stroke="#7d8896" />
-          <rect x="92" y="107" width="11" height="4" rx="1.5" fill="#8a6a3a" />
-          <rect x="95.5" y="111" width="4" height="9" rx="1.5" fill="#5a4026" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <path d="M96 86 L99 86 L100 108 L95 108 Z" fill="#a7a392" stroke="#050403" />
+          <rect x="92" y="107" width="11" height="4" rx="1.5" fill="#6e5530" />
+          <rect x="95.5" y="111" width="4" height="9" rx="1.5" fill="#2e2016" />
         </g>
       );
     case 'tome':
       return (
-        <g className="av-weapon">
-          <rect x="90" y="104" width="20" height="24" rx="2" fill="#5b3a7a" stroke="#2e1d40" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="90" y="104" width="20" height="24" rx="2" fill="#3e2a52" stroke="#050403" />
           <rect
             x="93"
             y="107"
@@ -199,97 +194,97 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
             height="18"
             rx="1"
             fill="none"
-            stroke="#d4a64a"
+            stroke="#a8853e"
             strokeWidth="1.2"
           />
-          <circle cx="100" cy="116" r="3" fill="#b28df0" className="av-orb" />
+          <circle cx="100" cy="116" r="3" fill="#9a82c9" className="av-orb" />
         </g>
       );
     case 'staff':
       return (
-        <g className="av-weapon">
-          <rect x="95" y="56" width="5" height="90" rx="2" fill="#7a5530" />
-          <circle cx="97.5" cy="54" r="8" fill="#7fd3ff" className="av-orb" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95" y="56" width="5" height="90" rx="2" fill="#4a3220" />
+          <circle cx="97.5" cy="54" r="8" fill="#7fb3c9" className="av-orb" />
           <circle cx="95" cy="51" r="2.5" fill="#ffffff" opacity="0.8" />
         </g>
       );
     // ---- request #45: PROVISIONAL drawings ----
     case 'spear':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="44" width="4" height="100" rx="2" fill="#7a5530" />
-          <path d="M97.5 30 L102 46 L93 46 Z" fill="#cfd6e0" stroke="#7d8896" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="44" width="4" height="100" rx="2" fill="#4a3220" />
+          <path d="M97.5 30 L102 46 L93 46 Z" fill="#a7a392" stroke="#050403" />
         </g>
       );
     case 'mace':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="80" width="5" height="44" rx="2" fill="#6b4a2a" />
-          <circle cx="98" cy="76" r="9" fill="#8d96a3" stroke="#59616c" strokeWidth="2" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="80" width="5" height="44" rx="2" fill="#42301f" />
+          <circle cx="98" cy="76" r="9" fill="#6f6b60" stroke="#050403" strokeWidth="2" />
         </g>
       );
     case 'wand':
       return (
-        <g className="av-weapon">
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
           <rect x="96" y="92" width="4" height="30" rx="2" fill="#d8c9a3" />
-          <circle cx="98" cy="90" r="3.5" fill="#b28df0" className="av-orb" />
+          <circle cx="98" cy="90" r="3.5" fill="#9a82c9" className="av-orb" />
         </g>
       );
     case 'greatsword':
       return (
-        <g className="av-weapon">
-          <path d="M94 30 L102 30 L102 104 L94 104 Z" fill="#d6dde6" stroke="#7d8896" />
-          <path d="M98 22 L102 30 L94 30 Z" fill="#d6dde6" stroke="#7d8896" />
-          <rect x="84" y="102" width="28" height="6" rx="2" fill="#8a6a3a" />
-          <rect x="95" y="108" width="6" height="20" rx="2" fill="#5a4026" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <path d="M94 30 L102 30 L102 104 L94 104 Z" fill="#b0ab99" stroke="#050403" />
+          <path d="M98 22 L102 30 L94 30 Z" fill="#b0ab99" stroke="#050403" />
+          <rect x="84" y="102" width="28" height="6" rx="2" fill="#6e5530" />
+          <rect x="95" y="108" width="6" height="20" rx="2" fill="#2e2016" />
         </g>
       );
     case 'greataxe':
       return (
-        <g className="av-weapon">
-          <rect x="95" y="44" width="6" height="96" rx="2" fill="#6b4a2a" />
-          <path d="M101 46 C126 40 128 82 101 78 Z" fill="#b8c2cf" stroke="#6f7a88" />
-          <path d="M95 50 C80 50 80 72 95 72 Z" fill="#a3adba" stroke="#6f7a88" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95" y="44" width="6" height="96" rx="2" fill="#42301f" />
+          <path d="M101 46 C126 40 128 82 101 78 Z" fill="#9c9887" stroke="#050403" />
+          <path d="M95 50 C80 50 80 72 95 72 Z" fill="#8b8778" stroke="#050403" />
         </g>
       );
     case 'handaxe':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="78" width="4.5" height="44" rx="2" fill="#7a5530" />
-          <path d="M100 78 C110 76 111 92 100 92 Z" fill="#b8c2cf" stroke="#6f7a88" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="78" width="4.5" height="44" rx="2" fill="#4a3220" />
+          <path d="M100 78 C110 76 111 92 100 92 Z" fill="#9c9887" stroke="#050403" />
         </g>
       );
     case 'hammer':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="78" width="5" height="46" rx="2" fill="#6b4a2a" />
-          <rect x="86" y="68" width="24" height="12" rx="2" fill="#8d96a3" stroke="#59616c" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="78" width="5" height="46" rx="2" fill="#42301f" />
+          <rect x="86" y="68" width="24" height="12" rx="2" fill="#6f6b60" stroke="#050403" />
         </g>
       );
     case 'greathammer':
       return (
-        <g className="av-weapon">
-          <rect x="95" y="52" width="6" height="92" rx="2" fill="#5e4226" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95" y="52" width="6" height="92" rx="2" fill="#3a2a1b" />
           <rect
             x="80"
             y="36"
             width="36"
             height="20"
             rx="3"
-            fill="#7d8796"
-            stroke="#4d5560"
+            fill="#66625a"
+            stroke="#050403"
             strokeWidth="2"
           />
         </g>
       );
     case 'morningstar':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="82" width="5" height="42" rx="2" fill="#6b4a2a" />
-          <circle cx="98" cy="76" r="8" fill="#8d96a3" stroke="#59616c" strokeWidth="1.5" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="82" width="5" height="42" rx="2" fill="#42301f" />
+          <circle cx="98" cy="76" r="8" fill="#6f6b60" stroke="#050403" strokeWidth="1.5" />
           <path
             d="M98 64 L98 68 M98 84 L98 88 M86 76 L90 76 M106 76 L110 76 M90 68 L92.5 70.5 M106 68 L103.5 70.5 M90 84 L92.5 81.5 M106 84 L103.5 81.5"
-            stroke="#cfd6e0"
+            stroke="#a7a392"
             strokeWidth="2.5"
             strokeLinecap="round"
           />
@@ -297,36 +292,36 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
       );
     case 'lance':
       return (
-        <g className="av-weapon">
-          <path d="M98 16 L104 96 L92 96 Z" fill="#cfd6e0" stroke="#7d8896" />
-          <path d="M88 96 L108 96 L104 106 L92 106 Z" fill="#8a2a2a" />
-          <rect x="95.5" y="106" width="5" height="34" rx="2" fill="#6b4a2a" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <path d="M98 16 L104 96 L92 96 Z" fill="#a7a392" stroke="#050403" />
+          <path d="M88 96 L108 96 L104 106 L92 106 Z" fill="#6e1a14" />
+          <rect x="95.5" y="106" width="5" height="34" rx="2" fill="#42301f" />
         </g>
       );
     case 'crossbow':
       return (
-        <g className="av-weapon">
-          <rect x="94" y="88" width="30" height="6" rx="2" fill="#7a5530" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="94" y="88" width="30" height="6" rx="2" fill="#4a3220" />
           <path
             d="M116 72 C124 82 124 100 116 110"
-            stroke="#5e4226"
+            stroke="#3a2a1b"
             strokeWidth="4"
             fill="none"
             strokeLinecap="round"
           />
-          <line x1="116" y1="72" x2="116" y2="110" stroke="#e8e2d0" strokeWidth="1.2" />
-          <rect x="94" y="94" width="5" height="14" rx="2" fill="#5e4226" />
+          <line x1="116" y1="72" x2="116" y2="110" stroke="#cfc6ad" strokeWidth="1.2" />
+          <rect x="94" y="94" width="5" height="14" rx="2" fill="#3a2a1b" />
         </g>
       );
     // ---- request #46 ----
     case 'scepter':
       return (
-        <g className="av-weapon">
-          <rect x="96" y="80" width="4" height="44" rx="2" fill="#c9a24a" />
-          <circle cx="98" cy="74" r="7" fill="#fff1a8" className="av-orb" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="96" y="80" width="4" height="44" rx="2" fill="#a8853e" />
+          <circle cx="98" cy="74" r="7" fill="#e8d28a" className="av-orb" />
           <path
             d="M98 62 L98 68 M92 74 L86 74 M104 74 L110 74"
-            stroke="#fff1a8"
+            stroke="#e8d28a"
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -334,14 +329,14 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
       );
     case 'chakram':
       return (
-        <g className="av-weapon">
-          <circle cx="100" cy="104" r="11" fill="none" stroke="#cfd6e0" strokeWidth="4" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <circle cx="100" cy="104" r="11" fill="none" stroke="#a7a392" strokeWidth="4" />
           <circle
             cx="100"
             cy="104"
             r="11"
             fill="none"
-            stroke="#b28df0"
+            stroke="#9a82c9"
             strokeWidth="1.5"
             className="av-orb"
           />
@@ -349,22 +344,22 @@ function Weapon({ weapon }: { weapon: WeaponArt }) {
       );
     case 'scythe':
       return (
-        <g className="av-weapon">
-          <rect x="95.5" y="34" width="4.5" height="110" rx="2" fill="#4a3424" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="95.5" y="34" width="4.5" height="110" rx="2" fill="#33251a" />
           <path
             d="M98 36 C84 26 64 30 58 44 C70 38 84 40 97 46 Z"
-            fill="#cfd6e0"
-            stroke="#7d8896"
+            fill="#a7a392"
+            stroke="#050403"
           />
         </g>
       );
     case 'sling':
       return (
-        <g className="av-weapon">
-          <path d="M96 96 C100 110 104 118 100 128" stroke="#8a5a2e" strokeWidth="2" fill="none" />
-          <path d="M96 96 C92 110 94 120 100 128" stroke="#8a5a2e" strokeWidth="2" fill="none" />
-          <ellipse cx="100" cy="129" rx="4" ry="3" fill="#6b4a2a" />
-          <circle cx="100" cy="127" r="2.2" fill="#9aa0a8" />
+        <g className="av-weapon" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <path d="M96 96 C100 110 104 118 100 128" stroke="#523620" strokeWidth="2" fill="none" />
+          <path d="M96 96 C92 110 94 120 100 128" stroke="#523620" strokeWidth="2" fill="none" />
+          <ellipse cx="100" cy="129" rx="4" ry="3" fill="#42301f" />
+          <circle cx="100" cy="127" r="2.2" fill="#7a7a72" />
         </g>
       );
     default:
@@ -376,36 +371,36 @@ function Offhand({ offhand }: { offhand: OffhandArt }) {
   switch (offhand) {
     case 'shield':
       return (
-        <g className="av-offhand">
+        <g className="av-offhand" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
           <path
             d="M8 96 L32 92 L32 116 C32 128 20 134 20 134 C20 134 8 128 8 116 Z"
-            fill="#8a5a2e"
-            stroke="#4a3018"
+            fill="#523620"
+            stroke="#050403"
             strokeWidth="2"
           />
-          <circle cx="20" cy="112" r="4" fill="#c9a24a" />
+          <circle cx="20" cy="112" r="4" fill="#a8853e" />
         </g>
       );
     case 'talisman':
       return (
-        <g className="av-offhand">
-          <line x1="22" y1="112" x2="18" y2="128" stroke="#cdbb92" strokeWidth="1.5" />
-          <path d="M12 128 L24 128 L18 140 Z" fill="#e8e0c8" stroke="#8c7a52" />
-          <circle cx="18" cy="132" r="2" fill="#7fd3ff" className="av-orb" />
+        <g className="av-offhand" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <line x1="22" y1="112" x2="18" y2="128" stroke="#a89a78" strokeWidth="1.5" />
+          <path d="M12 128 L24 128 L18 140 Z" fill="#cfc6ad" stroke="#050403" />
+          <circle cx="18" cy="132" r="2" fill="#7fb3c9" className="av-orb" />
         </g>
       );
     case 'dagger':
       return (
-        <g className="av-offhand">
-          <path d="M21 86 L24 86 L25 108 L20 108 Z" fill="#cfd6e0" stroke="#7d8896" />
-          <rect x="17" y="107" width="11" height="4" rx="1.5" fill="#8a6a3a" />
+        <g className="av-offhand" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <path d="M21 86 L24 86 L25 108 L20 108 Z" fill="#a7a392" stroke="#050403" />
+          <rect x="17" y="107" width="11" height="4" rx="1.5" fill="#6e5530" />
         </g>
       );
     case 'handaxe':
       return (
-        <g className="av-offhand">
-          <rect x="19" y="90" width="4" height="40" rx="2" fill="#7a5530" />
-          <path d="M19 90 C9 88 8 104 19 104 Z" fill="#b8c2cf" stroke="#6f7a88" />
+        <g className="av-offhand" stroke="#050403" strokeWidth="1.4" strokeLinejoin="round">
+          <rect x="19" y="90" width="4" height="40" rx="2" fill="#4a3220" />
+          <path d="M19 90 C9 88 8 104 19 104 Z" fill="#9c9887" stroke="#050403" />
         </g>
       );
     default:
@@ -431,11 +426,18 @@ export function CharacterAvatar({
   const a = normalizeAppearance(appearance);
   const uid = useId().replace(/:/g, '');
   const wide = a.body === 'sturdy' ? 1 : 0.86;
-  const outfit = a.outfit;
-  const outfitDark = shade(outfit, -0.18);
-  const skinShade = shade(a.skin, -0.1);
-  const viewBox = portrait ? '14 12 92 92' : '0 0 120 160';
+  const W = (x: number) => 60 + (x - 60) * wide;
+  const outfit = grim(a.outfit);
+  const outfitDark = shade(outfit, -0.12);
+  const mantle = shade(outfit, -0.2);
+  const skin = grim(a.skin, 0.15, 0.06);
+  const skinShade = shade(skin, -0.14);
+  const hair = grim(a.hairColor, 0.25, 0.08);
+  const pants = '#26211c';
+  const leather = '#2e2117';
+  const viewBox = portrait ? '33 12 54 54' : '0 0 120 160';
   const width = portrait ? size : (size * 3) / 4;
+  const outline = { stroke: INK, strokeWidth: 1.6, strokeLinejoin: 'round' as const };
 
   return (
     <svg
@@ -450,7 +452,7 @@ export function CharacterAvatar({
       {title && <title>{title}</title>}
       <defs>
         <clipPath id={`clip-${uid}`}>
-          <circle cx="60" cy="58" r="46" />
+          <circle cx="60" cy="39" r="27" />
         </clipPath>
       </defs>
       <g
@@ -458,87 +460,114 @@ export function CharacterAvatar({
         clipPath={portrait ? `url(#clip-${uid})` : undefined}
       >
         {!portrait && part === 'full' && (
-          <ellipse cx="60" cy="151" rx="30" ry="6" fill="rgba(0,0,0,0.35)" className="av-shadow" />
+          <ellipse cx="60" cy="150" rx="26" ry="4.5" fill="rgba(0,0,0,0.6)" className="av-shadow" />
         )}
         <g className="av-root">
-          {show('base') && <BackHair a={a} />}
-          {/* legs */}
+          {show('base') && <BackHair a={a} c={hair} />}
+          {/* legs and boots */}
           {show('base') && (
-            <g className="av-legs">
-              <rect x={60 - 14 * wide} y="118" width="12" height="28" rx="5" fill="#2b3040" />
-              <rect x={60 + 14 * wide - 12} y="118" width="12" height="28" rx="5" fill="#2b3040" />
-              <rect x={60 - 15 * wide} y="139" width="14" height="10" rx="4" fill="#4a3424" />
-              <rect x={60 + 15 * wide - 14} y="139" width="14" height="10" rx="4" fill="#4a3424" />
+            <g className="av-legs" {...outline}>
+              <path d={`M${W(50)} 103 L${W(58)} 103 L55.5 146 L47 146 Z`} fill={pants} />
+              <path d={`M${W(62)} 103 L${W(70)} 103 L73 146 L64.5 146 Z`} fill={pants} />
+              <path
+                d="M46.5 127 L56 127 L56.5 144 Q60.5 145 60.5 149.5 L46 149.5 Z"
+                fill={leather}
+              />
+              <path d="M64 127 L73.5 127 L74 144 Q78 145 78 149.5 L64 149.5 Z" fill={leather} />
             </g>
           )}
-          {/* torso + arms */}
+          {/* torso, mantle and arms */}
           {show('base') && (
-            <g className="av-body">
-              <rect x={60 - 30 * wide} y="88" width="11" height="30" rx="5.5" fill={outfitDark} />
-              <circle cx={60 - 24.5 * wide} cy="120" r="5.5" fill={a.skin} />
+            <g className="av-body" {...outline}>
+              {/* off arm */}
+              <path d={`M${W(42)} 53 L${W(50)} 55 L${W(43)} 83 L${W(35)} 80 Z`} fill={outfitDark} />
+              <path d={`M${W(34)} 80 L${W(44)} 83 L28.5 111 L18.5 107 Z`} fill={outfitDark} />
+              <path d="M22.6 96 L31 99 L28.5 107 L19.5 104 Z" fill={leather} />
+              <circle cx="23.5" cy="110" r="3.4" fill={skin} />
+              {/* weapon arm */}
+              <path d={`M${W(70)} 55 L${W(78)} 53 L${W(85)} 80 L${W(77)} 83 Z`} fill={outfitDark} />
+              <path d={`M${W(76)} 83 L${W(86)} 80 L101.5 109 L93 115 Z`} fill={outfitDark} />
+              <path d="M88.5 98 L97 95 L100.5 104 L92.5 108 Z" fill={leather} />
+              {/* tunic */}
               <path
-                d={`M${60 - 24 * wide} 126 L${60 - 20 * wide} 90 C${60 - 16 * wide} 84 ${60 + 16 * wide} 84 ${60 + 20 * wide} 90 L${60 + 24 * wide} 126 Z`}
+                d={`M${W(45)} 50 Q60 47 ${W(75)} 50 L${W(77)} 60 L${W(72)} 84 L${W(79)} 106 L${W(41)} 106 L${W(48)} 84 L${W(43)} 60 Z`}
                 fill={outfit}
               />
-              <rect x={60 - 22 * wide} y="113" width={44 * wide} height="6" rx="2" fill="#3b2b1e" />
-              <rect x="57" y="113" width="6" height="6" rx="1" fill="#d4a64a" />
-              <path d={`M52 87 L60 100 L68 87`} stroke={outfitDark} strokeWidth="3" fill="none" />
-              <rect
-                x={60 + 30 * wide - 11}
-                y="88"
-                width="11"
-                height="30"
-                rx="5.5"
-                fill={outfitDark}
+              <path
+                d={`M${W(53)} 52 L${W(45)} 50 L${W(43)} 60 L${W(48)} 84 L${W(41)} 106 L${W(51)} 106 L${W(55)} 84 Z`}
+                fill={INK}
+                opacity="0.32"
+                stroke="none"
               />
+              <path d={`M60 86 L60 106`} stroke={INK} strokeWidth="1" opacity="0.6" />
+              <rect x={W(47)} y="82" width={W(73) - W(47)} height="5" fill={leather} />
+              <rect x="57.5" y="81.5" width="5" height="6" fill="#7d6a45" strokeWidth="1" />
+              {/* shoulder mantle */}
+              <path
+                d={`M${W(41)} 52 Q60 45 ${W(79)} 52 L${W(81)} 64 Q60 71 ${W(39)} 64 Z`}
+                fill={mantle}
+              />
+              <path d="M55 50 L60 57 L65 50" fill="none" strokeWidth="1.2" />
             </g>
           )}
           {show('weapon') && <Weapon weapon={weapon} />}
           {show('offhand') && <Offhand offhand={offhand} />}
           {show('weapon') && (
-            <circle cx={60 + 24.5 * wide} cy="120" r="5.5" fill={a.skin} className="av-hand" />
+            <circle cx="97" cy="113" r="3.4" fill={skin} className="av-hand" {...outline} />
           )}
           {/* head */}
           {show('head') && (
             <g className="av-head">
-              <rect x="53" y="80" width="14" height="10" rx="4" fill={skinShade} />
-              <circle cx="26" cy="64" r="6" fill={a.skin} />
-              <circle cx="94" cy="64" r="6" fill={a.skin} />
-              <circle cx="60" cy="60" r="34" fill={a.skin} />
+              <rect x="56.5" y="42" width="7" height="9" fill={skinShade} {...outline} />
+              {/* three-quarter view, facing right (toward the enemy): one ear shows */}
+              <ellipse cx="52.4" cy="35.8" rx="1.9" ry="3.2" fill={skin} {...outline} />
+              <path
+                d="M51 30 C51 19.5 69 19.5 69 30 L68.5 39 C67 45.5 63 48 60 48 C57 48 53 45.5 51.5 39 Z"
+                fill={skin}
+                {...outline}
+              />
+              {/* hard shadow: brow, right cheek and jaw */}
+              <path
+                d="M54.5 31 L51.4 30.5 L51.8 39 C53.2 45 57 47.6 60 47.8 C56.6 44.5 54.4 40 54.5 31 Z"
+                fill={skinShade}
+              />
+              <rect x="54" y="32" width="15" height="2.6" fill={skinShade} opacity="0.85" />
               {eyesClosed ? (
                 <path
-                  d="M42 67 Q47 70 52 67 M68 67 Q73 70 78 67"
-                  stroke="#1d1a22"
-                  strokeWidth="2.2"
-                  fill="none"
+                  d="M56.6 35.6 L60.4 35.9 M64 35.9 L67.4 35.6"
+                  stroke={INK}
+                  strokeWidth="1.1"
                   strokeLinecap="round"
                 />
               ) : (
                 <g className="av-eyes">
-                  <ellipse cx="47" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
-                  <ellipse cx="73" cy="66" rx="5" ry="6.5" fill="#1d1a22" />
-                  <ellipse cx="47" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
-                  <ellipse cx="73" cy="67" rx="3.8" ry="4.8" fill={a.eyeColor} />
-                  <circle cx="45.5" cy="64" r="1.8" fill="#fff" />
-                  <circle cx="71.5" cy="64" r="1.8" fill="#fff" />
+                  <ellipse cx="58.6" cy="35.7" rx="1.8" ry="1.15" fill="#d9d0bb" />
+                  <ellipse cx="65.9" cy="35.6" rx="1.4" ry="1.1" fill="#d9d0bb" />
+                  <circle cx="59.3" cy="35.7" r="0.95" fill={a.eyeColor} />
+                  <circle cx="66.4" cy="35.6" r="0.85" fill={a.eyeColor} />
+                  <path
+                    d="M56.6 34.7 L60.8 34.8 M64.3 34.8 L67.6 34.6"
+                    stroke={INK}
+                    strokeWidth="0.9"
+                  />
                 </g>
               )}
               <path
-                d="M41 56 L52 57 M68 57 L79 56"
-                stroke={shade(a.hairColor, -0.1)}
-                strokeWidth="2.2"
+                d="M55.6 32.2 L60.8 33 M63.8 33 L68 32.2"
+                stroke={shade(hair, -0.12)}
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
-              <ellipse cx="40" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
-              <ellipse cx="80" cy="76" rx="5" ry="2.5" fill="#e88c8c" opacity="0.35" />
               <path
-                d="M56 79 Q60 82 64 79"
-                stroke="#7a4a3a"
-                strokeWidth="1.8"
+                d="M64.6 35.5 L68.4 40.6 L64.8 41.4"
+                stroke={shade(skin, -0.3)}
+                strokeWidth="0.8"
                 fill="none"
-                strokeLinecap="round"
               />
-              <FrontHair a={a} />
+              <path d="M60 43.9 L65.2 43.4" stroke="#3a1f17" strokeWidth="0.9" />
+              <g {...outline} strokeWidth={1.3}>
+                <FrontHair a={a} c={hair} />
+              </g>
             </g>
           )}
         </g>

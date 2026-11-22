@@ -108,11 +108,14 @@ importers:
 
   apps/web:
     dependencies:
-      '@fontsource/alegreya-sans':
-        specifier: 5.3.0
+      '@fontsource/alegreya':
+        specifier: ^5.3.0
         version: 5.3.0
-      '@fontsource/cinzel':
-        specifier: 5.3.0
+      '@fontsource/alegreya-sc':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/grenze-gotisch':
+        specifier: ^5.3.0
         version: 5.3.0
       '@realms/game-core':
         specifier: workspace:*
@@ -867,11 +870,14 @@ packages:
   '@fastify/websocket@11.3.7':
     resolution: {integrity: sha512-fkkS87CkAOY/MzvJrB94S729RxvIbLHXv2LNGkPifli4/q4IdeicpcFoxgJ3oVmIRVNSi4W6FZai5AmRhzhhTw==}
 
-  '@fontsource/alegreya-sans@5.3.0':
-    resolution: {integrity: sha512-Uf0RbuwzhSS3NQrBFcRzEUm7TxDQW3qdAbQ6JIOhsIW6V+YN2dqlR99lhfEE38R3GHgMCMJBzqSp7aJxhNXSOw==}
+  '@fontsource/alegreya-sc@5.3.0':
+    resolution: {integrity: sha512-MksAO+rnvCMXBfrzcznuaoNtGgGwqORHhz5/UP0V4bHq0M9mL9EpOrW44ilAgI/yjzYtWoVlVjvvvEXPJI9PCw==}
 
-  '@fontsource/cinzel@5.3.0':
-    resolution: {integrity: sha512-KEOYTsrRppW0uRIPWBDPrQgunCS6f8u4nzZxYRBfo9SCknKojLYjK7B0ZoVmJhyVLefz271ZQRF9EOpHZlfhRw==}
+  '@fontsource/alegreya@5.3.0':
+    resolution: {integrity: sha512-YCsp9dHYfMNdggXxinMMS0nkGlZkzs2MvPL7qPVjSO4DM1uJ29hmKEdTC/fBP+2K4Aa+4Z44JuOQz05eDcvNJA==}
+
+  '@fontsource/grenze-gotisch@5.3.0':
+    resolution: {integrity: sha512-hIgb3TJWnwjiaf8FWMYfPe5PvHHnSv+VYUJI40Fj0KhjWhBhBl4LTsGrkr4MSjo6mG+znR2tBz5L++4wkEgI1A==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2921,9 +2927,11 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@fontsource/alegreya-sans@5.3.0': {}
+  '@fontsource/alegreya-sc@5.3.0': {}
 
-  '@fontsource/cinzel@5.3.0': {}
+  '@fontsource/alegreya@5.3.0': {}
+
+  '@fontsource/grenze-gotisch@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

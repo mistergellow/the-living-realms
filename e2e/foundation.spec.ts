@@ -249,9 +249,9 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   await page.getByRole('button', { name: 'Enter solo' }).click();
   await expect(page).toHaveURL(/\/rifts\/runs\//);
   // The Rift map: branching paths; the first row is always a fight.
-  await expect(page.getByTestId('rift-map')).toBeVisible();
-  await page.screenshot({ path: 'test-results/screens/06-rift-map.png' });
-  await page.getByTestId('room-combat').first().click();
+  await expect(page.getByTestId('rift-doors')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/06-rift-doors.png' });
+  await page.getByTestId('door').first().click();
 
   // PvE turn (Slay the Spire): actions happen at once, then the enemies act.
   await expect(page.getByText('Your turn')).toBeVisible();
@@ -324,9 +324,9 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   await a.getByRole('button', { name: 'Enter the Rift' }).click();
   await expect(a).toHaveURL(/\/rifts\/runs\//);
   await expect(b).toHaveURL(/\/rifts\/runs\//);
-  await a.getByTestId('room-combat').first().click();
+  await a.getByTestId('door').first().click();
   await expect(a.getByText('Waiting for the others to vote')).toBeVisible();
-  await b.getByTestId('room-combat').first().click();
+  await b.getByTestId('door').first().click();
   await expect(a.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
   await expect(b.getByTestId('unit-party')).toHaveCount(2, { timeout: 10_000 });
 
@@ -446,6 +446,8 @@ test('city storage: grids, drag and drop, search, sort (requests #52, #59)', asy
 test('guild: the Guild tab offers to found one with an emblem (request #57)', async ({ page }) => {
   await register(page, `e2e-guild-${unique()}@example.com`);
   await createCharacter(page, randomName('Founder'));
+  // Request #69: Friends and Guild live together under "Allies".
+  await page.getByTestId('friends-link').click();
   await page.getByTestId('guild-link').click();
   await expect(page.getByTestId('guild-found')).toContainText('Found a guild');
   await page.getByLabel('Guild name').fill('Silver Hawks');
@@ -545,15 +547,15 @@ test('screens fit every screen size', async ({ page }) => {
   await travel(page, name, 'rift');
   await page.goto('/rifts');
   await page.getByRole('button', { name: 'Enter solo' }).click();
-  await expect(page.getByTestId('rift-map')).toBeVisible();
+  await expect(page.getByTestId('rift-doors')).toBeVisible();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
-    await expect(page.getByTestId('rift-map')).toBeVisible();
+    await expect(page.getByTestId('rift-doors')).toBeVisible();
     await expectFitsViewport(page);
-    await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-rift-map.png` });
+    await page.screenshot({ path: `test-results/screens/sizes/${vp.name}-rift-doors.png` });
   }
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.getByTestId('room-combat').first().click();
+  await page.getByTestId('door').first().click();
   await expect(page.getByText('Your turn')).toBeVisible();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });

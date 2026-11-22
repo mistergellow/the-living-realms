@@ -41,22 +41,23 @@ export const PLATE_HEIGHT = 38;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function combatLayout(width: number, height: number): CombatLayout {
-  // Narrow (phone) screens get relatively bigger units: they have height to spare.
-  const byWidth = width < 700 ? width / 640 : width / 1050;
-  const base = clamp(Math.min(byWidth, height / 440), 0.42, 1.6);
+  // Request #69 (Darkest Dungeon): big figures that fill the stage. Narrow
+  // (phone) screens get relatively bigger units: they have height to spare.
+  const byWidth = width < 700 ? width / 640 : width / 760;
+  const base = clamp(Math.min(byWidth, height / 260), 0.42, 2.4);
   const cx = width / 2;
   return {
     width,
     height,
     base,
-    horizon: height * 0.46,
+    horizon: height * 0.6,
     riftX: cx,
     place(side, slot) {
       const pos = Math.max(0, Math.min(3, slot));
-      const off = width * (0.09 + 0.098 * pos);
+      const off = width * (0.085 + 0.102 * pos);
       const x = side === 'party' ? cx - off : cx + off;
-      const y = height * 0.76;
-      return { x, y, scale: base * 0.98, depth: 0 };
+      const y = height * 0.86;
+      return { x, y, scale: base, depth: 0 };
     },
   };
 }

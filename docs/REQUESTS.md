@@ -135,6 +135,11 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D123 | **Famílias de inimigos** (para os bónus "Strong against X"): Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift Zealot, jogadores)                                                                                                                | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
 | D124 | **Bónus do equipamento:** 5 bónus aleatórios da pool do slot (sem limite por grupo, sem bónus fixo por tipo de arma; por tipo de equipamento talvez); **até 2 slots de runa** por item (abrem-se depois ou o item já cai com 1); bónus novos do PoE e estados novos entram todos para depois cortar/afinar; arma de 1 mão nas duas mãos dá mais dano; materiais de crafting vêm de caça e profissões, alguns são drop de monstros | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
 | D125 | **Bónus do equipamento (implementação):** sem defesas por família de arma (só defesa física e mágica); o valor de cada bónus vem do tier do Rift (Rift mais difícil = melhor equipamento); sem bónus de economia; o limite é por bónus e por item (somam-se entre itens diferentes); armas de duas mãos com bónus de ataque ×1,5; materiais de crafting: por agora só os de recolha                                               | 2026-11-22 | `content/affixes.ts`, `combat/engine.ts`, `docs/EQUIPMENT_SPECIALS.md`                                |
+| D126 | **Aspeto "Darkest Dungeon"** (substitui D113): negro quente, texto cor de osso, vermelho-sangue = vida/perigo/ação principal, âmbar de tocha = o que se pode usar/selecionado, molduras de ferro com rebites; títulos em Grenze Gotisch, texto em Alegreya / Alegreya SC (sem maiúsculas espaçadas)                                                                                                                               | 2026-11-22 | `styles/tokens.css`, `styles/theme.css`, `main.tsx`, ADR-050                                          |
+| D127 | **Personagens góticos** (substitui o "chibi" de D32): proporções adultas, contorno a tinta, sombras duras, cores dessaturadas, vistos a ¾ virados para o inimigo — **placeholders**, a arte final é do dono; o HUD também é placeholder (o dono vai fazê-lo)                                                                                                                                                                      | 2026-11-22 | `CharacterAvatar.tsx`, `EnemyAvatar.tsx`, `combat.css` (`.combat-hud`)                                |
+| D128 | **Combate ao estilo Darkest Dungeon:** campo de batalha a toda a largura (corredor com tochas), figuras grandes, HUD em baixo: herói (retrato, HP, Mana, Focus) · habilidades + leitura da escolhida · unidade apontada + End turn; log recolhível                                                                                                                                                                                | 2026-11-22 | `CombatPage.tsx`, `CombatStage.tsx`, `combat-layout.ts`, `combat-scene.ts`                            |
+| D129 | **Dungeon por portas** (substitui o mapa visível de D43): escolhe-se Esquerda / Meio / Direita sem saber o que há atrás; a sala só se revela ao entrar (o servidor não envia o tipo). O mapa ramificado continua a existir por baixo                                                                                                                                                                                              | 2026-11-22 | `toMapDto`, `availableRooms`, `RiftDoors.tsx`, ADR-051                                                |
+| D130 | **Liberdade para reorganizar páginas e menus** para ficar tudo coerente e fácil para quem começa                                                                                                                                                                                                                                                                                                                                  | 2026-11-22 | navegação, `PageHeader`, guia "próximo passo"                                                         |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -270,6 +275,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A128 | Falha da leitura                                                | 96 % para o nível 2, −4 por nível, mínimo 20 % (10 = 64 %, M1 = 60 %, P = 20 %); falhar gasta os livros                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `SKILL_RULES.readChance*`                                                        |
 | A129 | Bónus do equipamento (pedido #67)                               | valores T1–T5 de `AFFIXES` (`tiers`); 10 % de chance de um tier acima; duas armas de 1 mão: +40 % de dano do ataque básico; Chill = −1 Focus por ronda, Blind = 25 % de falhar, Impale = 30 % do golpe, 3 rondas; "Casting speed" = chance de devolver 1 Focus (não há cooldowns); "Onslaught" = Strength ao matar (no PvE não há iniciativa); "+níveis de skill" só para todas as skills; Focus por ronda só a partir de T4                                                                                                                               | `AFFIX_RULES`, `DUAL_WIELD_RULES`, `AFFIXES`                                     |
 | A130 | Deitar itens fora (pedido #68)                                  | o item desaparece de vez (não fica no chão do hexágono); só da mochila (equipados: tirar primeiro; armazém: não); uma pilha cai inteira, ou escolhe-se a quantidade na confirmação; funciona em qualquer lado, também dentro de um Rift                                                                                                                                                                                                                                                                                                                    | `dropItem` (`sheet.service.ts`), `DropDialog`                                    |
+| A131 | Portas por sala (pedido #69)                                    | no máximo **3** (esquerda, meio, direita); se uma sala tiver mais saídas, ficam as duas de fora e a do meio; uma passagem secreta encontrada aparece por cima; a porta do boss e as secretas encontradas são as únicas com nome                                                                                                                                                                                                                                                                                                                            | `MAX_DOORS`, `availableRooms`, `toMapDto`                                        |
+| A132 | Revelação da sala de combate (pedido #69)                       | faixa "Ambush!" / "A terrible foe!" (elite) / "The lair of the beast" (boss) durante ~2 s no início da luta; salas sem luta revelam-se pela janela da sala (título)                                                                                                                                                                                                                                                                                                                                                                                        | `RoomReveal` (`CombatPage.tsx`)                                                  |
+| A133 | Navegação (pedido #69)                                          | 5 entradas: Character · World · Here (o hexágono onde estás; cidade, Rifts e world boss contam como "Here") · Crafts (profissões) · Allies (Amigos + Guilda em separadores)                                                                                                                                                                                                                                                                                                                                                                                | `GameShell.tsx` (`BottomNav`), `AlliesTabs.tsx`                                  |
+| A134 | Guia "próximo passo" (pedido #69)                               | aparece no hexágono até à primeira reputação: gastar pontos de atributo → encontrar um Rift → entrar                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `NextStep` (`HomePage.tsx`)                                                      |
 
 ---
 
@@ -1456,3 +1465,44 @@ funciona em qualquer lado).
 Drop); "Drop" pede confirmação (com a quantidade, se for uma pilha). Rota
 `POST /characters/:id/items/:itemId/drop` e `dropItem` no servidor. Testes:
 `character-sheet.test.ts` ("dropping items") e passo no e2e.
+
+### #69 — 2026-11-22 — Revamp visual total ao estilo Darkest Dungeon
+
+**Pedido:** análise geral; a interface estava "horrível e inconsistente". Revamp
+total do aspeto ao estilo Darkest Dungeon (imagem de referência), mantendo ou
+melhorando as mecânicas. Durante o trabalho o dono acrescentou: (1) vai fazer o
+HUD ele próprio — por agora um placeholder o mais decente possível; (2) mudar a
+dungeon: em vez do mapa estilo Slay the Spire, escolher entre caminhos
+Esquerda / Meio / Direita sem saber o que há; ao escolher aparece o que é
+(tesouro, inimigos, …); (3) personagens vistos meio de lado (placeholders por
+agora); (4) tudo mais user friendly, sem scrolls estranhos, dimensões adequadas;
+(5) liberdade total para mudar páginas e menus incoerentes.
+**Perguntas e respostas:** redesenhar os personagens ao estilo DD (sim, substitui
+o chibi de D32); layout de combate DD (sim).
+**Decisões:** D126–D130; provisórios A131–A134.
+**Resultado:**
+
+- Sistema visual novo (`tokens.css`, `theme.css` reescrito, ADR-050): paleta
+  negro/osso/sangue/tocha, grão de pedra, molduras de ferro com rebites, botão
+  principal vermelho-sangue, fontes Grenze Gotisch + Alegreya/Alegreya SC (saem
+  Cinzel e Alegreya Sans). Todos os fundos "frios" (azul/roxo) dos CSS passaram
+  para tons quentes; mapa-mundo e cores dos países dessaturados.
+- Cenários novos em tinta: fundo (lua, mansão em ruínas, bosque morto, campas,
+  nevoeiro), cidade e campo do hexágono.
+- Personagens e os 13 inimigos redesenhados (contorno, sombras duras, ¾).
+- Combate: corredor de pedra com tochas (fenda vermelha no boss), figuras
+  maiores, barras de vida duras, HUD em baixo (herói · habilidades + leitura ·
+  unidade apontada + End turn), log em gaveta, faixa de revelação da sala.
+- Dungeon por portas (`RiftDoors.tsx`, ADR-051): o servidor deixa de enviar o
+  tipo das salas onde ainda não se entrou; no máximo 3 portas; caminho já
+  percorrido e "sala X de N" por cima das portas.
+- Usabilidade: navegação Character · World · Here · Crafts · Allies (Amigos e
+  Guilda juntos), recursos do topo com rótulo (Reputation, Gold, Action points,
+  Online), cabeçalho igual em todas as páginas (`PageHeader`: título + uma frase
+  a explicar o sítio), guia "próximo passo" para quem começa, página Rifts em
+  duas colunas, painéis já não ficam esmagados com scroll próprio (a página
+  rola uma vez se for preciso), barra de topo numa linha no telemóvel, nomes das
+  unidades escondidos no telemóvel (não se sobrepõem), ficha com o herói maior.
+- Corrigido: título "The Living Ri" cortado no login.
+- Testes: `rift.test.ts` (tipos escondidos, ≤ 3 portas), `rifts.test.ts`, e2e
+  (portas, Allies → Guild).

@@ -152,7 +152,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Contrato: `packages/shared/src/api.ts` (`appearanceV1Schema` antigo, `appearanceV2Schema`, `BODY_TYPES`, `SKIN_TONES`, `HAIR_STYLES`, `HAIR_COLORS`, `EYE_COLORS`, `APPEARANCE_COLORS` = roupa, `DEFAULT_APPEARANCE`, `normalizeAppearance`)
 - BD: `characters.appearance` (JSONB com `version`); ao mudar a forma, **criar nova versão** e manter `normalizeAppearance` a converter as antigas
-- Arte (SVG em camadas, provisória): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
+- Arte (SVG em camadas, provisória; estilo gótico ¾ desde o pedido #69, D127): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente; mão da arma em (97, 113), mão secundária em (23, 110) — as armas desenham-se nessas posições), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
 - Inimigos: `apps/web/src/features/avatar/EnemyAvatar.tsx` (um desenho por `enemyDefId`) — **inimigo novo precisa de arte aqui**
 - Usos no DOM: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói), `rifts/CombatStage.tsx` (só sem WebGL)
 - Usos no canvas (PixiJS): `apps/web/src/features/render/avatar-textures.tsx` transforma as camadas em texturas (`part`: `base`/`weapon`/`head` + `eyesClosed`; âncoras usadas em `rifts/combat-scene.ts` → `UnitView`). **Camada nova** (ex.: equipamento) → acrescentar a `AvatarPart`, a `characterTextures` e ao `UnitView` (a mão secundária já é a camada `offhand`); retrato do mapa → `portraitTexture` (`world/map-scene.ts`)
@@ -460,30 +460,35 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 ## Tema visual (aspeto de jogo) e tamanhos de ecrã
 
-- Cores, espaçamentos e escala fluida: `apps/web/src/styles/tokens.css` (tudo em `rem`; `--hud-gap`)
-- Estilos: `apps/web/src/styles/global.css` (painéis, botões, `screen`, `topbar`, HUD do mundo, criação, ficha), `features/rifts/combat.css`
-- Fontes: `@fontsource/cinzel` e `@fontsource/alegreya-sans` importadas em `apps/web/src/main.tsx`
-- Moldura de ecrã: `apps/web/src/shared/ui/Screen.tsx` (cenário, brasas, vinheta); ícones: `shared/ui/Icon.tsx`
-- **Ecrã novo:** envolver em `<Screen>` com `<header className="topbar">` e `<main className="screen-body">`
+- **Aspeto "Darkest Dungeon" (pedido #69, ADR-050):** cores em `apps/web/src/styles/tokens.css` (`--ink`, `--bone`, `--blood`, `--torch`, `--iron`, `--grain`; os nomes antigos `--gold-*`/`--frame-*` continuam e apontam para a paleta nova); a camada final é `apps/web/src/styles/theme.css` (painéis, botões, inputs, HUD, tooltips, ícones, cabeçalhos de página, regras de "sem scroll")
+- **Cor nova num CSS:** usar os tokens; não usar fundos azuis/roxos (o tema é quente)
+- Estilos base: `styles/global.css`; por ecrã: `features/*/*.css`
+- Fontes: `@fontsource/grenze-gotisch` (títulos e nomes, `--font-title`), `@fontsource/alegreya` (texto), `@fontsource/alegreya-sc` (rótulos e botões, `--font-display`) em `apps/web/src/main.tsx`; no canvas: `FONT` em `rifts/combat-scene.ts` e `world/map-scene.ts`
+- Moldura de ecrã: `apps/web/src/shared/ui/Screen.tsx` (cenário, brasas, vinheta); cenário `shared/ui/Landscape.tsx` (`DeadTree` também usada em `game/LocationScene.tsx`); ícones: `shared/ui/Icon.tsx`
+- **Página nova dentro do jogo:** `<div className="screen-body"><div className="contain stack">` + `<PageHeader title lead actions />` (`shared/ui/PageHeader.tsx`: título + uma frase a explicar o sítio)
+- **Ecrã novo fora do jogo:** envolver em `<Screen>` com `<header className="topbar">` e `<main className="screen-body">`
 - Avatares em `rem` no DOM; no canvas usar `inSvg` (píxeis exatos) — ver `render/avatar-textures.tsx`
-- Teste: `e2e/foundation.spec.ts` → "screens fit every screen size" (a página nunca faz scroll)
-- Decisão: ADR-030
+- Teste: `e2e/foundation.spec.ts` → "screens fit every screen size" (a página nunca passa do ecrã)
+- Decisões: ADR-030, ADR-050
 
 ## Hub, barra de topo e navegação (GameShell)
 
 - Layout: `apps/web/src/features/game/GameShell.tsx` (ligação ao mundo `useWorldConnection`, avisos "Playing elsewhere"/"Entering the world", `TopBar`, `BottomNav`), estilos em `features/game/game.css`
 - Hub: `features/game/HomePage.tsx` (cartão de atividade, menus laterais, losangos, faixa da Crónica)
-- Rotas dentro do layout: `/home`, `/world`, `/rifts`, `/friends` (`app/router.tsx`); entrar no jogo vai para `/home` (`CharacterCreatePage`, `CharacterSelectPage`, `CharacterSheetPage`)
+- Rotas dentro do layout: `/home`, `/world`, `/rifts`, `/friends`, `/guild`, `/professions`, `/city/:tab`, `/world-boss` (`app/router.tsx`); entrar no jogo vai para `/home` (`CharacterCreatePage`, `CharacterSelectPage`, `CharacterSheetPage`)
+- **Navegação (pedido #69, A133):** `BottomNav` = Character · World · Here · Crafts · Allies (`also` marca as rotas que acendem cada entrada); Amigos/Guilda em separadores `social/AlliesTabs.tsx` (testids `friends-link` na barra, `guild-link` no separador)
+- Recursos do topo com rótulo (`.res-text`); guia de principiante `NextStep` em `HomePage.tsx` (A134)
 - Cenário: `shared/ui/Landscape.tsx` (placeholder) via `Screen`/`SceneBackground` (`dim` por ecrã em `DIM` no `GameShell`)
 - Ícones de interface: `shared/ui/Icon.tsx`
-- Testes: `e2e/foundation.spec.ts` (Hub, navegação "World"/"Rifts" com `exact: true`)
-- Decisão: ADR-031; valores provisórios A35
+- Testes: `e2e/foundation.spec.ts` (Hub, navegação "World" com `exact: true`, Allies → Guild)
+- Decisão: ADR-031; valores provisórios A35, A133, A134
 
 ## Barra de habilidades (combate)
 
 - `apps/web/src/features/rifts/AbilityBar.tsx` (slots, teclas 1–9, Esc, tooltip), `AbilityIcon.tsx` (ícones placeholder: `GLYPH_BY_ABILITY` e cor por tipo `abilitySchool`), estilos no fim de `combat.css`
 - **Habilidade nova:** acrescentar o ícone em `GLYPH_BY_ABILITY` (senão usa o ícone do tipo); o texto da tooltip vem de `describeEffects`/`describeTargeting`/`describeScaling` (`game-core/content/abilities.ts`)
-- Usada em `CombatPage.tsx`; e2e procura os botões pelo nome ("Slash", "Raise Shield")
+- Usada em `CombatPage.tsx` (HUD ao estilo DD, pedido #69: `hud-hero` · `hud-skills` com `AbilityReadout` · `hud-target` com `UnitCard` + End turn; `onHover` da barra alimenta a leitura); e2e procura os botões pelo nome ("Slash", "Raise Shield")
+- **HUD placeholder:** o dono vai desenhar o HUD final — manter as classes `.combat-hud`, `.hud-*`, `.bar`, `.focus-pips` e os tokens para a arte nova entrar sem mexer na lógica
 
 ## The Rift — dungeon, mapa e salas (pedido #31)
 
@@ -492,10 +497,11 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `packages/shared/src/combat.ts` (`ROOM_TYPES`, `RiftDto`, `MapDto`, `MapNodeDto`, `RunMemberDto`, `ConditionView`, `VoteView`, `EventView`, `TestRollView`, `RoomOutcomeView`, `RunPhase`, `RunDto`; ações `vote`/`continue`); `LobbyDto.depth` (`social.ts`)
 - Servidor: `modules/rifts/rifts.service.ts` (`createRun`, `act`, `catchUpTimers`, `grantItems`, `decisionKey`, `toRunDto`, `startingSlot`), `lobbies.service.ts` (líder do lobby = líder da corrida)
 - BD: `rift_runs.state` (`version: 2`); itens encontrados → `items.source` (`loot_room`, `secret_room`, `event`)
-- Web: `features/rifts/RunPage.tsx` (`ExplorationScreen`, painel do grupo, eventos com escolha de quem tenta e % de sucesso, resultado das salas), `RiftMap.tsx` (`ROOM_GLYPH`, `MapLegend`), `rift-map.css`
-- **Tipo de sala novo:** `ROOM_TYPES` (shared) → `ROOM_TYPE_INFO` (rooms.ts) → `enterRoom` (run.ts) → pesos em `MapTemplate.themes` → `ROOM_GLYPH` + cor em `rift-map.css` → testes
+- **Portas (pedido #69, D129, ADR-051):** os jogadores escolhem entre portas sem ver o que há atrás — `toMapDto` manda `type: null` para salas onde ainda não se entrou (exceto boss e secretas encontradas); `availableRooms` dá no máximo `MAX_DOORS` (3) da esquerda para a direita (A131); `MapNodeDto.type` é `RoomType | null`
+- Web: `features/rifts/RunPage.tsx` (`ExplorationScreen`, painel do grupo, eventos com escolha de quem tenta e % de sucesso, resultado das salas), `RiftDoors.tsx` (`RiftDoors`, `doorNames`, `ROOM_GLYPH`, caminho percorrido), `rift-doors.css`; revelação da luta: `RoomReveal` em `CombatPage.tsx`
+- **Tipo de sala novo:** `ROOM_TYPES` (shared) → `ROOM_TYPE_INFO` (rooms.ts) → `enterRoom` (run.ts) → pesos em `MapTemplate.themes` → `ROOM_GLYPH` (`RiftDoors.tsx`) → texto em `RoomReveal` se for de luta → testes
 - **Evento novo:** `content/events.ts` + id em `RIFTS.*.events`; **estado novo:** `CONDITIONS`
-- Testes: `game-core/test/rift.test.ts` (regras do mapa em 150 seeds, votos, campsite, loot, eventos, segredos escondidos), `apps/server/test/rifts.test.ts` (corrida completa até ao boss, loot), `lobbies.test.ts` (votos em grupo), `e2e` ("Rift: map, plan…")
+- Testes: `game-core/test/rift.test.ts` (regras do mapa em 150 seeds, votos, campsite, loot, eventos, segredos escondidos, tipos escondidos, ≤ 3 portas), `apps/server/test/rifts.test.ts` (corrida completa até ao boss, loot, só o boss tem nome), `lobbies.test.ts` (votos em grupo), `e2e` ("Rift: map, plan…", testids `rift-doors`/`door`)
 - Equilíbrio: `pnpm sim` joga corridas completas
 - Futuro: Dungeon Threat (ADR-035)
 

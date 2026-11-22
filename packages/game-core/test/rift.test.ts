@@ -25,6 +25,7 @@ import {
   testChance,
   timeoutRun,
   toMapDto,
+  MAX_DOORS,
   validateMap,
   vote,
   type RunMember,
@@ -244,6 +245,26 @@ describe('exploration run', () => {
     expect(toMapDto(s).edges.some(([a, b]) => a === secret.id || b === secret.id)).toBe(false);
     s.revealed.push(secret.id);
     expect(toMapDto(s).nodes.find((n) => n.id === secret.id)).toMatchObject({ secret: true });
+  });
+
+  it('never offers more than three doors (request #69)', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const s = createRun({ rift, party: [hero('a')], leaderId: 'a', seed });
+      expect(availableRooms(s).length).toBeLessThanOrEqual(MAX_DOORS);
+    }
+  });
+
+  it('players do not see what is behind a door until they go in (request #69)', () => {
+    const s = createRun({ rift, party: [hero('a')], leaderId: 'a', seed: 21 });
+    const dto = toMapDto(s);
+    for (const n of dto.nodes) {
+      const real = findNode(s.map, n.id)!.type;
+      expect(n.type).toBe(real === 'boss' || real === 'secret' ? real : null);
+    }
+    const first = availableRooms(s)[0]!;
+    s.visited.push(first);
+    s.currentId = first;
+    expect(toMapDto(s).nodes.find((n) => n.id === first)!.type).toBe(findNode(s.map, first)!.type);
   });
 
   it('exploration conditions carry into the next fight', () => {

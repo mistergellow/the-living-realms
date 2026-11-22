@@ -26,8 +26,8 @@
   font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   cursor: pointer;
   margin-bottom: -1px;
 }
@@ -37,7 +37,7 @@
 .sheet-tab[aria-selected='true'] {
   color: var(--accent-strong);
   border-color: var(--frame);
-  background: linear-gradient(180deg, rgb(30 30 42 / 0.95), rgb(16 17 24 / 0.95));
+  background: linear-gradient(180deg, rgb(37 30 23 / 0.95), rgb(21 17 13 / 0.95));
 }
 .sheet-tab[aria-selected='true']::after {
   content: '';
@@ -159,7 +159,7 @@
   border: 1px solid var(--border-strong);
   background:
     radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.06), transparent 70%),
-    linear-gradient(180deg, #0c0b11, #17151f);
+    linear-gradient(180deg, #0e0b09, #1b1611);
   box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.7);
   transition:
     border-color 120ms,
@@ -193,8 +193,8 @@
   white-space: nowrap;
   font-family: var(--font-display);
   font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   color: var(--text-faint);
 }
 .equip-slot[data-accept='true'] > * {
@@ -226,7 +226,7 @@
   background: radial-gradient(circle at 35% 30%, var(--t1), var(--t2) 78%);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
   --t1: #6b6f7c;
-  --t2: #1e2027;
+  --t2: #261f18;
 }
 .item-icon svg {
   width: 64%;
@@ -239,11 +239,11 @@
 }
 .item-icon[data-tone='armor'] {
   --t1: #5a7aa8;
-  --t2: #15223a;
+  --t2: #271f18;
 }
 .item-icon[data-tone='accessory'] {
   --t1: #a98bd8;
-  --t2: #2a1a46;
+  --t2: #2a221a;
 }
 .item-icon[data-tone='material'] {
   --t1: #6f7f62;
@@ -285,7 +285,7 @@
   padding: 0.2rem;
   border-radius: 0.3rem;
   border: 1px solid rgb(255 255 255 / 0.07);
-  background: linear-gradient(180deg, #0e0d13, #16141d);
+  background: linear-gradient(180deg, #100d0a, #191510);
   cursor: grab;
   touch-action: none;
 }
@@ -372,7 +372,7 @@ button.bag-cell:focus-visible {
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--frame-hi);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, rgb(28 26 36 / 0.98), rgb(12 12 18 / 0.98));
+  background: linear-gradient(180deg, rgb(33 27 20 / 0.98), rgb(15 12 9 / 0.98));
   box-shadow:
     0 0.6rem 1.6rem rgb(0 0 0 / 0.7),
     inset 0 1px 0 rgb(255 255 255 / 0.06);
@@ -447,8 +447,8 @@ button.bag-cell:focus-visible {
 }
 .tip-label {
   font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   color: var(--text-faint);
 }
 .tip-chips {
@@ -529,7 +529,7 @@ button.bag-cell:focus-visible {
   display: grid;
   place-items: center;
   border-style: dashed;
-  background: linear-gradient(180deg, #0c0b11, #17151f);
+  background: linear-gradient(180deg, #0e0b09, #1b1611);
   color: rgb(255 255 255 / 0.18);
   font-family: var(--font-display);
   font-size: 1.3rem;
@@ -658,8 +658,8 @@ button.bag-cell:focus-visible {
   margin: 0;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   color: var(--text-faint);
 }
 
@@ -700,8 +700,8 @@ button.bag-cell:focus-visible {
 .tip-rarity {
   font-size: 0.7rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: none;
+  letter-spacing: 0.03em;
 }
 .item-tip .tip-row[data-met='false'] {
   color: var(--danger);
@@ -750,7 +750,7 @@ button.bag-cell:focus-visible {
   width: 19rem;
   padding: 0.6rem 0.75rem;
   border-radius: var(--radius-sm);
-  background: #141320;
+  background: #18140f;
   border: 1px solid var(--border-strong);
   box-shadow: 0 0.6rem 1.4rem rgb(0 0 0 / 0.6);
   font-weight: 400;

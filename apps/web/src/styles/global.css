@@ -112,7 +112,7 @@ input {
     radial-gradient(ellipse 80% 60% at 50% 110%, rgb(212 120 50 / 0.18), transparent 70%),
     radial-gradient(ellipse 70% 50% at 15% 0%, rgb(110 90 200 / 0.16), transparent 70%),
     radial-gradient(ellipse 60% 50% at 90% 10%, rgb(60 120 160 / 0.12), transparent 70%),
-    linear-gradient(180deg, #100e18 0%, #0b0a10 60%, #0d0a0a 100%);
+    linear-gradient(180deg, #130f0c 0%, #0d0b08 60%, #0d0a0a 100%);
 }
 .scene-bg::before,
 .scene-bg::after {
@@ -150,7 +150,7 @@ input {
 .scene-dim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(8 8 14 / 0.85), rgb(8 8 14 / 0.7) 50%, rgb(8 8 14 / 0.9));
+  background: linear-gradient(180deg, rgb(10 8 6 / 0.85), rgb(10 8 6 / 0.7) 50%, rgb(10 8 6 / 0.9));
   transition: opacity 0.4s;
 }
 .vignette {
@@ -217,7 +217,7 @@ input {
 .logo {
   font-family: var(--font-display);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
   background: linear-gradient(180deg, #fff1c8 0%, var(--accent-strong) 45%, #9c7228 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -251,7 +251,7 @@ input {
   position: relative;
   background:
     linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 40%),
-    linear-gradient(180deg, rgb(22 23 31 / 0.84), rgb(13 14 20 / 0.9));
+    linear-gradient(180deg, rgb(28 23 17 / 0.84), rgb(17 14 11 / 0.9));
   border: 1px solid var(--frame);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
@@ -289,8 +289,8 @@ input {
   font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  text-transform: none;
+  letter-spacing: 0.03em;
   color: var(--accent-strong);
   margin-bottom: var(--space-3);
 }
@@ -319,13 +319,13 @@ input {
   padding: 0 var(--space-4);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, #34303f 0%, #221f2c 55%, #1a1822 100%);
+  background: linear-gradient(180deg, #3c3126 0%, #272019 55%, #1e1913 100%);
   color: var(--text);
   font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   text-shadow: 0 1px 1px rgb(0 0 0 / 0.8);
   cursor: pointer;
   text-decoration: none;
@@ -405,7 +405,7 @@ input {
   min-height: 3.4rem;
   padding: 0 var(--space-6);
   font-size: 1.1rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.03em;
 }
 .btn .icon {
   width: 1.15em;
@@ -438,8 +438,8 @@ input {
   font-family: var(--font-display);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   color: var(--text-muted);
 }
 .legend {
@@ -451,7 +451,7 @@ input {
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, #07060a, #100f16);
+  background: linear-gradient(180deg, #07060a, #130f0c);
   box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.6);
   color: var(--text);
   font-size: 1.05rem;
@@ -533,9 +533,9 @@ fieldset.field {
   align-items: center;
   gap: var(--space-4);
   font-family: var(--font-display);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.03em;
   color: var(--text-muted);
-  text-transform: uppercase;
+  text-transform: none;
   font-size: 0.9rem;
   text-align: center;
 }
@@ -683,7 +683,7 @@ fieldset.field {
   padding: var(--space-3) var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgb(30 28 41 / 0.92), rgb(14 13 20 / 0.95));
+  background: linear-gradient(180deg, rgb(35 29 22 / 0.92), rgb(17 14 10 / 0.95));
   color: var(--text);
   cursor: pointer;
   text-align: center;
@@ -722,8 +722,8 @@ fieldset.field {
   color: var(--text-muted);
   font-family: var(--font-display);
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
 }
 .roster-locked {
   border-style: dashed;
@@ -731,8 +731,8 @@ fieldset.field {
   color: var(--text-faint);
   font-family: var(--font-display);
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
   opacity: 0.7;
   cursor: default;
 }
@@ -755,7 +755,7 @@ fieldset.field {
   align-self: center;
   font-family: var(--font-display);
   font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.03em;
   color: var(--text-faint);
   white-space: nowrap;
 }
@@ -939,7 +939,7 @@ fieldset.field {
   padding: var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgb(34 31 46 / 0.9), rgb(16 15 22 / 0.95));
+  background: linear-gradient(180deg, rgb(40 32 25 / 0.9), rgb(19 15 12 / 0.95));
   color: var(--text);
   transition:
     border-color 0.15s,
@@ -988,8 +988,8 @@ fieldset.field {
 }
 .stat-list dt {
   font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  text-transform: none;
+  letter-spacing: 0.03em;
   color: var(--text-faint);
 }
 .stat-list dd {
@@ -1010,7 +1010,7 @@ fieldset.field {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 50%, #1b1824 0%, #0d0c12 70%, #050407 100%);
+  background: radial-gradient(ellipse at 50% 50%, #1f1913 0%, #0f0c0a 70%, #050407 100%);
 }
 .world-map::after {
   content: '';
@@ -1349,7 +1349,7 @@ fieldset.field {
   border: 1px solid var(--border);
   background:
     radial-gradient(ellipse at 50% 92%, rgb(240 199 106 / 0.3), transparent 45%),
-    radial-gradient(ellipse at 50% 30%, #2a2340, #110f18 72%);
+    radial-gradient(ellipse at 50% 30%, #30271e, #14100c 72%);
   box-shadow: inset 0 0 2rem rgb(0 0 0 / 0.7);
 }
 .hero-stats {
@@ -1369,8 +1369,8 @@ fieldset.field {
   display: block;
   font-size: 0.65rem;
   color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  text-transform: none;
+  letter-spacing: 0.03em;
 }
 .hero-stats strong {
   font-family: var(--font-display);
@@ -1382,7 +1382,7 @@ fieldset.field {
   place-items: center;
   border-radius: 50%;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 35%, #2c2840, #13111a);
+  background: radial-gradient(circle at 50% 35%, #342a20, #16120e);
   border: 1px solid var(--frame);
   flex-shrink: 0;
 }
@@ -1464,7 +1464,7 @@ fieldset.field {
   grid-template-columns: repeat(4, minmax(0, 1fr)) 90px;
   gap: var(--space-3);
   align-items: stretch;
-  background: radial-gradient(ellipse at 70% 50%, #2b2350 0%, #171a2b 60%, #11131d 100%);
+  background: radial-gradient(ellipse at 70% 50%, #32291f 0%, #201a14 60%, #17130e 100%);
 }
 .lobby-formation[data-mode='pvp'] {
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -1618,15 +1618,15 @@ fieldset.field {
 }
 .school-magic {
   --c1: #8c6cf0;
-  --c2: #261650;
+  --c2: #272019;
 }
 .school-heal {
   --c1: #4cc28d;
-  --c2: #11402b;
+  --c2: #382e23;
 }
 .school-block {
   --c1: #5a8ee6;
-  --c2: #142a55;
+  --c2: #2f271e;
 }
 .school-status {
   --c1: #c9a043;
@@ -1634,7 +1634,7 @@ fieldset.field {
 }
 .school-utility {
   --c1: #8b93a3;
-  --c2: #262a33;
+  --c2: #31281f;
 }
 
 /* Game feel (request #43): no text selection except in text fields and the chat/log. */

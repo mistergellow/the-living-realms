@@ -1,4 +1,6 @@
 import type { GuildViewDto, ItemDto } from '@realms/shared';
+import { PageHeader } from '../../shared/ui/PageHeader';
+import { AlliesTabs } from '../social/AlliesTabs';
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
@@ -28,6 +30,7 @@ export function GuildPage() {
         className={`contain stack guild${guild.data && !guild.data.guild ? ' narrow' : ''}`}
         data-testid="guild"
       >
+        <AlliesTabs />
         <FormError error={guild.error ?? action.error} />
         {v?.message && (
           <p className="city-message" data-testid="guild-message">
@@ -97,9 +100,10 @@ function NoGuild({ v, run, busy }: Props) {
   const [color, setColor] = useState(v.rules.colors[0]!);
   return (
     <>
-      <h1 className="page-title" style={{ margin: 0 }}>
-        Guilds
-      </h1>
+      <PageHeader
+        title="Guilds"
+        lead="A guild is a banner you share: a common bank, common reputation and, later, land. Join through an invitation, or found your own."
+      />
       {v.invites.length > 0 && (
         <section className="panel" data-testid="guild-invites">
           <div className="panel-title">

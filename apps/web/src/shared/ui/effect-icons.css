@@ -11,7 +11,7 @@
   place-items: center;
   flex: none;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgb(40 36 54), rgb(12 11 18));
+  background: radial-gradient(circle at 35% 30%, rgb(46 38 29), rgb(14 12 9));
   border: 1.5px solid color-mix(in srgb, var(--fx) 70%, transparent);
   box-shadow:
     0 1px 3px rgb(0 0 0 / 0.6),

@@ -1,5 +1,7 @@
 import { StatusIcon } from '../../shared/ui/EffectIcon';
 import {
+  describeEffects,
+  describeTargeting,
   getAbility,
   getEnemy,
   reservedBy,
@@ -18,7 +20,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { FormError } from '../../shared/ui/FormError';
 import { CharacterToken } from '../characters/CharacterToken';
 import { AbilityBar } from './AbilityBar';
-import { AbilityIcon } from './AbilityIcon';
+import { AbilityIcon, abilitySchool } from './AbilityIcon';
+import { Rich } from '../../shared/ui/Rich';
 import { CombatStage } from './CombatStage';
 import { describeLog } from './combat-text';
 import './combat.css';
@@ -53,11 +56,12 @@ function useReplayState(combat: CombatView | undefined) {
 type Mutation = ReturnType<typeof useRunAction>;
 
 /**
- * Combat room (combat spec, request #31). Layout follows the owner's
- * reference: planned actions on the left (portrait → action → order), round
- * and initiative on top, enemy intents on the right, the battlefield in the
- * middle, the character panel (HP, Mana, Focus) bottom-left and the action
- * bar bottom-right.
+ * Combat room (combat spec, request #31; layout of request #69 after Darkest
+ * Dungeon): the battlefield takes the whole width; the round sits on top; the
+ * HUD at the bottom has your hero (portrait, HP, Mana, Focus) on the left, the
+ * skills with a read-out of the chosen one in the middle, and the unit you
+ * point at (HP, statuses, intents, mechanic) with End turn on the right. The
+ * log (and the PvP plan) is a drawer over the top-left of the battlefield.
  */
 export function CombatScreen({
   run,
@@ -72,6 +76,9 @@ export function CombatScreen({
 }) {
   const combat = run.combat!;
   const [selected, setSelected] = useState<string | null>(null);
+  const [hoverAbility, setHoverAbility] = useState<string | null>(null);
+  const [inspectId, setInspectId] = useState<string | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
   const replay = useReplayState(combat);
   const myId = `p:${characterId}`;
   const me = combat.combatants.find((c) => c.id === myId);
@@ -142,64 +149,125 @@ export function CombatScreen({
     (c) => c.side === 'party' && !c.downed && !c.stunned && !c.left && !combat.ready.includes(c.id),
   );
 
+  const inspected =
+    (inspectId && byId(inspectId)) || enemies.find((e) => !e.downed) || enemies[0] || null;
+  const readoutId = hoverAbility ?? selected;
+
   return (
     <div className="combat">
       <header className="combat-top">
-        <span className="title">{run.riftName}</span>
-        <span className="muted">
-          {run.worldBoss
-            ? `World boss · your party has dealt ${run.worldBoss.damage.toLocaleString()} damage`
-            : pvp
-              ? `PvP · you are on team ${mySide === 'party' ? 'A (left)' : 'B (right)'}`
-              : `${boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room ${run.roomsVisited}`}
-          {boss && run.threat.tier
-            ? ` · Threat ${run.threat.tier.name}: ${run.threat.tier.description}`
-            : ''}
-        </span>
-        <span className="spacer" />
-        <span className="round-banner" data-testid="round">
-          Round {combat.round}
-        </span>
-        {initiative && (
-          <span className="initiative" title="Team initiative: best roll + Agility of each side">
-            Initiative {initiative.party} vs {initiative.enemies} ·{' '}
-            <strong>
-              {initiative.first === mySide
-                ? 'Your team starts'
-                : pvp
-                  ? 'The other team starts'
-                  : 'Enemies start'}
-            </strong>
+        <div className="combat-where">
+          <span className="title">{run.riftName}</span>
+          <span className="muted small">
+            {run.worldBoss
+              ? `World boss · your party has dealt ${run.worldBoss.damage.toLocaleString()} damage`
+              : pvp
+                ? `PvP · you are on team ${mySide === 'party' ? 'A (left)' : 'B (right)'}`
+                : `${boss ? 'Boss' : run.roomType === 'elite' ? 'Elite room' : 'Combat'} · room ${run.roomsVisited}`}
+            {boss && run.threat.tier
+              ? ` · Threat ${run.threat.tier.name}: ${run.threat.tier.description}`
+              : ''}
           </span>
-        )}
-        <span className="spacer" />
-        {secondsLeft !== null && combat.phase === 'planning' && (
-          <span className="timer" data-low={secondsLeft <= 10}>
-            {secondsLeft}s
+        </div>
+        <div className="combat-round">
+          <span className="round-banner" data-testid="round">
+            Round {combat.round}
           </span>
-        )}
-        {run.status === 'active' && (
+          {initiative && (
+            <span className="initiative" title="Team initiative: best roll + Agility of each side">
+              Initiative {initiative.party} vs {initiative.enemies} ·{' '}
+              <strong>
+                {initiative.first === mySide
+                  ? 'Your team starts'
+                  : pvp
+                    ? 'The other team starts'
+                    : 'Enemies start'}
+              </strong>
+            </span>
+          )}
+        </div>
+        <div className="combat-tools">
+          {secondsLeft !== null && combat.phase === 'planning' && (
+            <span className="timer" data-low={secondsLeft <= 10}>
+              {secondsLeft}s
+            </span>
+          )}
           <button
-            className="btn btn-ghost btn-sm btn-danger"
-            onClick={() => {
-              if (
-                confirm(
-                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps going.',
-                )
-              )
-                send({ type: 'abandon' });
-            }}
+            className="btn btn-ghost btn-sm"
+            aria-expanded={logOpen}
+            aria-controls="combat-log-panel"
+            onClick={() => setLogOpen((o) => !o)}
           >
-            Abandon
+            {pvp ? 'Plan & log' : 'Log'}
           </button>
-        )}
+          {run.status === 'active' && (
+            <button
+              className="btn btn-ghost btn-sm btn-danger"
+              onClick={() => {
+                if (
+                  confirm(
+                    'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps going.',
+                  )
+                )
+                  send({ type: 'abandon' });
+              }}
+            >
+              Abandon
+            </button>
+          )}
+        </div>
       </header>
 
-      <div className="combat-middle">
-        <aside className="plan-queue" aria-label="Planned actions">
-          <h3>{pvp ? 'Plan' : 'Log'}</h3>
+      <div className="combat-field">
+        <CombatStage
+          onProgress={replay.onProgress}
+          onCaughtUp={replay.onCaughtUp}
+          combat={combat}
+          boss={boss}
+          targetIds={targetIds}
+          swapSlots={swapSlots}
+          columnMode={columnMode}
+          onInspect={(id) => id && setInspectId(id)}
+          onTarget={(u) => selected && send(targetAction(selected, u))}
+          onSlot={(slot) =>
+            selected && send({ type: 'plan', abilityId: selected, targetSlot: slot })
+          }
+        >
+          {!replay.pending && run.status === 'active' && combat.phase === 'room_cleared' && (
+            <div className="combat-overlay">
+              <div className="panel stack end-card">
+                <h2>Room cleared</h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  Your HP and Mana carry over. Fallen allies get back up with 1 HP. No drops here —
+                  the main rewards wait at the boss.
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => send({ type: 'continue' })}
+                  disabled={action.isPending}
+                >
+                  Back to the map
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
+          {(!replay.pending || run.status === 'abandoned') && run.status !== 'active' && (
+            <EndOverlay run={run} />
+          )}
+          {combat.round === 1 && combat.log.length <= 2 && run.status === 'active' && (
+            <RoomReveal roomType={run.roomType} pvp={pvp} />
+          )}
+        </CombatStage>
+
+        <aside
+          id="combat-log-panel"
+          className="combat-log-panel"
+          data-open={logOpen || pvp}
+          aria-label={pvp ? 'Planned actions and log' : 'Combat log'}
+        >
           {pvp && (
-            <ol data-testid="plan">
+            <ol className="plan-list" data-testid="plan">
               {combat.plan.map((p, i) => {
                 const actor = byId(p.actorId);
                 const a = getAbility(p.abilityId);
@@ -231,10 +299,8 @@ export function CombatScreen({
                   </li>
                 );
               })}
+              {combat.plan.length === 0 && <li className="muted small">No actions planned yet.</li>}
             </ol>
-          )}
-          {pvp && combat.plan.length === 0 && (
-            <p className="muted small">No actions planned yet.</p>
           )}
           <ol className="combat-log" data-testid="combat-log">
             {lines.map((l) => (
@@ -242,142 +308,72 @@ export function CombatScreen({
             ))}
           </ol>
         </aside>
-
-        <CombatStage
-          onProgress={replay.onProgress}
-          onCaughtUp={replay.onCaughtUp}
-          combat={combat}
-          boss={boss}
-          targetIds={targetIds}
-          swapSlots={swapSlots}
-          columnMode={columnMode}
-          onTarget={(u) => selected && send(targetAction(selected, u))}
-          onSlot={(slot) =>
-            selected && send({ type: 'plan', abilityId: selected, targetSlot: slot })
-          }
-        >
-          {!replay.pending && run.status === 'active' && combat.phase === 'room_cleared' && (
-            <div className="combat-overlay">
-              <div className="panel stack end-card">
-                <h2>Room cleared</h2>
-                <p className="muted" style={{ margin: 0 }}>
-                  Your HP and Mana carry over. Fallen allies get back up with 1 HP. No drops here —
-                  the main rewards wait at the boss.
-                </p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => send({ type: 'continue' })}
-                  disabled={action.isPending}
-                >
-                  Back to the map
-                </button>
-              </div>
-            </div>
-          )}
-          {/* Victory/defeat wait for the replay; fleeing shows the result at once. */}
-          {(!replay.pending || run.status === 'abandoned') && run.status !== 'active' && (
-            <EndOverlay run={run} />
-          )}
-        </CombatStage>
-
-        <aside className="enemy-intents" aria-label="Enemy intents">
-          <h3>{pvp ? 'Other team' : 'Enemies'}</h3>
-          {enemies.map((e) => (
-            <div key={e.id} className="intent-row" data-downed={e.downed}>
-              <strong>{e.name}</strong>
-              <span className="muted small">
-                {e.hp}/{e.maxHp} HP{e.block ? ` · ${e.block} Dodge` : ''}
-              </span>
-              {e.enemyDefId && getEnemy(e.enemyDefId)?.mechanic && (
-                <span className="enemy-mechanic small" data-testid="enemy-mechanic">
-                  {getEnemy(e.enemyDefId)!.mechanic}
-                </span>
-              )}
-              {e.statuses.length > 0 && (
-                <span className="fx-row">
-                  {e.statuses.map((st) => (
-                    <StatusIcon key={st.id} id={st.id} value={st.value} turns={st.turns} />
-                  ))}
-                </span>
-              )}
-              <span className="intent-icons">
-                {e.intents.map((it, i) => (
-                  <span key={i} title={getAbility(it.abilityId)?.name}>
-                    <AbilityIcon abilityId={it.abilityId} className="intent-icon" />
-                  </span>
-                ))}
-              </span>
-            </div>
-          ))}
-        </aside>
       </div>
 
-      <footer className="combat-bottom">
-        {me && (
-          <div className="me-panel">
-            {me.appearance && <CharacterToken appearance={me.appearance} size={64} />}
-            <div className="me-bars">
-              <div className="bar hp">
-                <span style={{ width: `${(me.hp / Math.max(1, me.maxHp)) * 100}%` }} />
-                <em>
-                  HP {me.hp} / {me.maxHp}
-                </em>
+      <footer className="combat-hud">
+        <section className="hud-hero" aria-label="Your hero">
+          {me && (
+            <>
+              <div className="hud-portrait">
+                {me.appearance && <CharacterToken appearance={me.appearance} size={72} />}
               </div>
-              <div className="bar mana">
-                <span style={{ width: `${(me.mana / Math.max(1, me.maxMana)) * 100}%` }} />
-                <em>
-                  Mana {me.mana} / {me.maxMana}
-                </em>
+              <div className="me-bars">
+                <strong className="hud-name">{me.name}</strong>
+                <div className="bar hp">
+                  <span style={{ width: `${(me.hp / Math.max(1, me.maxHp)) * 100}%` }} />
+                  <em>
+                    HP {me.hp} / {me.maxHp}
+                  </em>
+                </div>
+                <div className="bar mana">
+                  <span style={{ width: `${(me.mana / Math.max(1, me.maxMana)) * 100}%` }} />
+                  <em>
+                    Mana {me.mana} / {me.maxMana}
+                  </em>
+                </div>
+                <div
+                  className="focus-pips"
+                  title={`+${me.focusPerRound} Focus every round (Precision)`}
+                >
+                  {Array.from({ length: Math.max(me.focus, 1) }, (_, i) => (
+                    <i key={i} data-spent={i >= me.focus - reserved.focus} />
+                  ))}
+                  <em>
+                    Focus <strong data-testid="my-focus">{me.focus - reserved.focus}</strong>/
+                    {me.focus} · +{me.focusPerRound}/round
+                  </em>
+                </div>
               </div>
-              <div
-                className="focus-pips"
-                title={`+${me.focusPerRound} Focus every round (Precision)`}
-              >
-                {Array.from({ length: Math.max(me.focus, 1) }, (_, i) => (
-                  <i key={i} data-spent={i >= me.focus - reserved.focus} />
-                ))}
-                <em>
-                  Focus <strong data-testid="my-focus">{me.focus - reserved.focus}</strong>/
-                  {me.focus} · +{me.focusPerRound}/round
-                </em>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="action-bar">
+            </>
+          )}
+        </section>
+
+        <section className="hud-skills" aria-label="Actions">
           <FormError error={action.error} />
           {canPlan && me ? (
             <>
-              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div className="hud-turn">
                 <strong className="your-turn">{pvp ? 'Plan your actions' : 'Your turn'}</strong>
-                <span className="spacer" />
                 {selected && (
                   <span className="muted">
                     {columnMode ? 'Choose a column…' : 'Choose a target…'}
                   </span>
                 )}
               </div>
-              <div className="abilities">
-                <AbilityBar
-                  abilityIds={me.abilityIds}
-                  focus={me.focus - reserved.focus}
-                  mana={me.mana - reserved.mana}
-                  selected={selected}
-                  disabled={action.isPending}
-                  onPick={pick}
-                  onCancel={() => setSelected(null)}
-                />
-                <button
-                  className="btn btn-primary end-turn"
-                  onClick={() => send({ type: 'ready' })}
-                  disabled={action.isPending}
-                >
-                  {pvp ? 'Ready' : 'End turn'}
-                </button>
-              </div>
+              <AbilityBar
+                abilityIds={me.abilityIds}
+                focus={me.focus - reserved.focus}
+                mana={me.mana - reserved.mana}
+                selected={selected}
+                disabled={action.isPending}
+                onPick={pick}
+                onHover={setHoverAbility}
+                onCancel={() => setSelected(null)}
+              />
+              <AbilityReadout abilityId={readoutId} />
             </>
           ) : (
-            <span className="muted" data-testid="waiting">
+            <span className="muted hud-waiting" data-testid="waiting">
               {run.status !== 'active'
                 ? ''
                 : replay.resolving
@@ -393,8 +389,88 @@ export function CombatScreen({
                         : 'Waiting…'}
             </span>
           )}
-        </div>
+        </section>
+
+        <section className="hud-target" aria-label="Inspected unit">
+          {inspected && <UnitCard unit={inspected} />}
+          {canPlan && me && (
+            <button
+              className="btn btn-primary btn-lg end-turn"
+              onClick={() => send({ type: 'ready' })}
+              disabled={action.isPending}
+            >
+              {pvp ? 'Ready' : 'End turn'}
+            </button>
+          )}
+        </section>
       </footer>
+    </div>
+  );
+}
+
+/** What the chosen (or hovered) skill does, in one line (Darkest Dungeon's HIT / DMG / CRIT). */
+function AbilityReadout({ abilityId }: { abilityId: string | null }) {
+  const a = abilityId ? getAbility(abilityId) : undefined;
+  if (!a) return <p className="readout muted">Point at a skill to read it.</p>;
+  return (
+    <p className={`readout school-${abilitySchool(a.id)}`}>
+      <strong>{a.name}</strong>
+      <span className="readout-cost">
+        {a.focusCost} Focus{a.manaCost ? ` · ${a.manaCost} Mana` : ''}
+      </span>
+      <span className="readout-target">{describeTargeting(a.targeting)}</span>
+      <span className="readout-fx">
+        <Rich text={describeEffects(a).join(' · ')} />
+      </span>
+    </p>
+  );
+}
+
+/** The unit you point at: HP, Dodge, statuses, what it is about to do. */
+function UnitCard({ unit }: { unit: CombatantView }) {
+  const mechanic = unit.enemyDefId ? getEnemy(unit.enemyDefId)?.mechanic : undefined;
+  return (
+    <div className="unit-card" data-downed={unit.downed} data-side={unit.side}>
+      <strong className="unit-card-name">{unit.name}</strong>
+      <div className="bar hp small">
+        <span style={{ width: `${(unit.hp / Math.max(1, unit.maxHp)) * 100}%` }} />
+        <em>
+          {unit.hp}/{unit.maxHp} HP{unit.block ? ` · ${unit.block} Dodge` : ''}
+        </em>
+      </div>
+      {mechanic && (
+        <span className="enemy-mechanic small" data-testid="enemy-mechanic">
+          {mechanic}
+        </span>
+      )}
+      {(unit.statuses.length > 0 || unit.intents.length > 0) && (
+        <span className="fx-row">
+          {unit.statuses.map((st) => (
+            <StatusIcon key={st.id} id={st.id} value={st.value} turns={st.turns} />
+          ))}
+          {unit.intents.map((it, i) => (
+            <span key={i} title={`Will use ${getAbility(it.abilityId)?.name ?? ''}`}>
+              <AbilityIcon abilityId={it.abilityId} className="intent-icon" />
+            </span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Request #69: the door opens on… (a banner that fades as the fight starts). */
+function RoomReveal({ roomType, pvp }: { roomType: RunDto['roomType']; pvp: boolean }) {
+  const text = pvp
+    ? 'To arms!'
+    : roomType === 'boss'
+      ? 'The lair of the beast'
+      : roomType === 'elite'
+        ? 'A terrible foe!'
+        : 'Ambush!';
+  return (
+    <div className="room-reveal" aria-live="polite">
+      <span>{text}</span>
     </div>
   );
 }

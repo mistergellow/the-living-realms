@@ -186,7 +186,7 @@ export function EquipmentTab({
                 offhand={offhandArtFor(
                   s.equipment.offHand?.broken ? null : s.equipment.offHand?.defId,
                 )}
-                size={170}
+                size={300}
                 title={s.character.name}
               />
             </div>

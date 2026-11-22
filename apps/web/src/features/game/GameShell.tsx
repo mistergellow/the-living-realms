@@ -143,16 +143,25 @@ function TopBar(props: {
 
       <div className="res-pill" title="Reputation: earned in Rifts, spent later">
         <Icon name="star" />
-        <strong data-testid="top-reputation">{sheet.data?.reputation ?? '—'}</strong>
+        <span className="res-text">
+          <strong data-testid="top-reputation">{sheet.data?.reputation ?? '—'}</strong>
+          <small>Reputation</small>
+        </span>
       </div>
       <div className="res-pill" title="Gold: earned in Rifts; spent in shops and at the blacksmith">
         <Icon name="coin" />
-        <strong data-testid="top-gold">{sheet.data?.gold ?? '—'}</strong>
+        <span className="res-text">
+          <strong data-testid="top-gold">{sheet.data?.gold ?? '—'}</strong>
+          <small>Gold</small>
+        </span>
       </div>
       <ApPill />
-      <div className="res-pill" title="Characters in the world right now">
+      <div className="res-pill res-pill-quiet" title="Characters in the world right now">
         <Icon name="friends" />
-        <strong>{props.online}</strong>
+        <span className="res-text">
+          <strong>{props.online}</strong>
+          <small>Online</small>
+        </span>
       </div>
       <span className="spacer" />
       <div className="world-chip" title={props.worldName}>
@@ -186,6 +195,9 @@ function TopBar(props: {
 function BottomNav({ characterId }: { characterId: string }) {
   const friends = useFriends(characterId);
   const pending = friends.data?.incoming.length ?? 0;
+  const { pathname } = useLocation();
+  // Request #69: five places, named for what you do there. Friends and Guild
+  // share "Allies"; the crafts got their own entry.
   const items: Array<{
     to: string;
     label: string;
@@ -193,13 +205,26 @@ function BottomNav({ characterId }: { characterId: string }) {
     home?: boolean;
     badge?: number;
     testId?: string;
+    also?: string[];
   }> = [
     { to: `/characters/${characterId}`, label: 'Character', icon: 'hero' },
-    { to: '/home', label: 'Home', icon: 'home', home: true },
     { to: '/world', label: 'World', icon: 'compass' },
-    { to: '/friends', label: 'Friends', icon: 'friends', badge: pending, testId: 'friends-link' },
-    // Request #57.
-    { to: '/guild', label: 'Guild', icon: 'banner', testId: 'guild-link' },
+    {
+      to: '/home',
+      label: 'Here',
+      icon: 'home',
+      home: true,
+      also: ['/city', '/rifts', '/world-boss'],
+    },
+    { to: '/professions', label: 'Crafts', icon: 'gear' },
+    {
+      to: '/friends',
+      label: 'Allies',
+      icon: 'friends',
+      badge: pending,
+      testId: 'friends-link',
+      also: ['/guild'],
+    },
   ];
   return (
     <nav className="game-nav" aria-label="Main">
@@ -208,7 +233,11 @@ function BottomNav({ characterId }: { characterId: string }) {
           key={it.label}
           to={it.to}
           className={({ isActive }) =>
-            ['nav-item', it.home ? 'nav-home' : '', isActive ? 'is-active' : ''].join(' ')
+            [
+              'nav-item',
+              it.home ? 'nav-home' : '',
+              isActive || it.also?.some((p) => pathname.startsWith(p)) ? 'is-active' : '',
+            ].join(' ')
           }
           data-testid={it.testId}
         >
@@ -239,9 +268,12 @@ function ApPill() {
       title={`Action Points: travel costs AP. +${ap.perHour} per hour${full ? `, full in ${full}` : ' (full)'}.`}
     >
       <Icon name="bolt" />
-      <strong data-testid="top-ap">
-        {liveAp(ap)}/{ap.max}
-      </strong>
+      <span className="res-text">
+        <strong data-testid="top-ap">
+          {liveAp(ap)}/{ap.max}
+        </strong>
+        <small>Action points</small>
+      </span>
     </div>
   );
 }
