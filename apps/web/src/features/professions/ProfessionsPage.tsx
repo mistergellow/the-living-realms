@@ -1,11 +1,25 @@
-import { ATTRIBUTE_NAMES, MASTERY_RANK_NAMES, MASTERY_RANKS } from '@realms/game-core';
-import type { ActivityDto, ActivityResultDto, ProfessionDto } from '@realms/shared';
+import {
+  AP_RULES,
+  ATTRIBUTE_NAMES,
+  JOB_RULES,
+  jobApCost,
+  jobSeconds,
+  MASTERY_RANK_NAMES,
+  MASTERY_RANKS,
+} from '@realms/game-core';
+import type {
+  ActivityDto,
+  ActivityResultDto,
+  JobResultDto,
+  ProfessionDto,
+  ProfessionJobDto,
+} from '@realms/shared';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
-import { usePerformActivity, useProfessions } from './api';
+import { useDismissJob, usePerformActivity, useProfessions, useStartJob } from './api';
 import './professions.css';
 
 /** The two sections of the profession screen (spec §19). */
@@ -113,7 +127,17 @@ export function ProfessionsPanel({ characterId }: { characterId: string }) {
           </section>
         ))}
       </aside>
-      {current && <ProfessionDetail key={current.id} p={current} characterId={characterId} />}
+      <div className="stack">
+        {list.data?.job && <JobBanner job={list.data.job} characterId={characterId} />}
+        {current && (
+          <ProfessionDetail
+            key={current.id}
+            p={current}
+            characterId={characterId}
+            jobRunning={list.data?.job?.status === 'running'}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -131,7 +155,120 @@ export function RankLadder({ rank }: { rank: number }) {
   );
 }
 
-function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: string }) {
+const clock = (s: number) =>
+  s >= 3600
+    ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`
+    : s >= 60
+      ? `${Math.floor(s / 60)}m ${s % 60}s`
+      : `${s}s`;
+
+/** The real-time job (request #56): a countdown, then what it produced. */
+function JobBanner({ job, characterId }: { job: ProfessionJobDto; characterId: string }) {
+  const left = useSecondsUntil(job.status === 'running' ? job.finishesAt : null);
+  const dismiss = useDismissJob(characterId);
+  const r = job.result;
+  return (
+    <section className="panel prof-job" data-testid="profession-job" data-status={job.status}>
+      {job.status === 'running' ? (
+        <p style={{ margin: 0 }}>
+          Working: <strong>{job.activityName}</strong> × {job.count} ({job.professionName}) ·{' '}
+          {left > 0 ? `${clock(left)} left` : 'finishing…'}
+          <span className="muted small"> · the items arrive when it ends</span>
+        </p>
+      ) : (
+        <div className="row" style={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <span>
+            <strong>Job done:</strong> {r?.message}
+            {r && r.produced.length > 0 && (
+              <>
+                {' '}
+                Got{' '}
+                {r.produced
+                  .map((o) => `${o.qty} × ${o.grade ? `${o.grade} ` : ''}${o.name}`)
+                  .join(', ')}
+                .
+              </>
+            )}{' '}
+            {r && <span className="muted">+{r.pointsGained} Mastery</span>}
+          </span>
+          <span className="spacer" />
+          <button className="btn btn-sm" onClick={() => dismiss.mutate()}>
+            OK
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Several attempts at once: pay with AP now, or with real time (request #56). */
+function JobControls({
+  p,
+  a,
+  characterId,
+  disabled,
+  onResult,
+}: {
+  p: ProfessionDto;
+  a: ActivityDto;
+  characterId: string;
+  disabled: boolean;
+  onResult: (r: JobResultDto) => void;
+}) {
+  const [count, setCount] = useState(5);
+  const start = useStartJob(characterId);
+  const n = Math.max(1, Math.min(JOB_RULES.maxCount, Math.floor(count) || 1));
+  const ap = jobApCost(p.category, n, AP_RULES.gatherCost);
+  const seconds = jobSeconds(p.category, a, n);
+  const go = (mode: 'ap' | 'time') =>
+    start.mutate(
+      { professionId: p.id, activityId: a.id, mode, count: n },
+      { onSuccess: (res) => res.result && onResult(res.result) },
+    );
+  return (
+    <div className="job-controls" data-testid={`job-${a.id}`}>
+      <label className="small muted">
+        Attempts{' '}
+        <input
+          type="number"
+          min={1}
+          max={JOB_RULES.maxCount}
+          value={count}
+          onChange={(e) => setCount(Number(e.target.value))}
+          aria-label={`Attempts of ${a.name}`}
+        />
+      </label>
+      <button
+        className="btn btn-sm"
+        disabled={disabled || start.isPending}
+        onClick={() => go('ap')}
+        title="All at once, paid in Action Points"
+      >
+        Now · {ap} AP
+      </button>
+      <button
+        className="btn btn-sm"
+        disabled={disabled || start.isPending}
+        onClick={() => go('time')}
+        title="No AP: the items arrive when the time is up"
+      >
+        Wait · {clock(seconds)}
+      </button>
+      <FormError error={start.error} />
+    </div>
+  );
+}
+
+function ProfessionDetail({
+  p,
+  characterId,
+  jobRunning,
+}: {
+  p: ProfessionDto;
+  characterId: string;
+  jobRunning: boolean;
+}) {
+  const [jobResult, setJobResult] = useState<JobResultDto | null>(null);
   const perform = usePerformActivity(characterId);
   const sheet = useCharacterSheet(characterId);
   const busy = useSecondsUntil(p.readyAt);
@@ -229,6 +366,26 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
       </div>
 
       <FormError error={perform.error} />
+      {jobResult && (
+        <div
+          className="prof-result"
+          data-success={jobResult.successes > 0}
+          data-testid="job-result"
+        >
+          <strong>{jobResult.message}</strong>{' '}
+          <span className="muted">
+            (+{jobResult.pointsGained} Mastery · −{jobResult.apSpent} AP)
+          </span>
+          {jobResult.produced.length > 0 && (
+            <div>
+              Got:{' '}
+              {jobResult.produced
+                .map((o) => `${o.qty} × ${o.grade ? `${o.grade} ` : ''}${o.name}`)
+                .join(', ')}
+            </div>
+          )}
+        </div>
+      )}
       {result && (
         <div className="prof-result" data-success={result.success} data-testid="activity-result">
           <strong>{result.message}</strong>{' '}
@@ -310,12 +467,22 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
                   missing ||
                   needsTarget ||
                   busy > 0 ||
+                  jobRunning ||
                   perform.isPending
                 }
                 onClick={() => run(a)}
               >
                 {a.name}
               </button>
+              {!a.effect && (
+                <JobControls
+                  p={p}
+                  a={a}
+                  characterId={characterId}
+                  disabled={!p.availableHere || (!!p.tool && !p.tool.best) || missing || jobRunning}
+                  onResult={setJobResult}
+                />
+              )}
             </article>
           );
         })}

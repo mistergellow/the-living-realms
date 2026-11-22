@@ -1,6 +1,7 @@
 import {
   characterProfessions,
   characters,
+  professionJobs,
   resourceNodes,
   items,
   worldEvents,
@@ -12,6 +13,9 @@ import {
 import {
   activityChance,
   AP_RULES,
+  currentAp,
+  jobApCost,
+  jobSeconds,
   gradeName,
   NODE_RICHNESS,
   NODE_RICHNESS_NAMES,
@@ -47,6 +51,9 @@ import {
   type ProfessionDto,
   type ProfessionProfileDto,
   type ProfessionsDto,
+  type JobResponseDto,
+  type JobResultDto,
+  type ProfessionJobDto,
 } from '@realms/shared';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
@@ -114,6 +121,11 @@ export class ProfessionsService {
   }
 
   async list(accountId: string, characterId: string): Promise<ProfessionsDto> {
+    // A finished real-time job hands out its items when it is next looked at.
+    const job = await this.db.transaction(async (tx) => {
+      const locked = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
+      return this.settleJob(tx, accountId, locked);
+    });
     const c = await this.sheets.getOwnedCharacter(this.db, accountId, characterId);
     const [rows, owned, history, nodes] = await Promise.all([
       this.rows(this.db, characterId),
@@ -125,7 +137,364 @@ export class ProfessionsService {
       professions: Object.values(PROFESSIONS).map((p) =>
         this.toDto(p, rows.get(p.id) ?? NEW, owned, c, history.get(p.id) ?? [], nodes.get(p.id)),
       ),
+      job,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Jobs (request #56)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Start a job of `count` attempts. `ap`: everything now, paid in AP.
+   * `time`: no AP; inputs (and node charges) are taken now and the items
+   * arrive when the job ends.
+   */
+  async startJob(
+    accountId: string,
+    characterId: string,
+    professionId: string,
+    activityId: string,
+    mode: 'ap' | 'time',
+    count: number,
+  ): Promise<JobResponseDto> {
+    const prof = getProfession(professionId);
+    const activity = prof?.activities.find((a) => a.id === activityId);
+    if (!prof || !activity) throw errors.notFound('Activity');
+    if (activity.effect) throw this.invalid('Repairs are done one item at a time.');
+    return this.db.transaction(async (tx) => {
+      const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
+      await assertNotInRift(tx, c.id);
+      await this.settleJob(tx, accountId, c);
+      const running = await this.jobOf(tx, c.id);
+      if (running?.status === 'running') throw this.busyWith(running);
+      if (running) await tx.delete(professionJobs).where(eq(professionJobs.id, running.id));
+      const row = (await this.rows(tx, c.id)).get(prof.id) ?? NEW;
+      const { tool, owned } = await this.checkCanPractise(tx, c, prof, activity, row);
+      for (const i of activity.inputs)
+        if (have(owned, i.item) < i.qty * count)
+          throw this.invalid(
+            `You need ${i.qty * count} × ${itemName(i.item)} for ${count} attempts.`,
+          );
+      const gathering = prof.category === 'gathering';
+      const node = gathering ? await this.usableNode(tx, c, prof) : undefined;
+      const base = {
+        toolTier: tool?.tier ?? 0,
+        attributeBonus: attributeBonus(prof, baseAttributesOf(c)),
+      };
+
+      if (mode === 'ap') {
+        const cost = jobApCost(prof.category, count, AP_RULES.gatherCost);
+        const ap = currentAp(c.ap, c.apUpdatedAt);
+        if (ap < cost)
+          throw new AppError(
+            409,
+            ErrorCode.NOT_ENOUGH_AP,
+            `${count} attempts cost ${cost} AP (you have ${Math.floor(ap)}). Use real time instead, or fewer attempts.`,
+          );
+        const run = await this.runAttempts(tx, accountId, c, prof, activity, row, count, {
+          ...base,
+          node,
+          consumeInputs: true,
+        });
+        const apSpent = jobApCost(prof.category, run.result.attempts, AP_RULES.gatherCost);
+        await spendAp(tx, c, apSpent, activity.name.toLowerCase());
+        const result = { ...run.result, apSpent };
+        return {
+          result,
+          job: null,
+          profession: await this.dtoFor(tx, c, prof, run.saved, node),
+        };
+      }
+
+      // Real time: take the inputs and reserve the node's charges now.
+      for (const i of activity.inputs) await this.consume(tx, c.id, i.item, i.qty * count);
+      if (node) {
+        if (node.amount < count)
+          throw this.invalid(
+            `This spot only has ${Math.floor(node.amount)} left. Choose fewer attempts or another hex.`,
+          );
+        node.amount -= count;
+        await this.saveNode(tx, node);
+      }
+      const now = new Date();
+      const [job] = await tx
+        .insert(professionJobs)
+        .values({
+          characterId: c.id,
+          professionId: prof.id,
+          activityId: activity.id,
+          count,
+          nodeQ: node?.def.hex.q ?? null,
+          nodeR: node?.def.hex.r ?? null,
+          nodeRichness: node?.def.richness ?? null,
+          ...base,
+          startedAt: now,
+          finishesAt: new Date(now.getTime() + jobSeconds(prof.category, activity, count) * 1000),
+        })
+        .returning();
+      return {
+        result: null,
+        job: this.jobDto(job!),
+        profession: await this.dtoFor(tx, c, prof, row, node),
+      };
+    });
+  }
+
+  /** Forget a finished job's summary. */
+  async dismissJob(accountId: string, characterId: string): Promise<ProfessionsDto> {
+    await this.db.transaction(async (tx) => {
+      const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
+      await tx
+        .delete(professionJobs)
+        .where(and(eq(professionJobs.characterId, c.id), eq(professionJobs.status, 'done')));
+    });
+    return this.list(accountId, characterId);
+  }
+
+  private async jobOf(db: DbOrTx, characterId: string) {
+    const [job] = await db
+      .select()
+      .from(professionJobs)
+      .where(eq(professionJobs.characterId, characterId));
+    return job;
+  }
+
+  private busyWith(job: typeof professionJobs.$inferSelect) {
+    const name = getProfession(job.professionId)?.activities.find(
+      (a) => a.id === job.activityId,
+    )?.name;
+    return this.invalid(
+      `You are busy (${name ?? 'a job'} × ${job.count}) until ${job.finishesAt.toISOString().slice(11, 16)} UTC.`,
+    );
+  }
+
+  /** Resolve the character's real-time job if it has ended (character row locked). */
+  private async settleJob(
+    tx: DbOrTx,
+    accountId: string,
+    c: Character,
+  ): Promise<ProfessionJobDto | null> {
+    const job = await this.jobOf(tx, c.id);
+    if (!job) return null;
+    if (job.status !== 'running' || job.finishesAt.getTime() > Date.now()) return this.jobDto(job);
+    const prof = getProfession(job.professionId);
+    const activity = prof?.activities.find((a) => a.id === job.activityId);
+    if (!prof || !activity) {
+      await tx.delete(professionJobs).where(eq(professionJobs.id, job.id));
+      return null;
+    }
+    const row = (await this.rows(tx, c.id)).get(prof.id) ?? NEW;
+    const run = await this.runAttempts(tx, accountId, c, prof, activity, row, job.count, {
+      toolTier: job.toolTier,
+      attributeBonus: job.attributeBonus,
+      ...(job.nodeRichness !== null ? { richness: job.nodeRichness } : {}),
+      consumeInputs: false,
+    });
+    // Charges reserved for attempts that failed go back to the node.
+    if (job.nodeQ !== null && job.nodeR !== null) {
+      const def = resourceNodeAt({ q: job.nodeQ, r: job.nodeR }, prof.id);
+      const unused = job.count - run.result.successes;
+      if (def && unused > 0) {
+        const [n] = await tx.select().from(resourceNodes).where(this.nodeWhere(def)).for('update');
+        if (n)
+          await this.saveNode(tx, {
+            def,
+            amount: Math.min(def.max, nodeAmount(def, n.amount, n.updatedAt) + unused),
+          });
+      }
+    }
+    const [done] = await tx
+      .update(professionJobs)
+      .set({ status: 'done', result: run.result })
+      .where(eq(professionJobs.id, job.id))
+      .returning();
+    return this.jobDto(done!);
+  }
+
+  private jobDto(job: typeof professionJobs.$inferSelect): ProfessionJobDto {
+    const prof = getProfession(job.professionId);
+    return {
+      id: job.id,
+      professionId: job.professionId,
+      professionName: prof?.name ?? job.professionId,
+      activityId: job.activityId,
+      activityName: prof?.activities.find((a) => a.id === job.activityId)?.name ?? job.activityId,
+      count: job.count,
+      startedAt: job.startedAt.toISOString(),
+      finishesAt: job.finishesAt.toISOString(),
+      status: job.status === 'done' ? 'done' : 'running',
+      result: (job.result as JobResultDto | null) ?? null,
+    };
+  }
+
+  /** Terrain, rank and tool checks shared by single attempts and jobs. */
+  private async checkCanPractise(
+    tx: DbOrTx,
+    c: Character,
+    prof: ProfessionDef,
+    activity: ActivityDef,
+    row: Row,
+  ) {
+    const needs = professionTerrains(prof.id);
+    if (needs && !needs.includes(terrainAt(c)))
+      throw this.invalid(
+        `${prof.name} needs a ${needs.map((t) => TERRAIN_NAMES[t].toLowerCase()).join(' or ')} hex. Travel to one first.`,
+      );
+    if (row.rank < activity.rank)
+      throw this.invalid(`${activity.name} needs ${rankName(activity.rank)} ${prof.title}.`);
+    const owned = await this.items(tx, c.id);
+    const tool = bestTool(prof, row.rank, owned);
+    if (prof.tool && !tool)
+      throw this.invalid(
+        `${prof.name} needs a ${TOOL_TYPE_NAMES[prof.tool]} in your bag. The city store sells them.`,
+      );
+    return { tool, owned };
+  }
+
+  /** The node on the character's hex, locked, with at least one charge. */
+  private async usableNode(tx: DbOrTx, c: Character, prof: ProfessionDef) {
+    const node = await this.lockNode(tx, c, prof.id);
+    if (!node) throw this.invalid(`There is nothing to gather for ${prof.name} here.`);
+    if (node.amount < 1) {
+      const at = nodeReadyAt(node.amount)!;
+      const min = Math.max(1, Math.ceil((at.getTime() - Date.now()) / 60_000));
+      throw this.invalid(
+        `This spot is exhausted. It regrows in about ${min} min — or try another hex.`,
+      );
+    }
+    return node;
+  }
+
+  private async saveNode(tx: DbOrTx, node: NodeState) {
+    await tx
+      .update(resourceNodes)
+      .set({ amount: node.amount, updatedAt: new Date() })
+      .where(this.nodeWhere(node.def));
+  }
+
+  /**
+   * Resolve `count` attempts in a row (Mastery grows between them), hand out
+   * the items, save the profession row and record rank-ups. With a `node`,
+   * each success takes a charge and the run stops when it is empty.
+   */
+  private async runAttempts(
+    tx: DbOrTx,
+    accountId: string,
+    c: Character,
+    prof: ProfessionDef,
+    activity: ActivityDef,
+    row: Row,
+    count: number,
+    opts: {
+      toolTier: number;
+      attributeBonus: number;
+      node?: NodeState;
+      richness?: number;
+      consumeInputs: boolean;
+    },
+  ): Promise<{ saved: Row; result: JobResultDto }> {
+    let rank = row.rank;
+    let points = row.points;
+    let successes = 0;
+    let pointsGained = 0;
+    let ranksGained = 0;
+    let attempts = 0;
+    const made = new Map<string, { item: string; grade: number | null; qty: number }>();
+    const richness = opts.node ? opts.node.def.richness : opts.richness;
+    for (; attempts < count; attempts++) {
+      if (opts.node && opts.node.amount < 1) break;
+      const outcome = resolveActivity(
+        activity,
+        {
+          rank,
+          toolTier: opts.toolTier,
+          attributeBonus: opts.attributeBonus,
+          ...(richness !== undefined ? { nodeRichness: richness } : {}),
+        },
+        randomInt(2 ** 31),
+      );
+      if (outcome.success) {
+        successes++;
+        if (opts.node) opts.node.amount -= 1;
+      }
+      for (const o of outcome.outputs) {
+        const key = `${o.item}|${o.grade}`;
+        const m = made.get(key) ?? { item: o.item, grade: o.grade, qty: 0 };
+        m.qty += o.qty;
+        made.set(key, m);
+      }
+      const next = addMastery(rank, points, outcome.points);
+      pointsGained += outcome.points;
+      ranksGained += next.ranksGained;
+      rank = next.rank;
+      points = next.points;
+    }
+    if (opts.consumeInputs)
+      for (const i of activity.inputs) await this.consume(tx, c.id, i.item, i.qty * attempts);
+    for (const m of made.values()) await this.give(tx, c.id, m.item, m.qty, m.grade);
+    if (opts.node) await this.saveNode(tx, opts.node);
+    const total = [...made.values()].reduce((n, m) => n + m.qty, 0);
+    const saved: Row = {
+      rank,
+      points,
+      readyAt: row.readyAt,
+      attempts: row.attempts + attempts,
+      successes: row.successes + successes,
+      itemsMade: row.itemsMade + total,
+    };
+    await tx
+      .insert(characterProfessions)
+      .values({ characterId: c.id, professionId: prof.id, ...saved })
+      .onConflictDoUpdate({
+        target: [characterProfessions.characterId, characterProfessions.professionId],
+        set: saved,
+      });
+    if (ranksGained)
+      await tx.insert(worldEvents).values({
+        worldId: this.ctx.world.id,
+        type: RANK_UP,
+        actorAccountId: accountId,
+        actorCharacterId: c.id,
+        payload: { professionId: prof.id, rank },
+      });
+    const stopped = attempts < count ? ' The spot ran out.' : '';
+    return {
+      saved,
+      result: {
+        attempts,
+        successes,
+        pointsGained,
+        ranksGained,
+        produced: [...made.values()].map((m) => ({
+          name: itemName(m.item),
+          qty: m.qty,
+          grade: m.grade === null ? null : gradeName(m.grade),
+        })),
+        consumed: activity.inputs.map((i) => ({ name: itemName(i.item), qty: i.qty * attempts })),
+        apSpent: 0,
+        message:
+          `${activity.name} × ${attempts}: ${successes} succeeded.${stopped}` +
+          (ranksGained ? ` You are now ${rankName(rank)} ${prof.title}!` : ''),
+      },
+    };
+  }
+
+  private async dtoFor(
+    tx: DbOrTx,
+    c: Character,
+    prof: ProfessionDef,
+    row: Row,
+    node?: NodeState,
+  ): Promise<ProfessionDto> {
+    return this.toDto(
+      prof,
+      row,
+      await this.items(tx, c.id),
+      c,
+      (await this.history(tx, c.id)).get(prof.id) ?? [],
+      node,
+    );
   }
 
   /** Another character's professional profile (request #51): ranks and statistics only. */
@@ -176,6 +545,9 @@ export class ProfessionsService {
     return this.db.transaction(async (tx) => {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertNotInRift(tx, c.id);
+      // Request #56: a real-time job keeps you busy.
+      const job = await this.settleJob(tx, accountId, c);
+      if (job?.status === 'running') throw this.busyWith((await this.jobOf(tx, c.id))!);
       const row = (await this.rows(tx, c.id)).get(prof.id) ?? NEW;
       // Gathering needs the right terrain under your feet (request #43).
       const needs = professionTerrains(prof.id);

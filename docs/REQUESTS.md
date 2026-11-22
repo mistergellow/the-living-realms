@@ -120,6 +120,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D108 | **Pesquisa, filtro e arrastar-e-largar no armazém**                                                                                                                                                                                                                                                                    | 2026-11-22 | `CityPage.tsx` (`Storage`)                                                                            |
 | D109 | **Skills com 21 níveis: 1–10, M1–M10, P**; fracas no início e a melhorar a cada nível; rever todas (ex. Expose Weakness)                                                                                                                                                                                               | 2026-11-22 | por fazer (pedido #53)                                                                                |
 | D110 | **Rifts mudam todos os dias** de posição e de ameaça; **mais Rifts**, alguns já dentro dos territórios; **pirâmide** (muitos de ameaça baixa, poucos de alta)                                                                                                                                                          | 2026-11-22 | `riftLayout`, `RIFT_LAYOUT_RULES`                                                                     |
+| D111 | **Trabalhos de profissão**: escolher quantas tentativas e pagar **em AP** (tudo já) ou **em tempo real** (os itens chegam no fim)                                                                                                                                                                                      | 2026-11-22 | `startJob`, `JOB_RULES`                                                                               |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -246,6 +247,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A119 | Qualidade dos materiais                                         | Poor, Common, Fine, Superior, Exceptional; rolagem 0–99 + 8 por rank ± 12 pela riqueza; limites 20/70/92/110; gasta-se primeiro o pior; materiais antigos ficam Common                                                                                                                                                                                                                                                                                                                                                                                     | `GRADE_RULES`, `rollGrade`                                                       |
 | A120 | Níveis de skill                                                 | 1–10: +10 % por nível (10 = ×1,9); M1–M10: +8 % por nível (M10 = ×2,7); P: +30 % (×3); estados (não Stun) +1 ronda em M1 e +1 em P; Mark/Weaken 25 % no nível 1, máx. +100 % / −75 %; números com uma casa decimal                                                                                                                                                                                                                                                                                                                                         | `SKILL_RULES`, `COMBAT_RULES`                                                    |
 | A121 | Rifts diários                                                   | mudam à meia-noite UTC; 30 por dia: 12 × T1, 8 × T2, 5 × T3, 3 × T4, 2 × T5; T1–T2 também nas nações; T4 a partir de 40 % de profundidade e T5 de 65 %; 3 hexágonos de distância entre Rifts e das capitais; uma corrida já começada continua depois da meia-noite                                                                                                                                                                                                                                                                                         | `RIFT_LAYOUT_RULES`                                                              |
+| A122 | Trabalhos                                                       | até 50 tentativas; em AP: recolher 2 AP e criar 1 AP por tentativa; em tempo real: recolher 10 min por tentativa, criar o tempo da receita (20 s); um trabalho de cada vez e enquanto corre não se pratica mais nada; materiais e cargas do nó tirados no início (as cargas das tentativas falhadas voltam)                                                                                                                                                                                                                                                | `JOB_RULES`                                                                      |
 
 ---
 
@@ -1191,3 +1193,16 @@ podem abrir nas nações; os mais altos ficam no fundo das Riftlands. O id do
 Rift inclui posição, tier e dia: uma corrida ou lobby de ontem continua a
 funcionar, mas já não se pode entrar num Rift fechado ("Rifts move every
 day"). Ids antigos continuam válidos. Testes: `world-systems.test.ts`.
+
+### #56 — 2026-11-22 — Trabalhos de profissão por tempo real ou por AP
+
+**Pedido:** em vez de andar aos cliques, escolher quanto tempo real gastar
+num trabalho (os itens chegam no fim) ou quanto AP gastar (dá logo tudo).
+**Decisões:** D111; valores provisórios A122.
+**Resultado:** cada receita tem "Attempts", "Now · N AP" e "Wait · tempo".
+Em AP resolve tudo de uma vez (a recolha pára se o sítio esgotar e só cobra
+as tentativas feitas). Em tempo real fica uma faixa "Working … left"; quando
+acaba, o ecrã volta a ler e mostra o resultado ("Job done", botão OK). A
+Mastery sobe entre tentativas. Tabela `profession_jobs` (migração 0018),
+resolvida quando é lida (sem tarefas no worker). Testes: 3 de integração novos
+e passo no e2e de profissões.

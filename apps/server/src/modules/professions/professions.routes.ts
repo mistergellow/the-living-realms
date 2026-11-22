@@ -1,4 +1,4 @@
-import { performActivitySchema } from '@realms/shared';
+import { performActivitySchema, startJobSchema } from '@realms/shared';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { parse } from '../../lib/errors.js';
@@ -34,6 +34,18 @@ export async function professionsRoutes(
   app.get('/by-name/:name/professions/profile', async (request) => {
     const { name } = parse(nameParams, request.params);
     return service.profile({ name });
+  });
+
+  // Request #56: jobs of several attempts, paid in AP or in real time.
+  app.post('/:id/professions/:professionId/activities/:activityId/jobs', async (request) => {
+    const { id, professionId, activityId } = parse(activityParams, request.params);
+    const { mode, count } = parse(startJobSchema, request.body);
+    return service.startJob(request.auth!.account.id, id, professionId, activityId, mode, count);
+  });
+
+  app.post('/:id/professions/jobs/dismiss', async (request) => {
+    const { id } = parse(characterParams, request.params);
+    return service.dismissJob(request.auth!.account.id, id);
   });
 
   app.post('/:id/professions/:professionId/activities/:activityId', async (request) => {
