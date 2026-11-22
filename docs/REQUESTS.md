@@ -131,6 +131,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                    | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
 | D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                               | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
 | D121 | **O conteúdo principal ocupa o espaço; a mochila (20) é uma coluna compacta**; o que acontece numa sala do Rift abre **num popup à frente de tudo**; páginas coerentes e óbvias                                                                                                                                        | 2026-11-22 | `city.css`, `sheet.css`, `RunPage.tsx`                                                                |
+| D122 | **Livros por nível**: chegar ao nível N pede N livros (1, 2 … 10, M1 = 11 … M10 = 20, P = 21); **a leitura pode falhar**                                                                                                                                                                                               | 2026-11-22 | `booksToReach`, `readChance`                                                                          |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -263,6 +264,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
 | A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
 | A127 | Mercado                                                         | só nas capitais (ainda não há aldeias); sem taxa; o vendedor recebe o ouro mesmo offline; tirar de volta só na cidade onde está à venda; uma pilha vende-se inteira                                                                                                                                                                                                                                                                                                                                                                                        | `MARKET_RULES`                                                                   |
+| A128 | Falha da leitura                                                | 96 % para o nível 2, −4 por nível, mínimo 20 % (10 = 64 %, M1 = 60 %, P = 20 %); falhar gasta os livros                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `SKILL_RULES.readChance*`                                                        |
 
 ---
 
@@ -1368,3 +1370,16 @@ runas só quando há espaços desbloqueados; "Abilities while equipped" com os
 "Ranged" passou a ser só a forma do ataque: o dano mostra-se sempre como
 físico ou mágico (`damageTypeLabel`), como já era no cálculo (a Armadura
 reduz o dano à distância).
+
+### #66 — 2026-11-22 — Livros por nível e leitura que pode falhar
+
+**Pedido:** para subir uma skill de nível são precisos cada vez mais livros:
+nível 1 = 1 livro, 2 = 2, 3 = 3 … 10 = 10, M1 = 11 … M10 = 20, P = 21; e a
+leitura tem probabilidade de falhar.
+**Decisões:** D122; valores provisórios A128.
+**Resultado:** ao ler o livro de uma skill que já tens, são precisos (e
+gastos) N livros para chegar ao nível N; a probabilidade desce com o nível;
+se falhar, a skill fica no nível e os livros perdem-se. A aba Abilities e a
+tooltip do livro dizem quantos livros e que probabilidade tem o próximo
+nível; depois de ler aparece o resultado (verde ou vermelho). Testes:
+`skill-levels.test.ts`, `character-sheet.test.ts`.

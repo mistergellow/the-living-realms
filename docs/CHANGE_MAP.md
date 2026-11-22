@@ -229,6 +229,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Web: `characters/api.ts` (`use`), `sheet/EquipmentTab.tsx` (duplo clique no livro), `sheet/ItemTooltip.tsx` ("Teaches …")
 - Testes: `combat.test.ts` ("skills"), `character-sheet.test.ts` ("Skill Books")
 - **Níveis (pedidos #50, #53):** 21 níveis 1–10, M1–M10, P — `SKILL_RULES`, `skillLevelLabel`, `skillLevelMultiplier`, `skillExtraTurns`, `skillAtLevel` (`skills.ts`); BD `character_skills.level`; servidor `sheet.service.ts` (`useItem` sobe o nível, `leveledSkillDto`, `combatProfile` → `abilityMultipliers` + `abilityExtraTurns`); combate `abilityExtraTurns` (`PartyMemberInput`, `CombatantView` em `shared/combat.ts`, `RunMember` em `run.ts`, `rifts.service.ts`), `markFactor`/`weakenFactor` e valores com uma casa decimal (`engine.ts`, `COMBAT_RULES.maxMarkPct/maxWeakenPct`); web `AbilityDto.levelLabel` (`AbilitiesTab.tsx`); testes `game-core/test/skill-levels.test.ts`
+- Livros por nível (pedido #66): `booksToReach`, `readChance`, `SKILL_RULES.readChance*` (`skills.ts`); `useItem` (`sheet.service.ts`) gasta N livros e pode falhar; `AbilityDto.nextLevel`, `CharacterSheetDto.notice`; web: aba Abilities, tooltip do livro (`ItemTooltip.tsx`), aviso em `EquipmentTab.tsx`
 - **Skill nova:** só dados em `SKILLS` (o livro e o saque aparecem sozinhos); ícone opcional em `AbilityIcon.tsx`; Mark/Weaken com `value` (percentagem) para crescerem com o nível
 
 ## Ouro, cidade (loja, armazém, ferreiro) e mochila (pedido #50)
