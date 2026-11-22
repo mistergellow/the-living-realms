@@ -85,8 +85,6 @@ export const TERRAIN_NAMES: Readonly<Record<Terrain, string>> = {
 
 /** Rift difficulty tiers (request #43): deeper in the Riftlands = higher tier. */
 export const RIFT_TIERS = 5;
-/** How many Rift entrances exist on the map (placeholder, A80). */
-export const RIFT_SITE_COUNT = 14;
 
 export interface MapHex {
   q: number;
@@ -193,26 +191,12 @@ function carveRivers(map: Map<string, MapHex>) {
   }
 }
 
-/** Rift entrances: spread over the Riftlands, harder towards the heart. */
-function placeRifts(map: Map<string, MapHex>) {
+/** How deep into the Riftlands each Riftlands hex is (0 edge … 1 heart). */
+function setRiftDepth(map: Map<string, MapHex>) {
   const rift = [...map.values()].filter((h) => h.region === 'riftlands');
   const maxD = Math.max(...rift.map((h) => hexDistance(h, RIFTLANDS_CENTER)), 1);
   for (const h of rift)
     h.riftDepth = Math.round((1 - hexDistance(h, RIFTLANDS_CENTER) / maxD) * 100) / 100;
-  // The heart always has a Rift; then the most "noisy" hexes, at least 4 apart.
-  const candidates = rift
-    .filter((h) => h.terrain !== 'river')
-    .sort((a, b) => noise(b.q, b.r, 7) - noise(a.q, a.r, 7));
-  const heart = map.get(hexKey(RIFTLANDS_CENTER));
-  const chosen: MapHex[] = heart ? [heart] : [];
-  for (const c of candidates) {
-    if (chosen.length >= RIFT_SITE_COUNT) break;
-    if (chosen.every((o) => hexDistance(o, c) >= 4)) chosen.push(c);
-  }
-  for (const h of chosen) {
-    const tier = Math.min(RIFT_TIERS, 1 + Math.floor((h.riftDepth ?? 0) * RIFT_TIERS));
-    h.rift = { id: `rift_${h.q}_${h.r}`.replace(/-/g, 'm'), tier };
-  }
 }
 
 function buildMap(): Map<string, MapHex> {
@@ -253,36 +237,145 @@ function buildMap(): Map<string, MapHex> {
     });
   }
   carveRivers(out);
-  placeRifts(out);
+  setRiftDepth(out);
   return out;
 }
 
 const WORLD_MAP = buildMap();
 
-/** Every land hex of the continent. */
-export function worldMapHexes(): MapHex[] {
-  return [...WORLD_MAP.values()];
+/*
+ * Rift entrances (request #55): they move every day (UTC). Each day has its
+ * own layout, derived from the day number, so every server and client agrees
+ * without storing anything. Threat is a pyramid: many tier-1 Rifts (some
+ * inside the nations' territories), few tier-5 ones deep in the Riftlands.
+ */
+export const RIFT_LAYOUT_RULES = {
+  /** Rifts of each tier per day (tier 1 … 5). */
+  perTier: [12, 8, 5, 3, 2] as readonly number[],
+  /** Minimum distance between two Rifts. */
+  minSpacing: 3,
+  /** Rifts never open this close to a capital. */
+  capitalDistance: 3,
+  /** Minimum Riftlands depth per tier (tiers 1–2 may also open in the nations). */
+  minDepth: [0, 0, 0, 0.4, 0.65] as readonly number[],
+  /** Tiers that may open inside a nation's territory. */
+  nationTiers: [1, 2] as readonly number[],
+} as const;
+
+const DAY_MS = 86_400_000;
+/** Day number (UTC) the Rift layout belongs to. */
+export const riftDay = (now: Date = new Date()) => Math.floor(now.getTime() / DAY_MS);
+/** When the Rifts move next (the next UTC midnight). */
+export const nextRiftReset = (now: Date = new Date()) => new Date((riftDay(now) + 1) * DAY_MS);
+
+const enc = (n: number) => String(n).replace('-', 'm');
+const dec = (s: string) => Number(s.replace('m', '-'));
+
+/** Id of a Rift entrance: position, tier and day (`rift_q_r_tier_day`). */
+export const riftSiteId = (q: number, r: number, tier: number, day: number) =>
+  `rift_${enc(q)}_${enc(r)}_${tier}_${day}`;
+
+/**
+ * Position, tier and day of a Rift id. Ids from before request #55
+ * (`rift_q_r`) still resolve, with the tier of their depth.
+ */
+export function parseRiftId(
+  id: string,
+): { q: number; r: number; tier: number; day: number | null } | null {
+  const m = /^rift_(m?\d+)_(m?\d+)(?:_(\d)_(\d+))?$/.exec(id);
+  if (!m) return null;
+  const q = dec(m[1]!);
+  const r = dec(m[2]!);
+  const h = WORLD_MAP.get(hexKey({ q, r }));
+  if (!h) return null;
+  if (m[3]) return { q, r, tier: Number(m[3]), day: Number(m[4]) };
+  const tier = Math.min(RIFT_TIERS, 1 + Math.floor((h.riftDepth ?? 0) * RIFT_TIERS));
+  return { q, r, tier, day: null };
 }
 
-/** The map hex at `h`, or `null` when it is sea (off the continent). */
-export function mapHexAt(h: HexCoord): MapHex | null {
-  return WORLD_MAP.get(hexKey(h)) ?? null;
+const layouts = new Map<number, Map<string, { id: string; tier: number }>>();
+
+/** The Rift entrances of a day: hex key → { id, tier }. */
+export function riftLayout(day: number): Map<string, { id: string; tier: number }> {
+  const cached = layouts.get(day);
+  if (cached) return cached;
+  const capitals = NATIONS.map((id) => REGIONS[id].capital!.hex);
+  const land = [...WORLD_MAP.values()].filter(
+    (h) =>
+      h.terrain !== 'river' &&
+      h.terrain !== 'city' &&
+      capitals.every((c) => hexDistance(c, h) >= RIFT_LAYOUT_RULES.capitalDistance),
+  );
+  // A different shuffle every day.
+  const order = [...land].sort(
+    (a, b) => noise(a.q, a.r, 1000 + (day % 100_000)) - noise(b.q, b.r, 1000 + (day % 100_000)),
+  );
+  const chosen: Array<{ h: MapHex; tier: number }> = [];
+  // Hardest first, so the deep hexes go to the high tiers.
+  for (let tier = RIFT_TIERS; tier >= 1; tier--) {
+    let left = RIFT_LAYOUT_RULES.perTier[tier - 1] ?? 0;
+    const inNations = RIFT_LAYOUT_RULES.nationTiers.includes(tier);
+    for (const h of order) {
+      if (left <= 0) break;
+      const riftlands = h.region === 'riftlands';
+      if (!riftlands && !inNations) continue;
+      if (riftlands && (h.riftDepth ?? 0) < (RIFT_LAYOUT_RULES.minDepth[tier - 1] ?? 0)) continue;
+      if (chosen.some((c) => hexDistance(c.h, h) < RIFT_LAYOUT_RULES.minSpacing)) continue;
+      chosen.push({ h, tier });
+      left--;
+    }
+  }
+  const out = new Map(
+    chosen.map(({ h, tier }) => [hexKey(h), { id: riftSiteId(h.q, h.r, tier, day), tier }]),
+  );
+  if (layouts.size > 8) layouts.clear();
+  layouts.set(day, out);
+  return out;
+}
+
+const withRift = (h: MapHex, day: number): MapHex => ({
+  ...h,
+  rift: riftLayout(day).get(hexKey(h)) ?? null,
+});
+
+/** Every land hex of the continent, with today's Rift entrances. */
+export function worldMapHexes(now: Date = new Date()): MapHex[] {
+  const day = riftDay(now);
+  return [...WORLD_MAP.values()].map((h) => withRift(h, day));
+}
+
+/** The map hex at `h` (with today's Rift, if any), or `null` when it is sea. */
+export function mapHexAt(h: HexCoord, now: Date = new Date()): MapHex | null {
+  const m = WORLD_MAP.get(hexKey(h));
+  return m ? withRift(m, riftDay(now)) : null;
 }
 
 /** Region of a hex, or `null` when it is sea. */
 export function regionAt(h: HexCoord): RegionDef | null {
-  const m = mapHexAt(h);
+  const m = WORLD_MAP.get(hexKey(h));
   return m ? REGIONS[m.region] : null;
 }
 
-/** Every Rift entrance on the map. */
-export function riftSites(): MapHex[] {
-  return worldMapHexes().filter((h) => h.rift);
+/** Today's Rift entrances. */
+export function riftSites(now: Date = new Date()): MapHex[] {
+  return worldMapHexes(now).filter((h) => h.rift);
 }
 
-/** The Rift entrance with this id, or null. */
+/**
+ * The hex of a Rift id with its Rift (any day: a run that started yesterday
+ * still knows where it is), or null.
+ */
 export function riftSiteById(id: string): MapHex | null {
-  return riftSites().find((h) => h.rift!.id === id) ?? null;
+  const p = parseRiftId(id);
+  const h = p && WORLD_MAP.get(hexKey(p));
+  return h && p ? { ...h, rift: { id, tier: p.tier } } : null;
+}
+
+/** Whether a Rift entrance is open now (Rifts move every day). */
+export function isRiftOpen(id: string, now: Date = new Date()): boolean {
+  const p = parseRiftId(id);
+  if (!p) return false;
+  return riftLayout(riftDay(now)).get(hexKey(p))?.id === id;
 }
 
 /** Capital hex of a nation. */

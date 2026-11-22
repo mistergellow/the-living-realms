@@ -194,6 +194,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Mapa: `world-map.ts` (`TERRAINS`, `TERRAIN_NAMES`, `MapHex.terrain/riftDepth/rift`, `carveRivers`, `placeRifts`, `RIFT_TIERS`, `RIFT_SITE_COUNT`, `riftSites`, `riftSiteById`)
 - Rifts: `content/rifts.ts` (`RIFT_TIER_RULES`, `riftTierModifiers`, `getRift` resolve `rift_q_r`), `rift/run.ts` (Threat inicial, modificadores por tier), `RiftDto.tier/site` (`combat.ts`)
 - Servidor: `rifts.service.ts` (`list` = entradas, `assertAtRift`), `lobbies.service.ts` (criar/começar no hexágono); erro `NOT_HERE` (`errors.ts`)
+- Rifts diários (pedido #55): `RIFT_LAYOUT_RULES`, `riftDay`, `nextRiftReset`, `riftSiteId`, `parseRiftId`, `riftLayout`, `isRiftOpen` (`world-map.ts`); `worldMapHexes`/`mapHexAt`/`riftSites` aceitam `now`; `siteRift` (`rifts.ts`); `assertAtRift` (`rifts.service.ts`) recusa Rifts fechados; `WorldPage.tsx` (dica)
 - Profissões: `GATHERING_TERRAIN`, `professionTerrains` (`content/professions.ts`), `professions.service.ts` (terreno), `ProfessionDto.terrains/availableHere`, `ProfessionsPage.tsx`
 - Locais: `content/locations.ts` (capital, terreno, Rift, world boss) → `HomePage.tsx`
 - Web: `map-scene.ts` (`terrainTint`, `drawTerrainGlyph`, `riftMarker`), `RiftsPage.tsx` (Rift no teu hexágono + lista)

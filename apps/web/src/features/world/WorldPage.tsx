@@ -1,4 +1,11 @@
-import { AP_RULES, hexDistance, mapHexAt, REGIONS, TERRAIN_NAMES } from '@realms/game-core';
+import {
+  AP_RULES,
+  hexDistance,
+  mapHexAt,
+  nextRiftReset,
+  REGIONS,
+  TERRAIN_NAMES,
+} from '@realms/game-core';
 import type { HexCoord, PresencePlayer } from '@realms/shared';
 import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -130,7 +137,14 @@ function HexInfo({
   return (
     <span data-testid="hex-info" className="hex-info">
       <strong>{title}</strong>
-      {tile?.rift && <span className="hex-tag rift">Rift · tier {tile.rift.tier}</span>}
+      {tile?.rift && (
+        <span
+          className="hex-tag rift"
+          title={`Rifts move every day. This one closes at ${nextRiftReset().toLocaleTimeString()}.`}
+        >
+          Rift · tier {tile.rift.tier}
+        </span>
+      )}
       {bossHere && <span className="hex-tag boss">World boss</span>} · Hex{' '}
       <span className="mono">
         ({hex.q}, {hex.r})

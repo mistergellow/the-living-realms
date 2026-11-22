@@ -13,6 +13,11 @@ import {
   RIFT_TIERS,
   RIFTLANDS_CENTER,
   riftSites,
+  RIFT_LAYOUT_RULES,
+  isRiftOpen,
+  nextRiftReset,
+  riftDay,
+  parseRiftId,
   riftTierModifiers,
   STARTER_KITS,
   worldBossDamage,
@@ -37,22 +42,44 @@ describe('terrain and Rift entrances (request #43)', () => {
     expect(professionTerrains('blacksmith')).toBeNull();
   });
 
-  it('Rifts sit in the Riftlands; the deeper, the higher the tier', () => {
+  it('Rifts form a pyramid of threat; high tiers sit deep in the Riftlands (request #55)', () => {
     const sites = riftSites();
-    expect(sites.length).toBeGreaterThanOrEqual(10);
-    for (const s of sites) expect(s.region).toBe('riftlands');
-    const heart = mapHexAt(RIFTLANDS_CENTER)!;
-    expect(heart.rift!.tier).toBe(RIFT_TIERS);
-    const tiers = new Set(sites.map((s) => s.rift!.tier));
-    expect(tiers.has(1)).toBe(true);
-    // Tier follows depth.
-    const sorted = [...sites].sort((a, b) => a.riftDepth! - b.riftDepth!);
-    expect(sorted[0]!.rift!.tier).toBeLessThanOrEqual(sorted.at(-1)!.rift!.tier);
+    const count = (t: number) => sites.filter((s) => s.rift!.tier === t).length;
+    expect(sites).toHaveLength(RIFT_LAYOUT_RULES.perTier.reduce((a, b) => a + b, 0));
+    for (let t = 1; t < RIFT_TIERS; t++) expect(count(t)).toBeGreaterThan(count(t + 1));
+    for (const s of sites.filter((x) => x.rift!.tier >= 3)) expect(s.region).toBe('riftlands');
+    for (const s of sites.filter((x) => x.rift!.tier === RIFT_TIERS))
+      expect(s.riftDepth!).toBeGreaterThanOrEqual(RIFT_LAYOUT_RULES.minDepth[RIFT_TIERS - 1]!);
+    expect(sites.every((s) => s.terrain !== 'city' && s.terrain !== 'river')).toBe(true);
+  });
+
+  it('some low Rifts open inside the nations (over a few days)', () => {
+    const days = [0, 1, 2, 3, 4].map((d) => new Date(Date.UTC(2026, 10, 1 + d)));
+    const inNations = days.flatMap((d) => riftSites(d).filter((s) => s.region !== 'riftlands'));
+    expect(inNations.length).toBeGreaterThan(0);
+    for (const s of inNations) expect(s.rift!.tier).toBeLessThanOrEqual(2);
+  });
+
+  it('Rifts move every day; yesterday\'s Rift still resolves but is closed', () => {
+    const today = new Date(Date.UTC(2026, 10, 22, 12));
+    const tomorrow = new Date(Date.UTC(2026, 10, 23, 12));
+    const a = riftSites(today).map((s) => s.rift!.id);
+    const b = riftSites(tomorrow).map((s) => s.rift!.id);
+    expect(a).not.toEqual(b);
+    expect(isRiftOpen(a[0]!, today)).toBe(true);
+    expect(isRiftOpen(a[0]!, tomorrow)).toBe(false);
+    expect(getRift(a[0]!)).toBeDefined(); // runs in progress keep working
+    expect(nextRiftReset(today).toISOString()).toBe('2026-11-23T00:00:00.000Z');
+    expect(riftDay(today)).toBe(riftDay(new Date(Date.UTC(2026, 10, 22, 23, 59))));
+    // Ids from before the daily layout still resolve.
+    const deep = mapHexAt(RIFTLANDS_CENTER)!;
+    const legacy = `rift_${deep.q}_${deep.r}`.replace(/-/g, 'm');
+    expect(parseRiftId(legacy)).toMatchObject({ q: deep.q, r: deep.r, tier: RIFT_TIERS });
   });
 
   it('a site Rift is the template scaled by its tier', () => {
     const t1 = riftSites().find((s) => s.rift!.tier === 1)!;
-    const t5 = mapHexAt(RIFTLANDS_CENTER)!;
+    const t5 = riftSites().find((s) => s.rift!.tier === RIFT_TIERS)!;
     const easy = getRift(t1.rift!.id)!;
     const hard = getRift(t5.rift!.id)!;
     expect(easy.site).toEqual({ q: t1.q, r: t1.r });

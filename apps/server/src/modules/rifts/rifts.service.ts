@@ -33,6 +33,7 @@ import {
   rollAffixes,
   Rng,
   riftSites,
+  isRiftOpen,
   RUN_STATE_VERSION,
   seedFrom,
   RIFT_GOLD_RULES,
@@ -108,6 +109,13 @@ export function assertAtRift(
 ) {
   if (!rift.site)
     throw new AppError(409, ErrorCode.NOT_HERE, 'Rifts are entered from their hex on the map.');
+  // Request #55: Rifts move every day; yesterday's entrance is closed.
+  if (!isRiftOpen(rift.id))
+    throw new AppError(
+      409,
+      ErrorCode.NOT_HERE,
+      'This Rift has closed: Rifts move every day. Find one on the world map.',
+    );
   const away = chars.filter((c) => c.hexQ !== rift.site!.q || c.hexR !== rift.site!.r);
   if (away.length)
     throw new AppError(
