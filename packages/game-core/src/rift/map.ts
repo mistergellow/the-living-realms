@@ -44,6 +44,8 @@ export interface MapTemplate {
     minCounts: Partial<Record<RoomType, number>>;
   };
   secrets: { min: number; max: number; minRow: number };
+  /** Request #60: at most this many Campsites on any route to the boss. */
+  maxCampsitesPerPath?: number;
 }
 
 export interface RiftMapNode {
@@ -229,6 +231,11 @@ export function validateMap(map: RiftMap, t: MapTemplate): string[] {
     if (n < (min ?? 0)) problems.push(`${n} ${type} rooms (min ${min})`);
   }
   if (!visible.some((n) => parentsOf(map, n.id).length >= 2)) problems.push('no branches converge');
+  if (t.maxCampsitesPerPath !== undefined) {
+    const most = maxOnAnyPath(map, 'campsite');
+    if (most > t.maxCampsitesPerPath)
+      problems.push(`a route has ${most} campsites (max ${t.maxCampsitesPerPath})`);
+  }
   if (map.nodes.filter((n) => n.row === 0).length < 2) problems.push('only one entrance');
   // Every room reaches the boss; every room is reachable from an entrance.
   const reach = new Set<string>();
@@ -309,6 +316,20 @@ export function generateRiftMap(t: MapTemplate, pools: MapContentPools, seed: nu
     }
   }
   throw new Error(`Could not generate a valid Rift map: ${last.join('; ')}`);
+}
+
+/** Most rooms of a type on any route from an entrance to the boss (secrets included). */
+export function maxOnAnyPath(map: RiftMap, type: RoomType): number {
+  const memo = new Map<string, number>();
+  const best = (id: string): number => {
+    const known = memo.get(id);
+    if (known !== undefined) return known;
+    const here = findNode(map, id)?.type === type ? 1 : 0;
+    const v = here + Math.max(0, ...childrenOf(map, id).map(best));
+    memo.set(id, v);
+    return v;
+  };
+  return Math.max(0, ...map.nodes.filter((n) => n.row === 0).map((n) => best(n.id)));
 }
 
 /** Every path from an entrance to the boss (visible rooms only). For tests and tools. */

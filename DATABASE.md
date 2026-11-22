@@ -194,6 +194,10 @@ someone gathers there; no row = full.
 | amount        | double precision | charges when `updated_at` was written; regrowth is added |
 | updated_at    | timestamptz      |                                                          |
 
+`items.slot` (smallint, null; request #59): position in the bag (0–19) or the
+storage grid (0 … `characters.storage_slots` − 1, default 80); null when
+equipped.
+
 `items.grade` (smallint 0–4, null): grade of a gathered material (Poor …
 Exceptional); stacks only join the same grade.
 

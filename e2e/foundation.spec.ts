@@ -355,6 +355,10 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
   await page.getByTestId('profession-fishing').click();
   await expect(page.getByTestId('profession-tool')).toContainText('Fishing Rod');
+  // The test travelled through the API, not the UI: reload to see the new AP.
+  await page.reload();
+  await expect(page.getByTestId('top-ap')).not.toHaveText('120/120');
+  const apBefore = Number((await page.getByTestId('top-ap').innerText()).split('/')[0]);
   // Request #52: gathering costs AP and uses the spot's resources.
   await expect(page.getByTestId('profession-node')).toContainText('left');
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
@@ -365,6 +369,8 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.getByLabel('Attempts of Fish').fill('3');
   await page.getByTestId('job-fish').getByRole('button', { name: /Now · 6 AP/ }).click();
   await expect(page.getByTestId('job-result')).toContainText('Fish × 3');
+  // Request #59: the header's AP follows at once (2 for the single fish + 6).
+  await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
   await page.getByTestId('profession-carpentry').click();

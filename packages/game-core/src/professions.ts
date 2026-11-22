@@ -71,8 +71,7 @@ export function attributeBonus(p: Pick<ProfessionDef, 'attributes'>, base: Attri
 }
 
 /** Success bonus of a tool tier (tier 1 = none). */
-export const toolBonus = (tier: number) =>
-  Math.max(0, tier - 1) * TOOL_RULES.chanceBonusPerTier;
+export const toolBonus = (tier: number) => Math.max(0, tier - 1) * TOOL_RULES.chanceBonusPerTier;
 
 export interface ChanceInput {
   rank: number;

@@ -123,6 +123,11 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D111 | **Trabalhos de profissão**: escolher quantas tentativas e pagar **em AP** (tudo já) ou **em tempo real** (os itens chegam no fim)                                                                                                                                                                                      | 2026-11-22 | `startJob`, `JOB_RULES`                                                                               |
 | D112 | **Guildas**: máx. 16 membros; reputação da guilda ganha a fazer coisas juntos (Rifts, raids); ícone e cor; armazém da guilda; o líder convida e expulsa; comprar terreno de guilda                                                                                                                                     | 2026-11-22 | `content/guilds.ts`, `guilds.service.ts`                                                              |
 | D113 | **Visual coerente "premium RPG"** pela referência do dono: painéis escuros com molduras douradas, títulos dourados, ícones redondos com gradiente e símbolo branco                                                                                                                                                     | 2026-11-22 | `styles/theme.css`, `tokens.css`                                                                      |
+| D114 | **Nenhuma página com scroll**; só caixas por dentro                                                                                                                                                                                                                                                                    | 2026-11-22 | `theme.css`, e2e "screens fit"                                                                        |
+| D115 | **Mochila, armazém e loja em grelha**; arrastar e fica na posição; juntar e dividir pilhas; botão de ordenar; **armazém com 80 espaços** (mais espaços pagos com dinheiro real no futuro)                                                                                                                              | 2026-11-22 | `items.slot`, `ItemGrid.tsx`                                                                          |
+| D116 | **Valores dos poderes sempre inteiros, arredondados para baixo**                                                                                                                                                                                                                                                       | 2026-11-22 | `skillAtLevel`, `engine.ts`                                                                           |
+| D117 | **Rifts com 10–20 salas por percurso (pelo tier)**; **fogueiras raras**: máx. 3 num fácil, mín. 1                                                                                                                                                                                                                      | 2026-11-22 | `RIFT_SIZE_RULES`, `mapTemplateForTier`                                                               |
+| D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                   | 2026-11-22 | `GameShell.tsx`                                                                                       |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -251,6 +256,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A121 | Rifts diários                                                   | mudam à meia-noite UTC; 30 por dia: 12 × T1, 8 × T2, 5 × T3, 3 × T4, 2 × T5; T1–T2 também nas nações; T4 a partir de 40 % de profundidade e T5 de 65 %; 3 hexágonos de distância entre Rifts e das capitais; uma corrida já começada continua depois da meia-noite                                                                                                                                                                                                                                                                                         | `RIFT_LAYOUT_RULES`                                                              |
 | A122 | Trabalhos                                                       | até 50 tentativas; em AP: recolher 2 AP e criar 1 AP por tentativa; em tempo real: recolher 10 min por tentativa, criar o tempo da receita (20 s); um trabalho de cada vez e enquanto corre não se pratica mais nada; materiais e cargas do nó tirados no início (as cargas das tentativas falhadas voltam)                                                                                                                                                                                                                                                | `JOB_RULES`                                                                      |
 | A123 | Guildas                                                         | fundar 500 ouro; terreno 2000 ouro do banco (hexágono onde o líder está; não capital, não rio, a ≥ 3 das capitais; um por guilda); armazém 40 espaços, usado em capitais ou no terreno; qualquer membro guarda e tira; reputação = a reputação dos membros num Rift vencido com ≥ 2 membros; 12 ícones e 10 cores; líder sai → passa ao membro mais antigo; último sai → guilda acaba                                                                                                                                                                      | `GUILD_RULES`                                                                    |
+| A124 | Tamanho dos Rifts                                               | 10, 13, 15, 18, 20 salas por percurso (tier 1–5, boss incluído); fogueiras por percurso: 3, 3, 2, 2, 1 (a de antes do boss conta); pesos de fogueira muito baixos                                                                                                                                                                                                                                                                                                                                                                                          | `RIFT_SIZE_RULES`                                                                |
+| A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
 
 ---
 
@@ -1242,3 +1249,39 @@ barra de cima, ações do hub (medalhão redondo) e menu de baixo com o mesmo
 estilo; ícones de skills e de efeitos redondos com gradiente da cor e símbolo
 branco (como a referência); emblemas das guildas iguais. Arte continua
 PLACEHOLDER. Testes: os 13 e2e (incluindo "screens fit every screen size").
+
+### #59 — 2026-11-22 — Sem scroll, inventário/armazém/loja em grelha, ficha compacta
+
+**Pedido:** páginas sem scroll (só dentro das caixas); armazém em grelha (não
+em lista); organizar o inventário arrastando (fica na posição), juntar e
+dividir pilhas, botão de ordenar (tipo Baldur's Gate); armazém com 80 espaços
+(depois pagar para abrir mais); ficha do personagem mais compacta; loja em
+grelha com pesquisa e filtro; o AP do topo não atualizava; valores dos poderes
+sem decimais (arredondar para baixo). Também pedido e na fila: tooltips todas
+como a da arma com valores e palavras-chave coloridos; mercado de jogadores.
+**Decisões:** D114–D116, D118; valores provisórios A125.
+**Resultado:**
+
+- Cada item tem posição (`items.slot`, migração 0020) na mochila (20) ou no
+  armazém (`characters.storage_slots`, 80). API `POST /characters/:id/items/move`
+  (mover, dividir, juntar, trocar, tirar equipamento para uma posição) e
+  `/items/sort`. Entre mochila e armazém só numa capital.
+- Grelha partilhada `ItemGrid` na ficha, no armazém e na loja; pesquisa e
+  filtros escurecem o que não corresponde (nada muda de sítio); Shift ao
+  largar abre a janela de dividir.
+- Loja: grelha de ofertas com preço e grelha da mochila para vender.
+- Nenhuma página com scroll (o teste e2e dos tamanhos de ecrã verifica-o em
+  13 ecrãs × 6 tamanhos); a ficha ficou mais pequena e cabe no ecrã.
+- O AP no topo segue logo as ações que o gastam.
+- Poderes: números inteiros, arredondados para baixo.
+- Limite de pedidos configurável (`RATE_LIMIT`, 300/min; o e2e usa mais).
+
+### #60 — 2026-11-22 — Rifts maiores e fogueiras raras
+
+**Pedido:** Rifts com dimensão 10–20 (pelo tier) e fogueiras bem mais raras:
+máximo 3 num fácil, mínimo 1. "Está muito fácil fazer os Rifts."
+**Decisões:** D117; valores provisórios A124.
+**Resultado:** cada entrada no mapa usa `mapTemplateForTier(tier)`: percursos
+de 10 a 20 salas; nenhum percurso passa por mais fogueiras do que o limite
+do tier (validado na geração, `maxOnAnyPath`); a fogueira antes do boss fica
+sempre. Testes: `rift-size.test.ts` (5 tiers × 15 mapas).

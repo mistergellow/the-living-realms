@@ -39,9 +39,10 @@ export function useDeleteCharacter() {
 
 export const sheetQueryKey = (id: string) => ['characters', id, 'sheet'] as const;
 
-export function useCharacterSheet(id: string) {
+export function useCharacterSheet(id: string | null) {
   return useQuery({
-    queryKey: sheetQueryKey(id),
+    queryKey: sheetQueryKey(id ?? ''),
+    enabled: !!id,
     queryFn: () => api<CharacterSheetDto>('GET', `/characters/${id}`),
   });
 }
