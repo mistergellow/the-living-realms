@@ -1342,3 +1342,12 @@ do documento). Nada implementado em código.
 slot com id, nome, efeito, intervalo provisório e inspiração; marca o que já
 existe em `affixes.ts` (✅), efeitos só para itens com nome (⭐) e utilitários
 fora do combate (🧭).
+
+**Revisão (mesmo dia):** o dono esclareceu que queria bónus simples por tipo de
+item, ao estilo das tabelas do Metin2 (pool fixa por slot, cada bónus com uma
+escada de valores), adaptados ao jogo. `docs/EQUIPMENT_SPECIALS.md` foi
+reescrito: catálogo Attack / Resistance / Other com valores T1–T5, matriz de
+que bónus pode sair em cada slot (Weapon, Head, Face, Pendant, Body, Belt,
+Boots, Ring, Off-hand), runas como bónus 6 e 7, e perguntas (famílias de
+inimigos, tier do valor, defesas por família de arma, bónus de economia,
+limites). Continua a ser só proposta.
