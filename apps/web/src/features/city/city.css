@@ -75,3 +75,25 @@
 .city-message[data-result='success'] {
   border-left-color: var(--success);
 }
+
+/* Storage drag and drop, search and filter (request #52). */
+.city-tools {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.city-tools .bag-search {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+.city-row[data-draggable='true'] {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.city-drop[data-accept='true'] {
+  border-color: var(--accent);
+}
+.city-drop[data-over='true'] {
+  box-shadow: 0 0 1.2rem color-mix(in srgb, var(--accent) 50%, transparent);
+}

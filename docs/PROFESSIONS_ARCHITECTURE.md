@@ -114,13 +114,13 @@ Later: `GET /api/world/nodes?q&r` (2), `POST …/city/workshop/:recipe` with a f
 
 ## 8. Plan
 
-| Phase | Content                                                                                                                                                          | Depends on     | Status  |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------- |
-| 1     | 15 professions, independent Mastery (6 ranks, complexity), recipe unlocks by rank, profession interface, tools and requirements, BASE attributes (§21), profiles | —              | ✅ done |
-| 2     | Gathering nodes on hexes, regeneration, AP cost for gathering, material quality                                                                                  | 1              | next    |
-| 3     | Crafting quality (materials + Mastery), recipes found/bought/discovered, public facilities with fees, processing chains                                          | 2              |         |
-| 4     | Player economy: regional market, cross-region orders, trading, commissions, player shops, professional reputation, gold ledger                                   | 3              |         |
-| 5     | Private and guild workshops                                                                                                                                      | 4 (and guilds) |         |
-| 6     | Book duplication (Scribing), rare and unique resources, profession events                                                                                        | 3–5            |         |
+| Phase | Content                                                                                                                                                          | Depends on     | Status        |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------- |
+| 1     | 15 professions, independent Mastery (6 ranks, complexity), recipe unlocks by rank, profession interface, tools and requirements, BASE attributes (§21), profiles | —              | ✅ done       |
+| 2     | Gathering nodes on hexes, regeneration, AP cost for gathering, material quality                                                                                  | 1              | ✅ done (#52) |
+| 3     | Crafting quality (materials + Mastery), recipes found/bought/discovered, public facilities with fees, processing chains                                          | 2              |               |
+| 4     | Player economy: regional market, cross-region orders, trading, commissions, player shops, professional reputation, gold ledger                                   | 3              |               |
+| 5     | Private and guild workshops                                                                                                                                      | 4 (and guilds) |               |
+| 6     | Book duplication (Scribing), rare and unique resources, profession events                                                                                        | 3–5            |               |
 
 Each phase ends with unit, integration and e2e tests, as in phase 1.

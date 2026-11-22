@@ -6,6 +6,9 @@ import { Icon } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { ItemIcon } from '../characters/sheet/ItemIcon';
 import { ItemTooltipBody } from '../characters/sheet/ItemTooltip';
+import { DragGhost, useDragAndDrop } from '../characters/sheet/drag';
+import { ITEM_FILTERS, itemMatches, type ItemFilter } from '../characters/sheet/item-filters';
+import '../characters/sheet/sheet.css';
 import { useCity, useCityAction } from './api';
 import './city.css';
 
@@ -80,9 +83,24 @@ type Props = {
   run: (path: string, body: Record<string, unknown>) => void;
 };
 
-function ItemRow({ item, children }: { item: ItemDto; children: React.ReactNode }) {
+function ItemRow({
+  item,
+  children,
+  drag,
+}: {
+  item: ItemDto;
+  children: React.ReactNode;
+  /** Pointer handlers from `useDragAndDrop` (storage). */
+  drag?: React.HTMLAttributes<HTMLLIElement>;
+}) {
   return (
-    <li className="city-row" data-rarity={item.rarity}>
+    <li
+      className="city-row"
+      data-rarity={item.rarity}
+      data-draggable={drag ? true : undefined}
+      data-testid={`city-item-${item.defId}`}
+      {...drag}
+    >
       <span className="city-icon">
         <ItemIcon item={item} />
       </span>
@@ -156,50 +174,103 @@ function Shop({ city, busy, run }: Props) {
   );
 }
 
+type Place = 'bag' | 'storage';
+
+/**
+ * Storage (request #50; search, filter and drag and drop from request #52):
+ * drag an item from the bag onto the storage (or back), or use the buttons.
+ */
 function Storage({ city, busy, run }: Props) {
+  const [filter, setFilter] = useState<ItemFilter>('all');
+  const [search, setSearch] = useState('');
+  const move = (itemId: string, from: Place) =>
+    run(from === 'bag' ? 'storage/deposit' : 'storage/withdraw', { itemId });
+  const dnd = useDragAndDrop<{ item: ItemDto; from: Place }>((d, target) => {
+    if (target && target !== d.from) move(d.item.id, d.from);
+  });
+  const enabled = !busy && !!city.capital;
+  const bag = city.sheet.inventory.filter((i) => itemMatches(i, filter, search));
+  const stored = city.storage.filter((i) => itemMatches(i, filter, search));
+
+  const column = (place: Place, title: string, list: ItemDto[], total: number) => {
+    const other: Place = place === 'bag' ? 'storage' : 'bag';
+    const accepting = dnd.drag?.payload.from === other;
+    return (
+      <section
+        className="panel city-drop"
+        data-drop={place}
+        data-accept={accepting ? true : undefined}
+        data-over={accepting && dnd.drag?.over === place ? true : undefined}
+      >
+        <div className="panel-title">
+          <span>{title}</span>
+        </div>
+        {total === 0 && (
+          <p className="muted small">
+            {place === 'bag' ? 'Your bag is empty.' : 'Nothing stored.'}
+          </p>
+        )}
+        {total > 0 && list.length === 0 && <p className="muted small">Nothing matches.</p>}
+        <ul className="city-list" data-testid={place}>
+          {list.map((i) => (
+            <ItemRow key={i.id} item={i} drag={dnd.bind({ item: i, from: place }, enabled)}>
+              <button
+                className="btn btn-sm"
+                disabled={!enabled}
+                onClick={dnd.click(() => move(i.id, place))}
+                aria-label={`${place === 'bag' ? 'Store' : 'Take'} ${i.name}`}
+              >
+                {place === 'bag' ? 'Store' : 'Take'}
+              </button>
+            </ItemRow>
+          ))}
+        </ul>
+      </section>
+    );
+  };
+
   return (
-    <div className="city-cols">
-      <section className="panel">
-        <div className="panel-title">
-          <span>
-            Bag ({city.bag.used}/{city.bag.slots})
-          </span>
-        </div>
-        <ul className="city-list" data-testid="bag">
-          {city.sheet.inventory.map((i) => (
-            <ItemRow key={i.id} item={i}>
-              <button
-                className="btn btn-sm"
-                disabled={busy || !city.capital}
-                onClick={() => run('storage/deposit', { itemId: i.id })}
-                aria-label={`Store ${i.name}`}
-              >
-                Store
-              </button>
-            </ItemRow>
+    <div className="stack">
+      <div className="row city-tools">
+        <input
+          className="bag-search"
+          type="search"
+          placeholder="Search the bag and storage…"
+          aria-label="Search the bag and storage"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="bag-filters" role="tablist" aria-label="Storage filter">
+          {ITEM_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              role="tab"
+              aria-selected={filter === f.id}
+              className="chip-btn"
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
           ))}
-        </ul>
-      </section>
-      <section className="panel">
-        <div className="panel-title">
-          <span>Storage ({city.storage.length})</span>
         </div>
-        {city.storage.length === 0 && <p className="muted small">Nothing stored.</p>}
-        <ul className="city-list" data-testid="storage">
-          {city.storage.map((i) => (
-            <ItemRow key={i.id} item={i}>
-              <button
-                className="btn btn-sm"
-                disabled={busy || !city.capital}
-                onClick={() => run('storage/withdraw', { itemId: i.id })}
-                aria-label={`Take ${i.name}`}
-              >
-                Take
-              </button>
-            </ItemRow>
-          ))}
-        </ul>
-      </section>
+      </div>
+      <p className="muted small" style={{ margin: 0 }}>
+        Drag items between your bag and the storage, or use the buttons.
+      </p>
+      <div className="city-cols">
+        {column(
+          'bag',
+          `Bag (${city.bag.used}/${city.bag.slots})`,
+          bag,
+          city.sheet.inventory.length,
+        )}
+        {column('storage', `Storage (${city.storage.length})`, stored, city.storage.length)}
+      </div>
+      {dnd.drag && (
+        <DragGhost x={dnd.drag.x} y={dnd.drag.y}>
+          <ItemIcon item={dnd.drag.payload.item} />
+        </DragGhost>
+      )}
     </div>
   );
 }

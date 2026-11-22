@@ -76,6 +76,15 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
         </div>
       )}
 
+      {item.grade && (
+        <div className="tip-row" data-testid="item-grade">
+          <span>Quality</span>
+          <b className="grade-text" data-grade={item.grade.value}>
+            {item.grade.name}
+          </b>
+        </div>
+      )}
+
       {item.tool && (
         <div className="tip-block" data-testid="tool-info">
           <div className="tip-row">
@@ -90,7 +99,9 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
               <b>{item.tool.rankName}</b>
             </div>
           )}
-          <p className="tip-identity">Keep it in your bag to use it. It does not replace Mastery.</p>
+          <p className="tip-identity">
+            Keep it in your bag to use it. It does not replace Mastery.
+          </p>
         </div>
       )}
 

@@ -34,6 +34,7 @@ import {
   normalizeAffixes,
   planEquip,
   rarityOf,
+  gradeName,
   rankName,
   TOOL_TYPE_NAMES,
   weaponInfo,
@@ -130,6 +131,7 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
         ? { used: unlocked.filter((r) => !!r.runeId).length, total: unlocked.length }
         : null,
     grantsAbilities: (def?.abilities ?? []).flatMap((id) => getAbility(id)?.name ?? []),
+    grade: i.grade === null ? null : { value: i.grade, name: gradeName(i.grade) },
     tool: def?.tool
       ? {
           type: def.tool.type,

@@ -1,6 +1,7 @@
 import {
   characterProfessions,
   characters,
+  resourceNodes,
   items,
   worldEvents,
   type Character,
@@ -10,6 +11,14 @@ import {
 } from '@realms/db';
 import {
   activityChance,
+  AP_RULES,
+  gradeName,
+  NODE_RICHNESS,
+  NODE_RICHNESS_NAMES,
+  nodeAmount,
+  nodeReadyAt,
+  resourceNodeAt,
+  type ResourceNodeDef,
   addMastery,
   attributeBonus,
   getItemDef,
@@ -43,6 +52,7 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
+import { spendAp } from '../characters/ap.js';
 import { giveItem } from '../characters/bag.js';
 import {
   assertNotInRift,
@@ -60,6 +70,9 @@ type Row = {
 };
 const NEW: Row = { rank: 0, points: 0, readyAt: null, attempts: 0, successes: 0, itemsMade: 0 };
 const RANK_UP = 'profession.rank_up';
+
+/** A resource node on a hex with its current charges (request #52). */
+type NodeState = { def: ResourceNodeDef; amount: number };
 const itemName = (id: string) => getItemDef(id)?.name ?? id;
 
 /** Quantity of an unequipped item definition a character carries. */
@@ -102,14 +115,15 @@ export class ProfessionsService {
 
   async list(accountId: string, characterId: string): Promise<ProfessionsDto> {
     const c = await this.sheets.getOwnedCharacter(this.db, accountId, characterId);
-    const [rows, owned, history] = await Promise.all([
+    const [rows, owned, history, nodes] = await Promise.all([
       this.rows(this.db, characterId),
       this.items(this.db, characterId),
       this.history(this.db, characterId),
+      this.nodesAt(this.db, c),
     ]);
     return {
       professions: Object.values(PROFESSIONS).map((p) =>
-        this.toDto(p, rows.get(p.id) ?? NEW, owned, c, history.get(p.id) ?? []),
+        this.toDto(p, rows.get(p.id) ?? NEW, owned, c, history.get(p.id) ?? [], nodes.get(p.id)),
       ),
     };
   }
@@ -171,7 +185,8 @@ export class ProfessionsService {
         );
       if (row.rank < activity.rank)
         throw this.invalid(`${activity.name} needs ${rankName(activity.rank)} ${prof.title}.`);
-      if (row.readyAt && row.readyAt.getTime() > Date.now()) {
+      const gathering = prof.category === 'gathering';
+      if (!gathering && row.readyAt && row.readyAt.getTime() > Date.now()) {
         const s = Math.ceil((row.readyAt.getTime() - Date.now()) / 1000);
         throw this.invalid(`You are still busy (${s}s).`);
       }
@@ -185,6 +200,21 @@ export class ProfessionsService {
       for (const i of activity.inputs)
         if (have(owned, i.item) < i.qty)
           throw this.invalid(`You need ${i.qty} × ${itemName(i.item)}.`);
+
+      // Gathering (request #52): a resource node with charges, and AP.
+      let node: NodeState | undefined;
+      if (gathering) {
+        node = await this.lockNode(tx, c, prof.id);
+        if (!node) throw this.invalid(`There is nothing to gather for ${prof.name} here.`);
+        if (node.amount < 1) {
+          const at = nodeReadyAt(node.amount)!;
+          const min = Math.max(1, Math.ceil((at.getTime() - Date.now()) / 60_000));
+          throw this.invalid(
+            `This spot is exhausted. It regrows in about ${min} min — or try another hex.`,
+          );
+        }
+        await spendAp(tx, c, AP_RULES.gatherCost, activity.name.toLowerCase());
+      }
 
       // Repairs work on one of your items.
       let target: Item | undefined;
@@ -200,11 +230,19 @@ export class ProfessionsService {
           rank: row.rank,
           toolTier: tool?.tier ?? 0,
           attributeBonus: attributeBonus(prof, baseAttributesOf(c)),
+          ...(node ? { nodeRichness: node.def.richness } : {}),
         },
         randomInt(2 ** 31),
       );
+      if (node && outcome.success) {
+        node.amount -= 1;
+        await tx
+          .update(resourceNodes)
+          .set({ amount: node.amount, updatedAt: new Date() })
+          .where(this.nodeWhere(node.def));
+      }
       for (const i of activity.inputs) await this.consume(tx, c.id, i.item, i.qty);
-      for (const o of outcome.outputs) await this.give(tx, c.id, o.item, o.qty);
+      for (const o of outcome.outputs) await this.give(tx, c.id, o.item, o.qty, o.grade);
       if (target && outcome.repaired)
         await tx
           .update(items)
@@ -212,7 +250,8 @@ export class ProfessionsService {
           .where(eq(items.id, target.id));
 
       const next = addMastery(row.rank, row.points, outcome.points);
-      const readyAt = new Date(Date.now() + activity.cooldownSeconds * 1000);
+      // Crafting costs time; gathering costs AP instead (request #52).
+      const readyAt = gathering ? null : new Date(Date.now() + activity.cooldownSeconds * 1000);
       const made = outcome.outputs.reduce((n, o) => n + o.qty, 0);
       const saved: Row = {
         rank: next.rank,
@@ -251,7 +290,12 @@ export class ProfessionsService {
           : message,
         pointsGained: outcome.points,
         ranksGained: next.ranksGained,
-        produced: outcome.outputs.map((o) => ({ name: itemName(o.item), qty: o.qty })),
+        produced: outcome.outputs.map((o) => ({
+          name: itemName(o.item),
+          qty: o.qty,
+          grade: o.grade === null ? null : gradeName(o.grade),
+        })),
+        apSpent: gathering ? AP_RULES.gatherCost : 0,
         consumed: activity.inputs.map((i) => ({ name: itemName(i.item), qty: i.qty })),
         profession: this.toDto(
           prof,
@@ -259,6 +303,7 @@ export class ProfessionsService {
           await this.items(tx, c.id),
           c,
           (await this.history(tx, c.id)).get(prof.id) ?? [],
+          node,
         ),
       };
     });
@@ -275,6 +320,64 @@ export class ProfessionsService {
       .from(characterProfessions)
       .where(eq(characterProfessions.characterId, characterId));
     return new Map(rows.map((r) => [r.professionId, r]));
+  }
+
+  private nodeWhere(def: ResourceNodeDef) {
+    return and(
+      eq(resourceNodes.worldId, this.ctx.world.id),
+      eq(resourceNodes.hexQ, def.hex.q),
+      eq(resourceNodes.hexR, def.hex.r),
+      eq(resourceNodes.professionId, def.professionId),
+    );
+  }
+
+  /** Current state of every node on the character's hex (no row = full). */
+  private async nodesAt(db: DbOrTx, c: Character): Promise<Map<string, NodeState>> {
+    const hex = { q: c.hexQ, r: c.hexR };
+    const defs = Object.values(PROFESSIONS)
+      .map((p) => resourceNodeAt(hex, p.id))
+      .filter((d): d is ResourceNodeDef => !!d);
+    const out = new Map<string, NodeState>();
+    if (!defs.length) return out;
+    const rows = await db
+      .select()
+      .from(resourceNodes)
+      .where(
+        and(
+          eq(resourceNodes.worldId, this.ctx.world.id),
+          eq(resourceNodes.hexQ, hex.q),
+          eq(resourceNodes.hexR, hex.r),
+        ),
+      );
+    for (const def of defs) {
+      const row = rows.find((r) => r.professionId === def.professionId);
+      out.set(def.professionId, {
+        def,
+        amount: row ? nodeAmount(def, row.amount, row.updatedAt) : def.max,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * The node for a profession on the character's hex, row-locked (players share
+   * it). Creates the row the first time; the amount includes regrowth.
+   */
+  private async lockNode(tx: DbOrTx, c: Character, professionId: string) {
+    const def = resourceNodeAt({ q: c.hexQ, r: c.hexR }, professionId);
+    if (!def) return undefined;
+    await tx
+      .insert(resourceNodes)
+      .values({
+        worldId: this.ctx.world.id,
+        hexQ: def.hex.q,
+        hexR: def.hex.r,
+        professionId,
+        amount: def.max,
+      })
+      .onConflictDoNothing();
+    const [row] = await tx.select().from(resourceNodes).where(this.nodeWhere(def)).for('update');
+    return { def, amount: nodeAmount(def, row!.amount, row!.updatedAt) };
   }
 
   /** Rank-ups per profession, newest first (the last 50 events). */
@@ -305,10 +408,20 @@ export class ProfessionsService {
   }
 
   /** Add items: stackables join an existing stack; what does not fit goes to storage. */
-  private async give(tx: DbOrTx, characterId: string, defId: string, qty: number): Promise<void> {
+  private async give(
+    tx: DbOrTx,
+    characterId: string,
+    defId: string,
+    qty: number,
+    grade: number | null,
+  ): Promise<void> {
     if (qty <= 0) return;
     if (isStackable(getItemDef(defId))) {
-      await giveItem(tx, characterId, defId, { qty, source: 'crafted' });
+      await giveItem(tx, characterId, defId, {
+        qty,
+        source: grade === null ? 'crafted' : 'gathered',
+        ...(grade === null ? {} : { grade }),
+      });
       return;
     }
     for (let i = 0; i < qty; i++) await giveItem(tx, characterId, defId, { source: 'crafted' });
@@ -321,9 +434,10 @@ export class ProfessionsService {
     qty: number,
   ): Promise<void> {
     let left = qty;
-    const rows = (await this.items(tx, characterId)).filter(
-      (r) => r.itemDefId === defId && !r.equippedSlot,
-    );
+    // The poorest grade goes first (request #52), keeping the better materials.
+    const rows = (await this.items(tx, characterId))
+      .filter((r) => r.itemDefId === defId && !r.equippedSlot)
+      .sort((a, b) => (a.grade ?? 1) - (b.grade ?? 1));
     for (const r of rows) {
       if (left <= 0) break;
       const take = Math.min(left, r.quantity);
@@ -343,7 +457,9 @@ export class ProfessionsService {
     owned: Item[],
     c: Character,
     history: ProfessionDto['history'],
+    node?: NodeState,
   ): ProfessionDto {
+    const gathering = p.category === 'gathering';
     const needs = professionTerrains(p.id);
     const ready =
       row.readyAt && row.readyAt.getTime() > Date.now() ? row.readyAt.toISOString() : null;
@@ -361,7 +477,7 @@ export class ProfessionsService {
       maxRank: MAX_RANK,
       points: row.points,
       pointsToNext: pointsToNext(row.rank),
-      readyAt: ready,
+      readyAt: gathering ? null : ready,
       activities: p.activities.map((a: ActivityDef) => ({
         id: a.id,
         name: a.name,
@@ -374,7 +490,8 @@ export class ProfessionsService {
           toolTier: tool?.tier ?? 0,
           attributeBonus: bonus,
         }),
-        cooldownSeconds: a.cooldownSeconds,
+        cooldownSeconds: gathering ? 0 : a.cooldownSeconds,
+        apCost: gathering ? AP_RULES.gatherCost : 0,
         locked: row.rank < a.rank,
         points: masteryPoints(a, row.rank, true),
         inputs: a.inputs.map((i) => ({
@@ -393,6 +510,14 @@ export class ProfessionsService {
       })),
       terrains: needs ? needs.map((t) => TERRAIN_NAMES[t]) : null,
       availableHere: !needs || needs.includes(terrainAt(c)),
+      node: node
+        ? {
+            richness: NODE_RICHNESS_NAMES[NODE_RICHNESS[node.def.richness]!],
+            amount: Math.floor(node.amount),
+            max: node.def.max,
+            readyAt: nodeReadyAt(node.amount)?.toISOString() ?? null,
+          }
+        : null,
       tool: p.tool
         ? {
             type: p.tool,

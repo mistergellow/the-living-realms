@@ -184,6 +184,11 @@ export const items = pgTable(
     source: text('source').notNull().default('starter'),
     /** Weapons: upgrade level (+0, +1, …). Same type + level = same stats (request #31). */
     upgradeLevel: smallint('upgrade_level').notNull().default(0),
+    /**
+     * Gathered materials (request #52): grade 0 Poor … 4 Exceptional; null =
+     * no grade. Stacks only join stacks of the same grade.
+     */
+    grade: smallint('grade'),
     /** Weapons: special properties (max 5), e.g. [{ "id": "keen" }]. */
     specials: jsonb('specials').notNull().default([]),
     /** Weapons: 2 rune slots, locked by default (Runemaster = future). */
@@ -205,6 +210,7 @@ export const items = pgTable(
     check('items_quality_range', sql`${t.quality} between 0 and 100`),
     check('items_upgrade_level_range', sql`${t.upgradeLevel} between 0 and 10`),
     check('items_quantity_positive', sql`${t.quantity} > 0`),
+    check('items_grade_range', sql`${t.grade} between 0 and 4`),
   ],
 );
 
@@ -433,6 +439,25 @@ export const customContent = pgTable(
     check('custom_content_kind_ck', sql`${t.kind} in ('item', 'ability')`),
     index('custom_content_kind_idx').on(t.kind, t.createdAt),
   ],
+);
+
+// Resource nodes (request #52, professions phase 2). One per hex and gathering
+// profession; a row appears the first time it is gathered from (no row = full).
+// `amount` is the charges when `updated_at` was written; the current amount
+// adds the regrowth since then (game-core `nodeAmount`), like AP.
+export const resourceNodes = pgTable(
+  'resource_nodes',
+  {
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'cascade' }),
+    hexQ: integer('hex_q').notNull(),
+    hexR: integer('hex_r').notNull(),
+    professionId: text('profession_id').notNull(),
+    amount: doublePrecision('amount').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.worldId, t.hexQ, t.hexR, t.professionId] })],
 );
 
 // ---------------------------------------------------------------------------

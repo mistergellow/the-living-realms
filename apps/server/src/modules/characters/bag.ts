@@ -1,5 +1,5 @@
 import { items, type DbOrTx } from '@realms/db';
-import { getItemDef, INVENTORY_RULES, isStackable } from '@realms/game-core';
+import { defaultGrade, getItemDef, INVENTORY_RULES, isStackable } from '@realms/game-core';
 import { ErrorCode } from '@realms/shared';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../../lib/errors.js';
@@ -9,6 +9,10 @@ import { AppError } from '../../lib/errors.js';
  * neither equipped nor in storage (a stack is one slot). Loot that does not
  * fit goes to the city storage; things you buy or take out need room.
  */
+
+/** Stacks join only stacks of the same material grade (request #52). */
+export const sameGrade = (grade: number | null) =>
+  grade === null ? isNull(items.grade) : eq(items.grade, grade);
 
 const inBag = (characterId: string) =>
   and(eq(items.characterId, characterId), isNull(items.equippedSlot), eq(items.inStorage, false));
@@ -47,15 +51,18 @@ export async function giveItem(
     specials?: unknown;
     upgradeLevel?: number;
     quality?: number;
+    /** Material grade (request #52); defaults to Common for gatherable materials. */
+    grade?: number | null;
     strict?: boolean;
   },
 ): Promise<{ id: string; inStorage: boolean; specials: unknown }> {
   const qty = opts.qty ?? 1;
+  const grade = opts.grade === undefined ? defaultGrade(defId) : opts.grade;
   if (isStackable(getItemDef(defId))) {
     const [stack] = await tx
       .update(items)
       .set({ quantity: sql`${items.quantity} + ${qty}` })
-      .where(and(inBag(characterId), eq(items.itemDefId, defId)))
+      .where(and(inBag(characterId), eq(items.itemDefId, defId), sameGrade(grade)))
       .returning({ id: items.id, specials: items.specials });
     if (stack) return { id: stack.id, inStorage: false, specials: stack.specials };
   }
@@ -69,6 +76,7 @@ export async function giveItem(
       quantity: isStackable(getItemDef(defId)) ? qty : 1,
       source: opts.source,
       inStorage: full,
+      grade,
       ...(opts.specials !== undefined ? { specials: opts.specials } : {}),
       ...(opts.upgradeLevel !== undefined ? { upgradeLevel: opts.upgradeLevel } : {}),
       ...(opts.quality !== undefined ? { quality: opts.quality } : {}),

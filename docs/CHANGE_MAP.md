@@ -563,9 +563,17 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - BD: `character_professions` (`level` = rank 0–5, `xp` = pontos, `attempts`, `successes`, `items_made`; migrações 0009 e 0016); eventos `profession.rank_up`; **TRUNCATE** em `helpers.ts` e `worker.test.ts`
 - Servidor: `apps/server/src/modules/professions/` (`professions.service.ts`: rank, ferramentas, atributos BASE, materiais, cooldown, estatísticas, histórico, perfis; `professions.routes.ts`: `/api/characters/:id/professions`, `/:id/professions/profile`, `/by-name/:name/professions/profile`), registado em `app.ts`; ferramentas iniciais em `characters.service.ts`; `ItemDto.tool` em `sheet.service.ts` (`toItemDto`)
 - Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx` com `PROFESSION_SECTIONS`/`RankLadder`, `InspectPage.tsx`, `api.ts`, `professions.css`), rotas `/professions` e `/professions/inspect/:name` (`router.tsx`), link nos amigos (`FriendsPage.tsx`), botão no Hub (`HomePage.tsx`); ícones/tooltip/filtro de ferramentas (`ItemIcon.tsx`, `ItemTooltip.tsx`, `EquipmentTab.tsx`)
+- Recolha (pedido #52, ADR-048): `packages/game-core/src/gathering.ts` (`RESOURCE_NODE_RULES`, `resourceNodeAt`, `nodeAmount`, `nodeReadyAt`, `MATERIAL_GRADES`, `GRADE_RULES`, `rollGrade`, `GATHERED_MATERIALS`, `defaultGrade`); `AP_RULES.gatherCost` (`ap.ts`); BD `resource_nodes`, `items.grade` (migração 0017; TRUNCATE em `helpers.ts`/`worker.test.ts`); `giveItem`/`sameGrade` (`bag.ts`) e depositar/retirar (`city.service.ts`) juntam pilhas só da mesma qualidade; `ProfessionDto.node`, `ActivityDto.apCost`, `ActivityResultDto.apSpent`/`produced[].grade`, `ItemDto.grade`; web: nó no `ProfessionsPage.tsx`, `grade-pip` (`ItemIcon.tsx`, `global.css`), "Quality" (`ItemTooltip.tsx`)
 - **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS`/`TOOLS` se precisar); mudar os 15 ids obriga a migração (como a 0016) e a `RENAMED_PROFESSIONS`
 - **Tipo de ferramenta novo:** `ToolType`, `TOOL_TYPE_NAMES`, `TOOLS`, `STARTER_TOOLS`?, `BY_TOOL` (`ItemIcon.tsx`)
 - Testes: `game-core/test/professions.test.ts`, `game-core/test/world-systems.test.ts`, `apps/server/test/professions.test.ts` (+ `character-sheet`, `city`, `rifts` contam com as ferramentas na mochila), `e2e` ("professions")
+
+## Armazém e filtros de itens (pedidos #50, #52)
+
+- Filtros/pesquisa partilhados: `apps/web/src/features/characters/sheet/item-filters.ts` (`ITEM_FILTERS`, `itemMatches`, `isGear`) usados por `EquipmentTab.tsx` e `CityPage.tsx`
+- Arrastar-e-largar: `useDragAndDrop`/`DragGhost` (`sheet/drag.tsx`); no armazém `data-drop="bag|storage"` → `storage/deposit|withdraw` (`city.routes.ts`)
+- **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
+- Testes: `apps/server/test/city.test.ts`, e2e "city storage"
 
 ## Admin e conteúdo personalizado (pedido #41, ADR-044)
 

@@ -120,6 +120,13 @@
       "when": 1795308598924,
       "tag": "0016_profession_mastery",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795309647228,
+      "tag": "0017_gathering_nodes_grades",
+      "breakpoints": true
     }
   ]
 }

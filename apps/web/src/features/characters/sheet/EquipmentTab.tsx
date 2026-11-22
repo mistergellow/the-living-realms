@@ -21,18 +21,12 @@ import { useAllocateAttributes, useEquipment } from '../api';
 import { DragGhost, Tooltip, useDragAndDrop, useHover } from './drag';
 import { GlyphSvg, ItemIcon, SLOT_GLYPH } from './ItemIcon';
 import { ItemTooltipBody } from './ItemTooltip';
+import { isGear, ITEM_FILTERS, itemMatches, type ItemFilter } from './item-filters';
 import { LEFT_SLOTS, RIGHT_SLOTS, SLOT_LABELS } from './slots';
 
-type Filter = 'all' | 'gear' | 'material' | 'consumable' | 'tool';
-const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: 'all', label: 'All' },
-  { id: 'gear', label: 'Gear' },
-  { id: 'material', label: 'Materials' },
-  { id: 'consumable', label: 'Consumables' },
-  { id: 'tool', label: 'Tools' },
-];
-const isGear = (i: ItemDto) => i.slots.length > 0;
-const matches = (i: ItemDto, f: Filter) => f === 'all' || (f === 'gear' ? isGear(i) : i.kind === f);
+type Filter = ItemFilter;
+const FILTERS = ITEM_FILTERS;
+const matches = (i: ItemDto, f: Filter) => itemMatches(i, f);
 /** The inventory grid always shows at least this many cells (empty ones included). */
 const MIN_CELLS = 36;
 const COLS = 6;

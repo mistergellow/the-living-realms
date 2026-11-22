@@ -1564,6 +1564,35 @@ fieldset.field {
 .rarity-text {
   color: var(--rarity, var(--text));
 }
+/* Material grades (request #52): Poor … Exceptional. */
+[data-grade='0'] {
+  --grade: #8a8172;
+}
+[data-grade='1'] {
+  --grade: #d8d2c4;
+}
+[data-grade='2'] {
+  --grade: #5fbf6a;
+}
+[data-grade='3'] {
+  --grade: #4e9be6;
+}
+[data-grade='4'] {
+  --grade: #c77dff;
+}
+.grade-text {
+  color: var(--grade);
+}
+.grade-pip {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grade);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.7);
+}
 /* ---------- ability icons (combat bar, character sheet) ---------- */
 .ability-icon {
   position: absolute;
