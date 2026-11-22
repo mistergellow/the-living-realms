@@ -536,7 +536,7 @@ conforme a dificuldade do Rift.
 **Resultado:** confirmado: sem alterações pendentes; `main` no GitHub = commit
 `7d8fa39` (ataques por coluna) com CI verde. O Railway publica a partir do `main`.
 
-### #26 — 2026-11-18 — Servidor a crashar no Railway ("Can't find meta/_journal.json")
+### #26 — 2026-11-18 — Servidor a crashar no Railway ("Can't find meta/\_journal.json")
 
 **Pedido:** logs do Railway com o servidor a reiniciar em ciclo.
 **Causa:** o mesmo do #10. O Railway não usou o Dockerfile: construiu o
@@ -1330,3 +1330,15 @@ venda em todas as cidades. Tabela `market_listings` (migração 0021); rotas
 `/characters/:id/market` (+ `list`, `buy`, `cancel`). Testes: `market.test.ts`
 (4) e passo no e2e. Também neste pedido: artefacto "Living Realms Arsenal" com
 todas as armas, itens com nome, armaduras e skills (níveis 1, 10 e P).
+
+### #64 — 2026-11-22 — Lista de especiais por tipo de equipamento
+
+**Pedido:** criar uma lista de especiais inspirada em MOBAs, MMORPGs e Path of
+Exile, para cada tipo de equipamento: Weapon, Head, Face, Pendant, Body, Belt,
+Boots, Ring (alguns especiais podem repetir-se entre tipos).
+**Decisões:** nenhuma — é uma **proposta** à espera do dono (perguntas no fim
+do documento). Nada implementado em código.
+**Resultado:** `docs/EQUIPMENT_SPECIALS.md`: pool partilhada (🔁) + lista por
+slot com id, nome, efeito, intervalo provisório e inspiração; marca o que já
+existe em `affixes.ts` (✅), efeitos só para itens com nome (⭐) e utilitários
+fora do combate (🧭).

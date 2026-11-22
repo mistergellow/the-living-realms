@@ -533,6 +533,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Interface: `apps/web/src/features/characters/sheet/ItemTooltip.tsx` (o cartão do item vive na caixa que aparece ao passar o rato: nome com a cor da raridade, "Requires", "Bonus effects", "Rune slots"); `sheet/EquipmentTab.tsx` (`data-rarity` nos espaços e na mochila → contorno com a cor); `sheet/sheet.css` (secção "rarity"); cores `--rarity-*` em `tokens.css` e `[data-rarity]` em `global.css`
 - Testes: `game-core/test/affixes.test.ts`; `apps/server/test/character-sheet.test.ts` ("item cards"); `e2e/foundation.spec.ts` (ficha)
 - **Efeito novo:** só dados em `AFFIXES` (se for de um tipo novo, acrescentar o `kind` a `AffixEffect` e tratá-lo em `gearTotals` e, se for de combate, em `GearCombatEffects` + motor)
+- Proposta de especiais por slot (pedido #64, ainda não implementada): `docs/EQUIPMENT_SPECIALS.md` — ao implementar um especial dessa lista, atualizar também esse documento (tirar de "proposta", marcar ✅)
 
 ## Loot do Rift (D55)
 
