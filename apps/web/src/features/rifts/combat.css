@@ -922,3 +922,56 @@
   font-style: italic;
   line-height: 1.25;
 }
+
+/* Loot popup (request #50) */
+.loot-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.6);
+  animation: loot-in 0.25s ease-out;
+}
+.loot-popup > .panel {
+  width: min(100%, 30rem);
+}
+@keyframes loot-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.loot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  gap: 0.5rem;
+}
+.loot-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--rarity) 60%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rarity) 22%, #15141d), #121118 80%);
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--rarity) 25%, transparent);
+}
+.loot-card svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: var(--rarity);
+  flex: none;
+}
+.loot-card span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.loot-card small {
+  color: var(--text-muted);
+}

@@ -1,5 +1,6 @@
 import type { RunDto } from '@realms/shared';
 import { Link } from 'react-router';
+import { LootList } from './LootList';
 
 /** Result of a run: rewards on victory, equipment damage on defeat or when leaving. */
 export function EndOverlay({ run }: { run: RunDto }) {
@@ -44,11 +45,9 @@ export function EndOverlay({ run }: { run: RunDto }) {
                 You have beaten this Rift enough times: it gives no more reputation.
               </p>
             )}
-            {run.rewards.items.map((i) => (
-              <p key={i.id} style={{ margin: '0.25rem 0 0' }}>
-                Loot: <strong>{i.name}</strong>
-              </p>
-            ))}
+            {(run.rewards.items.length > 0 || !!run.rewards.gold) && (
+              <LootList gold={run.rewards.gold} items={run.rewards.items} />
+            )}
           </div>
         )}
         {run.penalty && (
