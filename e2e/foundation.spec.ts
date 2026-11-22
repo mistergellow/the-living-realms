@@ -358,7 +358,7 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
   await expect(page.getByTestId('activity-result')).toContainText('Mastery');
   await expect(page.getByTestId('profession-level')).toContainText('busy');
-  await expect(page.getByTestId('profession-stats')).toContainText('1 attempts');
+  await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
   await page.getByTestId('profession-carpentry').click();
@@ -367,7 +367,7 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await page.getByLabel('Character to inspect').fill(angler);
   await page.getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByTestId('profession-profile')).toContainText(angler);
-  await expect(page.getByTestId('profile-fishing')).toContainText('1 attempts');
+  await expect(page.getByTestId('profile-fishing')).toContainText('1 attempt');
   await page.screenshot({ path: 'test-results/screens/10b-profession-profile.png' });
 });
 

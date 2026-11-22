@@ -97,7 +97,12 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 ## Phase 7 — Economy, professions and trade ⏳ ❓
 
-- [x] **Professions (request #33):** 15 professions (gathering, crafting, service) with levels 0–10, materials that stack, crafting, repairs and weapon upgrades (+1); balance and time cost (AP) to be decided
+- [x] **Professions (request #33):** professions with materials that stack, crafting and repairs
+- [x] **Professions & Economy — phase 1 (request #51, `docs/PROFESSIONS_ARCHITECTURE.md`):** the spec's 15 professions (5 gathering, 10 crafting), independent Mastery with 6 ranks and complexity-based progress, recipes unlocked by rank, tools as items (basic and fine), BASE-attribute bonus (§21), profession screen with Gathering/Crafting Mastery, statistics and history, other players' profiles
+- [ ] Phase 2: gathering nodes, regeneration, AP for gathering, material quality
+- [ ] Phase 3: crafting quality, recipes found/bought/discovered, public facilities and fees, processing
+- [ ] Phase 4: player economy (regional market, orders, trading, commissions, shops, professional reputation)
+- [ ] Phase 5: private and guild workshops · Phase 6: book duplication, rare resources, profession events
 - Consumables usable in the Rift (food, draughts, bandages); runes from rune stones
 - [x] **Character sheet (request #39):** tabs (Equipment / Abilities / Professions); 8 equipment slots (boots, 2 rings, pendant); drag-and-drop inventory with item tooltips; 8 prepared skills + weapon abilities + Block/Swap
 - Skill books (learn skills from books); weapon ability count per weapon (2?) to be decided

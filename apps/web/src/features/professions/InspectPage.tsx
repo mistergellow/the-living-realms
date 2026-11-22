@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { useProfessionProfile } from './api';
-import { PROFESSION_SECTIONS, RankLadder } from './ProfessionsPage';
+import { plural, PROFESSION_SECTIONS, RankLadder } from './ProfessionsPage';
 import './professions.css';
 
 /** Another player's professional profile (request #51): ranks and statistics. */
@@ -41,7 +41,8 @@ export function InspectPage() {
                         <i style={{ width: `${Math.round(x.progress * 100)}%` }} />
                       </div>
                       <span className="muted small">
-                        {x.stats.attempts} attempts · {x.stats.successes} successes ·{' '}
+                        {plural(x.stats.attempts, 'attempt')} ·{' '}
+                        {x.stats.successes} {x.stats.successes === 1 ? 'success' : 'successes'} ·{' '}
                         {x.stats.itemsMade} made
                       </span>
                     </article>

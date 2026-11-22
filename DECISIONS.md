@@ -817,3 +817,27 @@ roams lazily: whoever reads it after `next_move_at` moves it (guarded so only
 one reader wins). A fight is a run with `mode: 'worldboss'` whose single enemy
 starts with the pool's current HP; the damage dealt comes off the pool when
 the fight ends. The leaderboard groups attempts by party (sorted character ids).
+
+## ADR-047 — Profession Mastery: ranks, complexity falloff, tools as items, BASE-attribute weights
+
+**Status:** accepted (request #51, phase 1 of the Professions & Economy spec;
+review in `docs/PROFESSIONS_ARCHITECTURE.md`)
+
+**Decision.** The existing profession system is extended, not rebuilt. Each of
+the 15 professions has its own Mastery: a rank 0–5 and points towards the next
+rank, stored in the existing `character_professions` columns (`level`, `xp`)
+so no rename is needed. Activities declare a required rank and a
+`complexity` (1–6); the points an attempt gives fall off by how far the rank is
+above the complexity (100 %, 50 %, 15 %, 0), so cheap work cannot lead to
+Grandmaster. Tools are ordinary items (`kind = 'tool'`, data in
+`ItemDef.tool`) carried in the bag; the server picks the best usable one
+(type, not broken, rank met). §21: each profession has weights over the BASE
+attributes in game-core (`ProfessionDef.attributes`,
+`PROFESSION_ATTRIBUTE_RULES`); the bonus is computed only on the server from
+`baseAttributesOf` and is capped below one rank's bonus. Statistics are
+counters on the row; the history reads `profession.rank_up` world events.
+Old profession ids are mapped by `RENAMED_PROFESSIONS` and migration 0016.
+
+**Why.** Reusing the table, the item pipeline (`giveItem`, the bag of 20) and
+world events keeps one system. Content stays data in game-core, so balance
+changes need no migration.

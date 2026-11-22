@@ -554,16 +554,18 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Web: cartão "PvP Arena (test)" em `RiftsPage.tsx`; equipas A/B em `LobbyPage.tsx`; `CombatPage.tsx` (`mySide`, "Other team")
 - Testes: `game-core/test/combat.test.ts` ("PvP"), `apps/server/test/lobbies.test.ts` ("PvP arena")
 
-## Profissões (D58)
+## Profissões (D58; Mastery D102–D106, ADR-047, `docs/PROFESSIONS_ARCHITECTURE.md`)
 
-- Conteúdo: `packages/game-core/src/content/professions.ts` (`PROFESSIONS`, atividades, receitas, `PROFESSION_RULES`); materiais/consumíveis em `content/items.ts` (`MATERIALS`, `isStackable`)
-- Regras puras: `packages/game-core/src/professions.ts` (`xpToNext`, `addProfessionXp`, `activityChance`, `repairAmount`, `resolveActivity`)
-- Contrato: `packages/shared/src/professions.ts`; `ItemKind` (`material`, `consumable`), `ItemDto.quantity` (`api.ts`)
-- BD: `character_professions`, `items.quantity` (migração 0009); **TRUNCATE** em `helpers.ts` e `worker.test.ts`
-- Servidor: `apps/server/src/modules/professions/` (`professions.service.ts`: nível, materiais, cooldown, pilhas, reparar/melhorar; `professions.routes.ts` em `/api/characters/:id/professions`), registado em `app.ts`
-- Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx`, `api.ts`, `professions.css`), rota `/professions` no `GameShell`, botão no Hub (`HomePage.tsx`); quantidades na ficha
-- **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS` se precisar)
-- Testes: `game-core/test/professions.test.ts`, `apps/server/test/professions.test.ts`, `e2e` ("professions")
+- Conteúdo: `packages/game-core/src/content/professions.ts` (`PROFESSIONS` — 15, atividades com `rank`/`complexity`/`points`; `MASTERY_RANKS`, `MASTERY_RULES`, `rankName`, `MAX_RANK`; ferramentas `ToolType`, `TOOL_TYPE_NAMES`, `TOOL_RULES`; atributos `PROFESSION_ATTRIBUTE_RULES` + `ProfessionDef.attributes`; `RENAMED_PROFESSIONS`; `GATHERING_TERRAIN`; `professionResources`)
+- Itens: `content/items.ts` (`MATERIALS`, `TOOLS`, `STARTER_TOOLS`, `ItemDef.tool`, `isStackable`); loja `SHOP_STOCK` (`economy.ts`)
+- Regras puras: `packages/game-core/src/professions.ts` (`pointsToNext`, `complexityFactor`, `masteryPoints`, `addMastery`, `attributeBonus`, `toolBonus`, `activityChance`, `repairAmount`, `resolveActivity`)
+- Contrato: `packages/shared/src/professions.ts` (`ProfessionDto`, `ActivityDto`, `ActivityResultDto`, `ProfessionProfileDto`); `ItemKind` (`material`, `consumable`, `tool`), `ItemDto.tool`, `ItemDto.quantity` (`api.ts`)
+- BD: `character_professions` (`level` = rank 0–5, `xp` = pontos, `attempts`, `successes`, `items_made`; migrações 0009 e 0016); eventos `profession.rank_up`; **TRUNCATE** em `helpers.ts` e `worker.test.ts`
+- Servidor: `apps/server/src/modules/professions/` (`professions.service.ts`: rank, ferramentas, atributos BASE, materiais, cooldown, estatísticas, histórico, perfis; `professions.routes.ts`: `/api/characters/:id/professions`, `/:id/professions/profile`, `/by-name/:name/professions/profile`), registado em `app.ts`; ferramentas iniciais em `characters.service.ts`; `ItemDto.tool` em `sheet.service.ts` (`toItemDto`)
+- Web: `apps/web/src/features/professions/` (`ProfessionsPage.tsx` com `PROFESSION_SECTIONS`/`RankLadder`, `InspectPage.tsx`, `api.ts`, `professions.css`), rotas `/professions` e `/professions/inspect/:name` (`router.tsx`), link nos amigos (`FriendsPage.tsx`), botão no Hub (`HomePage.tsx`); ícones/tooltip/filtro de ferramentas (`ItemIcon.tsx`, `ItemTooltip.tsx`, `EquipmentTab.tsx`)
+- **Profissão/atividade nova:** só dados em `content/professions.ts` (+ item novo em `MATERIALS`/`TOOLS` se precisar); mudar os 15 ids obriga a migração (como a 0016) e a `RENAMED_PROFESSIONS`
+- **Tipo de ferramenta novo:** `ToolType`, `TOOL_TYPE_NAMES`, `TOOLS`, `STARTER_TOOLS`?, `BY_TOOL` (`ItemIcon.tsx`)
+- Testes: `game-core/test/professions.test.ts`, `game-core/test/world-systems.test.ts`, `apps/server/test/professions.test.ts` (+ `character-sheet`, `city`, `rifts` contam com as ferramentas na mochila), `e2e` ("professions")
 
 ## Admin e conteúdo personalizado (pedido #41, ADR-044)
 

@@ -25,6 +25,9 @@ function useSecondsUntil(iso: string | null): number {
   return iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 1000)) : 0;
 }
 
+/** "1 attempt", "3 attempts". */
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 const progress = (p: { points: number; pointsToNext: number }) =>
   p.pointsToNext ? Math.min(100, (p.points / p.pointsToNext) * 100) : 100;
 
@@ -203,7 +206,7 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
         <div>
           <span className="muted small">Statistics</span>
           <strong data-testid="profession-stats">
-            {p.stats.attempts} attempts · {rate}% success · {p.stats.itemsMade} made
+            {plural(p.stats.attempts, 'attempt')} · {rate}% success · {p.stats.itemsMade} made
           </strong>
         </div>
         <div>
