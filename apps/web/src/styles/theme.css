@@ -414,3 +414,8 @@
 .tip-yours {
   font-size: 1.05rem;
 }
+/* Request #66: a failed attempt reads as a failure. */
+:root .city-message[data-ok='false'] {
+  border-left-color: var(--danger);
+  color: #ffb3a7;
+}

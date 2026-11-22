@@ -423,6 +423,8 @@ export interface AbilityDto {
   level?: number;
   /** The level as shown: "1" … "10", "M1" … "M10", "P". */
   levelLabel?: string;
+  /** Request #66: what the next level takes (null at P). */
+  nextLevel?: { label: string; books: number; chance: number } | null;
   /** BASE attributes needed to learn it (skills, request #47); empty = free. */
   requirements: Array<{ attribute: AttributeKey; value: number }>;
 }
@@ -465,6 +467,8 @@ export interface CharacterSheetDto {
   abilities: AbilityDto[];
   /** All skills the character has learned (from books), prepared or not. */
   learnedSkills: AbilityDto[];
+  /** Request #66: the result of the last action that may not succeed (reading books). */
+  notice?: { ok: boolean; message: string };
   /** The prepared skills, by loadout slot (length MAX_PREPARED_SKILLS; null = empty). */
   loadout: Array<string | null>;
   /** Reputation is a per-character currency earned through activities. */

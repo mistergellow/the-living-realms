@@ -502,7 +502,31 @@ export const SKILL_RULES = {
   perfectBonus: 0.3,
   /** Extra status turns (not Stun) at M1 and again at P. */
   extraTurnsAt: [11, 21] as readonly number[],
+  /**
+   * Request #66: reading to reach a level can fail. Success chance (percent)
+   * to reach level 2, then −4 per level, never below 20 (PROVISIONAL, A128).
+   */
+  readChanceAtLevel2: 96,
+  readChanceStep: 4,
+  readChanceMin: 20,
 } as const;
+
+/**
+ * Request #66: books needed to reach a level — level 1 (learning) 1 book,
+ * level 2 2 books … 10 → 10, M1 → 11 … M10 → 20, P → 21. They are all used
+ * up by the attempt, whether it succeeds or not.
+ */
+export const booksToReach = (level: number) =>
+  Math.max(1, Math.min(SKILL_RULES.maxLevel, Math.round(level)));
+
+/** Chance (percent) that reading the books raises the skill to `level`. */
+export function readChance(level: number): number {
+  if (level <= 1) return 100;
+  return Math.max(
+    SKILL_RULES.readChanceMin,
+    SKILL_RULES.readChanceAtLevel2 - SKILL_RULES.readChanceStep * (level - 2),
+  );
+}
 
 /** "1" … "10", "M1" … "M10", "P". */
 export function skillLevelLabel(level: number): string {

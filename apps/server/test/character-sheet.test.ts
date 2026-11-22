@@ -1,4 +1,4 @@
-import { STARTER_TOOLS } from '@realms/game-core';
+import { readChance, STARTER_TOOLS } from '@realms/game-core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   createCharacter,
@@ -341,24 +341,31 @@ describe('Skill Books (request #47)', () => {
     expect(sheet.learnedSkills.map((s) => s.id)).toEqual(['second_wind']);
     expect(sheet.loadout[0]).toBe('second_wind');
     expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
-    // Request #50: a second copy raises the skill's level; its numbers grow.
+    // Request #66: reaching level N takes N books at once, and it can fail.
     const healAt = (sh: CharacterSheetDto) =>
       sh.learnedSkills.find((s) => s.id === 'second_wind')!;
     expect(healAt(sheet).levelLabel).toBe('1');
-    const copy = await give(id, 'book_second_wind');
-    const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
-    expect(healAt(res2).level).toBe(2);
-    const third = await give(id, 'book_second_wind');
-    const res3 = (await useItem(cookie, id, third)).json() as CharacterSheetDto;
-    expect(healAt(res3).level).toBe(3);
+    expect(healAt(sheet).nextLevel).toEqual({ label: '2', books: 2, chance: readChance(2) });
+    const one = await give(id, 'book_second_wind');
+    const short = await useItem(cookie, id, one);
+    expect(short.json().error.message).toMatch(/needs 2 books \(you carry 1\)/);
+    await give(id, 'book_second_wind'); // a second stack: 2 books in all
+    const tried = (await useItem(cookie, id, one)).json() as CharacterSheetDto;
+    expect(tried.notice).toBeDefined();
+    expect(healAt(tried).level).toBe(tried.notice!.ok ? 2 : 1);
+    // Both books are used up, success or not.
+    expect(tried.inventory.some((i) => i.defId === 'book_second_wind')).toBe(false);
     // Whole numbers, rounded down (request #59): Heal 6–8 → 7–9 at level 3.
-    expect(healAt(res3).effects[0]).toBe('Heal 7–9');
-    // Request #53: 21 levels, 1 … 10, M1 … M10, P.
+    await t.dbHandle
+      .sql`update character_skills set level = 3 where character_id = ${id} and skill_id = 'second_wind'`;
+    expect(healAt(await sheetOf(cookie, id)).effects[0]).toBe('Heal 7–9');
+    // Request #53: 21 levels, 1 … 10, M1 … M10, P; P takes 21 books.
     await t.dbHandle
       .sql`update character_skills set level = 20 where character_id = ${id} and skill_id = 'second_wind'`;
-    const last = await give(id, 'book_second_wind');
-    const atP = (await useItem(cookie, id, last)).json() as CharacterSheetDto;
-    expect(healAt(atP).levelLabel).toBe('P');
+    expect(healAt(await sheetOf(cookie, id)).nextLevel).toMatchObject({ label: 'P', books: 21 });
+    await t.dbHandle
+      .sql`update character_skills set level = 21 where character_id = ${id} and skill_id = 'second_wind'`;
+    expect(healAt(await sheetOf(cookie, id)).nextLevel).toBeNull();
     const more = await give(id, 'book_second_wind');
     expect((await useItem(cookie, id, more)).json().error.message).toMatch(/highest level \(P\)/);
   });
