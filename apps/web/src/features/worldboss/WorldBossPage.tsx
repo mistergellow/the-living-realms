@@ -29,7 +29,7 @@ export function WorldBossPage() {
 
   return (
     <div className="screen-body">
-      <div className="contain stack">
+      <div className="contain stack narrow">
         <FormError error={boss.error ?? fight.error ?? lobby.create.error} />
         {b && (
           <>

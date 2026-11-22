@@ -387,3 +387,8 @@
   text-transform: uppercase;
   color: #ff9f43;
 }
+
+/* Request #64: pages with little on them stay a readable width, centred. */
+:root .screen-body > .contain.narrow {
+  max-width: min(100%, 60rem);
+}

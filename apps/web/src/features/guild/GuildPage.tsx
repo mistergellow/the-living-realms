@@ -24,7 +24,10 @@ export function GuildPage() {
   const run: Run = (path, body, method) => action.mutate({ path, body, method });
   return (
     <div className="screen-body">
-      <div className="contain stack guild" data-testid="guild">
+      <div
+        className={`contain stack guild${guild.data && !guild.data.guild ? ' narrow' : ''}`}
+        data-testid="guild"
+      >
         <FormError error={guild.error ?? action.error} />
         {v?.message && (
           <p className="city-message" data-testid="guild-message">

@@ -213,88 +213,102 @@ function ExplorationScreen({
         <aside className="room-panel" aria-label="Room">
           <FormError error={action.error} />
           {run.outcome?.search && run.phase !== 'room' && <TestLine test={run.outcome.search} />}
+          {/* Request #64: rooms (challenges, events, loot, campsites) open in front of everything. */}
           {run.phase === 'event' && run.event && (
-            <div className="panel stack" data-testid="event">
-              <h2>{run.event.title}</h2>
-              <p>{run.event.text}</p>
-              {!run.event.result ? (
-                <>
-                  {active.length > 1 && (
-                    <label className="field">
-                      Who attempts it?
-                      <select value={tester} onChange={(e) => setTester(e.target.value)}>
-                        {active.map((m) => (
-                          <option key={m.characterId} value={m.characterId}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <div className="approaches">
-                    {run.event.approaches.map((a) => {
-                      const voters = run.votes.filter((v) => v.optionId === a.id);
-                      const base =
-                        a.attribute && testerMember
-                          ? testerMember.baseAttributes[a.attribute]
-                          : null;
-                      return (
-                        <button
-                          key={a.id}
-                          className="btn approach"
-                          data-mine={myVote?.optionId === a.id}
-                          disabled={action.isPending}
-                          onClick={() =>
-                            send({
-                              type: 'vote',
-                              optionId: a.id,
-                              ...(a.attribute ? { testerId: tester } : {}),
-                            })
-                          }
-                        >
-                          <strong>{a.label}</strong>
-                          <span className="muted small">{a.description}</span>
-                          {a.attribute && a.difficulty !== null && base !== null && (
-                            <span className="small">
-                              {ATTRIBUTE_NAMES[a.attribute]} {base} (base) vs {a.difficulty} ·{' '}
-                              {Math.round(testChance(base, a.difficulty) * 100)}%
-                            </span>
-                          )}
-                          {voters.length > 0 && (
-                            <span className="small">
-                              Votes: {voters.map((v) => nameOf(v.characterId)).join(', ')}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="muted small">
-                    Tests use BASE attributes only — equipment and buffs do not count.
-                  </p>
-                </>
-              ) : (
-                <>
-                  {run.event.result.test && <TestLine test={run.event.result.test} />}
-                  <p>{run.event.result.text}</p>
-                  <ul className="effects">
-                    {run.event.result.effects.map((e, i) => (
-                      <li key={i}>{e}</li>
-                    ))}
-                  </ul>
-                  {run.status === 'active' && (
-                    <button className="btn btn-primary" onClick={() => send({ type: 'continue' })}>
-                      Continue
-                    </button>
-                  )}
-                </>
-              )}
+            <div
+              className="loot-popup room-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={run.event.title}
+            >
+              <div className="panel stack" data-testid="event">
+                <h2>{run.event.title}</h2>
+                <p>{run.event.text}</p>
+                {!run.event.result ? (
+                  <>
+                    {active.length > 1 && (
+                      <label className="field">
+                        Who attempts it?
+                        <select value={tester} onChange={(e) => setTester(e.target.value)}>
+                          {active.map((m) => (
+                            <option key={m.characterId} value={m.characterId}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    <div className="approaches">
+                      {run.event.approaches.map((a) => {
+                        const voters = run.votes.filter((v) => v.optionId === a.id);
+                        const base =
+                          a.attribute && testerMember
+                            ? testerMember.baseAttributes[a.attribute]
+                            : null;
+                        return (
+                          <button
+                            key={a.id}
+                            className="btn approach"
+                            data-mine={myVote?.optionId === a.id}
+                            disabled={action.isPending}
+                            onClick={() =>
+                              send({
+                                type: 'vote',
+                                optionId: a.id,
+                                ...(a.attribute ? { testerId: tester } : {}),
+                              })
+                            }
+                          >
+                            <strong>{a.label}</strong>
+                            <span className="muted small">{a.description}</span>
+                            {a.attribute && a.difficulty !== null && base !== null && (
+                              <span className="small">
+                                {ATTRIBUTE_NAMES[a.attribute]} {base} (base) vs {a.difficulty} ·{' '}
+                                {Math.round(testChance(base, a.difficulty) * 100)}%
+                              </span>
+                            )}
+                            {voters.length > 0 && (
+                              <span className="small">
+                                Votes: {voters.map((v) => nameOf(v.characterId)).join(', ')}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="muted small">
+                      Tests use BASE attributes only — equipment and buffs do not count.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    {run.event.result.test && <TestLine test={run.event.result.test} />}
+                    <p>{run.event.result.text}</p>
+                    <ul className="effects">
+                      {run.event.result.effects.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                    {run.status === 'active' && (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => send({ type: 'continue' })}
+                      >
+                        Continue
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
           {run.phase === 'room' && run.outcome && (
             // Request #50: what was found pops up, coloured by rarity.
             <div
-              className={run.outcome.items.length || run.outcome.gold ? 'loot-popup' : undefined}
+              className="loot-popup room-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={run.outcome.title}
             >
               <div className="panel stack" data-testid="room-outcome">
                 <h2>{run.outcome.title}</h2>

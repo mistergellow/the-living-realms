@@ -192,7 +192,7 @@ function Shop({ city, busy, run }: Props) {
               place="storage"
               items={offers.map((o) => o.item)}
               size={offers.length}
-              cols={8}
+              cols={10}
               over={null}
               dimmed={dim}
               bind={noop}
@@ -245,7 +245,7 @@ function Shop({ city, busy, run }: Props) {
             )}
           </div>
         </section>
-        <section className="panel storage-pane">
+        <section className="panel storage-pane bag-pane">
           <div className="panel-title">
             <span>Sell from your bag</span>
           </div>
@@ -386,6 +386,22 @@ function Storage({ city, busy }: Props) {
         <section className="panel storage-pane">
           <div className="panel-title">
             <span>
+              Storage ({city.storage.length}/{city.storageSlots})
+            </span>
+          </div>
+          <div className="pane-scroll">{grid('storage', city.storage, city.storageSlots, 12)}</div>
+          <button
+            className="btn btn-sm"
+            disabled={working}
+            onClick={() => inv.sort.mutate('storage')}
+            aria-label="Sort the storage"
+          >
+            Sort
+          </button>
+        </section>
+        <section className="panel storage-pane bag-pane">
+          <div className="panel-title">
+            <span>
               Bag ({city.bag.used}/{city.bag.slots})
             </span>
           </div>
@@ -395,22 +411,6 @@ function Storage({ city, busy }: Props) {
             disabled={working}
             onClick={() => inv.sort.mutate('bag')}
             aria-label="Sort the bag"
-          >
-            Sort
-          </button>
-        </section>
-        <section className="panel storage-pane">
-          <div className="panel-title">
-            <span>
-              Storage ({city.storage.length}/{city.storageSlots})
-            </span>
-          </div>
-          <div className="pane-scroll">{grid('storage', city.storage, city.storageSlots, 10)}</div>
-          <button
-            className="btn btn-sm"
-            disabled={working}
-            onClick={() => inv.sort.mutate('storage')}
-            aria-label="Sort the storage"
           >
             Sort
           </button>
@@ -624,7 +624,7 @@ function Market() {
                 place="storage"
                 items={listings.map((l) => l.item)}
                 size={listings.length}
-                cols={8}
+                cols={10}
                 over={null}
                 dimmed={dim}
                 bind={noop}
@@ -676,7 +676,7 @@ function Market() {
             )}
           </div>
         </section>
-        <section className="panel storage-pane">
+        <section className="panel storage-pane bag-pane">
           <div className="panel-title">
             <span>
               Sell · {m.mine.length}/{m.maxListings} for sale

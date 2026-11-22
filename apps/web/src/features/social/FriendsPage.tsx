@@ -49,7 +49,7 @@ export function FriendsPage() {
 
   return (
     <div className="screen-body">
-      <div className="contain stack">
+      <div className="contain stack narrow">
         <h1 className="page-title">Friends</h1>
         <FormError
           error={request.error ?? accept.error ?? remove.error ?? lobbyActions.invite.error}
