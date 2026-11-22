@@ -219,6 +219,18 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByRole('button', { name: 'Main hand: Hunting Bow' })).toBeVisible();
   await page.getByRole('tab', { name: /Abilities/ }).click();
   await expect(page.getByTestId('abilities')).toContainText('Aimed Shot');
+
+  // Request #65: right click on a bag item → Drop → confirm; it is gone.
+  await page.getByRole('tab', { name: /Equipment/ }).click();
+  await page
+    .getByRole('button', { name: 'Main hand: Hunting Bow' })
+    .dragTo(page.getByTestId('inventory'));
+  await page.getByTestId('bag-item-hunting_bow').click({ button: 'right' });
+  await expect(page.getByTestId('item-menu')).toBeVisible();
+  await page.getByTestId('item-menu-drop').click();
+  await expect(page.getByTestId('drop-dialog')).toContainText('Drop Hunting Bow?');
+  await page.getByTestId('drop-confirm').click();
+  await expect(page.getByTestId('bag-item-hunting_bow')).toHaveCount(0);
 });
 
 test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ page }) => {

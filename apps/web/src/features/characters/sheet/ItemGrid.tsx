@@ -1,5 +1,5 @@
 import type { ItemDto } from '@realms/shared';
-import { useState, type HTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from 'react';
 import { ItemIcon } from './ItemIcon';
 import { isGear } from './item-filters';
 
@@ -28,6 +28,7 @@ export function ItemGrid({
   tip,
   onDoubleClick,
   onClick,
+  onContextMenu,
   selected,
   badge,
   testId,
@@ -45,6 +46,8 @@ export function ItemGrid({
   tip?: (item: ItemDto) => HTMLAttributes<HTMLElement>;
   onDoubleClick?: (item: ItemDto) => void;
   onClick?: (item: ItemDto) => void;
+  /** Request #65: right click on an item (opens its menu). */
+  onContextMenu?: (item: ItemDto, at: { x: number; y: number }) => void;
   /** Id of the selected item (shop). */
   selected?: string | null;
   /** Small label on the tile, e.g. a price. */
@@ -88,6 +91,14 @@ export function ItemGrid({
             data-selected={selected === item.id ? true : undefined}
             onDoubleClick={() => onDoubleClick?.(item)}
             onClick={() => onClick?.(item)}
+            onContextMenu={
+              onContextMenu
+                ? (e: MouseEvent) => {
+                    e.preventDefault();
+                    onContextMenu(item, { x: e.clientX, y: e.clientY });
+                  }
+                : undefined
+            }
           >
             <ItemIcon item={item} />
             {badge?.(item)}
@@ -197,6 +208,116 @@ export function GridTools({
       >
         Sort
       </button>
+    </div>
+  );
+}
+
+/** Request #65: small menu at the pointer (right click on an item). */
+export function ItemMenu({
+  at,
+  actions,
+  onClose,
+}: {
+  at: { x: number; y: number };
+  actions: Array<{ label: string; onSelect: () => void; danger?: boolean; testId?: string }>;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const close = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [onClose]);
+  // Keep the menu inside the window.
+  const x = Math.min(at.x, window.innerWidth - 170);
+  const y = Math.min(at.y, window.innerHeight - 40 * actions.length - 16);
+  return (
+    <div
+      className="item-menu-backdrop"
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        className="panel item-menu"
+        role="menu"
+        data-testid="item-menu"
+        style={{ left: Math.max(8, x), top: Math.max(8, y) }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {actions.map((a) => (
+          <button
+            key={a.label}
+            role="menuitem"
+            className="item-menu-btn"
+            data-danger={a.danger ? true : undefined}
+            data-testid={a.testId}
+            onClick={() => {
+              onClose();
+              a.onSelect();
+            }}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Request #65: confirm throwing an item away (choose how many of a stack). */
+export function DropDialog({
+  item,
+  onConfirm,
+  onCancel,
+}: {
+  item: ItemDto;
+  onConfirm: (qty: number) => void;
+  onCancel: () => void;
+}) {
+  const [qty, setQty] = useState(item.quantity);
+  return (
+    <div className="split-backdrop" onClick={onCancel}>
+      <form
+        className="panel split-dialog"
+        data-testid="drop-dialog"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onConfirm(qty);
+        }}
+      >
+        <div className="panel-title">
+          <span>Drop {item.name}?</span>
+        </div>
+        {item.quantity > 1 && (
+          <>
+            <input
+              type="range"
+              min={1}
+              max={item.quantity}
+              value={qty}
+              onChange={(e) => setQty(Number(e.target.value))}
+              aria-label="How many"
+            />
+            <p style={{ margin: 0, textAlign: 'center' }}>
+              Drop <strong className="v">{qty}</strong> of {item.quantity}
+            </p>
+          </>
+        )}
+        <p className="muted small" style={{ margin: 0, textAlign: 'center' }}>
+          Dropped items are gone for good.
+        </p>
+        <div className="row" style={{ justifyContent: 'center' }}>
+          <button type="button" className="btn btn-sm" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn btn-sm btn-danger" data-testid="drop-confirm">
+            Drop
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

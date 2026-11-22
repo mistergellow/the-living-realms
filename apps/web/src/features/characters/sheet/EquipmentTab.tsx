@@ -23,7 +23,7 @@ import { DragGhost, Tooltip, useDragAndDrop, useHover } from './drag';
 import { GlyphSvg, ItemIcon, SLOT_GLYPH } from './ItemIcon';
 import { ItemTooltipBody } from './ItemTooltip';
 import { ITEM_FILTERS, itemMatches, type ItemFilter } from './item-filters';
-import { GridTools, ItemGrid, parseCellKey, SplitDialog } from './ItemGrid';
+import { DropDialog, GridTools, ItemGrid, ItemMenu, parseCellKey, SplitDialog } from './ItemGrid';
 import { useInventoryActions } from '../../city/api';
 import { LEFT_SLOTS, RIGHT_SLOTS, SLOT_LABELS } from './slots';
 
@@ -49,16 +49,20 @@ export function EquipmentTab({
   sheet: CharacterSheetDto;
   characterId: string;
 }) {
-  const { equip, unequip, use } = useEquipment(characterId);
+  const { equip, unequip, use, drop } = useEquipment(characterId);
   const allocate = useAllocateAttributes(characterId);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const inv = useInventoryActions(characterId);
   const [split, setSplit] = useState<{ item: ItemDto; slot: number } | null>(null);
+  // Request #65: right-click menu on a bag item, and the drop confirmation.
+  const [menu, setMenu] = useState<{ item: ItemDto; at: { x: number; y: number } } | null>(null);
+  const [dropping, setDropping] = useState<ItemDto | null>(null);
   const busy =
     equip.isPending ||
     unequip.isPending ||
     use.isPending ||
+    drop.isPending ||
     inv.move.isPending ||
     inv.sort.isPending;
   /** Skill Books (request #47): double-click to read and learn. */
@@ -153,6 +157,7 @@ export function EquipmentTab({
           equip.error ??
           unequip.error ??
           use.error ??
+          drop.error ??
           allocate.error ??
           inv.move.error ??
           inv.sort.error
@@ -244,11 +249,17 @@ export function EquipmentTab({
               onDoubleClick={(item) =>
                 getItemDef(item.defId)?.teaches ? read(item) : doEquip(item, quickSlot(item, s))
               }
+              onContextMenu={(item, at) => {
+                if (busy) return;
+                tip.clear();
+                setMenu({ item, at });
+              }}
               testId="inventory"
             />
           </div>
           <p className="doll-hint">
-            Drag to arrange · drop on the same item to stack · Shift + drop to split
+            Drag to arrange · drop on the same item to stack · Shift + drop to split · right click
+            for more
           </p>
         </section>
 
@@ -346,6 +357,35 @@ export function EquipmentTab({
         <DragGhost x={dnd.drag.x} y={dnd.drag.y}>
           <ItemIcon item={dnd.drag.payload.item} />
         </DragGhost>
+      )}
+      {menu && (
+        <ItemMenu
+          at={menu.at}
+          onClose={() => setMenu(null)}
+          actions={[
+            ...(getItemDef(menu.item.defId)?.teaches
+              ? [{ label: 'Read', onSelect: () => read(menu.item) }]
+              : menu.item.slots.length
+                ? [{ label: 'Equip', onSelect: () => doEquip(menu.item, quickSlot(menu.item, s)) }]
+                : []),
+            {
+              label: 'Drop',
+              danger: true,
+              testId: 'item-menu-drop',
+              onSelect: () => setDropping(menu.item),
+            },
+          ]}
+        />
+      )}
+      {dropping && (
+        <DropDialog
+          item={dropping}
+          onCancel={() => setDropping(null)}
+          onConfirm={(qty) => {
+            drop.mutate({ itemId: dropping.id, qty });
+            setDropping(null);
+          }}
+        />
       )}
       {split && (
         <SplitDialog

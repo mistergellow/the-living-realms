@@ -266,6 +266,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
 | A127 | Mercado                                                         | só nas capitais (ainda não há aldeias); sem taxa; o vendedor recebe o ouro mesmo offline; tirar de volta só na cidade onde está à venda; uma pilha vende-se inteira                                                                                                                                                                                                                                                                                                                                                                                        | `MARKET_RULES`                                                                   |
 | A128 | Bónus do equipamento (pedido #64)                               | valores T1–T5 de `AFFIXES` (`tiers`); 10 % de chance de um tier acima; duas armas de 1 mão: +40 % de dano do ataque básico; Chill = −1 Focus por ronda, Blind = 25 % de falhar, Impale = 30 % do golpe, 3 rondas; "Casting speed" = chance de devolver 1 Focus (não há cooldowns); "Onslaught" = Strength ao matar (no PvE não há iniciativa); "+níveis de skill" só para todas as skills; Focus por ronda só a partir de T4                                                                                                                               | `AFFIX_RULES`, `DUAL_WIELD_RULES`, `AFFIXES`                                     |
+| A129 | Deitar itens fora (pedido #65)                                  | o item desaparece de vez (não fica no chão do hexágono); só da mochila (equipados: tirar primeiro; armazém: não); uma pilha cai inteira, ou escolhe-se a quantidade na confirmação; funciona em qualquer lado, também dentro de um Rift                                                                                                                                                                                                                                                                                                                    | `dropItem` (`sheet.service.ts`), `DropDialog`                                    |
 
 ---
 
@@ -1391,3 +1392,14 @@ estados novos Chill, Blind e Impale (ícones e cores). Duas armas de uma mão =
 mais dano. Ainda não: runas como bónus 6 e 7 (não há itens de runa), bónus
 fixo por tipo de equipamento, crafting. Testes: `affixes.test.ts` (pools,
 tiers, duas mãos, combate), `named.test.ts`, `character-sheet.test.ts`.
+
+### #65 — 2026-11-22 — Deitar itens fora em aventura
+
+**Pedido:** tem de haver uma forma de largar itens quando se está em aventura:
+na ficha do personagem, clicar com o botão direito no item e escolher "Drop".
+**Decisões:** valores provisórios A129 (o item desaparece de vez; só da mochila;
+funciona em qualquer lado).
+**Resultado:** botão direito num item da mochila abre um menu (Equip / Read e
+Drop); "Drop" pede confirmação (com a quantidade, se for uma pilha). Rota
+`POST /characters/:id/items/:itemId/drop` e `dropItem` no servidor. Testes:
+`character-sheet.test.ts` ("dropping items") e passo no e2e.

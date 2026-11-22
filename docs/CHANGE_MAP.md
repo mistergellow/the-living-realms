@@ -580,6 +580,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Filtros/pesquisa partilhados: `apps/web/src/features/characters/sheet/item-filters.ts` (`ITEM_FILTERS`, `itemMatches`, `isGear`) usados por `EquipmentTab.tsx` e `CityPage.tsx`
 - Arrastar-e-largar: `useDragAndDrop`/`DragGhost` (`sheet/drag.tsx`); no armazém `data-drop="bag|storage"` → `storage/deposit|withdraw` (`city.routes.ts`)
+- **Deitar fora (drop, pedido #65):** rota `POST /characters/:id/items/:itemId/drop` (`characters.routes.ts`, `dropItemRequestSchema` em `shared/api.ts`) → `dropItem` (`sheet.service.ts`: só itens da mochila, funciona em qualquer lado, também num Rift; apaga ou reduz a pilha); web `useEquipment().drop` (`characters/api.ts`), menu do botão direito `ItemMenu` e confirmação `DropDialog` (`sheet/ItemGrid.tsx`, prop `onContextMenu`), usados em `sheet/EquipmentTab.tsx`, estilos `.item-menu*` (`sheet.css`); testes `character-sheet.test.ts` ("dropping items") e `e2e/foundation.spec.ts`
 - Ferreiro, comparação (pedido #54): `CityDto.upgrades[id].compare/preview` (`shared/city.ts`, `city.service.ts` com `weaponInfo`/`upgradeMultiplier`), `UpgradeCompare` (`CityPage.tsx`)
 - **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
 - Testes: `apps/server/test/city.test.ts`, e2e "city storage"

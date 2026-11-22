@@ -800,6 +800,36 @@ button.bag-cell:focus-visible {
   place-items: center;
   background: rgb(0 0 0 / 0.55);
 }
+/* Request #65: right-click menu on a bag item. */
+.item-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+}
+.item-menu {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 9rem;
+  padding: var(--space-1);
+  gap: 2px;
+}
+.item-menu-btn {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.item-menu-btn:hover,
+.item-menu-btn:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+.item-menu-btn[data-danger] {
+  color: var(--danger);
+}
 .split-dialog {
   display: flex;
   flex-direction: column;

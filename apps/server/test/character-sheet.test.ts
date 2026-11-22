@@ -342,8 +342,7 @@ describe('Skill Books (request #47)', () => {
     expect(sheet.loadout[0]).toBe('second_wind');
     expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
     // Request #50: a second copy raises the skill's level; its numbers grow.
-    const healAt = (sh: CharacterSheetDto) =>
-      sh.learnedSkills.find((s) => s.id === 'second_wind')!;
+    const healAt = (sh: CharacterSheetDto) => sh.learnedSkills.find((s) => s.id === 'second_wind')!;
     expect(healAt(sheet).levelLabel).toBe('1');
     const copy = await give(id, 'book_second_wind');
     const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
@@ -371,5 +370,40 @@ describe('Skill Books (request #47)', () => {
     expect(res.json().error.message).toMatch(/Intellect 9/);
     const sword = (await sheetOf(cookie, id)).equipment.mainHand!.id;
     expect((await useItem(cookie, id, sword)).statusCode).toBe(400);
+  });
+});
+
+describe('dropping items (request #65)', () => {
+  const put = async (id: string, defId: string, quantity = 1) => {
+    const [row] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, source, quantity, slot)
+      values (gen_random_uuid(), ${id}, ${defId}, 'drop', ${quantity}, 10) returning id`;
+    return row!.id as string;
+  };
+  const drop = (cookie: string, id: string, itemId: string, qty?: number) =>
+    post(cookie, `/api/characters/${id}/items/${itemId}/drop`, qty ? { qty } : {});
+
+  it('throws a bag item away for good; part of a stack or all of it', async () => {
+    const { cookie, id } = await newCharacter();
+    const ring = await put(id, 'ring_of_vigor');
+    const res = await drop(cookie, id, ring);
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as CharacterSheetDto).inventory.some((i) => i.id === ring)).toBe(false);
+    const ore = await put(id, 'copper_ore', 5);
+    const part = (await drop(cookie, id, ore, 2)).json() as CharacterSheetDto;
+    expect(part.inventory.find((i) => i.id === ore)!.quantity).toBe(3);
+    const all = (await drop(cookie, id, ore)).json() as CharacterSheetDto;
+    expect(all.inventory.some((i) => i.id === ore)).toBe(false);
+  });
+
+  it('refuses equipped items and items of other characters', async () => {
+    const { cookie, id } = await newCharacter();
+    const sword = (await sheetOf(cookie, id)).equipment.mainHand!.id;
+    const res = await drop(cookie, id, sword);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/Unequip/);
+    const other = await newCharacter();
+    const theirs = await put(other.id, 'ring_of_vigor');
+    expect((await drop(cookie, id, theirs)).statusCode).toBe(404);
   });
 });

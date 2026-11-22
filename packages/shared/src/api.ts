@@ -568,6 +568,10 @@ export type EquipRequest = z.infer<typeof equipRequestSchema>;
 export const unequipRequestSchema = z.object({ slot: z.enum(EQUIP_SLOTS) });
 export type UnequipRequest = z.infer<typeof unequipRequestSchema>;
 
+/** Request #65: throw away an item from the bag (all of a stack unless `qty`). */
+export const dropItemRequestSchema = z.object({ qty: z.number().int().positive().optional() });
+export type DropItemRequest = z.infer<typeof dropItemRequestSchema>;
+
 /** Replace the prepared skills; each entry is a learned skill id or null (empty slot). */
 export const loadoutRequestSchema = z.object({
   slots: z.array(z.string().max(64).nullable()).length(MAX_PREPARED_SKILLS),

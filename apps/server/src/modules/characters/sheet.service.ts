@@ -360,6 +360,33 @@ export class CharacterSheetService {
     });
   }
 
+  /**
+   * Request #65: throw an item away from the bag (it is gone for good). Works
+   * anywhere, also during a Rift; equipped and stored items cannot be dropped.
+   * A stack drops whole unless `qty` is given.
+   */
+  async dropItem(accountId: string, characterId: string, itemId: string, qty?: number) {
+    return this.db.transaction(async (tx) => {
+      const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
+      const [item] = await tx
+        .select()
+        .from(items)
+        .where(and(eq(items.id, itemId), eq(items.characterId, c.id)))
+        .for('update');
+      if (!item) throw errors.notFound('Item');
+      if (item.equippedSlot) throw errors.validation('Unequip it first.');
+      if (item.inStorage) throw errors.validation('Only items in the bag can be dropped.');
+      const n = Math.min(qty ?? item.quantity, item.quantity);
+      if (n < item.quantity)
+        await tx
+          .update(items)
+          .set({ quantity: item.quantity - n })
+          .where(eq(items.id, item.id));
+      else await tx.delete(items).where(eq(items.id, item.id));
+      return this.buildSheet(tx, c);
+    });
+  }
+
   async unequip(accountId: string, characterId: string, slot: EquipSlot) {
     return this.db.transaction(async (tx) => {
       const c = await this.getOwnedCharacter(tx, accountId, characterId, true);

@@ -5,6 +5,7 @@ import {
   equipRequestSchema,
   loadoutRequestSchema,
   unequipRequestSchema,
+  dropItemRequestSchema,
   type CharacterListResponse,
 } from '@realms/shared';
 import type { FastifyInstance } from 'fastify';
@@ -69,6 +70,13 @@ export async function charactersRoutes(
   app.post('/:id/items/:itemId/use', async (request) => {
     const { id, itemId } = parse(useItemParams, request.params);
     return sheets.useItem(request.auth!.account.id, id, itemId);
+  });
+
+  /** Request #65: drop (throw away) an item from the bag, anywhere — also on an adventure. */
+  app.post('/:id/items/:itemId/drop', async (request) => {
+    const { id, itemId } = parse(useItemParams, request.params);
+    const { qty } = parse(dropItemRequestSchema, request.body ?? {});
+    return sheets.dropItem(request.auth!.account.id, id, itemId, qty);
   });
 
   app.post('/:id/unequip', async (request) => {
