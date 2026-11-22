@@ -16,7 +16,6 @@ const KEYWORDS: Array<[string, Kind]> = [
   ['physical', 'physical'],
   ['magic', 'magic'],
   ['magical', 'magic'],
-  ['ranged', 'ranged'],
   ['Focus', 'focus'],
   ['Mana', 'mana'],
   ['HP', 'hp'],

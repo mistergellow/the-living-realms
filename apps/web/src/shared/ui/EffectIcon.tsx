@@ -1,4 +1,10 @@
-import { getAbility, STATUS_DESCRIPTIONS, STATUS_NAMES, type AbilityDef } from '@realms/game-core';
+import {
+  getAbility,
+  STATUS_DESCRIPTIONS,
+  STATUS_NAMES,
+  type AbilityDef,
+  damageTypeLabel,
+} from '@realms/game-core';
 import { Rich } from './Rich';
 import type { StatusId } from '@realms/shared';
 import './effect-icons.css';
@@ -193,7 +199,7 @@ export function abilityEffectIcons(a: AbilityDef, power = 1) {
             key={key}
             kind={kind}
             value={v}
-            title={`${v} ${e.damageType} damage${e.drain ? ', heals for the damage dealt' : ''}`}
+            title={`${v} ${damageTypeLabel(e.damageType)} damage${e.drain ? ', heals for the damage dealt' : ''}`}
           />,
         ];
       }
