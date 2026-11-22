@@ -13,7 +13,42 @@ import type { WeaponType } from './weapons.js';
 export const INVENTORY_RULES = {
   /** Bag slots (a stack of materials uses one slot). Equipped items do not count. */
   bagSlots: 20,
+  /** Request #59: city storage slots (more can be unlocked later). */
+  storageSlots: 80,
 } as const;
+
+/** Request #59: the order "Sort" puts items in (by kind, then best first, then name). */
+const SORT_KINDS: readonly string[] = [
+  'weapon',
+  'offhand',
+  'armor',
+  'accessory',
+  'tool',
+  'consumable',
+  'material',
+];
+
+export interface SortableItem {
+  itemDefId: string;
+  /** Number of bonus effects (rarity). */
+  affixCount: number;
+  upgradeLevel: number;
+  grade: number | null;
+}
+
+/** Comparator for sorting a bag or the storage. */
+export function compareItemsForSort(a: SortableItem, b: SortableItem): number {
+  const da = getItemDef(a.itemDefId);
+  const db = getItemDef(b.itemDefId);
+  const ka = SORT_KINDS.indexOf(da?.kind ?? 'material');
+  const kb = SORT_KINDS.indexOf(db?.kind ?? 'material');
+  if (ka !== kb) return ka - kb;
+  if (a.affixCount !== b.affixCount) return b.affixCount - a.affixCount;
+  if (a.upgradeLevel !== b.upgradeLevel) return b.upgradeLevel - a.upgradeLevel;
+  const n = (da?.name ?? a.itemDefId).localeCompare(db?.name ?? b.itemDefId);
+  if (n !== 0) return n;
+  return (b.grade ?? -1) - (a.grade ?? -1);
+}
 
 /** What the general store in every capital sells (gold each). */
 export const SHOP_STOCK: ReadonlyArray<{ item: ItemDefId; price: number }> = [

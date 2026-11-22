@@ -141,6 +141,13 @@
       "when": 1795312107358,
       "tag": "0019_guilds",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795345931991,
+      "tag": "0020_item_slots",
+      "breakpoints": true
     }
   ]
 }

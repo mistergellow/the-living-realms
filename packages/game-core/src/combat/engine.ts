@@ -483,11 +483,8 @@ function applyEffect(
     }
     case 'status': {
       const potency = 1 + actor.stats.effectPotency / 100;
-      // Request #53: values keep one decimal so every skill level counts
-      // (they are rounded where they deal damage or heal).
-      const value = effect.value
-        ? Math.max(1, Math.round(effect.value * mult * potency * 10) / 10)
-        : 0;
+      // Request #59: power values are whole numbers, rounded down.
+      const value = effect.value ? Math.max(1, Math.floor(effect.value * mult * potency)) : 0;
       // Skill levels (request #53): statuses (not Stun) last longer from M1.
       const extra =
         effect.status === 'stun' ? 0 : (actor.abilityExtraTurns?.[ability.id] ?? 0);

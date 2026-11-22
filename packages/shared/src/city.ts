@@ -8,6 +8,8 @@ export interface CityDto {
   sheet: CharacterSheetDto;
   storage: ItemDto[];
   bag: { used: number; slots: number };
+  /** Request #59: storage size (80; more can be unlocked later). */
+  storageSlots: number;
   shop: Array<{ defId: string; name: string; price: number }>;
   /** What the store pays for each bag item it buys (gear only); id → gold. */
   sellPrices: Record<string, number>;
@@ -43,4 +45,12 @@ export const buySchema = z.object({
   defId: z.string().max(64),
   qty: z.number().int().min(1).max(99).default(1),
 });
+/** Request #59: move (or split, merge, swap) an item to a bag or storage position. */
+export const moveItemSchema = z.object({
+  itemId: z.uuid(),
+  to: z.enum(['bag', 'storage']),
+  slot: z.number().int().min(0).max(999),
+  qty: z.number().int().min(1).optional(),
+});
+export const sortItemsSchema = z.object({ place: z.enum(['bag', 'storage']) });
 export const upgradeSchema = z.object({ itemId: z.uuid(), blessing: z.boolean().default(false) });

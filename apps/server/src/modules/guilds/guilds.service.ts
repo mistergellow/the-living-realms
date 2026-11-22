@@ -25,7 +25,7 @@ import { ErrorCode, type GuildDto, type GuildViewDto } from '@realms/shared';
 import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
-import { assertBagRoom, giveItem } from '../characters/bag.js';
+import { assertBagRoom, firstFreeSlot, giveItem } from '../characters/bag.js';
 import {
   baseAttributesOf,
   toItemDto,
@@ -528,6 +528,7 @@ export class GuildsService {
       } else {
         await assertBagRoom(tx, c.id);
         await tx.insert(items).values({
+          slot: await firstFreeSlot(tx, c.id, 'bag'),
           characterId: c.id,
           itemDefId: gi.itemDefId,
           quality: gi.quality,
@@ -559,6 +560,7 @@ function asItem(gi: typeof guildItems.$inferSelect): Item {
     quantity: gi.quantity,
     equippedSlot: null,
     inStorage: true,
+    slot: null,
     source: gi.source,
     upgradeLevel: gi.upgradeLevel,
     grade: gi.grade,

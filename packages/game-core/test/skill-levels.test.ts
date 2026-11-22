@@ -29,7 +29,7 @@ describe('skill levels (request #53)', () => {
     expect(skillLevelMultiplier(21)).toBeCloseTo(3);
   });
 
-  it('every skill gets better at every level (nothing stays flat)', () => {
+  it('every skill gets better as it levels (whole numbers, rounded down)', () => {
     const power = (lvl: number, s: (typeof SKILLS)[keyof typeof SKILLS]) =>
       skillAtLevel(s, lvl).effects.reduce(
         (n, e) =>
@@ -41,16 +41,23 @@ describe('skill levels (request #53)', () => {
               : 0),
         0,
       );
-    for (const s of Object.values(SKILLS))
+    // Whole numbers rounded down (request #59): never worse, clearly better over a few levels.
+    for (const s of Object.values(SKILLS)) {
       for (let l = 2; l <= SKILL_RULES.maxLevel; l++)
-        expect(power(l, s), `${s.id} ${skillLevelLabel(l)}`).toBeGreaterThan(power(l - 1, s));
+        expect(power(l, s), `${s.id} ${skillLevelLabel(l)}`).toBeGreaterThanOrEqual(
+          power(l - 1, s),
+        );
+      expect(power(10, s), s.id).toBeGreaterThan(power(1, s));
+      expect(power(21, s), s.id).toBeGreaterThan(power(10, s));
+    }
   });
 
   it('Expose Weakness grows: Mark and Weaken get stronger and last longer', () => {
     const at = (l: number) => skillAtLevel(SKILLS.expose_weakness, l).effects;
     const mark = (l: number) => at(l).find((e) => e.kind === 'status' && e.status === 'mark')!;
     expect(mark(1)).toMatchObject({ value: 25, turns: 2 });
-    expect((mark(2) as { value: number }).value).toBeGreaterThan(25);
+    expect((mark(2) as { value: number }).value).toBe(27);
+    expect(Number.isInteger((mark(5) as { value: number }).value)).toBe(true);
     expect(mark(21)).toMatchObject({ turns: 4 });
     expect(markFactor(50)).toBe(1.5);
     expect(weakenFactor(40)).toBeCloseTo(0.6);

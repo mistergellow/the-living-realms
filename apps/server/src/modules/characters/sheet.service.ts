@@ -60,7 +60,7 @@ import {
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { AppError, errors } from '../../lib/errors.js';
 import { toCharacterDto } from './characters.service.js';
-import { assertBagRoom } from './bag.js';
+import { assertBagRoom, ensureSlots, firstFreeSlot } from './bag.js';
 import { itemsRepository } from './items.repository.js';
 import { riftsRepository } from '../rifts/rifts.repository.js';
 
@@ -141,6 +141,7 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
         ? { used: unlocked.filter((r) => !!r.runeId).length, total: unlocked.length }
         : null,
     grantsAbilities: (def?.abilities ?? []).flatMap((id) => getAbility(id)?.name ?? []),
+    slot: i.equippedSlot ? null : i.slot,
     grade: i.grade === null ? null : { value: i.grade, name: gradeName(i.grade) },
     tool: def?.tool
       ? {
@@ -211,12 +212,18 @@ export class CharacterSheetService {
     return this.db.transaction(async (tx) => {
       const c = await this.getOwnedCharacter(tx, accountId, characterId, true);
       await assertNotInRift(tx, c.id);
-      const owned = (await itemsRepository.listByCharacter(tx, c.id)).map(toOwned);
+      const rows = await itemsRepository.listByCharacter(tx, c.id);
+      const owned = rows.map(toOwned);
       const plan = planEquip(owned, itemId, slot, baseAttributesOf(c));
       if (!plan.ok) throw new AppError(400, ErrorCode.INVALID_EQUIPMENT, plan.reason);
       // Free the slots first (unique slot index), then place the item.
       await itemsRepository.unequip(tx, plan.unequip);
       await itemsRepository.setSlot(tx, itemId, slot);
+      // Request #59: what comes off takes the bag position the new item leaves.
+      const from = rows.find((r) => r.id === itemId)?.slot ?? null;
+      await tx.update(items).set({ slot: null }).where(eq(items.id, itemId));
+      if (plan.unequip[0] && from !== null)
+        await tx.update(items).set({ slot: from }).where(eq(items.id, plan.unequip[0]));
       return this.buildSheet(tx, c);
     });
   }
@@ -353,6 +360,11 @@ export class CharacterSheetService {
       if (item) {
         await assertBagRoom(tx, c.id); // request #50: the bag must have room
         await itemsRepository.setSlot(tx, item.id, null);
+        // Request #59: into the first free bag position.
+        await tx
+          .update(items)
+          .set({ slot: await firstFreeSlot(tx, c.id, 'bag') })
+          .where(eq(items.id, item.id));
       }
       return this.buildSheet(tx, c);
     });
@@ -414,6 +426,7 @@ export class CharacterSheetService {
   }
 
   async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
+    await ensureSlots(db, c.id); // request #59: every item has a place
     const [rows, skills] = await Promise.all([
       itemsRepository.listByCharacter(db, c.id),
       itemsRepository.learnedSkills(db, c.id),

@@ -309,6 +309,8 @@ export interface ItemDto {
   runeSlots: { used: number; total: number } | null;
   /** Names of the abilities this item grants while equipped (weapons, off-hands). */
   grantsAbilities: string[];
+  /** Request #59: position in the bag or the storage grid (null when equipped). */
+  slot: number | null;
   /** Gathered materials (request #52): grade 0 Poor … 4 Exceptional, with its name. */
   grade: { value: number; name: string } | null;
   /** Profession tools (request #51): type, tier and the Mastery rank needed to use it. */
