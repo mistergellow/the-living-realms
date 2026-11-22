@@ -414,6 +414,18 @@ function ProfessionDetail({
         {unlocked.map((a) => {
           const missing = a.inputs.some((i) => i.have < i.qty);
           const needsTarget = !!a.effect && !target;
+          // Request #64: say why a recipe cannot be done right now.
+          const blocked = !p.availableHere
+            ? `Travel to a ${p.terrains?.join(' or ').toLowerCase()} hex first.`
+            : p.node && p.node.amount < 1
+              ? 'This spot is exhausted for now.'
+              : p.tool && !p.tool.best
+                ? `You need a ${p.tool.name} in your bag.`
+                : missing
+                  ? 'You are missing materials.'
+                  : jobRunning
+                    ? 'A job is running.'
+                    : null;
           return (
             <article key={a.id} className="activity" data-testid={`activity-${a.id}`}>
               <h3>{a.name}</h3>
@@ -442,6 +454,11 @@ function ProfessionDetail({
                   {a.outputs
                     .map((o) => `${o.min === o.max ? o.min : `${o.min}–${o.max}`} × ${o.name}`)
                     .join(', ')}
+                </p>
+              )}
+              {blocked && (
+                <p className="small field-error" data-testid={`blocked-${a.id}`}>
+                  {blocked}
                 </p>
               )}
               {a.effect && (

@@ -130,6 +130,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                   | 2026-11-22 | `GameShell.tsx`                                                                                       |
 | D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                    | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
 | D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                               | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
+| D121 | **O conteúdo principal ocupa o espaço; a mochila (20) é uma coluna compacta**; o que acontece numa sala do Rift abre **num popup à frente de tudo**; páginas coerentes e óbvias                                                                                                                                        | 2026-11-22 | `city.css`, `sheet.css`, `RunPage.tsx`                                                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -1330,3 +1331,24 @@ venda em todas as cidades. Tabela `market_listings` (migração 0021); rotas
 `/characters/:id/market` (+ `list`, `buy`, `cancel`). Testes: `market.test.ts`
 (4) e passo no e2e. Também neste pedido: artefacto "Living Realms Arsenal" com
 todas as armas, itens com nome, armaduras e skills (níveis 1, 10 e P).
+
+### #64 — 2026-11-22 — Revisão de todas as páginas (proporções, popups, clareza)
+
+**Pedido:** as janelas estavam desproporcionadas (a loja é mais importante do
+que a mochila de 20 espaços); rever todas as páginas, incluindo as dungeons,
+para serem coerentes e óbvias (ex. uma sala de desafio aparecia no canto em vez
+de ser um popup à frente de tudo); o mais "user friendly" possível.
+**Decisões:** D121.
+**Resultado:**
+
+- Loja, mercado e armazém: o painel principal (ofertas, itens à venda, armazém)
+  à esquerda e a encher o espaço; a mochila numa coluna compacta à direita
+  (o armazém passou para a esquerda). As grelhas principais enchem a largura.
+- Ficha: o boneco e os atributos ocupam o espaço; o inventário é uma coluna
+  compacta (como na loja).
+- Rifts: eventos/desafios, salas de saque, fogueiras e salas secretas abrem
+  num popup centrado à frente do mapa (antes ficavam no painel do canto).
+- Profissões: cada receita diz porque não se pode fazer agora (ir a um rio,
+  falta a ferramenta, faltam materiais, sítio esgotado, trabalho a decorrer).
+- Amigos, world boss e fundar guilda: largura legível e centrada em vez de
+  caixas de 1900 px quase vazias.

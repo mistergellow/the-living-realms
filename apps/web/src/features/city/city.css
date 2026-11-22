@@ -174,3 +174,33 @@
   border-top: 1px solid var(--frame);
   flex: none;
 }
+
+/*
+ * Request #64: the store, market and storage are the point of these screens;
+ * the bag (20 slots) is a compact column on the right, like on the sheet.
+ */
+.storage-cols {
+  grid-template-columns: minmax(0, 1fr) min(25rem, 40%);
+}
+.bag-pane {
+  width: 100%;
+}
+.bag-pane .bag-grid {
+  grid-template-columns: repeat(5, minmax(0, 4.2rem));
+}
+.storage-pane:not(.bag-pane) .bag-grid {
+  justify-content: start;
+}
+@media (max-width: 56.25em) {
+  .storage-cols {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+  .bag-pane {
+    width: 100%;
+  }
+}
+/* Main grids fill the pane with as many columns as fit. */
+.storage-pane:not(.bag-pane) .bag-grid {
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+}
