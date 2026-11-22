@@ -19,14 +19,21 @@
   --border: #2e2a3a;
   --border-strong: #463f55;
 
-  /* frames: thin light borders on dark glass (mobile-RPG style, request #30) */
-  --frame: rgb(255 255 255 / 0.2);
-  --frame-hi: rgb(255 255 255 / 0.5);
-  --frame-glow: rgb(255 176 64 / 0.35);
-  --glass: rgb(18 19 26 / 0.72);
-  --glass-strong: rgb(14 15 21 / 0.9);
-  --glass-border: rgb(255 255 255 / 0.22);
-  --glass-border-hi: rgb(255 255 255 / 0.55);
+  /*
+   * Frames (request #58, "premium RPG" look): thin antique-gold borders on
+   * near-opaque dark panels (was white lines on glass, request #30).
+   */
+  --gold-1: #f3dc9a;
+  --gold-2: #d4a849;
+  --gold-3: #8a6424;
+  --gold-4: #4a3514;
+  --frame: rgb(196 152 72 / 0.55);
+  --frame-hi: #e3c27a;
+  --frame-glow: rgb(228 184 92 / 0.4);
+  --glass: rgb(14 13 19 / 0.9);
+  --glass-strong: rgb(10 10 15 / 0.96);
+  --glass-border: rgb(196 152 72 / 0.5);
+  --glass-border-hi: #e3c27a;
 
   /* text */
   --text: #f3f1ec;
@@ -34,8 +41,8 @@
   --text-faint: #7d7a74;
 
   /* accents */
-  --accent: #f5a524;
-  --accent-strong: #ffc25a;
+  --accent: #d9a441;
+  --accent-strong: #f0cf7a;
   --accent-ink: #2a1600;
   --danger: #e2604c;
   --success: #6cc08b;

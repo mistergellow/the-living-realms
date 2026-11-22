@@ -122,6 +122,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D110 | **Rifts mudam todos os dias** de posição e de ameaça; **mais Rifts**, alguns já dentro dos territórios; **pirâmide** (muitos de ameaça baixa, poucos de alta)                                                                                                                                                          | 2026-11-22 | `riftLayout`, `RIFT_LAYOUT_RULES`                                                                     |
 | D111 | **Trabalhos de profissão**: escolher quantas tentativas e pagar **em AP** (tudo já) ou **em tempo real** (os itens chegam no fim)                                                                                                                                                                                      | 2026-11-22 | `startJob`, `JOB_RULES`                                                                               |
 | D112 | **Guildas**: máx. 16 membros; reputação da guilda ganha a fazer coisas juntos (Rifts, raids); ícone e cor; armazém da guilda; o líder convida e expulsa; comprar terreno de guilda                                                                                                                                     | 2026-11-22 | `content/guilds.ts`, `guilds.service.ts`                                                              |
+| D113 | **Visual coerente "premium RPG"** pela referência do dono: painéis escuros com molduras douradas, títulos dourados, ícones redondos com gradiente e símbolo branco                                                                                                                                                     | 2026-11-22 | `styles/theme.css`, `tokens.css`                                                                      |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -1225,3 +1226,19 @@ quando ≥ 2 membros vencem um Rift juntos. Tabelas `guilds`, `guild_members`,
 `guild_invites`, `guild_items` (migração 0019). Testes: `guilds.test.ts`
 (5) e e2e "guild". Ainda por fazer: edifícios no terreno (oficinas privadas,
 fase 5 das profissões), marcas das guildas no mapa, chat da guilda.
+
+### #58 — 2026-11-22 — Jogo mais coerente e bonito (referência visual)
+
+**Pedido:** "tornar o jogo mais visualmente coerente e mais bonito", com uma
+imagem de referência (interface RPG premium) e uma folha de ícones de efeitos
+(redondos, com gradiente). Depois do commit, se faltarem tokens, agendar para
+continuar sozinho.
+**Decisões:** D113.
+**Resultado:** tema novo `apps/web/src/styles/theme.css` (carregado por último)
+e tokens dourados (`--gold-1…4`, molduras, accent): painéis quase opacos com
+moldura dourada fina e cantos ornamentados; títulos dourados; botões escuros
+com moldura dourada e principais em dourado antigo; campos de texto escuros;
+barra de cima, ações do hub (medalhão redondo) e menu de baixo com o mesmo
+estilo; ícones de skills e de efeitos redondos com gradiente da cor e símbolo
+branco (como a referência); emblemas das guildas iguais. Arte continua
+PLACEHOLDER. Testes: os 13 e2e (incluindo "screens fit every screen size").
