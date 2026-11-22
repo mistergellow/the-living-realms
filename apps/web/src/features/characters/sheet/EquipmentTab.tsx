@@ -21,15 +21,15 @@ import { useAllocateAttributes, useEquipment } from '../api';
 import { DragGhost, Tooltip, useDragAndDrop, useHover } from './drag';
 import { GlyphSvg, ItemIcon, SLOT_GLYPH } from './ItemIcon';
 import { ItemTooltipBody } from './ItemTooltip';
-import { isGear, ITEM_FILTERS, itemMatches, type ItemFilter } from './item-filters';
+import { ITEM_FILTERS, itemMatches, type ItemFilter } from './item-filters';
+import { GridTools, ItemGrid, parseCellKey, SplitDialog } from './ItemGrid';
+import { useInventoryActions } from '../../city/api';
 import { LEFT_SLOTS, RIGHT_SLOTS, SLOT_LABELS } from './slots';
 
 type Filter = ItemFilter;
 const FILTERS = ITEM_FILTERS;
-const matches = (i: ItemDto, f: Filter) => itemMatches(i, f);
-/** The inventory grid always shows at least this many cells (empty ones included). */
-const MIN_CELLS = 36;
-const COLS = 6;
+/** Request #59: the bag is a 5 × 4 grid of fixed positions. */
+const COLS = 5;
 
 const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
@@ -52,7 +52,14 @@ export function EquipmentTab({
   const allocate = useAllocateAttributes(characterId);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const busy = equip.isPending || unequip.isPending || use.isPending;
+  const inv = useInventoryActions(characterId);
+  const [split, setSplit] = useState<{ item: ItemDto; slot: number } | null>(null);
+  const busy =
+    equip.isPending ||
+    unequip.isPending ||
+    use.isPending ||
+    inv.move.isPending ||
+    inv.sort.isPending;
   /** Skill Books (request #47): double-click to read and learn. */
   const read = (item: ItemDto) => {
     if (busy) return;
@@ -73,9 +80,19 @@ export function EquipmentTab({
     unequip.mutate({ slot });
   };
 
-  const dnd = useDragAndDrop<Drag>((d, target) => {
+  const dnd = useDragAndDrop<Drag>((d, target, mods) => {
     tip.clear();
     if (!target) return;
+    // Request #59: a bag cell — arrange, stack, split, or take gear off onto it.
+    const cell = parseCellKey(target);
+    if (cell) {
+      if (busy) return;
+      if (d.from === 'inventory' && d.item.slot === cell.slot) return;
+      if (mods.shift && d.from === 'inventory' && d.item.quantity > 1)
+        setSplit({ item: d.item, slot: cell.slot });
+      else inv.move.mutate({ itemId: d.item.id, to: 'bag', slot: cell.slot });
+      return;
+    }
     if (target === 'inventory') {
       if (d.from !== 'inventory') doUnequip(d.from);
       return;
@@ -84,18 +101,12 @@ export function EquipmentTab({
   });
   const dragging = dnd.drag?.payload.item ?? null;
 
-  // Request #50: search the bag by name.
-  const q = search.trim().toLowerCase();
-  const items = s.inventory.filter(
-    (i) => matches(i, filter) && (!q || i.name.toLowerCase().includes(q)),
-  );
   // The tooltip follows the live sheet: an item that just moved closes it.
   const hovered = tip.hover
     ? [...s.inventory, ...Object.values(s.equipment)].find(
         (i) => i?.id === tip.hover!.value.id && i.equippedSlot === tip.hover!.value.equippedSlot,
       )
     : undefined;
-  const cells = Math.max(MIN_CELLS, Math.ceil(items.length / COLS) * COLS);
 
   const renderSlot = (slot: EquipSlot) => {
     const item = s.equipment[slot];
@@ -136,7 +147,16 @@ export function EquipmentTab({
 
   return (
     <div className="equip-tab">
-      <FormError error={equip.error ?? unequip.error ?? use.error ?? allocate.error} />
+      <FormError
+        error={
+          equip.error ??
+          unequip.error ??
+          use.error ??
+          allocate.error ??
+          inv.move.error ??
+          inv.sort.error
+        }
+      />
       <div className="equip-grid">
         <section className="panel paperdoll" data-testid="equipment">
           <div className="doll-col">{LEFT_SLOTS.map(renderSlot)}</div>
@@ -150,7 +170,7 @@ export function EquipmentTab({
                 offhand={offhandArtFor(
                   s.equipment.offHand?.broken ? null : s.equipment.offHand?.defId,
                 )}
-                size={240}
+                size={170}
                 title={s.character.name}
               />
             </div>
@@ -183,82 +203,52 @@ export function EquipmentTab({
           className="panel bag"
           data-drop="inventory"
           data-accept={dragging ? dnd.drag?.payload.from !== 'inventory' : undefined}
-          data-over={
-            dnd.drag?.over === 'inventory' && dnd.drag.payload.from !== 'inventory'
-              ? true
-              : undefined
-          }
         >
           <div className="panel-title">
             <span data-testid="bag-count">
               Inventory ({s.inventory.length}/{INVENTORY_RULES.bagSlots})
             </span>
           </div>
-          <input
-            className="bag-search"
-            type="search"
-            placeholder="Search the bag…"
-            aria-label="Search the bag"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="bag-filters" role="tablist" aria-label="Inventory filter">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                role="tab"
-                aria-selected={filter === f.id}
-                className="chip-btn"
-                onClick={() => setFilter(f.id)}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="bag-grid" data-testid="inventory" style={{ ['--cols' as string]: COLS }}>
-            {Array.from({ length: cells }, (_, n) => {
-              const item = items[n];
-              if (!item) return <span key={`e${n}`} className="bag-cell" data-empty />;
-              return (
+          <GridTools
+            label="bag"
+            search={search}
+            onSearch={setSearch}
+            onSort={() => inv.sort.mutate('bag')}
+            sortDisabled={busy}
+          >
+            <div className="bag-filters" role="tablist" aria-label="Inventory filter">
+              {FILTERS.map((f) => (
                 <button
-                  key={item.id}
-                  className="bag-cell"
-                  aria-label={item.name}
-                  data-rarity={item.rarity}
-                  data-testid={`bag-${item.defId}`}
-                  {...dnd.bind({ item, from: 'inventory' }, !busy && isGear(item) && !item.broken)}
-                  {...tip.props(item)}
-                  onDoubleClick={() =>
-                    getItemDef(item.defId)?.teaches ? read(item) : doEquip(item, quickSlot(item, s))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') doEquip(item, quickSlot(item, s));
-                  }}
+                  key={f.id}
+                  role="tab"
+                  aria-selected={filter === f.id}
+                  className="chip-btn"
+                  onClick={() => setFilter(f.id)}
                 >
-                  <ItemIcon item={item} />
-                  {item.quantity > 1 && <span className="bag-qty">{item.quantity}</span>}
-                  {isGear(item) && (
-                    <span className="bag-q">
-                      <i
-                        style={{
-                          width: `${item.quality}%`,
-                          background:
-                            item.quality <= 0
-                              ? 'var(--danger)'
-                              : item.quality <= 25
-                                ? 'var(--warning)'
-                                : 'var(--success)',
-                        }}
-                      />
-                    </span>
-                  )}
+                  {f.label}
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          </GridTools>
+          <div className="bag-scroll">
+            <ItemGrid
+              place="bag"
+              items={s.inventory}
+              size={INVENTORY_RULES.bagSlots}
+              cols={COLS}
+              over={dnd.drag?.over ?? null}
+              dimmed={(i) => !itemMatches(i, filter, search)}
+              bind={(item) => dnd.bind({ item, from: 'inventory' }, !busy)}
+              tip={(item) => tip.props(item)}
+              onDoubleClick={(item) =>
+                getItemDef(item.defId)?.teaches ? read(item) : doEquip(item, quickSlot(item, s))
+              }
+              testId="inventory"
+            />
           </div>
-          {s.inventory.length === 0 && (
-            <p className="muted bag-empty">Your bag is empty. Rifts and professions fill it.</p>
-          )}
+          <p className="doll-hint">
+            Drag to arrange · drop on the same item to stack · Shift + drop to split
+          </p>
         </section>
 
         <section className="panel sheet-stats">
@@ -353,6 +343,16 @@ export function EquipmentTab({
         <DragGhost x={dnd.drag.x} y={dnd.drag.y}>
           <ItemIcon item={dnd.drag.payload.item} />
         </DragGhost>
+      )}
+      {split && (
+        <SplitDialog
+          item={split.item}
+          onCancel={() => setSplit(null)}
+          onConfirm={(qty) => {
+            inv.move.mutate({ itemId: split.item.id, to: 'bag', slot: split.slot, qty });
+            setSplit(null);
+          }}
+        />
       )}
     </div>
   );

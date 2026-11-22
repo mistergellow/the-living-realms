@@ -21,6 +21,8 @@ const env = {
   WORLD_TICK_MS: '1000',
   // Every test registers/logs in from the same IP: keep the auth rate limit out of the way.
   AUTH_RATE_LIMIT: '100',
+  // The screen-size test opens ~80 screens in a few minutes from one IP.
+  RATE_LIMIT: '5000',
   // Admin tools (request #41): e2e/admin.spec.ts logs in with this account.
   ADMIN_EMAILS: 'e2e-admin@example.com',
 } as Record<string, string>;

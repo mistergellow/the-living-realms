@@ -115,3 +115,62 @@
   padding-top: 0.4rem;
   border-top: 1px solid var(--frame);
 }
+
+/* Request #59: storage grids; only the panes scroll. */
+.storage-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  flex: 1;
+}
+.storage-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-3);
+  min-height: 0;
+  flex: 1;
+}
+.storage-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+.storage-pane > .btn {
+  align-self: flex-end;
+}
+.pane-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+@media (max-width: 56.25em) {
+  .storage-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.price-tag {
+  position: absolute;
+  left: 0.2rem;
+  top: 0.15rem;
+  padding: 0 0.25rem;
+  border-radius: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #f0c674;
+  background: rgb(0 0 0 / 0.7);
+}
+.bag-cell[data-selected='true'] {
+  border-color: var(--gold-1, #f3dc9a);
+  box-shadow: 0 0 0.7rem rgb(228 184 92 / 0.7);
+}
+.pick-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.6rem;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--frame);
+  flex: none;
+}

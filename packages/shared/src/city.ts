@@ -10,7 +10,8 @@ export interface CityDto {
   bag: { used: number; slots: number };
   /** Request #59: storage size (80; more can be unlocked later). */
   storageSlots: number;
-  shop: Array<{ defId: string; name: string; price: number }>;
+  /** Request #59: each offer carries the item card (for the grid and its tooltip). */
+  shop: Array<{ defId: string; name: string; price: number; item: ItemDto }>;
   /** What the store pays for each bag item it buys (gear only); id → gold. */
   sellPrices: Record<string, number>;
   /** Next upgrade of each weapon you carry or wear; id → quote. */

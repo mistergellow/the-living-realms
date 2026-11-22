@@ -11,8 +11,12 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * - CSRF defence in depth: SameSite=Lax cookies + Origin check on state-changing requests.
  * - Global rate limiting (Redis-backed so it holds across instances).
  */
-export const securityPlugin = fp<{ allowedOrigins: string[]; redis?: Redis }>(
-  async (app, { allowedOrigins, redis }) => {
+export const securityPlugin = fp<{
+  allowedOrigins: string[];
+  redis?: Redis;
+  rateLimitMax?: number;
+}>(
+  async (app, { allowedOrigins, redis, rateLimitMax }) => {
     await app.register(helmet, {
       contentSecurityPolicy: {
         directives: {
@@ -26,7 +30,7 @@ export const securityPlugin = fp<{ allowedOrigins: string[]; redis?: Redis }>(
 
     await app.register(rateLimit, {
       global: true,
-      max: 300,
+      max: rateLimitMax ?? 300,
       timeWindow: '1 minute',
       ...(redis ? { redis, nameSpace: 'realms:ratelimit:' } : {}),
     });
