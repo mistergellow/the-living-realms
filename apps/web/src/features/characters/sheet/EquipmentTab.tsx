@@ -1,4 +1,4 @@
-import { getItemDef } from '@realms/game-core';
+import { getItemDef, INVENTORY_RULES } from '@realms/game-core';
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
@@ -51,6 +51,7 @@ export function EquipmentTab({
   const { equip, unequip, use } = useEquipment(characterId);
   const allocate = useAllocateAttributes(characterId);
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const busy = equip.isPending || unequip.isPending || use.isPending;
   /** Skill Books (request #47): double-click to read and learn. */
   const read = (item: ItemDto) => {
@@ -83,7 +84,11 @@ export function EquipmentTab({
   });
   const dragging = dnd.drag?.payload.item ?? null;
 
-  const items = s.inventory.filter((i) => matches(i, filter));
+  // Request #50: search the bag by name.
+  const q = search.trim().toLowerCase();
+  const items = s.inventory.filter(
+    (i) => matches(i, filter) && (!q || i.name.toLowerCase().includes(q)),
+  );
   // The tooltip follows the live sheet: an item that just moved closes it.
   const hovered = tip.hover
     ? [...s.inventory, ...Object.values(s.equipment)].find(
@@ -185,8 +190,18 @@ export function EquipmentTab({
           }
         >
           <div className="panel-title">
-            <span>Inventory ({s.inventory.length})</span>
+            <span data-testid="bag-count">
+              Inventory ({s.inventory.length}/{INVENTORY_RULES.bagSlots})
+            </span>
           </div>
+          <input
+            className="bag-search"
+            type="search"
+            placeholder="Search the bag…"
+            aria-label="Search the bag"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <div className="bag-filters" role="tablist" aria-label="Inventory filter">
             {FILTERS.map((f) => (
               <button
