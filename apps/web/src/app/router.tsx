@@ -15,6 +15,7 @@ import { WorldBossPage } from '../features/worldboss/WorldBossPage';
 import { CityPage } from '../features/city/CityPage';
 import { LobbyPage } from '../features/rifts/LobbyPage';
 import { FriendsPage } from '../features/social/FriendsPage';
+import { GuildPage } from '../features/guild/GuildPage';
 import { Screen } from '../shared/ui/Screen';
 import { GameShell } from '../features/game/GameShell';
 import { HomePage } from '../features/game/HomePage';
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
           { path: '/world', element: <WorldPage /> },
           { path: '/rifts', element: <RiftsPage /> },
           { path: '/friends', element: <FriendsPage /> },
+          { path: '/guild', element: <GuildPage /> },
           { path: '/professions', element: <ProfessionsPage /> },
           { path: '/professions/inspect/:name', element: <InspectPage /> },
           { path: '/world-boss', element: <WorldBossPage /> },

@@ -579,6 +579,16 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
 - Testes: `apps/server/test/city.test.ts`, e2e "city storage"
 
+## Guildas (pedido #57, D112)
+
+- Regras: `packages/game-core/src/content/guilds.ts` (`GUILD_RULES`, `GUILD_ICONS`, `GUILD_COLORS`, `checkGuildName`, `checkGuildLand`, `guildRunReputation`)
+- Contrato: `packages/shared/src/guilds.ts` (`GuildViewDto`, `GuildDto`, `GuildInviteDto`, esquemas); erros `GUILD_FULL`, `NOT_IN_GUILD`, `ALREADY_IN_GUILD`, `GUILD_NAME_TAKEN` (`errors.ts`)
+- BD: `guilds`, `guild_members`, `guild_invites`, `guild_items` (migração 0019); **TRUNCATE** em `helpers.ts` e `worker.test.ts`; eventos `guild.*`
+- Servidor: `apps/server/src/modules/guilds/` (`guilds.service.ts`, `guilds.routes.ts` em `/api/characters/:id/guild…`), registado em `app.ts`; reputação: `awardGuildReputation` chamado em `rifts.service.ts` (`finish`, vitória)
+- Web: `apps/web/src/features/guild/` (`GuildPage.tsx`, `GuildEmblem.tsx` — ícones PLACEHOLDER, `api.ts`, `guild.css`); rota `/guild` (`router.tsx`); separador "Guild" (`GameShell.tsx`, ícone `banner` em `Icon.tsx`)
+- **Ícone novo:** `GUILD_ICONS` + `GLYPHS` em `GuildEmblem.tsx`
+- Testes: `apps/server/test/guilds.test.ts`, e2e "guild"
+
 ## Admin e conteúdo personalizado (pedido #41, ADR-044)
 
 - Quem é admin: variável `ADMIN_EMAILS` (`apps/server/src/config.ts`, `.env.example`, `playwright.config.ts`, `docs/DEPLOY_RAILWAY.md`) → `isAdminEmail`/`requireAdmin` (`apps/server/src/plugins/auth.ts`) → `AccountDto.isAdmin` (`auth.routes.ts`)

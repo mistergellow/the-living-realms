@@ -74,6 +74,7 @@ import type { AppContext } from '../../context.js';
 import { spendAp } from '../characters/ap.js';
 import { giveItem } from '../characters/bag.js';
 import { reputationGearBonus } from '../characters/sheet.service.js';
+import { awardGuildReputation } from '../guilds/guilds.service.js';
 import { settleWorldBossFight } from '../worldboss/worldboss.repository.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
@@ -575,6 +576,8 @@ export class RiftsService {
       return;
     }
     const rift = getRift(run.riftId)!;
+    // Request #57: guilds earn what their members earn together.
+    const earned: Array<{ characterId: string; reputation: number }> = [];
     for (const p of await repo.participants(tx, run.id)) {
       if (p.leftAt) continue; // already penalised when they left
       if (status !== 'victory') {
@@ -619,6 +622,7 @@ export class RiftsService {
       const previousClears = await repo.victoriesIn(tx, p.characterId, run.riftId, run.id);
       const gearBonusPct = await reputationGearBonus(tx, p.characterId);
       const reputation = riftReputation(rift.rewards.reputation, previousClears, gearBonusPct);
+      earned.push({ characterId: p.characterId, reputation });
       await tx
         .update(characters)
         .set({
@@ -644,6 +648,7 @@ export class RiftsService {
         'victory',
       );
     }
+    if (status === 'victory') await awardGuildReputation(tx, earned);
   }
 
   /** Equipped items lose quality (D30); `left` marks an early leaver (A28). */

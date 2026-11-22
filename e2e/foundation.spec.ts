@@ -410,6 +410,20 @@ test('city storage: search, filter and drag and drop (request #52)', async ({ pa
   await page.screenshot({ path: 'test-results/screens/13-blacksmith-compare.png' });
 });
 
+test('guild: the Guild tab offers to found one with an emblem (request #57)', async ({ page }) => {
+  await register(page, `e2e-guild-${unique()}@example.com`);
+  await createCharacter(page, randomName('Founder'));
+  await page.getByTestId('guild-link').click();
+  await expect(page.getByTestId('guild-found')).toContainText('Found a guild');
+  await page.getByLabel('Guild name').fill('Silver Hawks');
+  await page.getByRole('radio', { name: 'eagle' }).click();
+  await page.getByRole('radio', { name: '#1565c0' }).click();
+  await expect(page.getByRole('radio', { name: 'eagle' })).toHaveAttribute('aria-checked', 'true');
+  // A new character has no gold yet: founding (500 gold) is not possible.
+  await expect(page.getByRole('button', { name: /Found · 500 gold/ })).toBeDisabled();
+  await page.screenshot({ path: 'test-results/screens/14-guild.png' });
+});
+
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */
 const VIEWPORTS = [
   { name: 'phone', width: 390, height: 844 },

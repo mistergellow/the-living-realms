@@ -191,6 +191,8 @@ function BottomNav({ characterId }: { characterId: string }) {
     { to: '/home', label: 'Home', icon: 'home', home: true },
     { to: '/world', label: 'World', icon: 'compass' },
     { to: '/friends', label: 'Friends', icon: 'friends', badge: pending, testId: 'friends-link' },
+    // Request #57.
+    { to: '/guild', label: 'Guild', icon: 'banner', testId: 'guild-link' },
   ];
   return (
     <nav className="game-nav" aria-label="Main">

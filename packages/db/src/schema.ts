@@ -441,6 +441,94 @@ export const customContent = pgTable(
   ],
 );
 
+// ---------------------------------------------------------------------------
+// Guilds (request #57): up to 16 members, emblem (icon + colour), reputation,
+// gold bank, shared storage and a plot of land.
+// ---------------------------------------------------------------------------
+export const guilds = pgTable(
+  'guilds',
+  {
+    id: id(),
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    icon: text('icon').notNull(),
+    color: text('color').notNull(),
+    leaderCharacterId: uuid('leader_character_id').references(() => characters.id, {
+      onDelete: 'set null',
+    }),
+    reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
+    gold: bigint('gold', { mode: 'number' }).notNull().default(0),
+    /** The guild's land on the map (null = none yet). */
+    landQ: integer('land_q'),
+    landR: integer('land_r'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('guilds_world_name_uq').on(t.worldId, sql`lower(${t.name})`),
+    uniqueIndex('guilds_world_land_uq')
+      .on(t.worldId, t.landQ, t.landR)
+      .where(sql`${t.landQ} is not null`),
+    check('guilds_gold_nonneg', sql`${t.gold} >= 0`),
+  ],
+);
+
+export const guildMembers = pgTable(
+  'guild_members',
+  {
+    /** A character is in at most one guild. */
+    characterId: uuid('character_id')
+      .primaryKey()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    guildId: uuid('guild_id')
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    /** 'leader' | 'member'. */
+    role: text('role').notNull().default('member'),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('guild_members_guild_idx').on(t.guildId)],
+);
+
+export const guildInvites = pgTable(
+  'guild_invites',
+  {
+    guildId: uuid('guild_id')
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    invitedBy: uuid('invited_by').references(() => characters.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.characterId] })],
+);
+
+/** Guild storage: the same fields as `items`, owned by the guild. */
+export const guildItems = pgTable(
+  'guild_items',
+  {
+    id: id(),
+    guildId: uuid('guild_id')
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    itemDefId: text('item_def_id').notNull(),
+    quality: smallint('quality').notNull().default(100),
+    quantity: integer('quantity').notNull().default(1),
+    upgradeLevel: smallint('upgrade_level').notNull().default(0),
+    grade: smallint('grade'),
+    specials: jsonb('specials').notNull().default([]),
+    runeSlots: jsonb('rune_slots').notNull().default([]),
+    source: text('source').notNull().default('guild'),
+    depositedBy: uuid('deposited_by').references(() => characters.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('guild_items_guild_idx').on(t.guildId)],
+);
+
 // Profession jobs in real time (request #56): one per character. Inputs (and
 // node charges) are taken at the start; the attempts are resolved when the job
 // is read after `finishes_at`, and the summary is kept in `result` until the

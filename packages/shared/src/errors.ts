@@ -32,6 +32,11 @@ export const ErrorCode = {
   NOT_ENOUGH_GOLD: 'NOT_ENOUGH_GOLD',
   /** The world boss allows one fight per character per day (request #43). */
   NO_ATTEMPTS_LEFT: 'NO_ATTEMPTS_LEFT',
+  /** Guilds (request #57). */
+  GUILD_FULL: 'GUILD_FULL',
+  NOT_IN_GUILD: 'NOT_IN_GUILD',
+  ALREADY_IN_GUILD: 'ALREADY_IN_GUILD',
+  GUILD_NAME_TAKEN: 'GUILD_NAME_TAKEN',
   INTERNAL: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
