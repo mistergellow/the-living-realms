@@ -10,6 +10,7 @@ import {
   type RiftLobby,
 } from '@realms/db';
 import {
+  AP_RULES,
   CURRENT_WORLD_BOSS_SEASON,
   getItemDef,
   getRift,
@@ -32,6 +33,7 @@ import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
 import type { CharacterSheetService } from '../characters/sheet.service.js';
 import type { FriendsService } from '../social/friends.service.js';
+import { spendAp } from '../characters/ap.js';
 import type { WorldBossService } from '../worldboss/worldboss.service.js';
 import {
   assertAtRift,
@@ -339,6 +341,7 @@ export class LobbiesService {
       }
       const rift = getRift(lobby.riftId)!;
       assertAtRift(rift, locked);
+      for (const c of locked) await spendAp(tx, c, AP_RULES.riftEntryCost, 'enter a Rift');
       const runId = await this.rifts.createRun(
         tx,
         rift,

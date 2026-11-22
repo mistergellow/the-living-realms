@@ -305,6 +305,20 @@ export const RIFT_TIER_RULES = {
   names: ['Fringe Rift', 'Shallow Rift', 'Deep Rift', 'Abyssal Rift', 'Heart Rift'],
 } as const;
 
+/**
+ * Gold (request #50): every won Rift pays gold; Loot and Secret rooms hold
+ * some too (kept only if the party wins, like items). Scaled by tier.
+ * PROVISIONAL (A104).
+ */
+export const RIFT_GOLD_RULES = {
+  victory: { min: 25, max: 40 },
+  lootRoom: { min: 5, max: 12 },
+  secretRoom: { min: 12, max: 25 },
+  perTier: 0.5,
+} as const;
+
+export const goldTierMultiplier = (tier = 1) => 1 + RIFT_GOLD_RULES.perTier * Math.max(0, tier - 1);
+
 /** Extra enemy strength for a tier (1 = none). */
 export function riftTierModifiers(tier = 1): { hpMultiplier: number; powerMultiplier: number } {
   const t = Math.max(0, tier - 1);

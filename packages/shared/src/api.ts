@@ -436,6 +436,8 @@ export interface CharacterSheetDto {
   loadout: Array<string | null>;
   /** Reputation is a per-character currency earned through activities. */
   reputation: number;
+  /** Gold (request #50). */
+  gold: number;
   /** Extra % on reputation gains from the equipped gear (request #49). */
   reputationBonusPct: number;
   /** Attribute points not yet distributed. */

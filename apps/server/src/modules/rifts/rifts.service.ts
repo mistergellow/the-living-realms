@@ -35,6 +35,11 @@ import {
   riftSites,
   RUN_STATE_VERSION,
   seedFrom,
+  RIFT_GOLD_RULES,
+  goldTierMultiplier,
+  rarityOf,
+  normalizeAffixes,
+  AP_RULES,
   riftClearFactor,
   riftReputation,
   createWorldBossRun,
@@ -65,6 +70,7 @@ import {
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
+import { spendAp } from '../characters/ap.js';
 import { reputationGearBonus } from '../characters/sheet.service.js';
 import { settleWorldBossFight } from '../worldboss/worldboss.repository.js';
 import { AppError, errors } from '../../lib/errors.js';
@@ -162,10 +168,18 @@ export async function assertFreeForRift(
 const statusOf = (state: RunState): RunStatus => state.status;
 
 /** Bonus effects of a new piece of gear (request #37); materials get none. */
-const rollDropAffixes = (rng: Rng, defId: string) => {
+const rollDropAffixes = (rng: Rng, defId: string, tier: number) => {
   const kind = getItemDef(defId)?.kind;
-  return isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng)) : [];
+  return isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng, tier)) : [];
 };
+
+/** A dropped item for the reward popup (request #50): name and rarity. */
+const dropView = (id: string, defId: string, specials: unknown) => ({
+  id,
+  defId,
+  name: getItemDef(defId)?.name ?? defId,
+  rarity: rarityOf(normalizeAffixes(specials).length),
+});
 
 export class RiftsService {
   private readonly db: Database;
@@ -195,6 +209,7 @@ export class RiftsService {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
       await assertFreeForRift(tx, c.id);
       assertAtRift(rift, [c]);
+      await spendAp(tx, c, AP_RULES.riftEntryCost, 'enter a Rift');
       return this.createRun(tx, rift, [{ accountId, character: c }]);
     });
     return this.get(accountId, runId, characterId);
@@ -566,10 +581,10 @@ export class RiftsService {
             characterId: p.characterId,
             itemDefId: entry.item,
             source: 'drop',
-            specials: rollDropAffixes(rng, entry.item),
+            specials: rollDropAffixes(rng, entry.item, rift.tier ?? 1),
           })
-          .returning({ id: items.id });
-        dropped.push({ id: row!.id, name: getItemDef(entry.item)?.name ?? entry.item });
+          .returning({ id: items.id, specials: items.specials });
+        dropped.push(dropView(row!.id, entry.item, row!.specials));
       }
       // Items found on the way (Loot/Secret rooms, events) are only kept on
       // victory, by those still in the party (request #33).
@@ -582,11 +597,19 @@ export class RiftsService {
             characterId: g.characterId,
             itemDefId: g.itemDefId,
             source: g.source,
-            specials: rollDropAffixes(rng, g.itemDefId),
+            // Rolled when found (request #50), by the Rift tier.
+            specials: g.affixes ?? rollDropAffixes(rng, g.itemDefId, rift.tier ?? 1),
           })
-          .returning({ id: items.id });
-        dropped.push({ id: row!.id, name: getItemDef(g.itemDefId)?.name ?? g.itemDefId });
+          .returning({ id: items.id, specials: items.specials });
+        dropped.push(dropView(row!.id, g.itemDefId, row!.specials));
       }
+      // Gold (request #50): the Rift's reward + what was found on the way.
+      const gold =
+        Math.round(
+          (RIFT_GOLD_RULES.victory.min +
+            rng.int(RIFT_GOLD_RULES.victory.max - RIFT_GOLD_RULES.victory.min + 1)) *
+            goldTierMultiplier(rift.tier ?? 1),
+        ) + (stayed ? (state.gold?.[p.characterId] ?? 0) : 0);
       // Request #49: less reputation each time you beat the same Rift, then
       // none; better equipped gear raises it.
       const previousClears = await repo.victoriesIn(tx, p.characterId, run.riftId, run.id);
@@ -594,7 +617,10 @@ export class RiftsService {
       const reputation = riftReputation(rift.rewards.reputation, previousClears, gearBonusPct);
       await tx
         .update(characters)
-        .set({ reputation: sql`${characters.reputation} + ${reputation}` })
+        .set({
+          reputation: sql`${characters.reputation} + ${reputation}`,
+          gold: sql`${characters.gold} + ${gold}`,
+        })
         .where(eq(characters.id, p.characterId));
       await this.recordResult(
         tx,
@@ -604,6 +630,7 @@ export class RiftsService {
         {
           rewards: {
             reputation,
+            gold,
             items: dropped,
             clearNumber: previousClears + 1,
             clearFactorPct: Math.round(riftClearFactor(previousClears) * 100),

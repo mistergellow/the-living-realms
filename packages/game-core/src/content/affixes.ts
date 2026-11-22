@@ -29,6 +29,17 @@ export const AFFIX_RULES = {
    * index = number of effects. Provisional.
    */
   dropAffixWeights: [50, 28, 13, 6, 2.5, 0.5],
+  /**
+   * Request #50: drops scale with the Rift tier — a Rare (2 effects) in a
+   * tier-1 Rift is very rare. Weights for 0…5 effects, per tier (PROVISIONAL, A105).
+   */
+  dropAffixWeightsByTier: {
+    1: [85, 13, 1.7, 0.25, 0.05, 0],
+    2: [70, 24, 5, 0.8, 0.15, 0.05],
+    3: [55, 30, 11, 3, 0.8, 0.2],
+    4: [40, 32, 18, 7, 2.4, 0.6],
+    5: [25, 30, 25, 13, 5, 2],
+  } as Record<number, readonly number[]>,
   /** On-hit statuses: duration and damage per round (bleed/burn). */
   onHitTurns: { bleed: 2, burn: 2, stun: 1 },
   onHitValue: { bleed: 3, burn: 3, stun: 0 },
@@ -287,9 +298,13 @@ export function rollAffixes(rng: Rng, kind: ItemKind, count: number): WeaponSpec
   return out;
 }
 
-/** Number of effects for a new drop, from `AFFIX_RULES.dropAffixWeights`. */
-export function rollAffixCount(rng: Rng): number {
-  const w = AFFIX_RULES.dropAffixWeights;
+/** Number of effects for a new drop; by Rift tier when given (request #50). */
+export function rollAffixCount(rng: Rng, tier?: number): number {
+  const w =
+    tier !== undefined
+      ? (AFFIX_RULES.dropAffixWeightsByTier[Math.max(1, Math.min(5, tier))] ??
+        AFFIX_RULES.dropAffixWeights)
+      : AFFIX_RULES.dropAffixWeights;
   let roll = rng.next() * w.reduce((s, x) => s + x, 0);
   for (let i = 0; i < w.length; i++) if ((roll -= w[i]!) < 0) return i;
   return 0;

@@ -25,6 +25,8 @@ export const ErrorCode = {
   RATE_LIMITED: 'RATE_LIMITED',
   /** You must stand on a certain hex (a Rift entrance, the world boss — request #43). */
   NOT_HERE: 'NOT_HERE',
+  /** Not enough Action Points (request #50). */
+  NOT_ENOUGH_AP: 'NOT_ENOUGH_AP',
   /** The world boss allows one fight per character per day (request #43). */
   NO_ATTEMPTS_LEFT: 'NO_ATTEMPTS_LEFT',
   INTERNAL: 'INTERNAL',

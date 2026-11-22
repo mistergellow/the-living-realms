@@ -6,6 +6,7 @@ import type {
   HexCoord,
   DerivedStatsDto,
   GearCombatEffects,
+  ItemRarity,
 } from './api.js';
 
 /* ---------------------------------------------------------------------------
@@ -298,8 +299,10 @@ export interface RoomOutcomeView {
   title: string;
   text: string;
   effects: string[];
-  /** Items found, per character. */
-  items: Array<{ characterId: string; name: string }>;
+  /** Items found, per character (request #50: with rarity, for the drop popup). */
+  items: Array<{ characterId: string; name: string; defId?: string; rarity?: ItemRarity }>;
+  /** Gold found by each character present (request #50). */
+  gold?: number;
   /** A secret search on entering the room (BASE Precision of the best searcher). */
   search: TestRollView | null;
 }
@@ -319,7 +322,9 @@ export type RunStatus = 'active' | 'victory' | 'defeat' | 'abandoned';
 
 export interface RunRewardsDto {
   reputation: number;
-  items: Array<{ id: string; name: string }>;
+  items: Array<{ id: string; name: string; defId?: string; rarity?: ItemRarity }>;
+  /** Gold earned (request #50): the Rift's reward plus what was found on the way. */
+  gold?: number;
   /** Request #49: how many times you have beaten this Rift (1 = first time). */
   clearNumber?: number;
   /** Share of the Rift's reputation for this clear (100, 50, 25, then 0). */

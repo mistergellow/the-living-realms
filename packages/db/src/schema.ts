@@ -130,6 +130,8 @@ export const characters = pgTable(
     attributePoints: smallint('attribute_points').notNull().default(0),
     /** Per-character currency earned through activities. */
     reputation: bigint('reputation', { mode: 'number' }).notNull().default(0),
+    /** Gold (request #50): from Rifts; spent in shops and at the blacksmith. */
+    gold: bigint('gold', { mode: 'number' }).notNull().default(0),
     /** Axial hex coordinates of the character on the world map. */
     hexQ: integer('hex_q').notNull(),
     hexR: integer('hex_r').notNull(),

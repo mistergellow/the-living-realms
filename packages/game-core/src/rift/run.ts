@@ -15,12 +15,21 @@ import type {
   TestRollView,
   ThreatView,
   VoteView,
+  WeaponSpecial,
 } from '@realms/shared';
 import { getEvent, type EventEffect, type EventTarget } from '../content/events.js';
 import { getItemDef } from '../content/items.js';
 import type { EnemyId } from '../content/enemies.js';
 import { WORLD_BOSS_ID, worldBossEnemy } from '../content/world-boss.js';
-import { getRift, riftTierModifiers, type LootTable, type RiftDef } from '../content/rifts.js';
+import {
+  getRift,
+  goldTierMultiplier,
+  RIFT_GOLD_RULES,
+  riftTierModifiers,
+  type LootTable,
+  type RiftDef,
+} from '../content/rifts.js';
+import { isGear, rarityOf, rollAffixCount, rollAffixes } from '../content/affixes.js';
 import {
   CONDITIONS,
   EXPLORATION_RULES,
@@ -99,6 +108,8 @@ export interface ItemGrant {
   characterId: string;
   itemDefId: string;
   source: 'loot_room' | 'secret_room' | 'event';
+  /** Bonus effects rolled when found (request #50: by Rift tier). */
+  affixes?: WeaponSpecial[];
 }
 
 export interface RunState {
@@ -133,6 +144,8 @@ export interface RunState {
    * and so does anyone who left early.
    */
   grants: ItemGrant[];
+  /** Gold found on the way per character (request #50), kept only on victory. */
+  gold?: Record<string, number>;
 }
 
 export type RunResult =
@@ -460,13 +473,38 @@ function grant(
   source: ItemGrant['source'],
 ): RoomOutcomeView['items'] {
   const items: RoomOutcomeView['items'] = [];
+  const tier = getRift(s.riftId)?.tier ?? 1;
   for (const m of who) {
     for (const itemDefId of rollLoot(rng, table)) {
-      s.grants.push({ characterId: m.characterId, itemDefId, source });
-      items.push({ characterId: m.characterId, name: getItemDef(itemDefId)?.name ?? itemDefId });
+      // Request #50: rarity rolled now (by tier) so the popup can show it.
+      const kind = getItemDef(itemDefId)?.kind;
+      const affixes = isGear(kind) ? rollAffixes(rng, kind, rollAffixCount(rng, tier)) : [];
+      s.grants.push({ characterId: m.characterId, itemDefId, source, affixes });
+      items.push({
+        characterId: m.characterId,
+        name: getItemDef(itemDefId)?.name ?? itemDefId,
+        defId: itemDefId,
+        rarity: rarityOf(affixes.length),
+      });
     }
   }
   return items;
+}
+
+/** Gold found in a room by everyone present (request #50). */
+function findGold(
+  s: RunState,
+  rng: Rng,
+  range: { min: number; max: number },
+  who: RunMember[],
+): number {
+  const tier = getRift(s.riftId)?.tier ?? 1;
+  const amount = Math.round(
+    (range.min + rng.int(range.max - range.min + 1)) * goldTierMultiplier(tier),
+  );
+  s.gold = s.gold ?? {};
+  for (const m of who) s.gold[m.characterId] = (s.gold[m.characterId] ?? 0) + amount;
+  return amount;
 }
 
 /** The best BASE value in the party searches for a hidden room next to this one. */
@@ -588,6 +626,12 @@ function enterRoom(s: RunState, nodeId: string): void {
         activeMembers(s),
         secret ? 'secret_room' : 'loot_room',
       );
+      const gold = findGold(
+        s,
+        rng,
+        secret ? RIFT_GOLD_RULES.secretRoom : RIFT_GOLD_RULES.lootRoom,
+        activeMembers(s),
+      );
       s.phase = 'room';
       s.outcome = {
         type: node.type,
@@ -597,6 +641,7 @@ function enterRoom(s: RunState, nodeId: string): void {
           : 'A cache of supplies and gear, something for everyone — kept only if the party beats the Rift.',
         effects: [],
         items,
+        gold,
         search,
       };
       break;

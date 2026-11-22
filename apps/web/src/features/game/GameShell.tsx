@@ -138,6 +138,10 @@ function TopBar(props: {
         <Icon name="star" />
         <strong data-testid="top-reputation">{sheet.data?.reputation ?? '—'}</strong>
       </div>
+      <div className="res-pill" title="Gold: earned in Rifts; spent in shops and at the blacksmith">
+        <Icon name="coin" />
+        <strong data-testid="top-gold">{sheet.data?.gold ?? '—'}</strong>
+      </div>
       <ApPill />
       <div className="res-pill" title="Characters in the world right now">
         <Icon name="friends" />
@@ -184,7 +188,6 @@ function BottomNav({ characterId }: { characterId: string }) {
     testId?: string;
   }> = [
     { to: `/characters/${characterId}`, label: 'Character', icon: 'hero' },
-    { to: '/rifts', label: 'Rifts', icon: 'portal' },
     { to: '/home', label: 'Home', icon: 'home', home: true },
     { to: '/world', label: 'World', icon: 'compass' },
     { to: '/friends', label: 'Friends', icon: 'friends', badge: pending, testId: 'friends-link' },

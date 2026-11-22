@@ -378,6 +378,7 @@ export class CharacterSheetService {
       }),
       loadout: loadoutOf(skills),
       reputation: c.reputation,
+      gold: c.gold,
       reputationBonusPct: await reputationGearBonus(db, c.id),
       attributePoints: c.attributePoints,
     };

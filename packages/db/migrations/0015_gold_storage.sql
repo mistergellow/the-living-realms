@@ -1,0 +1,1 @@
+ALTER TABLE "characters" ADD COLUMN "gold" bigint DEFAULT 0 NOT NULL;
