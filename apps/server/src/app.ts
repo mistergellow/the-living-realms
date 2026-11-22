@@ -29,6 +29,8 @@ import { FriendsService } from './modules/social/friends.service.js';
 import { socialRoutes } from './modules/social/social.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { worldRoutes } from './modules/world/world.routes.js';
+import { cityRoutes } from './modules/city/city.routes.js';
+import { CityService } from './modules/city/city.service.js';
 import { worldBossRoutes } from './modules/worldboss/worldboss.routes.js';
 import { WorldBossService } from './modules/worldboss/worldboss.service.js';
 import { authPlugin } from './plugins/auth.js';
@@ -100,6 +102,7 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
         prefix: '/rifts/lobbies',
         lobbies: new LobbiesService(ctx, sheets, rifts, friends, worldBoss),
       });
+      await api.register(cityRoutes, { prefix: '/characters', city: new CityService(ctx, sheets) });
       await api.register(worldBossRoutes, { prefix: '/world-boss', service: worldBoss, rifts });
       await api.register(riftsRoutes, { prefix: '/rifts', service: rifts });
       await api.register(socialRoutes, { prefix: '/social', friends });

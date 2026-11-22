@@ -349,7 +349,7 @@ export class CharacterSheetService {
     return this.buildSheet(db, c);
   }
 
-  private async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
+  async buildSheet(db: DbOrTx, c: Character): Promise<CharacterSheetDto> {
     const [rows, skills] = await Promise.all([
       itemsRepository.listByCharacter(db, c.id),
       itemsRepository.learnedSkills(db, c.id),

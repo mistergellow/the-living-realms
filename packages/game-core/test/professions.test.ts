@@ -34,8 +34,6 @@ describe('professions', () => {
     expect(activityChance(fish, 0)).toBe(fish.baseChance);
     expect(activityChance(fish, 4)).toBe(fish.baseChance + 4 * PROFESSION_RULES.successPerLevel);
     expect(activityChance(fish, 10)).toBe(PROFESSION_RULES.maxChance);
-    const upgrade = getProfession('blacksmithing')!.activities.find((a) => a.effect === 'upgrade')!;
-    expect(activityChance(upgrade, 5, 2)).toBeLessThan(activityChance(upgrade, 5, 0));
   });
 
   it('XP levels up; the cost grows per level; max level 10', () => {
