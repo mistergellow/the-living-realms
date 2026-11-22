@@ -21,7 +21,15 @@ export type LocationScene = 'town' | 'wilds';
  * (NPCs and shops come with the economy and NPC phases).
  */
 export type LocationActionId =
-  'npcs' | 'shop' | 'storage' | 'blacksmith' | 'rifts' | 'workshop' | 'map' | 'worldboss';
+  | 'npcs'
+  | 'shop'
+  | 'market'
+  | 'storage'
+  | 'blacksmith'
+  | 'rifts'
+  | 'workshop'
+  | 'map'
+  | 'worldboss';
 
 export interface LocationAction {
   id: LocationActionId;
@@ -56,6 +64,13 @@ const ACTION: Record<Exclude<LocationActionId, 'rifts' | 'workshop'>, LocationAc
     id: 'shop',
     label: 'General store',
     description: 'Buy basic supplies; sell gear you do not need.',
+    available: true,
+  },
+  // Request #63: the player market.
+  market: {
+    id: 'market',
+    label: 'Market',
+    description: 'Buy what other players sell here; put your own items up for sale.',
     available: true,
   },
   storage: {
@@ -139,6 +154,7 @@ export function locationAt(hex: HexCoord, opts: { worldBossHere?: boolean } = {}
       description: `${TERRAIN_TEXT.city} ${region.name}.`,
       actions: [
         ACTION.shop,
+        ACTION.market,
         ACTION.storage,
         ACTION.blacksmith,
         workshop('city'),

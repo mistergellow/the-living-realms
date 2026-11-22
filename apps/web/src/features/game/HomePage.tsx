@@ -14,6 +14,7 @@ import { LocationScene } from './LocationScene';
 const ACTION_ICON: Record<LocationActionId, IconName> = {
   npcs: 'friends',
   shop: 'bag',
+  market: 'coin',
   rifts: 'portal',
   workshop: 'gear',
   map: 'compass',
@@ -27,6 +28,7 @@ const ACTION_TO: Partial<Record<LocationActionId, string>> = {
   map: '/world',
   worldboss: '/world-boss',
   shop: '/city/shop',
+  market: '/city/market',
   storage: '/city/storage',
   blacksmith: '/city/blacksmith',
 };

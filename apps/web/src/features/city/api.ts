@@ -1,4 +1,4 @@
-import type { CityDto } from '@realms/shared';
+import type { CityDto, MarketDto } from '@realms/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { sheetQueryKey } from '../characters/api';
@@ -47,4 +47,26 @@ export function useInventoryActions(characterId: string | null) {
     onSuccess: done,
   });
   return { move, sort };
+}
+
+/** Player market (request #63). */
+export const marketKey = (characterId: string | null) => ['market', characterId] as const;
+export function useMarket(characterId: string | null) {
+  return useQuery({
+    queryKey: marketKey(characterId),
+    enabled: !!characterId,
+    queryFn: () => api<MarketDto>('GET', `/characters/${characterId}/market`),
+  });
+}
+export function useMarketAction(characterId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { path: 'list' | 'buy' | 'cancel'; body: Record<string, unknown> }) =>
+      api<MarketDto>('POST', `/characters/${characterId}/market/${v.path}`, v.body),
+    onSuccess: (m) => {
+      qc.setQueryData(marketKey(characterId), m);
+      void qc.invalidateQueries({ queryKey: ['characters'] });
+      void qc.invalidateQueries({ queryKey: cityKey(characterId) });
+    },
+  });
 }

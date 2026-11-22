@@ -8,3 +8,4 @@ export * from './admin.js';
 export * from './world-boss.js';
 export * from './city.js';
 export * from './guilds.js';
+export * from './market.js';

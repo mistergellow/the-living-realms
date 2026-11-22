@@ -536,6 +536,39 @@ export const guildItems = pgTable(
   (t) => [index('guild_items_guild_idx').on(t.guildId)],
 );
 
+// Player market (request #63): an item a player put up for sale in a city.
+// It is only visible in that city's market and stays until bought or taken
+// back. The item's fields are kept here while it is listed.
+export const marketListings = pgTable(
+  'market_listings',
+  {
+    id: id(),
+    worldId: uuid('world_id')
+      .notNull()
+      .references(() => worlds.id, { onDelete: 'cascade' }),
+    hexQ: integer('hex_q').notNull(),
+    hexR: integer('hex_r').notNull(),
+    sellerCharacterId: uuid('seller_character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    price: bigint('price', { mode: 'number' }).notNull(),
+    itemDefId: text('item_def_id').notNull(),
+    quality: smallint('quality').notNull().default(100),
+    quantity: integer('quantity').notNull().default(1),
+    upgradeLevel: smallint('upgrade_level').notNull().default(0),
+    grade: smallint('grade'),
+    specials: jsonb('specials').notNull().default([]),
+    runeSlots: jsonb('rune_slots').notNull().default([]),
+    source: text('source').notNull().default('market'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('market_listings_hex_idx').on(t.worldId, t.hexQ, t.hexR),
+    index('market_listings_seller_idx').on(t.sellerCharacterId),
+    check('market_listings_price_positive', sql`${t.price} > 0`),
+  ],
+);
+
 // Profession jobs in real time (request #56): one per character. Inputs (and
 // node charges) are taken at the start; the attempts are resolved when the job
 // is read after `finishes_at`, and the summary is kept in `result` until the

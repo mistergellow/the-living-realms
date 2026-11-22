@@ -367,7 +367,10 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
   // Request #56: several attempts at once, paid in AP.
   await page.getByLabel('Attempts of Fish').fill('3');
-  await page.getByTestId('job-fish').getByRole('button', { name: /Now · 6 AP/ }).click();
+  await page
+    .getByTestId('job-fish')
+    .getByRole('button', { name: /Now · 6 AP/ })
+    .click();
   await expect(page.getByTestId('job-result')).toContainText('Fish × 3');
   // Request #59: the header's AP follows at once (2 for the single fish + 6).
   await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
@@ -410,6 +413,16 @@ test('city storage: grids, drag and drop, search, sort (requests #52, #59)', asy
   await page.getByRole('tab', { name: 'General store' }).click();
   await expect(page.getByTestId('shop-grid')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/12b-shop.png' });
+  // Request #63: the player market — put the rod up for sale, then take it back.
+  await page.getByRole('tab', { name: 'Market' }).click();
+  await page.getByTestId('market-bag').getByTestId('bag-item-fishing_rod').click();
+  await page.getByLabel('Price in gold').fill('15');
+  await page.getByRole('button', { name: 'Put up for sale' }).click();
+  await expect(page.getByTestId('my-listings')).toContainText('Fishing Rod');
+  await expect(page.getByTestId('market-grid')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/12c-market.png' });
+  await page.getByRole('button', { name: 'Take back Fishing Rod' }).click();
+  await expect(page.getByTestId('my-listings')).toHaveCount(0);
   // Request #54: the blacksmith shows what an upgrade changes.
   await page.getByRole('tab', { name: 'Blacksmith' }).click();
   await page.getByTestId('blacksmith').locator('.city-row > .city-name > strong').first().hover();
@@ -460,9 +473,9 @@ async function expectFitsViewport(page: Page, label = '') {
     })),
   );
   for (const b of bodies)
-    expect.soft(b.sh, `${label} at ${box.w}×${box.h}: the screen area scrolls`).toBeLessThanOrEqual(
-      b.ch + 1,
-    );
+    expect
+      .soft(b.sh, `${label} at ${box.w}×${box.h}: the screen area scrolls`)
+      .toBeLessThanOrEqual(b.ch + 1);
 }
 
 test('screens fit every screen size', async ({ page }) => {
@@ -486,6 +499,7 @@ test('screens fit every screen size', async ({ page }) => {
     ['professions', () => expect(page.getByTestId('profession-detail')).toBeVisible()],
     ['storage', () => expect(page.getByTestId('storage')).toBeVisible()],
     ['shop', () => expect(page.getByTestId('shop-grid')).toBeVisible()],
+    ['market', () => expect(page.getByTestId('market')).toBeVisible()],
     ['guild', () => expect(page.getByTestId('guild-found')).toBeVisible()],
     ['friends', () => expect(page.getByTestId('friends-link')).toBeVisible()],
   ];
@@ -500,6 +514,7 @@ test('screens fit every screen size', async ({ page }) => {
     professions: '/professions',
     storage: '/city/storage',
     shop: '/city/shop',
+    market: '/city/market',
     guild: '/guild',
     friends: '/friends',
   };

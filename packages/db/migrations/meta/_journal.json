@@ -148,6 +148,13 @@
       "when": 1795345931991,
       "tag": "0020_item_slots",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795349082199,
+      "tag": "0021_market",
+      "breakpoints": true
     }
   ]
 }

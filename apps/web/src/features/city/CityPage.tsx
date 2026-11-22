@@ -15,12 +15,13 @@ import {
 } from '../characters/sheet/ItemGrid';
 import { ITEM_FILTERS, itemMatches, type ItemFilter } from '../characters/sheet/item-filters';
 import '../characters/sheet/sheet.css';
-import { useCity, useCityAction, useInventoryActions } from './api';
+import { useCity, useCityAction, useInventoryActions, useMarket, useMarketAction } from './api';
 import './city.css';
 
-type Tab = 'shop' | 'storage' | 'blacksmith';
+type Tab = 'shop' | 'market' | 'storage' | 'blacksmith';
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'shop', label: 'General store' },
+  { id: 'market', label: 'Market' },
   { id: 'storage', label: 'Storage' },
   { id: 'blacksmith', label: 'Blacksmith' },
 ];
@@ -76,6 +77,7 @@ export function CityPage() {
           </p>
         )}
         {c && tab === 'shop' && <Shop city={c} busy={action.isPending} run={run} />}
+        {c && tab === 'market' && <Market />}
         {c && tab === 'storage' && <Storage city={c} busy={action.isPending} run={run} />}
         {c && tab === 'blacksmith' && <Blacksmith city={c} busy={action.isPending} run={run} />}
       </div>
@@ -544,6 +546,224 @@ function UpgradeCompare({ item, quote }: { item: ItemDto; quote: CityDto['upgrad
         <span className="muted small">After the upgrade</span>
         <ItemTooltipBody item={quote.preview} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Player market (request #63): what other players sell in this city, and
+ * your own items for sale. Pick an item from your bag, set a price, and it
+ * stays on sale here until someone buys it (you get the gold) or you take it
+ * back. At most 20 items for sale at once.
+ */
+function Market() {
+  const characterId = useActiveCharacter((s) => s.characterId);
+  const market = useMarket(characterId);
+  const action = useMarketAction(characterId);
+  const [filter, setFilter] = useState<ItemFilter>('all');
+  const [search, setSearch] = useState('');
+  const [buyId, setBuyId] = useState<string | null>(null);
+  const [sellId, setSellId] = useState<string | null>(null);
+  const [price, setPrice] = useState(10);
+  const tip = useHover<ItemDto>();
+  const m = market.data;
+  if (!m) return <FormError error={market.error} />;
+  const busy = action.isPending || !m.capital;
+  const listings = m.listings.map((l, i) => ({ ...l, item: { ...l.item, slot: i } }));
+  const listing = listings.find((l) => l.id === buyId);
+  const toSell = m.bag.find((i) => i.id === sellId);
+  const dim = (i: ItemDto) => !itemMatches(i, filter, search);
+  const run = (path: 'list' | 'buy' | 'cancel', body: Record<string, unknown>) =>
+    action.mutate({ path, body });
+  const noop = () => ({});
+  const hovered = tip.hover?.value;
+  return (
+    <div className="storage-tab" data-testid="market">
+      <div className="grid-tools">
+        <input
+          className="bag-search"
+          type="search"
+          placeholder="Search the market…"
+          aria-label="Search the market"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="bag-filters" role="tablist" aria-label="Market filter">
+          {ITEM_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              role="tab"
+              aria-selected={filter === f.id}
+              className="chip-btn"
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <span className="muted small">
+          Items for sale here are only sold in {m.capital ?? 'this city'}.
+        </span>
+      </div>
+      <FormError error={action.error} />
+      {m.message && (
+        <p className="city-message" data-testid="market-message">
+          {m.message}
+        </p>
+      )}
+      <div className="storage-cols">
+        <section className="panel storage-pane">
+          <div className="panel-title">
+            <span>For sale in {m.capital ?? 'the city'}</span>
+          </div>
+          <div className="pane-scroll">
+            {listings.length === 0 ? (
+              <p className="muted small">Nobody is selling anything here yet.</p>
+            ) : (
+              <ItemGrid
+                place="storage"
+                items={listings.map((l) => l.item)}
+                size={listings.length}
+                cols={8}
+                over={null}
+                dimmed={dim}
+                bind={noop}
+                tip={(item) => tip.props(item)}
+                selected={listing?.item.id ?? null}
+                onClick={(item) =>
+                  setBuyId(listings.find((l) => l.item.id === item.id)?.id ?? null)
+                }
+                badge={(item) => (
+                  <span className="price-tag">
+                    {listings.find((l) => l.item.id === item.id)?.price}
+                  </span>
+                )}
+                testId="market-grid"
+              />
+            )}
+          </div>
+          <div className="pick-bar">
+            {listing ? (
+              <>
+                <strong className="rarity-text" data-rarity={listing.item.rarity}>
+                  {listing.item.name}
+                  {listing.item.quantity > 1 ? ` ×${listing.item.quantity}` : ''}
+                </strong>
+                <span className="muted small">by {listing.sellerName}</span>
+                <span className="gold-tag">{listing.price} gold</span>
+                <span className="spacer" />
+                {listing.mine ? (
+                  <button
+                    className="btn btn-sm"
+                    disabled={busy}
+                    onClick={() => run('cancel', { listingId: listing.id })}
+                  >
+                    Take back
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-sm btn-primary"
+                    disabled={busy || m.gold < listing.price}
+                    onClick={() => run('buy', { listingId: listing.id })}
+                    aria-label={`Buy ${listing.item.name}`}
+                  >
+                    Buy
+                  </button>
+                )}
+              </>
+            ) : (
+              <span className="muted small">Pick an item to see its price and seller.</span>
+            )}
+          </div>
+        </section>
+        <section className="panel storage-pane">
+          <div className="panel-title">
+            <span>
+              Sell · {m.mine.length}/{m.maxListings} for sale
+            </span>
+          </div>
+          <div className="pane-scroll">
+            <ItemGrid
+              place="bag"
+              items={m.bag}
+              size={20}
+              cols={5}
+              over={null}
+              dimmed={dim}
+              bind={noop}
+              tip={(item) => tip.props(item)}
+              selected={toSell?.id ?? null}
+              onClick={(item) => setSellId(item.id)}
+              testId="market-bag"
+            />
+            {m.mine.length > 0 && (
+              <ul className="city-list" style={{ marginTop: '0.75rem' }} data-testid="my-listings">
+                {m.mine.map((l) => (
+                  <li key={l.id} className="city-row" data-rarity={l.item.rarity}>
+                    <strong className="rarity-text">
+                      {l.item.name}
+                      {l.item.quantity > 1 ? ` ×${l.item.quantity}` : ''}
+                    </strong>
+                    <span className="muted small">{l.city}</span>
+                    <span className="spacer" />
+                    <span className="gold-tag">{l.price} gold</span>
+                    {l.city === m.capital && (
+                      <button
+                        className="btn btn-sm"
+                        disabled={busy}
+                        onClick={() => run('cancel', { listingId: l.id })}
+                        aria-label={`Take back ${l.item.name}`}
+                      >
+                        Take back
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <form
+            className="pick-bar"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (toSell) {
+                run('list', { itemId: toSell.id, price });
+                setSellId(null);
+              }
+            }}
+          >
+            {toSell ? (
+              <>
+                <strong className="rarity-text" data-rarity={toSell.rarity}>
+                  {toSell.name}
+                </strong>
+                <span className="spacer" />
+                <input
+                  type="number"
+                  min={1}
+                  value={price}
+                  onChange={(e) => setPrice(Math.max(1, Math.floor(Number(e.target.value)) || 1))}
+                  aria-label="Price in gold"
+                  style={{ width: '6rem' }}
+                />
+                <button
+                  className="btn btn-sm btn-primary"
+                  disabled={busy || m.mine.length >= m.maxListings}
+                >
+                  Put up for sale
+                </button>
+              </>
+            ) : (
+              <span className="muted small">Pick an item from your bag to sell it here.</span>
+            )}
+          </form>
+        </section>
+      </div>
+      {hovered && tip.hover && (
+        <Tooltip anchor={tip.hover.rect}>
+          <ItemTooltipBody item={hovered} />
+        </Tooltip>
+      )}
     </div>
   );
 }

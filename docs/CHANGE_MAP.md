@@ -591,6 +591,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - `RIFT_SIZE_RULES`, `riftLength`, `mapTemplateForTier` (`content/rifts.ts`, usado em `siteRift`); `MapTemplate.maxCampsitesPerPath`, `maxOnAnyPath`, `validateMap` (`rift/map.ts`); testes `rift-size.test.ts`, `rifts.test.ts` (servidor)
 
+## Mercado de jogadores (pedido #63, D120)
+
+- Regras: `MARKET_RULES` (`economy.ts`); ação `market` no hub (`locations.ts`, `HomePage.tsx`)
+- BD: `market_listings` (migração 0021; TRUNCATE em `helpers.ts`/`worker.test.ts`); eventos `market.listed`, `market.sold`
+- Servidor: `apps/server/src/modules/market/` (`market.service.ts`, `market.routes.ts` em `/api/characters/:id/market…`), registado em `app.ts`
+- Contrato: `packages/shared/src/market.ts` (`MarketDto`, `MarketListingDto`, esquemas)
+- Web: `Market` em `CityPage.tsx` (separador `/city/market`), `useMarket`/`useMarketAction` (`city/api.ts`)
+- Testes: `apps/server/test/market.test.ts`, e2e "city storage"
+
 ## Itens com nome e classes de armadura (pedido #62, D119)
 
 - Dados: `packages/game-core/src/content/named.ts` (`NAMED_ITEMS`, `buildNamedItems`, `namedEffects`); `ItemDef.named`, `ItemDef.armorClass`, `ARMOR_CLASS_NAMES`, `NAMED_ITEM_DEFS` (`items.ts`)
