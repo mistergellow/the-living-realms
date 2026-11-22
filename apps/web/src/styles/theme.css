@@ -1,0 +1,243 @@
+/*
+ * "Premium RPG" theme (request #58), after the owner's reference: dark,
+ * near-opaque panels with thin antique-gold frames and ornate corners, gold
+ * serif titles, antique-gold primary buttons, and round gradient icons with a
+ * white glyph. Loaded after every other stylesheet; `:root` raises the
+ * specificity so it wins over the feature stylesheets. Colours come from
+ * tokens.css (--gold-1 … --gold-4).
+ */
+
+/* ---------- background: darker vignette so the panels read clearly ---------- */
+:root .screen-body {
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgb(6 6 10 / 0.25),
+    rgb(6 6 10 / 0.7) 75%,
+    rgb(4 4 8 / 0.85)
+  );
+}
+
+/* ---------- panels ---------- */
+:root .panel {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(212 168 73 / 0.07), transparent 60%),
+    linear-gradient(180deg, rgb(20 18 26 / 0.97), rgb(11 10 15 / 0.97));
+  border: 1px solid var(--gold-3);
+  border-radius: 0.2rem;
+  backdrop-filter: none;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.85),
+    inset 0 0 0 2px rgb(212 168 73 / 0.18),
+    inset 0 1px 1.2rem rgb(0 0 0 / 0.6),
+    0 0.5rem 1.8rem rgb(0 0 0 / 0.65);
+}
+/* Ornate gold corners: an L bracket and a small diamond on each corner. */
+:root .panel::before {
+  inset: -2px;
+  --c: var(--gold-2);
+  --l: 1.1rem;
+  --t: 2px;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) top left / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) top right / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) top right / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--t) var(--l);
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 2px rgb(228 184 92 / 0.45));
+}
+:root .panel-title {
+  color: var(--gold-1);
+  text-shadow:
+    0 1px 0 rgb(0 0 0 / 0.9),
+    0 0 0.6rem rgb(212 168 73 / 0.35);
+}
+:root .panel-title::before {
+  background: linear-gradient(90deg, transparent, var(--gold-3) 70%, var(--gold-2));
+}
+:root .panel-title::after {
+  background: linear-gradient(90deg, var(--gold-2), var(--gold-3) 30%, transparent);
+}
+:root .page-title {
+  color: var(--gold-1);
+  text-shadow:
+    0 2px 0 rgb(0 0 0 / 0.9),
+    0 0 1rem rgb(212 168 73 / 0.3);
+}
+
+/* ---------- buttons ---------- */
+:root .btn {
+  border-color: var(--gold-4);
+  background: linear-gradient(180deg, #2b2632 0%, #1b1820 55%, #141218 100%);
+  color: #e9e2d0;
+  box-shadow:
+    inset 0 0 0 1px rgb(212 168 73 / 0.16),
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 2px 4px rgb(0 0 0 / 0.5);
+}
+:root .btn:hover:not(:disabled) {
+  border-color: var(--gold-2);
+  color: var(--gold-1);
+  box-shadow:
+    inset 0 0 0 1px rgb(212 168 73 / 0.3),
+    0 0 0.8rem var(--frame-glow);
+}
+:root .btn-primary {
+  border-color: var(--gold-1);
+  background: linear-gradient(180deg, #f2d58a 0%, #d4a849 45%, #9c6f22 100%);
+  color: #241505;
+  text-shadow: 0 1px 0 rgb(255 240 200 / 0.45);
+  box-shadow:
+    inset 0 1px 0 rgb(255 250 230 / 0.6),
+    inset 0 -2px 0 rgb(70 45 10 / 0.5),
+    0 0 0 1px rgb(0 0 0 / 0.7),
+    0 0.2rem 0.8rem rgb(212 168 73 / 0.25);
+}
+:root .btn-primary:hover:not(:disabled) {
+  color: #241505;
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgb(255 250 230 / 0.6),
+    inset 0 -2px 0 rgb(70 45 10 / 0.5),
+    0 0 0 1px rgb(0 0 0 / 0.7),
+    0 0 1.2rem rgb(228 184 92 / 0.55);
+}
+:root .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+:root .btn-ghost:hover:not(:disabled) {
+  border-color: var(--gold-3);
+  background: rgb(212 168 73 / 0.06);
+  box-shadow: none;
+}
+
+/* ---------- inputs ---------- */
+:root input:not([type='checkbox']):not([type='radio']):not([type='range']),
+:root select,
+:root textarea {
+  background: rgb(6 6 10 / 0.85);
+  border: 1px solid var(--gold-4);
+  border-radius: 0.2rem;
+  color: var(--text);
+  box-shadow: inset 0 1px 4px rgb(0 0 0 / 0.7);
+}
+:root input:focus-visible,
+:root select:focus-visible,
+:root textarea:focus-visible {
+  outline: none;
+  border-color: var(--gold-2);
+  box-shadow:
+    inset 0 1px 4px rgb(0 0 0 / 0.7),
+    0 0 0.5rem rgb(212 168 73 / 0.35);
+}
+
+/* ---------- HUD: top pills, hub actions, bottom navigation ---------- */
+:root .profile-plate,
+:root .res-pill,
+:root .world-chip,
+:root .icon-btn,
+:root .place-action {
+  background: linear-gradient(180deg, rgb(24 21 30 / 0.95), rgb(12 11 16 / 0.95));
+  border-color: var(--gold-4);
+  backdrop-filter: none;
+  box-shadow:
+    inset 0 0 0 1px rgb(212 168 73 / 0.14),
+    0 2px 8px rgb(0 0 0 / 0.5);
+}
+:root .res-pill .icon,
+:root .place-action .icon {
+  color: var(--gold-2);
+}
+:root a.place-action:hover,
+:root .profile-plate:hover,
+:root .icon-btn:hover {
+  border-color: var(--gold-2);
+  box-shadow:
+    inset 0 0 0 1px rgb(212 168 73 / 0.3),
+    0 0 0.8rem var(--frame-glow);
+}
+/* Hub actions get a round gold medallion around their icon. */
+:root .place-action .icon {
+  box-sizing: content-box;
+  padding: 0.45rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3a3020, #120f0a 75%);
+  box-shadow:
+    0 0 0 1px var(--gold-3),
+    inset 0 0 0.5rem rgb(212 168 73 / 0.25);
+}
+:root .game-nav {
+  background: linear-gradient(180deg, rgb(14 12 18 / 0.9), rgb(6 6 9 / 0.98) 45%);
+  border-top: 1px solid var(--gold-3);
+  box-shadow:
+    0 -1px 0 rgb(0 0 0 / 0.8),
+    0 -0.5rem 1.5rem rgb(0 0 0 / 0.5);
+}
+:root .nav-item.is-active {
+  color: var(--gold-1);
+}
+:root .nav-item.is-active::after {
+  background: var(--gold-2);
+  box-shadow: 0 0 0.5rem var(--gold-2);
+}
+
+/* ---------- round gradient icons (skills, effects) ---------- */
+:root .ability-icon {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.35), transparent 40%),
+    radial-gradient(circle at 50% 45%, var(--c1), var(--c2) 78%);
+  box-shadow:
+    inset 0 0 0 2px rgb(0 0 0 / 0.55),
+    inset 0 0 0 3px color-mix(in srgb, var(--c1) 55%, #e3c27a),
+    inset 0 -0.4rem 0.8rem rgb(0 0 0 / 0.45);
+}
+:root .ability-icon svg {
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.8));
+}
+:root .fx-icon {
+  background:
+    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.35), transparent 42%),
+    radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--fx) 85%, #fff),
+      color-mix(in srgb, var(--fx) 70%, #000) 80%
+    );
+  border: 1.5px solid color-mix(in srgb, var(--fx) 40%, #e3c27a);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.7),
+    0 1px 3px rgb(0 0 0 / 0.6);
+}
+:root .fx-icon svg {
+  fill: rgb(255 255 255 / 0.25);
+  stroke: #fff;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.7));
+}
+
+/* ---------- item slots: dark wells with a gold rim ---------- */
+:root .bag-cell,
+:root .equip-slot > * {
+  border-color: var(--gold-4);
+}
+:root .item-icon {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.6),
+    inset 0 0 0 2px rgb(212 168 73 / 0.12);
+}
+
+/* ---------- tabs / chips ---------- */
+:root .chip-btn {
+  border-color: var(--gold-4);
+  background: rgb(10 9 14 / 0.85);
+}
+:root .chip-btn[aria-selected='true'] {
+  border-color: var(--gold-2);
+  color: var(--gold-1);
+  background: rgb(212 168 73 / 0.12);
+}

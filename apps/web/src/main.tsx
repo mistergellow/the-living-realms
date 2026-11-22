@@ -12,6 +12,8 @@ import '@fontsource/cinzel/600.css';
 import '@fontsource/cinzel/700.css';
 import '@fontsource/cinzel/800.css';
 import './styles/global.css';
+// Request #58: the premium RPG look (overrides the feature stylesheets).
+import './styles/theme.css';
 
 installAppFeel();
 

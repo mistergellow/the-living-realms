@@ -579,6 +579,12 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
 - Testes: `apps/server/test/city.test.ts`, e2e "city storage"
 
+## Tema visual (pedido #58, D113)
+
+- Tokens: `apps/web/src/styles/tokens.css` (`--gold-1…4`, `--frame*`, `--glass*`, `--accent*`)
+- Tema: `apps/web/src/styles/theme.css` (importado em `main.tsx` depois de `global.css`; regras com `:root` para ganharem às folhas das funcionalidades): painéis, títulos, botões, campos, HUD, menu, ícones de skills (`.ability-icon`) e efeitos (`.fx-icon`), espaços de itens, chips
+- **Componente novo:** usar `.panel`, `.panel-title`, `.btn`/`.btn-primary`, `.chip-btn`; cores só pelos tokens
+
 ## Guildas (pedido #57, D112)
 
 - Regras: `packages/game-core/src/content/guilds.ts` (`GUILD_RULES`, `GUILD_ICONS`, `GUILD_COLORS`, `checkGuildName`, `checkGuildLand`, `guildRunReputation`)
