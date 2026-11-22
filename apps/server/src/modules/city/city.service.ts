@@ -7,8 +7,10 @@ import {
   normalizeAffixes,
   npcSellPrice,
   SHOP_STOCK,
+  upgradeMultiplier,
   upgradeOutcome,
   upgradeQuote,
+  weaponInfo,
 } from '@realms/game-core';
 import { ErrorCode, type CityDto } from '@realms/shared';
 import { and, eq, isNull, sql } from 'drizzle-orm';
@@ -124,8 +126,15 @@ export class CityService {
         if (price !== null) sellPrices[i.id] = price;
       }
       const q = upgradeQuote(i.itemDefId, i.upgradeLevel);
+      const type = getItemDef(i.itemDefId)?.weaponType;
+      const at = (level: number) => ({
+        damage: weaponInfo(type, { upgradeLevel: level })?.baseDamage ?? { min: 0, max: 0 },
+        power: Math.round((upgradeMultiplier(level) - 1) * 100),
+      });
       if (q.ok)
         upgrades[i.id] = {
+          compare: { now: at(i.upgradeLevel), next: at(q.quote.toLevel) },
+          preview: toItemDto({ ...i, upgradeLevel: q.quote.toLevel }, base),
           toLevel: q.quote.toLevel,
           gold: q.quote.gold,
           chance: q.quote.chance,

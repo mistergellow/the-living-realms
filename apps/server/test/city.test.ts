@@ -87,6 +87,12 @@ describe('city services (request #50)', () => {
     const sword = await give(h, 'iron_greatsword');
     const city = (await get(h)).json() as CityDto;
     expect(city.upgrades[sword]).toMatchObject({ toLevel: 1, material: null });
+    // Request #54: the comparison (now vs after a successful upgrade).
+    const cmp = city.upgrades[sword]!.compare;
+    expect(cmp.now.power).toBe(0);
+    expect(cmp.next.power).toBeGreaterThan(0);
+    expect(cmp.next.damage.max).toBeGreaterThanOrEqual(cmp.now.damage.max);
+    expect(city.upgrades[sword]!.preview.name).toContain('+1');
     // +4 needs the family material.
     const blade = await give(h, 'training_sword', 1, 3);
     const quote = ((await get(h)).json() as CityDto).upgrades[blade]!;

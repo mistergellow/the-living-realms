@@ -119,6 +119,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D107 | Atividades de profissão custam **AP ou tempo real**: recolher gasta AP (sem espera), criar gasta tempo real (sem AP)                                                                                                                                                                                                   | 2026-11-22 | `AP_RULES.gatherCost`, `professions.service.ts`                                                       |
 | D108 | **Pesquisa, filtro e arrastar-e-largar no armazém**                                                                                                                                                                                                                                                                    | 2026-11-22 | `CityPage.tsx` (`Storage`)                                                                            |
 | D109 | **Skills com 21 níveis: 1–10, M1–M10, P**; fracas no início e a melhorar a cada nível; rever todas (ex. Expose Weakness)                                                                                                                                                                                               | 2026-11-22 | por fazer (pedido #53)                                                                                |
+| D110 | **Rifts mudam todos os dias** de posição e de ameaça; **mais Rifts**, alguns já dentro dos territórios; **pirâmide** (muitos de ameaça baixa, poucos de alta)                                                                                                                                                          | 2026-11-22 | `riftLayout`, `RIFT_LAYOUT_RULES`                                                                     |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -244,6 +245,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A118 | Nós de recursos                                                 | um por hexágono e profissão de recolha; 12 / 20 / 30 cargas (pobre / normal / rico; 25 % pobres, 20 % ricos); 5 cargas por hora; só o sucesso gasta uma carga; partilhados por todos                                                                                                                                                                                                                                                                                                                                                                       | `RESOURCE_NODE_RULES`                                                            |
 | A119 | Qualidade dos materiais                                         | Poor, Common, Fine, Superior, Exceptional; rolagem 0–99 + 8 por rank ± 12 pela riqueza; limites 20/70/92/110; gasta-se primeiro o pior; materiais antigos ficam Common                                                                                                                                                                                                                                                                                                                                                                                     | `GRADE_RULES`, `rollGrade`                                                       |
 | A120 | Níveis de skill                                                 | 1–10: +10 % por nível (10 = ×1,9); M1–M10: +8 % por nível (M10 = ×2,7); P: +30 % (×3); estados (não Stun) +1 ronda em M1 e +1 em P; Mark/Weaken 25 % no nível 1, máx. +100 % / −75 %; números com uma casa decimal                                                                                                                                                                                                                                                                                                                                         | `SKILL_RULES`, `COMBAT_RULES`                                                    |
+| A121 | Rifts diários                                                   | mudam à meia-noite UTC; 30 por dia: 12 × T1, 8 × T2, 5 × T3, 3 × T4, 2 × T5; T1–T2 também nas nações; T4 a partir de 40 % de profundidade e T5 de 65 %; 3 hexágonos de distância entre Rifts e das capitais; uma corrida já começada continua depois da meia-noite                                                                                                                                                                                                                                                                                         | `RIFT_LAYOUT_RULES`                                                              |
 
 ---
 
@@ -1167,3 +1169,25 @@ estranho": perguntado o quê em concreto.)
   Expose Weakness melhora a cada nível.
 - A ficha mostra os números do nível (com uma casa decimal) e "Lv M3", etc.
 - Testes: 145 unitários (game-core), 95 de integração.
+
+### #54 — 2026-11-22 — Ferreiro: tooltip com a diferença do upgrade
+
+**Pedido:** no ferreiro, ao fazer um upgrade, mostrar a diferença entre a arma
+atual e o que o upgrade vai fazer.
+**Resultado:** ao passar o rato sobre a arma no ferreiro aparece "Arma → +N":
+dano base atual → depois (ganho a verde), bónus das habilidades da arma
+(+0 % → +10 %), a probabilidade e o aviso de quebra, e o cartão completo da
+arma depois do upgrade. Servidor: `CityDto.upgrades[id].compare` e `preview`.
+Testes: `city.test.ts`, e2e "city storage".
+
+### #55 — 2026-11-22 — Rifts diários, mais Rifts e pirâmide de ameaça
+
+**Pedido:** os Rifts mudam todos os dias de posição e de ameaça ("reset");
+mais Rifts, alguns já dentro dos territórios; mais de ameaça baixa (pirâmide).
+**Decisões:** D110; valores provisórios A121.
+**Resultado:** a disposição dos Rifts deriva do dia (UTC) — nada guardado, o
+servidor e o browser calculam o mesmo. 30 Rifts por dia em pirâmide; T1–T2
+podem abrir nas nações; os mais altos ficam no fundo das Riftlands. O id do
+Rift inclui posição, tier e dia: uma corrida ou lobby de ontem continua a
+funcionar, mas já não se pode entrar num Rift fechado ("Rifts move every
+day"). Ids antigos continuam válidos. Testes: `world-systems.test.ts`.

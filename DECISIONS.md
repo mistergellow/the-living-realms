@@ -856,3 +856,15 @@ the profession cooldown; crafting keeps the cooldown and costs no AP. Gathered
 materials store their grade in `items.grade` (null for everything else);
 stacks only join stacks of the same grade (`sameGrade`), and recipes use the
 poorest grade first.
+
+## ADR-049 — Daily Rift layout derived from the date
+
+**Status:** accepted (request #55)
+
+**Decision.** Rift entrances are not stored. The layout of a day is a pure
+function of the UTC day number (`riftLayout(day)`), computed and cached on the
+server and in the browser. A Rift id encodes position, tier and day
+(`rift_q_r_tier_day`), so `getRift` resolves any id without the layout: runs
+and lobbies that started before midnight keep working, while `assertAtRift`
+only lets parties enter a Rift that is open today (`isRiftOpen`). Old ids
+(`rift_q_r`) still resolve with the tier of their depth.
