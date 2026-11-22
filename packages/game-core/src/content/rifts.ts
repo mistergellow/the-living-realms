@@ -278,6 +278,8 @@ export const RIFTS = {
       loot: [
         { item: 'leather_cap', weight: 3 },
         { item: 'leather_boots', weight: 3 },
+        { item: 'leather_belt', weight: 2 },
+        { item: 'bone_mask', weight: 2 },
         { item: 'wooden_shield', weight: 2 },
         { item: 'bone_talisman', weight: 2 },
         { item: 'iron_mace', weight: 1 },

@@ -7,6 +7,8 @@ import type { EquipSlot, ItemDto } from '@realms/shared';
  */
 
 const GLYPHS = {
+  belt: 'M3 10h18v4H3zM10 9h4v6h-4z',
+  mask: 'M4 6c3-2 13-2 16 0 0 7-3 12-8 12S4 13 4 6Zm4 4h3M13 10h3',
   sword: 'M14.5 4H20v5.5L9 20.5 3.5 15 14.5 4ZM5 13l6 6M3 21l3-3',
   axe: 'M8 21 17 6M13 4c4-2 8 1 8 5-3 0-5-1-6-3M15 8l-4-1',
   dagger: 'M15 3l3 3-9 9-3-3 9-9ZM6 12l-2 2 6 6 2-2M5 19l-2 2',
@@ -88,6 +90,8 @@ export const SLOT_GLYPH: Record<EquipSlot, Glyph> = {
   ring1: 'ring',
   ring2: 'ring',
   pendant: 'pendant',
+  belt: 'belt',
+  face: 'mask',
 };
 
 export function glyphFor(item: ItemDto): Glyph {

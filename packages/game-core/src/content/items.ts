@@ -289,6 +289,26 @@ export const ITEMS = {
     armor: 4,
   }),
 
+  // ---- request #50: belt and face slots ----
+  leather_belt: item({
+    id: 'leather_belt',
+    name: 'Leather Belt',
+    description: 'A sturdy belt. Slightly tougher.',
+    kind: 'armor',
+    slots: ['belt'],
+    armor: 2,
+    bonuses: { endurance: 1 },
+  }),
+  bone_mask: item({
+    id: 'bone_mask',
+    name: 'Bone Mask',
+    description: 'A grim mask carved from bone. Hard to read.',
+    kind: 'armor',
+    slots: ['face'],
+    armor: 1,
+    bonuses: { will: 1 },
+  }),
+
   // ---- accessories (drops): rings and pendants (request #39) ----
   ring_of_vigor: item({
     id: 'ring_of_vigor',

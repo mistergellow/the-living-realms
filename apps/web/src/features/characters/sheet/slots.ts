@@ -9,8 +9,10 @@ export const SLOT_LABELS: Record<EquipSlot, string> = {
   ring1: 'Ring',
   ring2: 'Ring',
   pendant: 'Pendant',
+  belt: 'Belt',
+  face: 'Face',
 };
 
 /** Paper-doll layout: left and right of the character. */
-export const LEFT_SLOTS: EquipSlot[] = ['head', 'pendant', 'body', 'feet'];
-export const RIGHT_SLOTS: EquipSlot[] = ['mainHand', 'offHand', 'ring1', 'ring2'];
+export const LEFT_SLOTS: EquipSlot[] = ['head', 'face', 'pendant', 'body', 'belt'];
+export const RIGHT_SLOTS: EquipSlot[] = ['mainHand', 'offHand', 'ring1', 'ring2', 'feet'];

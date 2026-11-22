@@ -13,7 +13,7 @@ const OFFHAND_TYPES = ['shield', 'talisman'];
 const SLOTS_BY_KIND: Record<CustomItemInput['kind'], EquipSlot[]> = {
   weapon: ['mainHand', 'offHand'],
   offhand: ['offHand'],
-  armor: ['head', 'body', 'feet'],
+  armor: ['head', 'body', 'feet', 'belt', 'face'],
   accessory: ['ring1', 'ring2', 'pendant'],
 };
 

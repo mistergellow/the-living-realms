@@ -1,5 +1,5 @@
 {
-  "id": "936cefb8-9760-4423-9290-72688b377d52",
+  "id": "c404aba7-8509-4b8e-8327-4c0c4a7cb03c",
   "prevId": "07df5fbd-e94b-4813-9ad4-f99968ceea3e",
   "version": "7",
   "dialect": "postgresql",
@@ -178,6 +178,13 @@
           "type": "smallint",
           "primaryKey": false,
           "notNull": false
+        },
+        "level": {
+          "name": "level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
         },
         "learned_at": {
           "name": "learned_at",

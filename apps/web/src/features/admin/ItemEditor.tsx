@@ -31,7 +31,7 @@ const EMPTY: CustomItemInput = {
   magicResist: 0,
 };
 
-const ARMOR_SLOTS: EquipSlot[] = ['head', 'body', 'feet'];
+const ARMOR_SLOTS: EquipSlot[] = ['head', 'face', 'body', 'belt', 'feet'];
 /** Accessories are rings (either ring slot) or a pendant. */
 const ACCESSORY_KINDS = { ring: ['ring1', 'ring2'], pendant: ['pendant'] } as const;
 

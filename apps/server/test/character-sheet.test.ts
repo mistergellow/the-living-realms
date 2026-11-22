@@ -338,9 +338,14 @@ describe('Skill Books (request #47)', () => {
     expect(sheet.learnedSkills.map((s) => s.id)).toEqual(['second_wind']);
     expect(sheet.loadout[0]).toBe('second_wind');
     expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
-    // Reading it again is not possible (the book is gone; a second copy says you know it).
-    const again = await give(id, 'book_second_wind');
-    expect((await useItem(cookie, id, again)).json().error.message).toMatch(/already know/);
+    // Request #50: a second copy raises the skill's level, up to 5.
+    for (let level = 2; level <= 5; level++) {
+      const copy = await give(id, 'book_second_wind');
+      const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
+      expect(res2.learnedSkills.find((s) => s.id === 'second_wind')!.level).toBe(level);
+    }
+    const sixth = await give(id, 'book_second_wind');
+    expect((await useItem(cookie, id, sixth)).json().error.message).toMatch(/highest level/);
   });
 
   it('needs the BASE attributes the skill requires', async () => {

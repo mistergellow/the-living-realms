@@ -121,3 +121,38 @@ export function scalingMultiplier(attributes: Attributes, scaling: Partial<Attri
     points += (attributes[k as keyof Attributes] ?? 0) * (w ?? 0);
   return 1 + STAT_RULES.scalingPerPoint * points;
 }
+
+/**
+ * What each attribute does, for tooltips (request #50), built from the rules
+ * above so it never goes out of date. "Base" values also decide requirements
+ * and exploration tests (gear bonuses do not count there).
+ */
+export function attributeEffects(k: keyof Attributes): string[] {
+  const scale = `Each point makes weapons and skills that scale with it ${Math.round(STAT_RULES.scalingPerPoint * 100)}% stronger.`;
+  switch (k) {
+    case 'might':
+      return [scale, 'Used by heavy weapons and brute-force skills (Whirlwind, Rushing Charge…).'];
+    case 'agility':
+      return ['+1 Initiative per point.', 'The Dodge action gains +1 per 2 points.', scale];
+    case 'precision':
+      return [
+        `+${STAT_RULES.critPerPrecision}% critical chance and +${STAT_RULES.critDamagePerPrecision}% critical damage per point.`,
+        `More Focus per round: ${FOCUS_RULES.minimum} at ${FOCUS_RULES.basePrecision}, +1 every ${FOCUS_RULES.precisionPerFocus} points above.`,
+        scale,
+      ];
+    case 'endurance':
+      return [
+        `+${STAT_RULES.hpPerEndurance} maximum HP per point.`,
+        `+${STAT_RULES.healingReceivedPerEndurance}% healing received per point.`,
+        scale,
+      ];
+    case 'intellect':
+      return [`+${STAT_RULES.manaPerIntellect} maximum Mana per point.`, scale];
+    case 'will':
+      return [
+        `+${STAT_RULES.resistPerWill} magic resist, +${STAT_RULES.healingPerWill}% healing done and +${STAT_RULES.potencyPerWill}% status potency per point.`,
+        `+1 Mana per turn every ${STAT_RULES.willPerManaRegen} points.`,
+        scale,
+      ];
+  }
+}

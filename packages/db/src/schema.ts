@@ -242,6 +242,8 @@ export const characterSkills = pgTable(
       .references(() => characters.id, { onDelete: 'cascade' }),
     skillId: text('skill_id').notNull(),
     loadoutSlot: smallint('loadout_slot'),
+    /** Skill level (request #50): reading the book again raises it (1 … SKILL_RULES.maxLevel). */
+    level: smallint('level').notNull().default(1),
     learnedAt: timestamp('learned_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

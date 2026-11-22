@@ -29,6 +29,7 @@ export const SHOP_STOCK: ReadonlyArray<{ item: ItemDefId; price: number }> = [
   { item: 'padded_tunic', price: 30 },
   { item: 'leather_cap', price: 25 },
   { item: 'leather_boots', price: 25 },
+  { item: 'leather_belt', price: 25 },
 ];
 
 const GEAR_BASE_VALUE: Partial<Record<ItemKind, number>> = {

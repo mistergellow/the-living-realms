@@ -31,9 +31,13 @@ export const itemsRepository = {
   learnedSkills(
     db: DbOrTx,
     characterId: string,
-  ): Promise<Array<{ id: string; loadoutSlot: number | null }>> {
+  ): Promise<Array<{ id: string; loadoutSlot: number | null; level: number }>> {
     return db
-      .select({ id: characterSkills.skillId, loadoutSlot: characterSkills.loadoutSlot })
+      .select({
+        id: characterSkills.skillId,
+        loadoutSlot: characterSkills.loadoutSlot,
+        level: characterSkills.level,
+      })
       .from(characterSkills)
       .where(eq(characterSkills.characterId, characterId))
       .orderBy(asc(characterSkills.learnedAt), asc(characterSkills.skillId));

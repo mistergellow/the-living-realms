@@ -1,4 +1,9 @@
-import { getItemDef, INVENTORY_RULES } from '@realms/game-core';
+import {
+  getItemDef,
+  INVENTORY_RULES,
+  ATTRIBUTE_SUMMARIES,
+  attributeEffects,
+} from '@realms/game-core';
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
@@ -281,8 +286,27 @@ export function EquipmentTab({
                   {ATTRIBUTE_KEYS.map((k) => {
                     const bonus = s.attributes[k] - s.baseAttributes[k];
                     return (
-                      <tr key={k}>
-                        <th>{ATTRIBUTE_NAMES[k]}</th>
+                      <tr key={k} className="attr-row">
+                        <th>
+                          <span className="attr-name" tabIndex={0} data-testid={`attr-help-${k}`}>
+                            {ATTRIBUTE_NAMES[k]}
+                            {/* Request #50: what the attribute does, for new players. */}
+                            <span className="attr-tip" role="tooltip">
+                              <strong>{ATTRIBUTE_NAMES[k]}</strong>
+                              <span className="muted">{ATTRIBUTE_SUMMARIES[k]}</span>
+                              <ul>
+                                {attributeEffects(k).map((line) => (
+                                  <li key={line}>{line}</li>
+                                ))}
+                              </ul>
+                              <span className="muted small">
+                                Base {s.baseAttributes[k]}
+                                {bonus !== 0 ? `, gear ${fmt(bonus)}` : ''}. Requirements and
+                                exploration tests use the base value only.
+                              </span>
+                            </span>
+                          </span>
+                        </th>
                         <td data-testid={`sheet-attr-${k}`}>
                           {s.attributes[k]}
                           {bonus !== 0 && <span className="bonus"> ({fmt(bonus)})</span>}

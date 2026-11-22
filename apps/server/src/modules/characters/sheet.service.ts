@@ -25,6 +25,8 @@ import {
   gearReputationBonusPct,
   getItemDef,
   getSkill,
+  SKILL_RULES,
+  skillLevelMultiplier,
   planLoadout,
   isBroken,
   isGear,
@@ -249,8 +251,35 @@ export class CharacterSheetService {
             .join(' and ')} (base attributes).`,
         );
       const learned = await itemsRepository.learnedSkills(tx, c.id);
-      if (learned.some((s) => s.id === skill.id))
-        throw errors.validation(`You already know ${skill.name}.`);
+      const known = learned.find((s) => s.id === skill.id);
+      const useBook = async () => {
+        if (item.quantity > 1)
+          await tx
+            .update(items)
+            .set({ quantity: item.quantity - 1 })
+            .where(eq(items.id, item.id));
+        else await tx.delete(items).where(eq(items.id, item.id));
+      };
+      // Request #50: a book of a skill you know raises its level.
+      if (known) {
+        if (known.level >= SKILL_RULES.maxLevel)
+          throw errors.validation(
+            `${skill.name} is already at its highest level (${SKILL_RULES.maxLevel}).`,
+          );
+        await tx
+          .update(characterSkills)
+          .set({ level: known.level + 1 })
+          .where(and(eq(characterSkills.characterId, c.id), eq(characterSkills.skillId, skill.id)));
+        await useBook();
+        await tx.insert(worldEvents).values({
+          worldId: c.worldId,
+          type: 'skill.leveled',
+          actorAccountId: accountId,
+          actorCharacterId: c.id,
+          payload: { skillId: skill.id, level: known.level + 1 },
+        });
+        return this.buildSheet(tx, c);
+      }
       const used = new Set(learned.map((s) => s.loadoutSlot));
       const free = Array.from({ length: MAX_PREPARED_SKILLS }, (_, i) => i).find(
         (i) => !used.has(i),
@@ -340,7 +369,13 @@ export class CharacterSheetService {
       baseAttributes: baseAttributesOf(c),
       ...computeStats(baseAttributesOf(c), owned),
       abilityIds: availableAbilities(owned, preparedIds(skills)).map((a) => a.ability.id),
-      abilityMultipliers: abilityMultipliers(owned),
+      // Request #50: skill levels raise their numbers like weapon upgrades do.
+      abilityMultipliers: {
+        ...abilityMultipliers(owned),
+        ...Object.fromEntries(
+          skills.filter((s) => s.level > 1).map((s) => [s.id, skillLevelMultiplier(s.level)]),
+        ),
+      },
     };
   }
 
@@ -378,7 +413,7 @@ export class CharacterSheetService {
       ),
       learnedSkills: skills.flatMap((sk) => {
         const a = getAbility(sk.id);
-        return a ? [toAbilityDto(a, null)] : [];
+        return a ? [{ ...toAbilityDto(a, null), level: sk.level }] : [];
       }),
       loadout: loadoutOf(skills),
       reputation: c.reputation,
