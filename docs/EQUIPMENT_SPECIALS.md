@@ -211,13 +211,109 @@ closest thing here are the fixed effects of named items.
 
 ---
 
+## 5. Ideas from Path of Exile weapons (proposal)
+
+Source: general knowledge of Path of Exile's weapon and modifier systems (the
+wiki pages could not be read from the dev environment — Cloudflare blocks
+automated requests). Adapted to rounds, Focus, skill levels 1–10 and the
+existing weapon catalogue.
+
+### 5.1 Implicit bonus per weapon type
+
+In PoE every weapon class has a fixed **implicit** line that comes with the base
+(claws: life on hit; daggers: crit chance; sceptres: elemental damage; wands:
+spell damage; staves: block). Proposal: every weapon type in `content/weapons.ts`
+gets one implicit, fixed, outside the 0–5 bonuses, growing with +1…+10 like the
+named items' fixed effects.
+
+| Weapon type                  | Implicit (proposal)                       | PoE analogue                |
+| ---------------------------- | ----------------------------------------- | --------------------------- |
+| Sword                        | +5% basic attack damage                   | sword accuracy              |
+| Greatsword                   | +10% crit damage                          | thrusting sword crit multi  |
+| Dagger                       | +4% crit chance                           | dagger crit chance          |
+| Scythe                       | 5% Bleed on hit                           | —                           |
+| Axe / Handaxe                | 5% Bleed on hit                           | axe physical / bleed        |
+| Greataxe                     | +3 damage on kill (next hit)              | —                           |
+| Mace / Morningstar           | +2% Stun on hit                           | mace stun threshold         |
+| Hammer / Greathammer         | +1 round of Stun duration (when it stuns) | two-hand mace stun duration |
+| Spear / Lance                | 3% piercing hits                          | spear / impale              |
+| Bow                          | +1 Initiative                             | bow quiver bonuses          |
+| Crossbow                     | 5% piercing hits                          | —                           |
+| Sling / Chakram              | 5% Weaken on hit                          | —                           |
+| Staff                        | 5% block chance                           | staff block                 |
+| Wand                         | +6% skill damage                          | wand spell damage           |
+| Tome                         | +3 max Mana                               | —                           |
+| Scepter                      | 5% Burn on hit                            | sceptre elemental damage    |
+| Claw-like weapons (if added) | heal 1 HP on hit                          | claw life gained on hit     |
+
+### 5.2 Prefixes and suffixes
+
+PoE splits rolled mods into **prefixes** (mostly damage / defence numbers) and
+**suffixes** (mostly utility: speed, crit, resistances, attributes), max 3 of
+each. Proposal: same split with our 5 bonuses — **max 3 Attack** bonuses on one
+item — so a Mythic cannot be 5 pure damage lines. (Question for the owner.)
+
+### 5.3 New bonuses taken from PoE
+
+| Id                 | Bonus                      | What it does                                                                       | T1  | T5  | PoE source                     |
+| ------------------ | -------------------------- | ---------------------------------------------------------------------------------- | --- | --- | ------------------------------ |
+| `local_damage`     | Increased weapon damage    | +X% to the weapon's own base damage (weapon only)                                  | 10% | 50% | % increased physical damage    |
+| `added_damage`     | Adds X–Y damage            | +X–Y flat damage to the basic attack                                               | 1–2 | 4–7 | adds # to # physical damage    |
+| `added_magic`      | Adds X–Y magic damage      | +X–Y magic damage to the basic attack (hits Magic Resist)                          | 1–2 | 3–6 | adds # to # elemental damage   |
+| `skill_levels`     | +1 to {weapon type} skills | +1 level to skills of that weapon type (max level 10)                              | +1  | +2  | +# to level of socketed gems   |
+| `all_skill_levels` | +1 to all skills ⭐        | +1 level to all prepared skills                                                    | +1  | +1  | +1 to level of all spell gems  |
+| `life_on_hit`      | Life gained on hit         | heal X HP each hit                                                                 | 1   | 3   | life gained for each enemy hit |
+| `life_on_kill`     | Life gained on kill        | heal X HP on kill                                                                  | 2   | 8   | life gained on kill            |
+| `mana_on_kill`     | Mana gained on kill        | +X Mana on kill                                                                    | 2   | 6   | mana gained on kill            |
+| `focus_on_kill`    | Focus on kill              | X% chance of +1 Focus on kill                                                      | 10% | 30% | power / frenzy charge on kill  |
+| `dot_damage`       | Damage over time           | +X% damage of your Bleed and Burn ticks                                            | 5%  | 25% | damage over time multiplier    |
+| `status_duration`  | Ailment duration           | X% chance that statuses you apply last +1 round                                    | 5%  | 25% | increased ailment duration     |
+| `armor_pen`        | Armor penetration          | ignore X% of the target's Armor                                                    | 3%  | 15% | penetration                    |
+| `magic_pen`        | Magic penetration          | ignore X% of the target's Magic Resist                                             | 3%  | 15% | elemental penetration          |
+| `culling`          | Culling Strike ⭐          | a hit that leaves a non-boss below 10% HP kills it                                 | —   | —   | culling strike                 |
+| `onslaught`        | Onslaught on kill          | on kill: +X Initiative next round                                                  | 2   | 5   | onslaught on kill              |
+| `chill_on_hit`     | Chilling attack            | X% chance to apply Chill (−X Initiative, 2 rounds) — new status                    | 3%  | 12% | chill / freeze                 |
+| `blind_on_hit`     | Blinding attack            | X% chance to apply Blind (attacks miss 25%) — new status                           | 2%  | 8%  | blind on hit                   |
+| `vs_bleeding`      | Damage vs bleeding enemies | +X% damage to enemies with Bleed                                                   | 5%  | 20% | damage vs bleeding enemies     |
+| `vs_burning`       | Damage vs burning enemies  | +X% damage to enemies with Burn                                                    | 5%  | 20% | damage vs ignited enemies      |
+| `vs_stunned`       | Damage vs stunned enemies  | +X% damage to Stunned enemies                                                      | 5%  | 25% | damage vs stunned / frozen     |
+| `stun_duration`    | Stun duration              | X% chance that your Stuns last +1 round                                            | 10% | 30% | increased stun duration        |
+| `impale`           | Impale                     | X% chance that a hit stores 30% of its damage, dealt again next hit on that target | 5%  | 20% | impale                         |
+
+T2–T4 values sit between T1 and T5 (to be filled in when implemented).
+
+### 5.4 One-handed, two-handed and dual wield
+
+- **Two-handed weapons** roll offensive bonuses at **×1.5** the value (in PoE
+  flat damage on two-handed weapons is roughly double), because they give up
+  the off-hand.
+- **Dual wield** (weapon in the off-hand, if allowed): +5% block chance and
+  +1 Initiative while dual wielding (PoE: +attack speed and +15% block).
+- **Shield** in the off-hand: block chance is its typical bonus.
+
+### 5.5 Crafting ideas (for the blacksmith / Runemaster)
+
+| PoE mechanic        | Here (proposal)                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| Crafting bench      | the blacksmith adds **one chosen bonus** (low tier) to an item with a free slot     |
+| Orb of Alteration   | material that **rerolls the values** of the bonuses (same bonuses)                  |
+| Chaos Orb           | material that **rerolls all bonuses** (same number)                                 |
+| Exalted Orb         | rare material that **adds one random bonus** (if there is a free slot)              |
+| Fractured mod       | one bonus is **locked** and survives rerolls                                        |
+| Veiled mod          | a drop with a hidden bonus: at the blacksmith you **choose 1 of 3**                 |
+| Vaal / corruption   | risky material: +1 implicit, or rerolled, or item becomes unmodifiable — final      |
+| Influence (Shaper…) | Rift-specific bonuses that only drop in some Rifts (e.g. Void Rifts → Void bonuses) |
+| Quality             | **not used**: here quality is durability (D19)                                      |
+| Sockets / links     | the rune slots (section 4)                                                          |
+
+---
+
 ## Questions for the owner
 
-1. **Enemy families** do not exist yet. Proposal for the current enemies:
-   Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow
-   Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift
-   Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift
-   Zealot, players). OK, or other families?
+1. ~~Enemy families~~ — **decided (D121)**: Beast (Hollow Hound, Thornback,
+   Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase
+   Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood
+   Mother, Volatile Mite), Humanoid (Rift Zealot, players).
 2. **Tier of the value**: from the Rift tier (proposal) or random?
 3. **Weapon-family defences** only work in PvP (monsters use abilities, not
    weapons). Keep them, or use only Melee / Ranged / Magic defence?
@@ -225,3 +321,8 @@ closest thing here are the fixed effects of named items.
 5. **Economy bonuses 🧭** (double gold, double items, reputation, gathering, AP) — allow?
 6. **Caps** on totals (e.g. crit chance 30%, life steal 15%, block 25%)?
 7. Is the slot matrix right, or do you want to move bonuses between slots?
+8. **Implicits per weapon type** (5.1): yes / no, and the list.
+9. **Max 3 Attack bonuses per item** (PoE prefix / suffix split, 5.2)?
+10. Which **new PoE bonuses** (5.3) to keep? Chill and Blind would be new statuses.
+11. **Two-handed ×1.5** and the **dual wield** bonus (5.4)?
+12. Which **crafting materials** (5.5) to have, and who makes them?

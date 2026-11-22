@@ -130,6 +130,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                   | 2026-11-22 | `GameShell.tsx`                                                                                       |
 | D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                    | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
 | D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                               | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
+| D121 | **Famílias de inimigos** (para os bónus "Strong against X"): Beast (Hollow Hound, Thornback, Rift Leech), Hollow (Rift Husk, The Hollow Colossus), Void (Void Shaman, Phase Stalker, Shard Spitter), Construct (Rift Bulwark, Rift Warden), Brood (Brood Mother, Volatile Mite), Humanoid (Rift Zealot, jogadores)     | 2026-11-22 | `docs/EQUIPMENT_SPECIALS.md` (ainda não em código)                                                    |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -1351,3 +1352,14 @@ que bónus pode sair em cada slot (Weapon, Head, Face, Pendant, Body, Belt,
 Boots, Ring, Off-hand), runas como bónus 6 e 7, e perguntas (famílias de
 inimigos, tier do valor, defesas por família de arma, bónus de economia,
 limites). Continua a ser só proposta.
+
+**Revisão 2 (mesmo dia):** o dono aceitou as famílias de inimigos (D121) e pediu
+ideias do Path of Exile (wiki de armas). A wiki não abriu a partir do ambiente
+(o Cloudflare bloqueia pedidos automáticos), por isso a secção nova foi escrita
+a partir do conhecimento geral do PoE: implícito por tipo de arma, divisão
+prefixo/sufixo (máx. 3 bónus de ataque), bónus novos (dano local, dano plano,
++níveis de skill, vida/mana/Focus ao matar, dano ao longo do tempo,
+penetração, Chill, Blind, Impale…), uma mão vs duas mãos vs dual wield, e ideias
+de crafting (bancada, materiais para rerolar/acrescentar, bónus bloqueado,
+"veiled", corrupção, bónus por Rift). Ambiente novo `the-living-realms` com
+acesso às wikis do PoE.
