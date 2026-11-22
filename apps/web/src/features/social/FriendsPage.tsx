@@ -1,6 +1,6 @@
 import type { CharacterRefDto } from '@realms/shared';
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router';
+import { Link, Navigate } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { CharacterToken } from '../characters/CharacterToken';
@@ -12,7 +12,14 @@ function Row({ who, children }: { who: CharacterRefDto; children?: React.ReactNo
     <li className="friend-row" data-testid="friend-row">
       <CharacterToken appearance={who.appearance} size={36} title={who.name} />
       <div style={{ flex: 1 }}>
-        <strong>{who.name}</strong>
+        <strong>{who.name}</strong>{' '}
+        <Link
+          className="small"
+          to={`/professions/inspect/${encodeURIComponent(who.name)}`}
+          aria-label={`Professions of ${who.name}`}
+        >
+          Professions
+        </Link>
         <div className="muted" style={{ fontSize: 12 }}>
           <span className="status-dot" data-status={who.online ? 'online' : 'idle'} />{' '}
           {who.online ? 'Online' : 'Offline'}

@@ -140,17 +140,26 @@ the old format (no penalty).
 
 ### `character_professions`
 
-Profession levels (request #33). A row is created the first time a profession
-is practised; no row means level 0.
+Profession Mastery (request #33, ranks from request #51). A row is created the
+first time a profession is practised; no row means Novice. The column names
+are the original ones: `level` holds the Mastery rank and `xp` the points.
 
 | Column        | Type                           | Notes                                                  |
 | ------------- | ------------------------------ | ------------------------------------------------------ |
 | character_id  | uuid FK → characters (cascade) | PK part                                                |
 | profession_id | text                           | PK part; id in `game-core/src/content/professions.ts`  |
-| level         | smallint 0–10                  | `CHECK` 0–10                                           |
-| xp            | integer                        | XP towards the next level                              |
+| level         | smallint 0–5                   | Mastery rank (0 Novice … 5 Grandmaster); `CHECK` 0–5   |
+| xp            | integer                        | Mastery points towards the next rank                   |
 | ready_at      | timestamptz null               | the profession can be practised again from this moment |
+| attempts      | integer                        | statistics (request #51)                               |
+| successes     | integer                        | statistics                                             |
+| items_made    | integer                        | statistics: items produced                             |
 | updated_at    | timestamptz                    |                                                        |
+
+Migration 0016 renamed old ids (`blacksmithing` → `blacksmith`, `runesmithing`
+→ `runecrafter`, `farming` → `herbalism`, `medicine` → `tailoring`), turned
+levels into ranks and gave every living character the four basic tools.
+Rank-ups are `world_events` of type `profession.rank_up` {professionId, rank}.
 
 ### `rift_runs`
 

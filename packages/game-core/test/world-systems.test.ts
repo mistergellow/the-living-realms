@@ -34,7 +34,7 @@ describe('terrain and Rift entrances (request #43)', () => {
     expect(professionTerrains('fishing')).toEqual(['river']);
     expect(professionTerrains('mining')).toEqual(['mountain']);
     expect(professionTerrains('woodcutting')).toEqual(['forest']);
-    expect(professionTerrains('blacksmithing')).toBeNull();
+    expect(professionTerrains('blacksmith')).toBeNull();
   });
 
   it('Rifts sit in the Riftlands; the deeper, the higher the tier', () => {

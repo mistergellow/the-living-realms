@@ -1,82 +1,128 @@
+import type { Attributes } from '@realms/shared';
+import { ATTRIBUTE_KEYS } from '@realms/shared';
 import { Rng } from './combat/rng.js';
-import { PROFESSION_RULES, type ActivityDef } from './content/professions.js';
+import {
+  MASTERY_RULES,
+  MAX_RANK,
+  PROFESSION_ATTRIBUTE_RULES,
+  TOOL_RULES,
+  type ActivityDef,
+  type ProfessionDef,
+} from './content/professions.js';
 
 /*
- * Profession rules (request #33). Pure: the server supplies the level, the
- * random seed and the target item; it applies the result.
+ * Profession rules (request #33, Mastery from request #51). Pure: the server
+ * supplies the rank, the BASE attributes, the best tool tier and the random
+ * seed; it applies the result.
  */
 
-/** XP needed to go from `level` to `level + 1`. */
-export const xpToNext = (level: number) =>
-  level >= PROFESSION_RULES.maxLevel
-    ? 0
-    : PROFESSION_RULES.xpBase + PROFESSION_RULES.xpPerLevel * level;
+/** Mastery points needed to go from `rank` to `rank + 1` (0 at Grandmaster). */
+export const pointsToNext = (rank: number) =>
+  rank >= MAX_RANK ? 0 : (MASTERY_RULES.pointsToNext[rank] ?? 0);
 
-/** Add XP; returns the new level/xp and how many levels were gained. */
-export function addProfessionXp(
-  level: number,
-  xp: number,
+/**
+ * Share of an activity's points a character of `rank` still gets: simple work
+ * teaches an expert little, then nothing (so farming cheap items cannot reach
+ * Grandmaster).
+ */
+export function complexityFactor(a: Pick<ActivityDef, 'complexity'>, rank: number): number {
+  const above = Math.max(0, rank - (a.complexity - 1));
+  const f = MASTERY_RULES.complexityFalloff;
+  return f[Math.min(above, f.length - 1)]!;
+}
+
+/** Mastery points an attempt gives at `rank` (after the complexity falloff). */
+export function masteryPoints(a: ActivityDef, rank: number, success: boolean): number {
+  if (rank >= MAX_RANK) return 0;
+  return Math.round((success ? a.points : a.failurePoints) * complexityFactor(a, rank));
+}
+
+/** Add Mastery points; returns the new rank/points and how many ranks were gained. */
+export function addMastery(
+  rank: number,
+  points: number,
   gain: number,
-): { level: number; xp: number; levelsGained: number } {
-  let l = level;
-  let x = xp + gain;
+): { rank: number; points: number; ranksGained: number } {
+  let r = rank;
+  let p = points + gain;
   let gained = 0;
-  while (l < PROFESSION_RULES.maxLevel && x >= xpToNext(l)) {
-    x -= xpToNext(l);
-    l++;
+  while (r < MAX_RANK && p >= pointsToNext(r)) {
+    p -= pointsToNext(r);
+    r++;
     gained++;
   }
-  if (l >= PROFESSION_RULES.maxLevel) x = 0;
-  return { level: l, xp: x, levelsGained: gained };
+  if (r >= MAX_RANK) p = 0;
+  return { rank: r, points: p, ranksGained: gained };
 }
 
-/** Success chance (percent) at a level; upgrades get harder per existing +1. */
-export function activityChance(a: ActivityDef, level: number, targetUpgrade = 0): number {
+/**
+ * §21: success bonus from BASE attributes (never gear), weighted per
+ * profession and capped well below what one rank gives.
+ */
+export function attributeBonus(p: Pick<ProfessionDef, 'attributes'>, base: Attributes): number {
+  const { baseline, perPoint, cap } = PROFESSION_ATTRIBUTE_RULES;
+  let sum = 0;
+  for (const k of ATTRIBUTE_KEYS) {
+    const w = p.attributes[k];
+    if (w) sum += w * Math.max(0, base[k] - baseline) * perPoint;
+  }
+  return Math.min(cap, Math.floor(sum));
+}
+
+/** Success bonus of a tool tier (tier 1 = none). */
+export const toolBonus = (tier: number) =>
+  Math.max(0, tier - 1) * TOOL_RULES.chanceBonusPerTier;
+
+export interface ChanceInput {
+  rank: number;
+  /** From `attributeBonus`. */
+  attributeBonus?: number;
+  /** Tier of the best usable tool (0 = none needed). */
+  toolTier?: number;
+}
+
+/** Success chance (percent). Mastery counts most; tools and attributes add a little. */
+export function activityChance(a: ActivityDef, input: ChanceInput): number {
   const raw =
     a.baseChance +
-    PROFESSION_RULES.successPerLevel * level -
-    (a.effect === 'upgrade' ? PROFESSION_RULES.upgradePenaltyPerLevel * targetUpgrade : 0);
-  return Math.max(PROFESSION_RULES.minChance, Math.min(PROFESSION_RULES.maxChance, raw));
+    MASTERY_RULES.successPerRank * Math.max(0, input.rank - a.rank) +
+    toolBonus(input.toolTier ?? 0) +
+    (input.attributeBonus ?? 0);
+  return Math.max(MASTERY_RULES.minChance, Math.min(MASTERY_RULES.maxChance, raw));
 }
 
-export const repairAmount = (level: number) =>
-  PROFESSION_RULES.repairBase + PROFESSION_RULES.repairPerLevel * level;
+export const repairAmount = (rank: number) =>
+  MASTERY_RULES.repairBase + MASTERY_RULES.repairPerRank * rank;
 
 export interface ActivityOutcome {
   success: boolean;
   chance: number;
-  xp: number;
+  /** Mastery points gained (after the complexity falloff). */
+  points: number;
   /** Items produced (success only). */
   outputs: Array<{ item: string; qty: number }>;
   /** Quality restored (repair). */
   repaired: number;
-  /** Weapon upgrade gained (upgrade). */
-  upgraded: boolean;
 }
 
-/** Roll an attempt. Level improves both the chance and the result. */
-export function resolveActivity(
-  a: ActivityDef,
-  level: number,
-  seed: number,
-  targetUpgrade = 0,
-): ActivityOutcome {
+/** Roll an attempt. Rank improves the chance and the result. */
+export function resolveActivity(a: ActivityDef, input: ChanceInput, seed: number): ActivityOutcome {
   const rng = new Rng(seed);
-  const chance = activityChance(a, level, targetUpgrade);
+  const chance = activityChance(a, input);
   const success = rng.chance(chance);
+  const above = Math.max(0, input.rank - a.rank);
   const outputs: ActivityOutcome['outputs'] = [];
   if (success)
     for (const o of a.outputs) {
       let qty = o.min + rng.int(o.max - o.min + 1);
-      if (rng.chance(PROFESSION_RULES.yieldPerLevel * level)) qty++;
+      if (rng.chance(MASTERY_RULES.yieldPerRank * above)) qty++;
       outputs.push({ item: o.item, qty });
     }
   return {
     success,
     chance,
-    xp: success ? a.xpSuccess : a.xpFailure,
+    points: masteryPoints(a, input.rank, success),
     outputs,
-    repaired: success && a.effect === 'repair' ? repairAmount(level) : 0,
-    upgraded: success && a.effect === 'upgrade',
+    repaired: success && a.effect === 'repair' ? repairAmount(input.rank) : 0,
   };
 }

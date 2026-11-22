@@ -40,6 +40,10 @@ const GLYPHS = {
   grain:
     'M12 21V8M12 8c-2-1-3-3-3-5 2 1 3 3 3 5ZM12 8c2-1 3-3 3-5-2 1-3 3-3 5ZM12 13c-2-1-4-2-4-5 2 1 4 2 4 5ZM12 13c2-1 4-2 4-5-2 1-4 2-4 5Z',
   bag: 'M8 7V6a4 4 0 0 1 8 0v1M5 7h14l-1 14H6L5 7Z',
+  // request #51: tools and scribing
+  rod: 'M4 21 18 3M18 3v11M18 14a2 2 0 1 1-2 2M4 21l2-1',
+  pickaxe: 'M4 20 14 10M6 6c4-3 9-3 14 1-4-1-7-1-10 1M13 9l2 2',
+  scroll: 'M7 4h11a2 2 0 0 1 0 4H7M7 4a2 2 0 0 0 0 4v10a2 2 0 0 0 2 2h9a2 2 0 0 0 0-4H9M10 11h6M10 14h4',
 } as const;
 type Glyph = keyof typeof GLYPHS;
 
@@ -64,6 +68,18 @@ const BY_DEF: Record<string, Glyph> = {
   healing_draught: 'potion',
   mana_tonic: 'potion',
   bandage: 'bandage',
+  parchment: 'scroll',
+  ink: 'potion',
+  blank_scroll: 'scroll',
+  blessing_scroll: 'scroll',
+};
+
+/** Request #51: profession tools by type. */
+const BY_TOOL: Record<string, Glyph> = {
+  fishing_rod: 'rod',
+  axe: 'axe',
+  pickaxe: 'pickaxe',
+  hunting_knife: 'dagger',
 };
 
 const BY_WEAPON: Record<string, Glyph> = {
@@ -96,6 +112,7 @@ export const SLOT_GLYPH: Record<EquipSlot, Glyph> = {
 
 export function glyphFor(item: ItemDto): Glyph {
   if (item.weapon) return BY_WEAPON[item.weapon.type] ?? 'sword';
+  if (item.tool) return BY_TOOL[item.tool.type] ?? 'bag';
   if (BY_DEF[item.defId]) return BY_DEF[item.defId]!;
   const slot = item.slots[0];
   if (slot) return SLOT_GLYPH[slot];

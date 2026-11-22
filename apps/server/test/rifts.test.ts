@@ -284,7 +284,9 @@ describe('Rifts', () => {
           url: `/api/characters/${h.characterId}`,
           headers: { cookie: h.cookie },
         })
-      ).json().inventory as Array<{ name: string }>;
+      ).json().inventory.filter((i: { kind: string }) => i.kind !== 'tool') as Array<{
+        name: string;
+      }>;
 
     // Leaving (or a wipe) loses what was found.
     const quitter = await hero();

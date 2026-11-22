@@ -99,3 +99,90 @@
     max-height: 12rem;
   }
 }
+
+/* Mastery (request #51). */
+.prof-inspect {
+  align-items: center;
+  gap: var(--space-2);
+}
+.prof-inspect input {
+  max-width: 14rem;
+}
+.rank-ladder {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.7rem;
+  text-align: center;
+}
+.rank-ladder li {
+  padding: 0.15rem 0.1rem;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted, #8a8172);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-ladder li[data-reached='true'] {
+  color: var(--text);
+  background: rgb(232 189 95 / 0.12);
+}
+.rank-ladder li[data-current='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.prof-bar {
+  height: 0.35rem;
+  background: rgb(0 0 0 / 0.5);
+  border-radius: 0.2rem;
+  overflow: hidden;
+}
+.prof-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.prof-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-2);
+}
+.prof-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: var(--space-2);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 0.25);
+}
+.prof-facts [data-ok='false'] strong {
+  color: var(--danger);
+}
+.prof-sub {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.prof-locked,
+.prof-history {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.prof-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+.prof-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: var(--space-2);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius-sm);
+}

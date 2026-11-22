@@ -10,6 +10,7 @@ import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
 import { RunPage } from '../features/rifts/RunPage';
 import { ProfessionsPage } from '../features/professions/ProfessionsPage';
+import { InspectPage } from '../features/professions/InspectPage';
 import { WorldBossPage } from '../features/worldboss/WorldBossPage';
 import { CityPage } from '../features/city/CityPage';
 import { LobbyPage } from '../features/rifts/LobbyPage';
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
           { path: '/rifts', element: <RiftsPage /> },
           { path: '/friends', element: <FriendsPage /> },
           { path: '/professions', element: <ProfessionsPage /> },
+          { path: '/professions/inspect/:name', element: <InspectPage /> },
           { path: '/world-boss', element: <WorldBossPage /> },
           { path: '/city/:tab', element: <CityPage /> },
         ],

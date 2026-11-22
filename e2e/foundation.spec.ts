@@ -340,7 +340,7 @@ test('friends + private lobby + group Rift with two players', async ({ browser }
   });
 });
 
-test('professions: practise fishing and gain XP', async ({ page }) => {
+test('professions: Mastery sections, fishing with a rod, inspect a profile', async ({ page }) => {
   await register(page, `e2e-prof-${unique()}@example.com`);
   const angler = randomName('Angler');
   await createCharacter(page, angler);
@@ -348,12 +348,27 @@ test('professions: practise fishing and gain XP', async ({ page }) => {
   await travel(page, angler, 'river');
   await expect(page.getByTestId('place-name')).toContainText('River');
   await page.getByRole('link', { name: 'Professions', exact: true }).click();
-  await expect(page.getByTestId('profession-fishing')).toContainText('Lv 0');
+  // Request #51: two sections, Novice ranks, the starter rod in the bag.
+  await expect(page.getByTestId('section-gathering')).toContainText('Gathering Mastery');
+  await expect(page.getByTestId('section-crafting')).toContainText('Crafting Mastery');
+  await expect(page.getByTestId('profession-scribing')).toContainText('Novice');
+  await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
   await page.getByTestId('profession-fishing').click();
+  await expect(page.getByTestId('profession-tool')).toContainText('Fishing Rod');
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
-  await expect(page.getByTestId('activity-result')).toContainText('XP');
+  await expect(page.getByTestId('activity-result')).toContainText('Mastery');
   await expect(page.getByTestId('profession-level')).toContainText('busy');
+  await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
+  // Crafting: higher recipes are listed as not unlocked yet.
+  await page.getByTestId('profession-carpentry').click();
+  await expect(page.getByTestId('locked-recipes')).toContainText('unlocks at Apprentice');
+  // Inspect a professional profile (here: your own, by name).
+  await page.getByLabel('Character to inspect').fill(angler);
+  await page.getByRole('button', { name: 'Inspect' }).click();
+  await expect(page.getByTestId('profession-profile')).toContainText(angler);
+  await expect(page.getByTestId('profile-fishing')).toContainText('1 attempt');
+  await page.screenshot({ path: 'test-results/screens/10b-profession-profile.png' });
 });
 
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */
