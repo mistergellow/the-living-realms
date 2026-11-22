@@ -1352,3 +1352,19 @@ de ser um popup à frente de tudo); o mais "user friendly" possível.
   falta a ferramenta, faltam materiais, sítio esgotado, trabalho a decorrer).
 - Amigos, world boss e fundar guilda: largura legível e centrada em vez de
   caixas de 1900 px quase vazias.
+
+### #65 — 2026-11-22 — Tooltip das armas mais clara; dano só físico ou mágico
+
+**Pedido:** a tooltip do item era confusa — o "13–16" era o dano já com os
+meus atributos? Mostrar o dano base e o dano real quando equipado; tirar a
+descrição ("Balanced…") mas dizer que é dano físico; "Grants" com os ícones
+das habilidades. Depois: não há dano "ranged" (ou é físico ou é mágico); e o
+"Scales with" tem de ficar.
+**Resultado:** a tooltip das armas mostra "Damage type", "Base damage" (da
+arma, com o upgrade), "With your attributes" (o teu dano real com os teus
+atributos totais), "Scales with" e "Basic attack"; upgrade só quando há; as
+runas só quando há espaços desbloqueados; "Abilities while equipped" com os
+ícones e nomes; a descrição das armas base saiu (as das armas com nome ficam).
+"Ranged" passou a ser só a forma do ataque: o dano mostra-se sempre como
+físico ou mágico (`damageTypeLabel`), como já era no cálculo (a Armadura
+reduz o dano à distância).

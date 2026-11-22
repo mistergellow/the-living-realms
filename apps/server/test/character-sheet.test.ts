@@ -84,7 +84,7 @@ describe('character creation (attributes + starter kit)', () => {
     expect(sheet.abilities[0]).toMatchObject({
       grantedBy: 'Hunting Bow',
       focusCost: 2,
-      effects: ['7–9 ranged damage'],
+      effects: ['7–9 physical damage'], // request #65: ranged attacks deal physical damage
       scaling: 'Precision 60% · Agility 40%',
     });
     expect(sheet.reputation).toBe(0);
