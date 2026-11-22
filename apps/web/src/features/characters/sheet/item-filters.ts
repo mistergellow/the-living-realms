@@ -16,8 +16,7 @@ export const isGear = (i: ItemDto) => i.slots.length > 0;
 /** Whether an item passes a filter and a search text (by name). */
 export function itemMatches(i: ItemDto, f: ItemFilter, search = ''): boolean {
   const q = search.trim().toLowerCase();
-  const kind =
-    f === 'all' || (f === 'gear' ? isGear(i) : f === 'named' ? !!i.named : i.kind === f);
+  const kind = f === 'all' || (f === 'gear' ? isGear(i) : f === 'named' ? !!i.named : i.kind === f);
   // Search also finds the base type ("sword", "plate", "heavy").
   const text = [i.name, i.named?.baseName, i.weapon?.typeName, i.armorClass]
     .filter(Boolean)
