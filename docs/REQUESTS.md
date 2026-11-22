@@ -1167,3 +1167,14 @@ estranho": perguntado o quê em concreto.)
   Expose Weakness melhora a cada nível.
 - A ficha mostra os números do nível (com uma casa decimal) e "Lv M3", etc.
 - Testes: 145 unitários (game-core), 95 de integração.
+
+### #54 — 2026-11-22 — Ferreiro: tooltip com a diferença do upgrade
+
+**Pedido:** no ferreiro, ao fazer um upgrade, mostrar a diferença entre a arma
+atual e o que o upgrade vai fazer.
+**Resultado:** ao passar o rato sobre a arma no ferreiro aparece "Arma → +N":
+dano base atual → depois (ganho a verde), bónus das habilidades da arma
+(+0 % → +10 %), a probabilidade e o aviso de quebra, e o cartão completo da
+arma depois do upgrade. Servidor: `CityDto.upgrades[id].compare` e `preview`.
+Testes: `city.test.ts`, e2e "city storage".
+

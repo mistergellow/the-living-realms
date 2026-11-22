@@ -19,6 +19,16 @@ export interface CityDto {
       gold: number;
       chance: number;
       material: { defId: string; name: string; qty: number; have: number } | null;
+      /**
+       * Request #54: the weapon now and after the upgrade, for the comparison
+       * tooltip. `power` = bonus on the weapon's ability values (percent).
+       */
+      compare: {
+        now: { damage: { min: number; max: number }; power: number };
+        next: { damage: { min: number; max: number }; power: number };
+      };
+      /** The item as it would be after a successful upgrade. */
+      preview: ItemDto;
     }
   >;
   /** Blessing Scrolls you carry. */

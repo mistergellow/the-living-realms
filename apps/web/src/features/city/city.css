@@ -97,3 +97,21 @@
 .city-drop[data-over='true'] {
   box-shadow: 0 0 1.2rem color-mix(in srgb, var(--accent) 50%, transparent);
 }
+
+/* Blacksmith comparison tooltip (request #54). */
+.city-tip[data-wide='true'] {
+  width: 21rem;
+}
+.upgrade-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.compare-up {
+  color: var(--success, #5fbf6a);
+}
+.compare-after {
+  margin-top: 0.3rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--frame);
+}

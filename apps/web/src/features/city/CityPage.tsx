@@ -87,9 +87,12 @@ function ItemRow({
   item,
   children,
   drag,
+  tip,
 }: {
   item: ItemDto;
   children: React.ReactNode;
+  /** Tooltip content instead of the item card (the blacksmith's comparison). */
+  tip?: React.ReactNode;
   /** Pointer handlers from `useDragAndDrop` (storage). */
   drag?: React.HTMLAttributes<HTMLLIElement>;
 }) {
@@ -109,8 +112,8 @@ function ItemRow({
           {item.name}
           {item.quantity > 1 ? ` ×${item.quantity}` : ''}
         </strong>
-        <span className="city-tip">
-          <ItemTooltipBody item={item} />
+        <span className="city-tip" data-wide={tip ? true : undefined}>
+          {tip ?? <ItemTooltipBody item={item} />}
         </span>
       </span>
       <span className="spacer" />
@@ -305,7 +308,7 @@ function Blacksmith({ city, busy, run }: Props) {
           const q = city.upgrades[w.id]!;
           const missing = q.material && q.material.have < q.material.qty;
           return (
-            <ItemRow key={w.id} item={w}>
+            <ItemRow key={w.id} item={w} tip={<UpgradeCompare item={w} quote={q} />}>
               <span className="muted small">
                 → +{q.toLevel} · {Math.round(q.chance * 100)}% · {q.gold} gold
                 {q.material && ` · ${q.material.qty} × ${q.material.name} (${q.material.have})`}
@@ -328,5 +331,59 @@ function Blacksmith({ city, busy, run }: Props) {
         })}
       </ul>
     </section>
+  );
+}
+
+/** One line of the comparison: value now → after, with the gain. */
+function CompareRow({
+  label,
+  now,
+  next,
+  unit = '',
+}: {
+  label: string;
+  now: string;
+  next: string;
+  unit?: string;
+}) {
+  const changed = now !== next;
+  return (
+    <div className="tip-row">
+      <span>{label}</span>
+      <b>
+        {now}
+        {unit} →{' '}
+        <span className={changed ? 'compare-up' : undefined}>
+          {next}
+          {unit}
+        </span>
+      </b>
+    </div>
+  );
+}
+
+/**
+ * Request #54: what the upgrade changes — the weapon now and after a
+ * successful upgrade, side by side, then the full card of the result.
+ */
+function UpgradeCompare({ item, quote }: { item: ItemDto; quote: CityDto['upgrades'][string] }) {
+  const { now, next } = quote.compare;
+  const dmg = (d: { min: number; max: number }) => `${d.min}–${d.max}`;
+  return (
+    <div className="upgrade-compare" data-testid="upgrade-compare">
+      <strong>
+        {item.name} → +{quote.toLevel}
+      </strong>
+      <CompareRow label="Base damage" now={dmg(now.damage)} next={dmg(next.damage)} />
+      <CompareRow label="Weapon abilities" now={`+${now.power}`} next={`+${next.power}`} unit="%" />
+      <p className="muted small" style={{ margin: '0.3rem 0' }}>
+        Success chance {Math.round(quote.chance * 100)}%. On failure the weapon breaks, unless you
+        use a Blessing Scroll.
+      </p>
+      <div className="compare-after">
+        <span className="muted small">After the upgrade</span>
+        <ItemTooltipBody item={quote.preview} />
+      </div>
+    </div>
   );
 }

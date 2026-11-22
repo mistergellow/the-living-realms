@@ -398,6 +398,12 @@ test('city storage: search, filter and drag and drop (request #52)', async ({ pa
   await storage.getByTestId('city-item-fishing_rod').dragTo(bag.locator('..'));
   await expect(bag.getByTestId('city-item-fishing_rod')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/12-storage.png' });
+  // Request #54: the blacksmith shows what an upgrade changes.
+  await page.getByRole('tab', { name: 'Blacksmith' }).click();
+  await page.getByTestId('blacksmith').locator('.city-row > .city-name > strong').first().hover();
+  await expect(page.getByTestId('upgrade-compare')).toContainText('→ +1');
+  await expect(page.getByTestId('upgrade-compare')).toContainText('After the upgrade');
+  await page.screenshot({ path: 'test-results/screens/13-blacksmith-compare.png' });
 });
 
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */

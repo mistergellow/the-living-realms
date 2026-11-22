@@ -573,6 +573,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Filtros/pesquisa partilhados: `apps/web/src/features/characters/sheet/item-filters.ts` (`ITEM_FILTERS`, `itemMatches`, `isGear`) usados por `EquipmentTab.tsx` e `CityPage.tsx`
 - Arrastar-e-largar: `useDragAndDrop`/`DragGhost` (`sheet/drag.tsx`); no armazém `data-drop="bag|storage"` → `storage/deposit|withdraw` (`city.routes.ts`)
+- Ferreiro, comparação (pedido #54): `CityDto.upgrades[id].compare/preview` (`shared/city.ts`, `city.service.ts` com `weaponInfo`/`upgradeMultiplier`), `UpgradeCompare` (`CityPage.tsx`)
 - **Tipo de item novo (`ItemKind`):** acrescentar a `ITEM_FILTERS` e a `KIND_LABEL` (`ItemTooltip.tsx`)
 - Testes: `apps/server/test/city.test.ts`, e2e "city storage"
 
