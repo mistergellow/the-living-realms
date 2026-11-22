@@ -1285,3 +1285,13 @@ máximo 3 num fácil, mínimo 1. "Está muito fácil fazer os Rifts."
 de 10 a 20 salas; nenhum percurso passa por mais fogueiras do que o limite
 do tier (validado na geração, `maxOnAnyPath`); a fogueira antes do boss fica
 sempre. Testes: `rift-size.test.ts` (5 tiers × 15 mapas).
+
+### #61 — 2026-11-22 — Tooltips iguais e valores coloridos
+
+**Pedido (em #59):** havia várias tooltips diferentes; todas deviam seguir a
+lógica da tooltip da arma; valores e palavras-chave com cor diferente.
+**Resultado:** um só aspeto para todas as tooltips (itens, skills na ficha e
+no combate, atributos, ícones de efeitos — estes deixaram a tooltip do browser
+e passaram a ter um cartão); componente `Rich` (`shared/ui/Rich.tsx`) pinta
+números/percentagens a dourado e palavras-chave por tipo (atributos, estados,
+físico/mágico/à distância, Focus, Mana, HP…). Estilos em `theme.css`.

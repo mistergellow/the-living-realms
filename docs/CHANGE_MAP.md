@@ -591,6 +591,12 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - `RIFT_SIZE_RULES`, `riftLength`, `mapTemplateForTier` (`content/rifts.ts`, usado em `siteRift`); `MapTemplate.maxCampsitesPerPath`, `maxOnAnyPath`, `validateMap` (`rift/map.ts`); testes `rift-size.test.ts`, `rifts.test.ts` (servidor)
 
+## Tooltips (pedido #61)
+
+- Aspeto único: `theme.css` (`.game-tooltip`, `.ability-tooltip`, `.attr-tip`, `.city-tip`, `.fx-tip`, `.v`, `.kw-*`); texto colorido com `Rich` (`shared/ui/Rich.tsx`: palavras-chave de `ATTRIBUTE_NAMES`, `STATUS_NAMES`, tipos de dano, recursos)
+- Usado em `ItemTooltip.tsx`, `AbilitiesTab.tsx`, `AbilityBar.tsx`, `EquipmentTab.tsx` (atributos), `EffectIcon.tsx` (cartão `.fx-hover`/`.fx-tip` em vez de `title`)
+- **Atributo/estado novo:** entra sozinho em `Rich`; **tooltip nova:** usar estas classes e `Rich`
+
 ## Tema visual (pedido #58, D113)
 
 - Tokens: `apps/web/src/styles/tokens.css` (`--gold-1…4`, `--frame*`, `--glass*`, `--accent*`)

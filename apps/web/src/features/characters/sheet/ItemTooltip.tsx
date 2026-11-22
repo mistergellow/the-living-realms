@@ -5,6 +5,7 @@ import {
   getSkill,
   RARITY_NAMES,
 } from '@realms/game-core';
+import { Rich } from '../../../shared/ui/Rich';
 import { AbilityEffects } from '../../../shared/ui/EffectIcon';
 import type { AttributeKey, EquipSlot, ItemDto } from '@realms/shared';
 import { SLOT_LABELS } from './slots';
@@ -71,7 +72,7 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
             </b>
           </div>
           <p className="tip-identity">
-            {w.attackStyle} · {w.identity}
+            <Rich text={`${w.attackStyle} · ${w.identity}`} />
           </p>
         </div>
       )}
@@ -137,7 +138,9 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
           <ul className="tip-affixes" data-testid="item-affixes">
             {item.affixes.map((a) => (
               <li key={a.id}>
-                <span>{a.label}</span>
+                <span>
+                  <Rich text={a.label.replace(/\s[+−-]?\d+%?$/, '')} />
+                </span>
                 <b>{a.display}</b>
               </li>
             ))}
@@ -201,7 +204,11 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
         </div>
       )}
 
-      {item.description && <p className="tip-desc">{item.description}</p>}
+      {item.description && (
+        <p className="tip-desc">
+          <Rich text={item.description} />
+        </p>
+      )}
 
       {item.slots.length > 0 && (
         <div className="tip-quality">

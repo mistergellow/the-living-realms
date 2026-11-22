@@ -1,4 +1,5 @@
 import { getAbility, STATUS_DESCRIPTIONS, STATUS_NAMES, type AbilityDef } from '@realms/game-core';
+import { Rich } from './Rich';
 import type { StatusId } from '@realms/shared';
 import './effect-icons.css';
 
@@ -128,24 +129,39 @@ export function EffectIcon({
 }) {
   const icon = ICONS[kind];
   const label = title ?? icon.label;
+  // Request #59: a card like every other tooltip ("Name 3: what it does").
+  const cut = label.indexOf(': ');
+  const head = cut > 0 ? label.slice(0, cut) : label;
+  const body = cut > 0 ? label.slice(cut + 2) : null;
   return (
-    <span
-      className={`fx-icon fx-${size}`}
-      style={{ ['--fx' as string]: icon.color }}
-      title={label}
-      aria-label={label}
-      role="img"
-      data-effect={kind}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden>
-        <path d={icon.path} />
-      </svg>
-      {value !== undefined && value !== null && value !== 0 && value !== '' && (
-        <b className="fx-value">{value}</b>
-      )}
-      {turns !== undefined && turns !== null && turns < 99 && turns > 0 && (
-        <i className="fx-turns">{turns}</i>
-      )}
+    <span className="fx-hover">
+      <span
+        className={`fx-icon fx-${size}`}
+        style={{ ['--fx' as string]: icon.color }}
+        aria-label={label}
+        role="img"
+        data-effect={kind}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden>
+          <path d={icon.path} />
+        </svg>
+        {value !== undefined && value !== null && value !== 0 && value !== '' && (
+          <b className="fx-value">{value}</b>
+        )}
+        {turns !== undefined && turns !== null && turns < 99 && turns > 0 && (
+          <i className="fx-turns">{turns}</i>
+        )}
+      </span>
+      <span className="fx-tip" role="tooltip">
+        <strong>
+          <Rich text={head} />
+        </strong>
+        {body && (
+          <span>
+            <Rich text={body} />
+          </span>
+        )}
+      </span>
     </span>
   );
 }

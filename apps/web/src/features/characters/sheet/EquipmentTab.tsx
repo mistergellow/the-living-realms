@@ -4,6 +4,7 @@ import {
   ATTRIBUTE_SUMMARIES,
   attributeEffects,
 } from '@realms/game-core';
+import { Rich } from '../../../shared/ui/Rich';
 import { ATTRIBUTE_NAMES } from '@realms/game-core';
 import {
   ATTRIBUTE_KEYS,
@@ -281,7 +282,9 @@ export function EquipmentTab({
                               <span className="muted">{ATTRIBUTE_SUMMARIES[k]}</span>
                               <ul>
                                 {attributeEffects(k).map((line) => (
-                                  <li key={line}>{line}</li>
+                                  <li key={line}>
+                                    <Rich text={line} />
+                                  </li>
                                 ))}
                               </ul>
                               <span className="muted small">
