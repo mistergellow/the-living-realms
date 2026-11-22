@@ -4,6 +4,7 @@ import type { WeaponType } from './weapons.js';
 import { customItemDef } from './custom.js';
 import { skillBookId, SKILLS, type SkillDef } from './skills.js';
 import type { ToolType } from './professions.js';
+import { buildNamedItems } from './named.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -37,7 +38,21 @@ export interface ItemDef {
    * small success bonus; `minRank` is the Mastery rank needed to use it.
    */
   tool?: { type: ToolType; tier: number; minRank: number };
+  /** Request #62: armor weight class (body, head and feet armor). */
+  armorClass?: ArmorClass;
+  /**
+   * Request #62: a named item — a version of `base` with fixed bonus effects
+   * (from the affix catalogue) that grow with its upgrade level.
+   */
+  named?: { base: string; fixed: Array<{ id: string; value: number }> };
 }
+
+export type ArmorClass = 'light' | 'medium' | 'heavy';
+export const ARMOR_CLASS_NAMES: Record<ArmorClass, string> = {
+  light: 'Light',
+  medium: 'Medium',
+  heavy: 'Heavy',
+};
 
 const item = (i: ItemDef) => i;
 const RING: EquipSlot[] = ['ring1', 'ring2'];
@@ -270,13 +285,77 @@ export const ITEMS = {
   }),
 
   // ---- armor ----
+  // Request #62: Light / Medium / Heavy armor for body, head and feet.
+  cloth_robe: item({
+    id: 'cloth_robe',
+    name: 'Cloth Robe',
+    description: 'Light armor: little protection against blows, good against magic.',
+    kind: 'armor',
+    slots: ['body'],
+    armorClass: 'light',
+    armor: 3,
+    magicResist: 6,
+  }),
+  plate_cuirass: item({
+    id: 'plate_cuirass',
+    name: 'Plate Cuirass',
+    description: 'Heavy armor: great protection, but it slows you down (Agility −1).',
+    kind: 'armor',
+    slots: ['body'],
+    armorClass: 'heavy',
+    armor: 11,
+    magicResist: 1,
+    bonuses: { agility: -1 },
+    requirements: { endurance: 7 },
+  }),
+  chain_coif: item({
+    id: 'chain_coif',
+    name: 'Chain Coif',
+    description: 'Medium armor for the head.',
+    kind: 'armor',
+    slots: ['head'],
+    armorClass: 'medium',
+    armor: 5,
+    magicResist: 1,
+  }),
+  iron_helm: item({
+    id: 'iron_helm',
+    name: 'Iron Helm',
+    description: 'Heavy armor for the head.',
+    kind: 'armor',
+    slots: ['head'],
+    armorClass: 'heavy',
+    armor: 7,
+    requirements: { endurance: 6 },
+  }),
+  chain_boots: item({
+    id: 'chain_boots',
+    name: 'Chain Boots',
+    description: 'Medium armor for the feet.',
+    kind: 'armor',
+    slots: ['feet'],
+    armorClass: 'medium',
+    armor: 5,
+  }),
+  iron_greaves: item({
+    id: 'iron_greaves',
+    name: 'Iron Greaves',
+    description: 'Heavy armor for the feet.',
+    kind: 'armor',
+    slots: ['feet'],
+    armorClass: 'heavy',
+    armor: 7,
+    requirements: { endurance: 6 },
+  }),
   padded_tunic: item({
     id: 'padded_tunic',
     name: 'Padded Tunic',
-    description: 'Quilted cloth. Better than nothing.',
+    description: 'Medium armor: quilted cloth, a fair all-rounder.',
     kind: 'armor',
     slots: ['body'],
+    armorClass: 'medium',
     armor: 6,
+    magicResist: 2,
   }),
   leather_cap: item({
     id: 'leather_cap',
@@ -284,6 +363,7 @@ export const ITEMS = {
     description: 'Light head protection.',
     kind: 'armor',
     slots: ['head'],
+    armorClass: 'light',
     armor: 3,
   }),
   leather_boots: item({
@@ -292,6 +372,7 @@ export const ITEMS = {
     description: 'Sturdy boots for the road.',
     kind: 'armor',
     slots: ['feet'],
+    armorClass: 'light',
     armor: 4,
   }),
 
@@ -545,6 +626,12 @@ export const TOOLS = {
 } satisfies Record<string, ItemDef>;
 Object.assign(ITEMS, TOOLS);
 export type ToolItemId = keyof typeof TOOLS;
+
+// Request #62: named items (versions of the base items with fixed bonuses).
+export const NAMED_ITEM_DEFS: Record<string, ItemDef> = Object.fromEntries(
+  buildNamedItems((id) => (ITEMS as Record<string, ItemDef>)[id]).map((d) => [d.id, d]),
+);
+Object.assign(ITEMS, NAMED_ITEM_DEFS);
 /** Every new character carries the basic tools (request #51, PROVISIONAL: see open decisions). */
 export const STARTER_TOOLS: ToolItemId[] = [
   'fishing_rod',

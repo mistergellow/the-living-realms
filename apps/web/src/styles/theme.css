@@ -374,3 +374,16 @@
 .fx-hover:focus-within > .fx-tip {
   display: flex;
 }
+
+/* Request #62: named items stand out (name and tile). */
+:root .item-tip[data-named] .tip-name {
+  color: #ff9f43;
+  text-shadow: 0 0 0.6rem rgb(255 159 67 / 0.35);
+}
+.tip-named {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ff9f43;
+}

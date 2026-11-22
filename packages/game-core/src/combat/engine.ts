@@ -451,6 +451,25 @@ function applyEffect(
           pushLog(state, { t: 'heal', targetId: actor.id, amount: healed });
         }
       }
+      // Request #62: named gear can strike back at melee attackers.
+      if (
+        effect.damageType === 'physical' &&
+        actor.side !== target.side &&
+        !actor.downed &&
+        amount > 0
+      )
+        for (const w of target.gear?.whenHit ?? []) {
+          if (!rng.chance(w.chance)) continue;
+          const base = AFFIX_RULES.onHitValue[w.status];
+          const potency = 1 + target.stats.effectPotency / 100;
+          addStatus(
+            state,
+            actor,
+            w.status,
+            AFFIX_RULES.onHitTurns[w.status],
+            base ? Math.max(1, Math.floor(base * potency)) : 0,
+          );
+        }
       // Thorns (request #44): hitting it hurts.
       const thorns = statusValue(target, 'thorns');
       if (thorns > 0 && actor.side !== target.side && !actor.downed) {

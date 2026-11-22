@@ -72,7 +72,9 @@ export type AffixEffect =
   | { kind: 'offense'; stat: 'damagePct' | 'critChance' | 'critDamage' | 'bossDamagePct' }
   | { kind: 'lifesteal' }
   | { kind: 'thorns' }
-  | { kind: 'onHit'; status: 'bleed' | 'burn' | 'stun' };
+  | { kind: 'onHit'; status: 'bleed' | 'burn' | 'stun' }
+  /** Request #62: a melee attacker that hits you gets the status (named gear only). */
+  | { kind: 'whenHit'; status: 'bleed' | 'burn' | 'stun' };
 
 export interface AffixDef {
   id: string;
@@ -256,6 +258,27 @@ export const AFFIXES: Record<string, AffixDef> = Object.fromEntries(
       max: 6,
       kinds: ['offhand', 'armor'],
     },
+    // Request #62: only on named gear (never rolled on drops: no kinds).
+    {
+      id: 'ignite_attackers',
+      label: 'Ignite melee attackers',
+      group: 'combat',
+      effect: { kind: 'whenHit', status: 'burn' },
+      min: 5,
+      max: 100,
+      percent: true,
+      kinds: [],
+    },
+    {
+      id: 'bleed_attackers',
+      label: 'Cut melee attackers (Bleed)',
+      group: 'combat',
+      effect: { kind: 'whenHit', status: 'bleed' },
+      min: 5,
+      max: 100,
+      percent: true,
+      kinds: [],
+    },
   ].map((a) => [a.id, a as AffixDef]),
 );
 
@@ -282,7 +305,8 @@ export function describeAffix(a: WeaponSpecial): ItemAffixDto | null {
   if (!def) return null;
   const value = a.value ?? def.min;
   const pct = def.percent ? '%' : '';
-  const display = def.effect.kind === 'onHit' ? `${value}%` : `+${value}${pct}`;
+  const display =
+    def.effect.kind === 'onHit' || def.effect.kind === 'whenHit' ? `${value}%` : `+${value}${pct}`;
   return { id: def.id, value, group: def.group, label: def.label, display };
 }
 
@@ -334,6 +358,7 @@ export const noGearEffects = (): GearCombatEffects => ({
   lifestealPct: 0,
   thorns: 0,
   onHit: [],
+  whenHit: [],
 });
 
 /** Adds up the effects of all equipped gear. */
@@ -378,6 +403,13 @@ export function gearTotals(affixes: WeaponSpecial[]): GearTotals {
         const hit = t.combat.onHit.find((h) => h.status === e.status);
         if (hit) hit.chance += v;
         else t.combat.onHit.push({ status: e.status, chance: v });
+        break;
+      }
+      case 'whenHit': {
+        const list = (t.combat.whenHit ??= []);
+        const hit = list.find((h) => h.status === e.status);
+        if (hit) hit.chance += v;
+        else list.push({ status: e.status, chance: v });
         break;
       }
     }

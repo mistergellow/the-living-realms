@@ -128,6 +128,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D116 | **Valores dos poderes sempre inteiros, arredondados para baixo**                                                                                                                                                                                                                                                       | 2026-11-22 | `skillAtLevel`, `engine.ts`                                                                           |
 | D117 | **Rifts com 10–20 salas por percurso (pelo tier)**; **fogueiras raras**: máx. 3 num fácil, mín. 1                                                                                                                                                                                                                      | 2026-11-22 | `RIFT_SIZE_RULES`, `mapTemplateForTier`                                                               |
 | D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                   | 2026-11-22 | `GameShell.tsx`                                                                                       |
+| D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                    | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -258,6 +259,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A123 | Guildas                                                         | fundar 500 ouro; terreno 2000 ouro do banco (hexágono onde o líder está; não capital, não rio, a ≥ 3 das capitais; um por guilda); armazém 40 espaços, usado em capitais ou no terreno; qualquer membro guarda e tira; reputação = a reputação dos membros num Rift vencido com ≥ 2 membros; 12 ícones e 10 cores; líder sai → passa ao membro mais antigo; último sai → guilda acaba                                                                                                                                                                      | `GUILD_RULES`                                                                    |
 | A124 | Tamanho dos Rifts                                               | 10, 13, 15, 18, 20 salas por percurso (tier 1–5, boss incluído); fogueiras por percurso: 3, 3, 2, 2, 1 (a de antes do boss conta); pesos de fogueira muito baixos                                                                                                                                                                                                                                                                                                                                                                                          | `RIFT_SIZE_RULES`                                                                |
 | A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
+| A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
 
 ---
 
@@ -1295,3 +1297,20 @@ no combate, atributos, ícones de efeitos — estes deixaram a tooltip do browse
 e passaram a ter um cartão); componente `Rich` (`shared/ui/Rich.tsx`) pinta
 números/percentagens a dourado e palavras-chave por tipo (atributos, estados,
 físico/mágico/à distância, Focus, Mana, HP…). Estilos em `theme.css`.
+
+### #62 — 2026-11-22 — Itens com nome e armaduras Light/Medium/Heavy
+
+**Pedido:** itens "named": uma espada base só tem o dano, mas há ~10 espadas
+diferentes com um bónus extra fixo que também sobe com +1…+10; o mesmo para
+os acessórios. Armadura com 3 tipos base (Light, Medium, Heavy) e versões com
+nome (ex. Dragon Heavy Armor: +X Armor, −3 Agility, quem te acerta corpo a
+corpo fica com "ignite"). Mais um filtro de procura. Depois: artefacto com a
+lista das armas e das skills; commit a tudo.
+**Decisões:** D119; valores provisórios A126.
+**Resultado:** `content/named.ts` (47 itens com nome sobre os itens base;
+efeitos fixos do catálogo de efeitos, que crescem com o upgrade); efeito novo
+"quando te acertam corpo a corpo" (`whenHit`: Burn/Bleed no atacante); 6
+armaduras novas (Cloth Robe, Plate Cuirass, Chain Coif, Iron Helm, Chain
+Boots, Iron Greaves) e classes nas existentes; tooltip com "Named · base",
+efeitos fixos e classe da armadura; filtro "Named" e pesquisa pelo tipo base;
+itens com nome e armaduras novas no saque dos Rifts. Testes: `named.test.ts`.

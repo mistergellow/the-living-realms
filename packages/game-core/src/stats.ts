@@ -1,4 +1,5 @@
 import type { Attributes, DerivedStatsDto, GearCombatEffects } from '@realms/shared';
+import { namedEffects } from './content/named.js';
 import { addAttributes } from './attributes.js';
 import { gearTotals } from './content/affixes.js';
 import { activeEquipment, type OwnedItem } from './equipment.js';
@@ -96,7 +97,10 @@ export interface CharacterStats {
 export function computeStats(base: Attributes, items: OwnedItem[] = []): CharacterStats {
   const equipped = activeEquipment(items);
   // Bonus effects of every equipped item (request #37).
-  const g = gearTotals(equipped.flatMap((i) => i.affixes ?? []));
+  // Request #62: named items add their fixed effects (grown by the upgrade level).
+  const g = gearTotals(
+    equipped.flatMap((i) => [...(i.affixes ?? []), ...namedEffects(i.def, i.upgradeLevel)]),
+  );
   const attributes = addAttributes(base, ...equipped.map((i) => i.def.bonuses ?? {}), g.attributes);
   const armor = equipped.reduce((sum, i) => sum + (i.def.armor ?? 0), 0) + g.stats.armor;
   const resist =

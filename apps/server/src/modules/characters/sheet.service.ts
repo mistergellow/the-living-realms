@@ -35,6 +35,7 @@ import {
   isGear,
   itemRequirements,
   normalizeAffixes,
+  namedEffects,
   planEquip,
   rarityOf,
   gradeName,
@@ -142,6 +143,15 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
         : null,
     grantsAbilities: (def?.abilities ?? []).flatMap((id) => getAbility(id)?.name ?? []),
     slot: i.equippedSlot ? null : i.slot,
+    named: def?.named
+      ? {
+          baseName: getItemDef(def.named.base)?.name ?? def.named.base,
+          effects: namedEffects(def, i.upgradeLevel)
+            .map(describeAffix)
+            .filter((a): a is ItemAffixDto => !!a),
+        }
+      : null,
+    armorClass: def?.armorClass ?? null,
     grade: i.grade === null ? null : { value: i.grade, name: gradeName(i.grade) },
     tool: def?.tool
       ? {

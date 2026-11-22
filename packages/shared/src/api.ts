@@ -309,6 +309,13 @@ export interface ItemDto {
   runeSlots: { used: number; total: number } | null;
   /** Names of the abilities this item grants while equipped (weapons, off-hands). */
   grantsAbilities: string[];
+  /**
+   * Request #62: a named item — its base item and its fixed effects at the
+   * current upgrade level. Null for base items.
+   */
+  named: { baseName: string; effects: ItemAffixDto[] } | null;
+  /** Request #62: Light / Medium / Heavy (body, head and feet armor). */
+  armorClass: 'light' | 'medium' | 'heavy' | null;
   /** Request #59: position in the bag or the storage grid (null when equipped). */
   slot: number | null;
   /** Gathered materials (request #52): grade 0 Poor … 4 Exceptional, with its name. */
@@ -354,6 +361,11 @@ export interface GearCombatEffects {
   thorns: number;
   /** Chance to apply a status when dealing damage. */
   onHit: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
+  /**
+   * Request #62 (named gear): chance that a melee attacker who hits this unit
+   * gets a status. Optional: runs saved before it do not have it.
+   */
+  whenHit?: Array<{ status: 'bleed' | 'burn' | 'stun'; chance: number }>;
 }
 
 /** A special property on a weapon (max 5). Catalogue of specials: future. */

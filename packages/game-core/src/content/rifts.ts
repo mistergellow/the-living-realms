@@ -5,6 +5,7 @@ import type { EventId } from './events.js';
 import type { HexCoord } from '@realms/shared';
 import type { MapTemplate } from '../rift/map.js';
 import { riftSiteById } from './world-map.js';
+import { NAMED_ITEMS } from './named.js';
 
 /*
  * Rift definitions (data). A Rift is a dungeon (request #31): a branching
@@ -75,6 +76,21 @@ const familyMaterials = (weight: number): LootEntry[] =>
       'polearm_haft',
       'sinew_string',
       'arcane_focus',
+    ] as ItemDefId[]
+  ).map((item) => ({ item, weight }));
+
+/** Request #62: named items (rare) and the new Light/Medium/Heavy armor in the loot. */
+const namedLoot = (weight: number): LootEntry[] =>
+  NAMED_ITEMS.map((n) => ({ item: n.id as ItemDefId, weight }));
+const armorLoot = (weight: number): LootEntry[] =>
+  (
+    [
+      'cloth_robe',
+      'plate_cuirass',
+      'chain_coif',
+      'iron_helm',
+      'chain_boots',
+      'iron_greaves',
     ] as ItemDefId[]
   ).map((item) => ({ item, weight }));
 
@@ -316,6 +332,8 @@ export const RIFTS = {
         { item: 'leather_sling', weight: 1 },
         ...books(0.5),
         ...familyMaterials(1),
+        ...armorLoot(1),
+        ...namedLoot(0.12),
       ],
     },
     lootRoom: {
@@ -347,6 +365,7 @@ export const RIFTS = {
         { item: 'hawkeye_band', weight: 2 },
         { item: 'brawler_wrap', weight: 2 },
         ...books(1),
+        ...namedLoot(0.3),
       ],
     },
   }),
