@@ -16,6 +16,7 @@ const KIND_LABEL: Record<ItemDto['kind'], string> = {
   accessory: 'Accessory',
   material: 'Material',
   consumable: 'Consumable',
+  tool: 'Tool',
 };
 
 const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
@@ -72,6 +73,24 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
           <p className="tip-identity">
             {w.attackStyle} · {w.identity}
           </p>
+        </div>
+      )}
+
+      {item.tool && (
+        <div className="tip-block" data-testid="tool-info">
+          <div className="tip-row">
+            <span>Tool</span>
+            <b>
+              {item.tool.typeName} · tier {item.tool.tier}
+            </b>
+          </div>
+          {item.tool.minRank > 0 && (
+            <div className="tip-row">
+              <span>Needs Mastery</span>
+              <b>{item.tool.rankName}</b>
+            </div>
+          )}
+          <p className="tip-identity">Keep it in your bag to use it. It does not replace Mastery.</p>
         </div>
       )}
 

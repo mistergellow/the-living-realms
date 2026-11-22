@@ -1,63 +1,96 @@
 import {
   characterProfessions,
+  characters,
   items,
   worldEvents,
+  type Character,
   type Database,
   type DbOrTx,
   type Item,
 } from '@realms/db';
 import {
-  mapHexAt,
-  professionTerrains,
-  TERRAIN_NAMES,
-  type Terrain,
   activityChance,
-  addProfessionXp,
+  addMastery,
+  attributeBonus,
   getItemDef,
   getProfession,
-  getWeaponType,
   isStackable,
-  PROFESSION_RULES,
+  mapHexAt,
+  masteryPoints,
+  MAX_RANK,
+  pointsToNext,
+  professionResources,
+  professionTerrains,
   PROFESSIONS,
+  rankName,
   resolveActivity,
-  xpToNext,
+  TERRAIN_NAMES,
+  TOOL_TYPE_NAMES,
   type ActivityDef,
   type ProfessionDef,
+  type Terrain,
 } from '@realms/game-core';
 import {
+  ATTRIBUTE_KEYS,
   ErrorCode,
   type ActivityResultDto,
+  type Attributes,
   type ProfessionDto,
+  type ProfessionProfileDto,
   type ProfessionsDto,
 } from '@realms/shared';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
-import { giveItem } from '../characters/bag.js';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
-import { assertNotInRift, type CharacterSheetService } from '../characters/sheet.service.js';
+import { giveItem } from '../characters/bag.js';
+import {
+  assertNotInRift,
+  baseAttributesOf,
+  type CharacterSheetService,
+} from '../characters/sheet.service.js';
 
-type Row = { level: number; xp: number; readyAt: Date | null };
-const NEW: Row = { level: 0, xp: 0, readyAt: null };
+type Row = {
+  rank: number;
+  points: number;
+  readyAt: Date | null;
+  attempts: number;
+  successes: number;
+  itemsMade: number;
+};
+const NEW: Row = { rank: 0, points: 0, readyAt: null, attempts: 0, successes: 0, itemsMade: 0 };
+const RANK_UP = 'profession.rank_up';
 const itemName = (id: string) => getItemDef(id)?.name ?? id;
 
-/** Quantity of an unequipped item definition a character owns. */
+/** Quantity of an unequipped item definition a character carries. */
 function have(rows: Item[], defId: string): number {
   return rows
     .filter((r) => r.itemDefId === defId && !r.equippedSlot)
     .reduce((n, r) => n + r.quantity, 0);
 }
 
-/**
- * Professions (request #33): every character can practise every profession;
- * levels raise the success chance and the results. Not available inside a
- * Rift. Each attempt has a time cost (cooldown per profession) until Action
- * Points exist.
- */
 /** Terrain of the hex a character stands on ('plains' off the map, for safety). */
 const terrainAt = (c: { hexQ: number; hexR: number }): Terrain =>
   mapHexAt({ q: c.hexQ, r: c.hexR })?.terrain ?? 'plains';
 
+/** Best tool of the profession's type the character can use (carried, not broken, rank met). */
+function bestTool(p: ProfessionDef, rank: number, owned: Item[]) {
+  if (!p.tool) return null;
+  let best: { item: Item; tier: number } | null = null;
+  for (const i of owned) {
+    const t = getItemDef(i.itemDefId)?.tool;
+    if (!t || t.type !== p.tool || i.quality <= 0 || t.minRank > rank) continue;
+    if (!best || t.tier > best.tier) best = { item: i, tier: t.tier };
+  }
+  return best;
+}
+
+/**
+ * Professions (request #33; Mastery, tools and BASE attributes from request
+ * #51). Every character can practise all 15. Not available inside a Rift.
+ * Gathering needs the right terrain and a tool. Each attempt has a time cost
+ * (cooldown per profession) until gathering moves to AP in phase 2.
+ */
 export class ProfessionsService {
   private readonly db: Database;
   constructor(
@@ -69,15 +102,50 @@ export class ProfessionsService {
 
   async list(accountId: string, characterId: string): Promise<ProfessionsDto> {
     const c = await this.sheets.getOwnedCharacter(this.db, accountId, characterId);
-    const terrain = terrainAt(c);
-    const [rows, owned] = await Promise.all([
+    const [rows, owned, history] = await Promise.all([
       this.rows(this.db, characterId),
       this.items(this.db, characterId),
+      this.history(this.db, characterId),
     ]);
     return {
       professions: Object.values(PROFESSIONS).map((p) =>
-        this.toDto(p, rows.get(p.id) ?? NEW, owned, terrain),
+        this.toDto(p, rows.get(p.id) ?? NEW, owned, c, history.get(p.id) ?? []),
       ),
+    };
+  }
+
+  /** Another character's professional profile (request #51): ranks and statistics only. */
+  async profile(target: { id?: string; name?: string }): Promise<ProfessionProfileDto> {
+    const [c] = await this.db
+      .select({ id: characters.id, name: characters.name })
+      .from(characters)
+      .where(
+        and(
+          eq(characters.worldId, this.ctx.world.id),
+          isNull(characters.deletedAt),
+          target.id
+            ? eq(characters.id, target.id)
+            : sql`lower(${characters.name}) = lower(${target.name ?? ''})`,
+        ),
+      );
+    if (!c) throw errors.notFound('Character');
+    const rows = await this.rows(this.db, c.id);
+    return {
+      character: c,
+      professions: Object.values(PROFESSIONS).map((p) => {
+        const r = rows.get(p.id) ?? NEW;
+        const need = pointsToNext(r.rank);
+        return {
+          id: p.id,
+          name: p.name,
+          title: p.title,
+          category: p.category,
+          rank: r.rank,
+          rankName: rankName(r.rank),
+          progress: need ? Math.min(1, r.points / need) : 1,
+          stats: { attempts: r.attempts, successes: r.successes, itemsMade: r.itemsMade },
+        };
+      }),
     };
   }
 
@@ -101,39 +169,39 @@ export class ProfessionsService {
         throw this.invalid(
           `${prof.name} needs a ${needs.map((t) => TERRAIN_NAMES[t].toLowerCase()).join(' or ')} hex. Travel to one first.`,
         );
-      if (row.level < activity.minLevel)
-        throw this.invalid(`${activity.name} needs ${prof.name} level ${activity.minLevel}.`);
+      if (row.rank < activity.rank)
+        throw this.invalid(`${activity.name} needs ${rankName(activity.rank)} ${prof.title}.`);
       if (row.readyAt && row.readyAt.getTime() > Date.now()) {
         const s = Math.ceil((row.readyAt.getTime() - Date.now()) / 1000);
         throw this.invalid(`You are still busy (${s}s).`);
       }
       const owned = await this.items(tx, c.id);
+      // Tools (request #51): carried in the bag; they never replace Mastery.
+      const tool = bestTool(prof, row.rank, owned);
+      if (prof.tool && !tool)
+        throw this.invalid(
+          `${prof.name} needs a ${TOOL_TYPE_NAMES[prof.tool]} in your bag. The city store sells them.`,
+        );
       for (const i of activity.inputs)
         if (have(owned, i.item) < i.qty)
           throw this.invalid(`You need ${i.qty} × ${itemName(i.item)}.`);
 
-      // Repair / upgrade work on one of your items.
+      // Repairs work on one of your items.
       let target: Item | undefined;
-      if (activity.effect) {
+      if (activity.effect === 'repair') {
         target = owned.find((i) => i.id === targetItemId);
         if (!target) throw this.invalid('Choose an item to work on.');
-        if (activity.effect === 'repair' && target.quality >= 100)
-          throw this.invalid('That item is already in perfect condition.');
-        if (activity.effect === 'upgrade') {
-          if (!getWeaponType(getItemDef(target.itemDefId)?.weaponType))
-            throw this.invalid('Only weapons can be improved.');
-          if (target.upgradeLevel >= PROFESSION_RULES.maxWeaponUpgrade)
-            throw this.invalid(
-              `Weapons can be improved up to +${PROFESSION_RULES.maxWeaponUpgrade} for now.`,
-            );
-        }
+        if (target.quality >= 100) throw this.invalid('That item is already in perfect condition.');
       }
 
       const outcome = resolveActivity(
         activity,
-        row.level,
+        {
+          rank: row.rank,
+          toolTier: tool?.tier ?? 0,
+          attributeBonus: attributeBonus(prof, baseAttributesOf(c)),
+        },
         randomInt(2 ** 31),
-        target?.upgradeLevel ?? 0,
       );
       for (const i of activity.inputs) await this.consume(tx, c.id, i.item, i.qty);
       for (const o of outcome.outputs) await this.give(tx, c.id, o.item, o.qty);
@@ -142,59 +210,55 @@ export class ProfessionsService {
           .update(items)
           .set({ quality: Math.min(100, target.quality + outcome.repaired) })
           .where(eq(items.id, target.id));
-      if (target && outcome.upgraded)
-        await tx
-          .update(items)
-          .set({ upgradeLevel: target.upgradeLevel + 1 })
-          .where(eq(items.id, target.id));
 
-      const next = addProfessionXp(row.level, row.xp, outcome.xp);
+      const next = addMastery(row.rank, row.points, outcome.points);
       const readyAt = new Date(Date.now() + activity.cooldownSeconds * 1000);
+      const made = outcome.outputs.reduce((n, o) => n + o.qty, 0);
+      const saved: Row = {
+        rank: next.rank,
+        points: next.points,
+        readyAt,
+        attempts: row.attempts + 1,
+        successes: row.successes + (outcome.success ? 1 : 0),
+        itemsMade: row.itemsMade + made,
+      };
       await tx
         .insert(characterProfessions)
-        .values({
-          characterId: c.id,
-          professionId: prof.id,
-          level: next.level,
-          xp: next.xp,
-          readyAt,
-        })
+        .values({ characterId: c.id, professionId: prof.id, ...saved })
         .onConflictDoUpdate({
           target: [characterProfessions.characterId, characterProfessions.professionId],
-          set: { level: next.level, xp: next.xp, readyAt },
+          set: saved,
         });
-      if (next.levelsGained)
+      if (next.ranksGained)
         await tx.insert(worldEvents).values({
           worldId: this.ctx.world.id,
-          type: 'profession.level_up',
+          type: RANK_UP,
           actorAccountId: accountId,
           actorCharacterId: c.id,
-          payload: { professionId: prof.id, level: next.level },
+          payload: { professionId: prof.id, rank: next.rank },
         });
 
-      const targetName = target ? itemName(target.itemDefId) : '';
       const message = !outcome.success
         ? `${activity.name} failed.`
         : outcome.repaired
-          ? `${targetName} repaired (+${outcome.repaired} quality).`
-          : outcome.upgraded
-            ? `${targetName} improved to +${target!.upgradeLevel + 1}!`
-            : `${activity.name}: success.`;
+          ? `${itemName(target!.itemDefId)} repaired (+${outcome.repaired} quality).`
+          : `${activity.name}: success.`;
       return {
         success: outcome.success,
         chance: outcome.chance,
-        message: next.levelsGained
-          ? `${message} ${prof.name} is now level ${next.level}!`
+        message: next.ranksGained
+          ? `${message} You are now ${rankName(next.rank)} ${prof.title}!`
           : message,
-        xpGained: outcome.xp,
-        levelsGained: next.levelsGained,
+        pointsGained: outcome.points,
+        ranksGained: next.ranksGained,
         produced: outcome.outputs.map((o) => ({ name: itemName(o.item), qty: o.qty })),
         consumed: activity.inputs.map((i) => ({ name: itemName(i.item), qty: i.qty })),
         profession: this.toDto(
           prof,
-          { level: next.level, xp: next.xp, readyAt },
+          saved,
           await this.items(tx, c.id),
-          terrainAt(c),
+          c,
+          (await this.history(tx, c.id)).get(prof.id) ?? [],
         ),
       };
     });
@@ -213,6 +277,25 @@ export class ProfessionsService {
     return new Map(rows.map((r) => [r.professionId, r]));
   }
 
+  /** Rank-ups per profession, newest first (the last 50 events). */
+  private async history(db: DbOrTx, characterId: string) {
+    const rows = await db
+      .select({ payload: worldEvents.payload, at: worldEvents.createdAt })
+      .from(worldEvents)
+      .where(and(eq(worldEvents.type, RANK_UP), eq(worldEvents.actorCharacterId, characterId)))
+      .orderBy(desc(worldEvents.createdAt))
+      .limit(50);
+    const out = new Map<string, ProfessionDto['history']>();
+    for (const r of rows) {
+      const p = r.payload as { professionId?: string; rank?: number };
+      if (!p.professionId || typeof p.rank !== 'number') continue;
+      const list = out.get(p.professionId) ?? [];
+      list.push({ at: r.at.toISOString(), rank: p.rank, rankName: rankName(p.rank) });
+      out.set(p.professionId, list);
+    }
+    return out;
+  }
+
   private items(db: DbOrTx, characterId: string): Promise<Item[]> {
     // Request #50: only what you carry (not the city storage).
     return db
@@ -221,10 +304,9 @@ export class ProfessionsService {
       .where(and(eq(items.characterId, characterId), eq(items.inStorage, false)));
   }
 
-  /** Add items: stackables join an existing stack. */
+  /** Add items: stackables join an existing stack; what does not fit goes to storage. */
   private async give(tx: DbOrTx, characterId: string, defId: string, qty: number): Promise<void> {
     if (qty <= 0) return;
-    // Request #50: stacks in the bag; what does not fit goes to storage.
     if (isStackable(getItemDef(defId))) {
       await giveItem(tx, characterId, defId, { qty, source: 'crafted' });
       return;
@@ -255,29 +337,46 @@ export class ProfessionsService {
     }
   }
 
-  private toDto(p: ProfessionDef, row: Row, owned: Item[], terrain: Terrain): ProfessionDto {
+  private toDto(
+    p: ProfessionDef,
+    row: Row,
+    owned: Item[],
+    c: Character,
+    history: ProfessionDto['history'],
+  ): ProfessionDto {
     const needs = professionTerrains(p.id);
     const ready =
       row.readyAt && row.readyAt.getTime() > Date.now() ? row.readyAt.toISOString() : null;
+    const base: Attributes = baseAttributesOf(c);
+    const bonus = attributeBonus(p, base);
+    const tool = bestTool(p, row.rank, owned);
     return {
       id: p.id,
       name: p.name,
       title: p.title,
       category: p.category,
       description: p.description,
-      level: row.level,
-      maxLevel: PROFESSION_RULES.maxLevel,
-      xp: row.xp,
-      xpToNext: xpToNext(row.level),
+      rank: row.rank,
+      rankName: rankName(row.rank),
+      maxRank: MAX_RANK,
+      points: row.points,
+      pointsToNext: pointsToNext(row.rank),
       readyAt: ready,
       activities: p.activities.map((a: ActivityDef) => ({
         id: a.id,
         name: a.name,
         description: a.description,
-        minLevel: a.minLevel,
-        chance: activityChance(a, row.level),
+        rank: a.rank,
+        rankName: rankName(a.rank),
+        complexity: a.complexity,
+        chance: activityChance(a, {
+          rank: row.rank,
+          toolTier: tool?.tier ?? 0,
+          attributeBonus: bonus,
+        }),
         cooldownSeconds: a.cooldownSeconds,
-        locked: row.level < a.minLevel,
+        locked: row.rank < a.rank,
+        points: masteryPoints(a, row.rank, true),
         inputs: a.inputs.map((i) => ({
           itemDefId: i.item,
           name: itemName(i.item),
@@ -293,7 +392,22 @@ export class ProfessionsService {
         effect: a.effect ?? null,
       })),
       terrains: needs ? needs.map((t) => TERRAIN_NAMES[t]) : null,
-      availableHere: !needs || needs.includes(terrain),
+      availableHere: !needs || needs.includes(terrainAt(c)),
+      tool: p.tool
+        ? {
+            type: p.tool,
+            name: TOOL_TYPE_NAMES[p.tool],
+            best: tool ? { name: itemName(tool.item.itemDefId), tier: tool.tier } : null,
+          }
+        : null,
+      attributes: ATTRIBUTE_KEYS.filter((k) => p.attributes[k]).map((k) => ({
+        attribute: k,
+        weight: p.attributes[k]!,
+      })),
+      attributeBonus: bonus,
+      resources: professionResources(p).map((id) => ({ itemDefId: id, name: itemName(id) })),
+      stats: { attempts: row.attempts, successes: row.successes, itemsMade: row.itemsMade },
+      history,
     };
   }
 }

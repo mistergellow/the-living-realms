@@ -208,8 +208,10 @@ export const items = pgTable(
   ],
 );
 
-// Profession levels per character (request #33). A row appears the first time
-// a profession is practised; no row = level 0.
+// Profession Mastery per character (request #33, ranks from request #51). A
+// row appears the first time a profession is practised; no row = Novice.
+// The DB columns keep their first names: `level` holds the Mastery rank index
+// (0 Novice … 5 Grandmaster) and `xp` the Mastery points towards the next rank.
 export const characterProfessions = pgTable(
   'character_professions',
   {
@@ -218,16 +220,19 @@ export const characterProfessions = pgTable(
       .references(() => characters.id, { onDelete: 'cascade' }),
     /** Profession id in game-core content (`PROFESSIONS`). */
     professionId: text('profession_id').notNull(),
-    level: smallint('level').notNull().default(0),
-    /** XP towards the next level. */
-    xp: integer('xp').notNull().default(0),
+    rank: smallint('level').notNull().default(0),
+    points: integer('xp').notNull().default(0),
     /** The profession can be practised again from this moment (activity time cost). */
     readyAt: timestamp('ready_at', { withTimezone: true }),
+    /** Statistics shown on the profession screen and profile (request #51). */
+    attempts: integer('attempts').notNull().default(0),
+    successes: integer('successes').notNull().default(0),
+    itemsMade: integer('items_made').notNull().default(0),
     updatedAt: updatedAt(),
   },
   (t) => [
     primaryKey({ columns: [t.characterId, t.professionId] }),
-    check('character_professions_level_range', sql`${t.level} between 0 and 10`),
+    check('character_professions_rank_range', sql`${t.rank} between 0 and 5`),
   ],
 );
 

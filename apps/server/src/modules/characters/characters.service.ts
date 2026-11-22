@@ -16,6 +16,7 @@ import {
   getItemDef,
   getStarterKit,
   STARTER_ARMOR,
+  STARTER_TOOLS,
   STARTER_OFFHANDS,
   STARTER_WEAPONS,
   validateCharacterName,
@@ -151,6 +152,16 @@ export class CharactersService {
             characterId: character.id,
             itemDefId: defId,
             equippedSlot: slot,
+            source: 'starter',
+          })),
+        );
+        // Basic profession tools, in the bag (request #51).
+        await itemsRepository.insertMany(
+          tx,
+          STARTER_TOOLS.map((defId) => ({
+            characterId: character.id,
+            itemDefId: defId,
+            equippedSlot: null,
             source: 'starter',
           })),
         );

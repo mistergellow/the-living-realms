@@ -1,4 +1,4 @@
-import type { ActivityResultDto, ProfessionsDto } from '@realms/shared';
+import type { ActivityResultDto, ProfessionProfileDto, ProfessionsDto } from '@realms/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
@@ -26,5 +26,18 @@ export function usePerformActivity(characterId: string | null) {
       // Items changed (materials, repairs, upgrades).
       void qc.invalidateQueries({ queryKey: ['characters'] });
     },
+  });
+}
+
+/** Another character's professional profile, by name (request #51). */
+export function useProfessionProfile(name: string | undefined) {
+  return useQuery({
+    queryKey: ['professions', 'profile', name],
+    enabled: !!name,
+    queryFn: () =>
+      api<ProfessionProfileDto>(
+        'GET',
+        `/characters/by-name/${encodeURIComponent(name!)}/professions/profile`,
+      ),
   });
 }

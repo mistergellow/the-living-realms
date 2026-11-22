@@ -21,6 +21,11 @@ export const SHOP_STOCK: ReadonlyArray<{ item: ItemDefId; price: number }> = [
   { item: 'mana_tonic', price: 15 },
   { item: 'bandage', price: 5 },
   { item: 'blessing_scroll', price: 150 },
+  // Request #51: basic profession tools (fine tools are made by Crafters).
+  { item: 'fishing_rod', price: 20 },
+  { item: 'felling_axe', price: 20 },
+  { item: 'pickaxe', price: 20 },
+  { item: 'hunting_knife', price: 20 },
   { item: 'training_sword', price: 40 },
   { item: 'hunting_bow', price: 40 },
   { item: 'rusty_dagger', price: 35 },

@@ -3,6 +3,7 @@ import type { AbilityId } from './abilities.js';
 import type { WeaponType } from './weapons.js';
 import { customItemDef } from './custom.js';
 import { skillBookId, SKILLS, type SkillDef } from './skills.js';
+import type { ToolType } from './professions.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -31,6 +32,11 @@ export interface ItemDef {
   requirements?: Partial<Attributes>;
   /** Skill Books (request #47): reading it teaches this skill (and uses the book up). */
   teaches?: string;
+  /**
+   * Profession tools (request #51): carried in the bag. `tier` above 1 gives a
+   * small success bonus; `minRank` is the Mastery rank needed to use it.
+   */
+  tool?: { type: ToolType; tier: number; minRank: number };
 }
 
 const item = (i: ItemDef) => i;
@@ -353,7 +359,7 @@ export const ITEMS = {
   }),
 } satisfies Record<string, ItemDef>;
 
-export type ItemDefId = keyof typeof ITEMS | MaterialId;
+export type ItemDefId = keyof typeof ITEMS | MaterialId | ToolItemId;
 
 export function getItemDef(id: string): ItemDef | undefined {
   // Built-in content first; then admin-made items (request #41).
@@ -429,6 +435,14 @@ export const MATERIALS = {
   flax: material('flax', 'Flax', 'Fibres for weaving.'),
   linen: material('linen', 'Linen', 'Woven cloth.'),
   cut_gem: material('cut_gem', 'Cut Gem', 'A polished gem for jewellery.'),
+  // Request #51: Scribing.
+  parchment: material('parchment', 'Parchment', 'Scraped leather, ready to write on.'),
+  ink: material('ink', 'Ink', 'Dark herbal ink.'),
+  blank_scroll: material(
+    'blank_scroll',
+    'Blank Scroll',
+    'Ruled parchment for scrolls. Scribes will write on it in a later update.',
+  ),
   rune_stone: material(
     'rune_stone',
     'Rune Stone',
@@ -475,6 +489,64 @@ export const MATERIALS = {
 
 export type MaterialId = keyof typeof MATERIALS;
 Object.assign(ITEMS, MATERIALS);
+
+/*
+ * Profession tools (request #51). They are items in the bag, not equipment.
+ * Basic tools are sold in the city store and made by Crafters; fine tools are
+ * better (tier 2) but need an Apprentice to use them. A tool never replaces
+ * Mastery: it makes the work possible and adds a small bonus.
+ */
+const tool = (
+  id: string,
+  name: string,
+  description: string,
+  type: ToolType,
+  tier: number,
+  minRank: number,
+): ItemDef => ({ id, name, description, kind: 'tool', slots: [], tool: { type, tier, minRank } });
+
+export const TOOLS = {
+  fishing_rod: tool('fishing_rod', 'Fishing Rod', 'Needed to fish.', 'fishing_rod', 1, 0),
+  felling_axe: tool('felling_axe', 'Felling Axe', 'Needed to chop wood.', 'axe', 1, 0),
+  pickaxe: tool('pickaxe', 'Pickaxe', 'Needed to mine.', 'pickaxe', 1, 0),
+  hunting_knife: tool('hunting_knife', 'Hunting Knife', 'Needed to hunt.', 'hunting_knife', 1, 0),
+  fine_fishing_rod: tool(
+    'fine_fishing_rod',
+    'Fine Fishing Rod',
+    'A better rod (+5% success). Needs an Apprentice Fisher.',
+    'fishing_rod',
+    2,
+    1,
+  ),
+  fine_felling_axe: tool(
+    'fine_felling_axe',
+    'Fine Felling Axe',
+    'A better axe (+5% success). Needs an Apprentice Lumberjack.',
+    'axe',
+    2,
+    1,
+  ),
+  fine_pickaxe: tool(
+    'fine_pickaxe',
+    'Fine Pickaxe',
+    'A better pick (+5% success). Needs an Apprentice Miner.',
+    'pickaxe',
+    2,
+    1,
+  ),
+  fine_hunting_knife: tool(
+    'fine_hunting_knife',
+    'Fine Hunting Knife',
+    'A better knife (+5% success). Needs an Apprentice Hunter.',
+    'hunting_knife',
+    2,
+    1,
+  ),
+} satisfies Record<string, ItemDef>;
+Object.assign(ITEMS, TOOLS);
+export type ToolItemId = keyof typeof TOOLS;
+/** Every new character carries the basic tools (request #51, PROVISIONAL: see open decisions). */
+export const STARTER_TOOLS: ToolItemId[] = ['fishing_rod', 'felling_axe', 'pickaxe', 'hunting_knife'];
 
 /**
  * Skill Books (request #47): one per skill. Read one (double-click in the bag)

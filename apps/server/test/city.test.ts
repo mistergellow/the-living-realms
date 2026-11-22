@@ -1,4 +1,4 @@
-import { INVENTORY_RULES, REGIONS, SHOP_STOCK } from '@realms/game-core';
+import { INVENTORY_RULES, REGIONS, SHOP_STOCK, STARTER_TOOLS } from '@realms/game-core';
 import type { CityDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -74,8 +74,9 @@ describe('city services (request #50)', () => {
     let city = (await post(h, 'storage/deposit', { itemId: axe })).json() as CityDto;
     expect(city.storage.map((i) => i.id)).toEqual([axe]);
     expect(city.sheet.inventory.some((i) => i.id === axe)).toBe(false);
-    // Fill the bag.
-    for (let i = 0; i < INVENTORY_RULES.bagSlots; i++) await give(h, 'leather_cap');
+    // Fill the bag (it starts with the 4 basic tools, request #51).
+    for (let i = 0; i < INVENTORY_RULES.bagSlots - STARTER_TOOLS.length; i++)
+      await give(h, 'leather_cap');
     expect((await post(h, 'storage/withdraw', { itemId: axe })).json().error.code).toBe('BAG_FULL');
     city = (await get(h)).json() as CityDto;
     expect(city.bag).toEqual({ used: INVENTORY_RULES.bagSlots, slots: INVENTORY_RULES.bagSlots });

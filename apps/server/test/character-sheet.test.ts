@@ -1,3 +1,4 @@
+import { STARTER_TOOLS } from '@realms/game-core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   createCharacter,
@@ -71,7 +72,9 @@ describe('character creation (attributes + starter kit)', () => {
     expect(sheet.attributePoints).toBe(0);
     expect(sheet.equipment.mainHand?.defId).toBe('hunting_bow');
     expect(sheet.equipment.body?.defId).toBe('padded_tunic');
-    expect(sheet.inventory).toEqual([]);
+    // The bag holds only the basic profession tools (request #51).
+    expect(sheet.inventory.map((i) => i.defId).sort()).toEqual([...STARTER_TOOLS].sort());
+    expect(sheet.inventory.every((i) => i.kind === 'tool' && i.tool)).toBe(true);
     expect(sheet.abilities.map((a) => a.id)).toEqual([
       'aimed_shot',
       'marking_shot',
@@ -108,7 +111,7 @@ describe('equipment', () => {
     expect(off.statusCode).toBe(200);
     const unarmed = off.json() as CharacterSheetDto;
     expect(unarmed.equipment.mainHand).toBeNull();
-    expect(unarmed.inventory.map((i) => i.id)).toEqual([sword.id]);
+    expect(unarmed.inventory.filter((i) => i.kind !== 'tool').map((i) => i.id)).toEqual([sword.id]);
     expect(unarmed.abilities.map((a) => a.id)).toEqual([
       'unarmed_strike',
       'block',

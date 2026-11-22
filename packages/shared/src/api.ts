@@ -266,7 +266,15 @@ export const EQUIP_SLOTS = [
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 /** 'material' and 'consumable' come from professions (request #33); they stack. */
-export type ItemKind = 'weapon' | 'offhand' | 'armor' | 'accessory' | 'material' | 'consumable';
+export type ItemKind =
+  | 'weapon'
+  | 'offhand'
+  | 'armor'
+  | 'accessory'
+  | 'material'
+  | 'consumable'
+  // request #51: profession tools (carried, not equipped)
+  | 'tool';
 
 /** Skills prepared for combat (request #39): 8, plus weapon abilities, Block and Swap. */
 export const MAX_PREPARED_SKILLS = 8;
@@ -301,6 +309,8 @@ export interface ItemDto {
   runeSlots: { used: number; total: number } | null;
   /** Names of the abilities this item grants while equipped (weapons, off-hands). */
   grantsAbilities: string[];
+  /** Profession tools (request #51): type, tier and the Mastery rank needed to use it. */
+  tool: { type: string; typeName: string; tier: number; minRank: number; rankName: string } | null;
 }
 
 export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
