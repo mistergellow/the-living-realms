@@ -30,6 +30,9 @@ export const COMBAT_RULES = {
   /** Mark: target takes +25% damage. Weaken: attacker deals −25%. */
   markMultiplier: 1.25,
   weakenMultiplier: 0.75,
+  /** Request #53: caps for Mark and Weaken values (percent) from skill levels. */
+  maxMarkPct: 100,
+  maxWeakenPct: 75,
   /** Safety net: most actions one unit can plan in a round. */
   maxActionsPerRound: 8,
   maxLog: 250,
@@ -62,6 +65,8 @@ export interface PartyMemberInput {
   abilityIds: string[];
   /** Weapon upgrade multipliers per ability id. */
   abilityMultipliers?: Record<string, number>;
+  /** Skill levels (request #53): extra status turns per ability id. */
+  abilityExtraTurns?: Record<string, number>;
   hp: number;
   mana: number;
   slot: number;
@@ -119,6 +124,7 @@ export function partyCombatant(p: PartyMemberInput, side: Combatant['side'] = 'p
     attributes: p.attributes,
     power: 1,
     abilityMultipliers: p.abilityMultipliers ?? {},
+    abilityExtraTurns: p.abilityExtraTurns ?? {},
     intents: [],
     downed: p.hp <= 0,
     isBoss: false,

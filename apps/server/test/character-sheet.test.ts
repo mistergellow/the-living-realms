@@ -341,14 +341,22 @@ describe('Skill Books (request #47)', () => {
     expect(sheet.learnedSkills.map((s) => s.id)).toEqual(['second_wind']);
     expect(sheet.loadout[0]).toBe('second_wind');
     expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
-    // Request #50: a second copy raises the skill's level, up to 5.
-    for (let level = 2; level <= 5; level++) {
-      const copy = await give(id, 'book_second_wind');
-      const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
-      expect(res2.learnedSkills.find((s) => s.id === 'second_wind')!.level).toBe(level);
-    }
-    const sixth = await give(id, 'book_second_wind');
-    expect((await useItem(cookie, id, sixth)).json().error.message).toMatch(/highest level/);
+    // Request #50: a second copy raises the skill's level; its numbers grow.
+    const healAt = (sh: CharacterSheetDto) =>
+      sh.learnedSkills.find((s) => s.id === 'second_wind')!;
+    expect(healAt(sheet).levelLabel).toBe('1');
+    const copy = await give(id, 'book_second_wind');
+    const res2 = (await useItem(cookie, id, copy)).json() as CharacterSheetDto;
+    expect(healAt(res2).level).toBe(2);
+    expect(healAt(res2).effects[0]).not.toBe(healAt(sheet).effects[0]);
+    // Request #53: 21 levels, 1 … 10, M1 … M10, P.
+    await t.dbHandle
+      .sql`update character_skills set level = 20 where character_id = ${id} and skill_id = 'second_wind'`;
+    const last = await give(id, 'book_second_wind');
+    const atP = (await useItem(cookie, id, last)).json() as CharacterSheetDto;
+    expect(healAt(atP).levelLabel).toBe('P');
+    const more = await give(id, 'book_second_wind');
+    expect((await useItem(cookie, id, more)).json().error.message).toMatch(/highest level \(P\)/);
   });
 
   it('needs the BASE attributes the skill requires', async () => {

@@ -184,7 +184,7 @@ function startRound(state: CombatState): void {
     // Regeneration (request #47): heals at the start of the round.
     const regen = u.statuses.find((s) => s.id === 'regen');
     if (regen && !u.downed) {
-      const healed = Math.min(u.maxHp - u.hp, regen.value);
+      const healed = Math.min(u.maxHp - u.hp, Math.round(regen.value));
       if (healed > 0) {
         u.hp += healed;
         pushLog(state, { t: 'heal', targetId: u.id, amount: healed });
@@ -192,7 +192,7 @@ function startRound(state: CombatState): void {
     }
     for (const s of u.statuses) {
       if ((s.id === 'bleed' || s.id === 'burn') && !u.downed) {
-        const amount = Math.min(u.hp, s.value);
+        const amount = Math.min(u.hp, Math.round(s.value));
         u.hp -= amount;
         pushLog(state, { t: 'tick', targetId: u.id, status: s.id, amount });
         if (u.hp <= 0) knockDown(state, u);
@@ -416,8 +416,10 @@ function applyEffect(
     case 'damage': {
       // 1. Incoming damage.
       let dmg = roll(rng, effect.min, effect.max) * mult;
-      if (hasStatus(actor, 'weaken')) dmg *= COMBAT_RULES.weakenMultiplier;
-      if (hasStatus(target, 'mark')) dmg *= COMBAT_RULES.markMultiplier;
+      // Request #53: Weaken and Mark carry their strength (percent) as value;
+      // without one they use the default multipliers.
+      if (hasStatus(actor, 'weaken')) dmg *= weakenFactor(statusValue(actor, 'weaken'));
+      if (hasStatus(target, 'mark')) dmg *= markFactor(statusValue(target, 'mark'));
       if (effect.bonusVs && hasStatus(target, effect.bonusVs.status))
         dmg *= effect.bonusVs.multiplier;
       if (effect.bonusVsBlock && target.block > 0) dmg *= effect.bonusVsBlock;
@@ -452,7 +454,7 @@ function applyEffect(
       // Thorns (request #44): hitting it hurts.
       const thorns = statusValue(target, 'thorns');
       if (thorns > 0 && actor.side !== target.side && !actor.downed) {
-        const back = Math.min(actor.hp, thorns);
+        const back = Math.min(actor.hp, Math.round(thorns));
         actor.hp -= back;
         pushLog(state, { t: 'damage', targetId: actor.id, amount: back, crit: false, blocked: 0 });
         if (actor.hp <= 0) knockDown(state, actor);
@@ -481,8 +483,15 @@ function applyEffect(
     }
     case 'status': {
       const potency = 1 + actor.stats.effectPotency / 100;
-      const value = effect.value ? Math.max(1, Math.round(effect.value * mult * potency)) : 0;
-      addStatus(state, target, effect.status, effect.turns, value);
+      // Request #53: values keep one decimal so every skill level counts
+      // (they are rounded where they deal damage or heal).
+      const value = effect.value
+        ? Math.max(1, Math.round(effect.value * mult * potency * 10) / 10)
+        : 0;
+      // Skill levels (request #53): statuses (not Stun) last longer from M1.
+      const extra =
+        effect.status === 'stun' ? 0 : (actor.abilityExtraTurns?.[ability.id] ?? 0);
+      addStatus(state, target, effect.status, effect.turns + extra, value);
       return true;
     }
     case 'swap':
@@ -498,6 +507,15 @@ function applyEffect(
     }
   }
 }
+
+/** Damage factor of Mark: +value % (default from COMBAT_RULES), at most +100 %. */
+export const markFactor = (value: number) =>
+  value > 0 ? 1 + Math.min(COMBAT_RULES.maxMarkPct, value) / 100 : COMBAT_RULES.markMultiplier;
+/** Damage factor of Weaken: −value % (default from COMBAT_RULES), at most −75 %. */
+export const weakenFactor = (value: number) =>
+  value > 0
+    ? 1 - Math.min(COMBAT_RULES.maxWeakenPct, value) / 100
+    : COMBAT_RULES.weakenMultiplier;
 
 const statusValue = (c: Combatant, id: StatusId) => c.statuses.find((s) => s.id === id)?.value ?? 0;
 
