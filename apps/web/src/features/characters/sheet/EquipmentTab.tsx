@@ -148,6 +148,16 @@ export function EquipmentTab({
 
   return (
     <div className="equip-tab">
+      {use.data?.notice && (
+        <p
+          className="city-message"
+          data-testid="read-notice"
+          data-ok={use.data.notice.ok}
+          style={{ margin: 0 }}
+        >
+          {use.data.notice.message}
+        </p>
+      )}
       <FormError
         error={
           equip.error ??

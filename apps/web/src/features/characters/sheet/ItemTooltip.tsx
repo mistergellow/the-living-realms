@@ -262,7 +262,20 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
                 <b>{v}</b>
               </div>
             ))}
-            <p className="tip-identity">Double-click to read it and learn the skill.</p>
+            {(() => {
+              const known = sheet.data?.learnedSkills.find((x) => x.id === sk.id);
+              if (!known)
+                return <p className="tip-identity">Double-click to read it and learn the skill.</p>;
+              if (!known.nextLevel)
+                return <p className="tip-identity">You know it at its highest level (P).</p>;
+              return (
+                <p className="tip-identity" data-testid="book-next-level">
+                  <Rich
+                    text={`You know it at Lv ${known.levelLabel}. Lv ${known.nextLevel.label} takes ${known.nextLevel.books} books at once (${known.nextLevel.chance}% chance; on failure the books are lost). Double-click to read.`}
+                  />
+                </p>
+              );
+            })()}
           </div>
         );
       })()}
