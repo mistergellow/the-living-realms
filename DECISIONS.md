@@ -841,3 +841,18 @@ Old profession ids are mapped by `RENAMED_PROFESSIONS` and migration 0016.
 **Why.** Reusing the table, the item pipeline (`giveItem`, the bag of 20) and
 world events keeps one system. Content stays data in game-core, so balance
 changes need no migration.
+
+## ADR-048 — Resource nodes as stored value + regrowth; material grade on the item row
+
+**Status:** accepted (request #52, professions phase 2)
+
+**Decision.** Nodes are derived from the deterministic map (one per hex and
+gathering profession, richness from a hash of the hex), so only their charges
+are stored: `resource_nodes` holds the amount and when it was written, and the
+current amount adds the regrowth since then (`nodeAmount`), like AP — no
+worker job. A row is created on first use and locked `FOR UPDATE` because
+players share nodes. Gathering spends AP through `spendAp` and no longer sets
+the profession cooldown; crafting keeps the cooldown and costs no AP. Gathered
+materials store their grade in `items.grade` (null for everything else);
+stacks only join stacks of the same grade (`sameGrade`), and recipes use the
+poorest grade first.

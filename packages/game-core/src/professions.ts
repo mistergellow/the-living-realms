@@ -1,6 +1,7 @@
 import type { Attributes } from '@realms/shared';
 import { ATTRIBUTE_KEYS } from '@realms/shared';
 import { Rng } from './combat/rng.js';
+import { rollGrade } from './gathering.js';
 import {
   MASTERY_RULES,
   MAX_RANK,
@@ -79,6 +80,8 @@ export interface ChanceInput {
   attributeBonus?: number;
   /** Tier of the best usable tool (0 = none needed). */
   toolTier?: number;
+  /** Gathering (request #52): richness of the node (0–2); outputs get a material grade. */
+  nodeRichness?: number;
 }
 
 /** Success chance (percent). Mastery counts most; tools and attributes add a little. */
@@ -99,8 +102,8 @@ export interface ActivityOutcome {
   chance: number;
   /** Mastery points gained (after the complexity falloff). */
   points: number;
-  /** Items produced (success only). */
-  outputs: Array<{ item: string; qty: number }>;
+  /** Items produced (success only); gathered ones have a grade (0 Poor … 4 Exceptional). */
+  outputs: Array<{ item: string; qty: number; grade: number | null }>;
   /** Quality restored (repair). */
   repaired: number;
 }
@@ -116,7 +119,9 @@ export function resolveActivity(a: ActivityDef, input: ChanceInput, seed: number
     for (const o of a.outputs) {
       let qty = o.min + rng.int(o.max - o.min + 1);
       if (rng.chance(MASTERY_RULES.yieldPerRank * above)) qty++;
-      outputs.push({ item: o.item, qty });
+      const grade =
+        input.nodeRichness === undefined ? null : rollGrade(rng, input.rank, input.nodeRichness);
+      outputs.push({ item: o.item, qty, grade });
     }
   return {
     success,

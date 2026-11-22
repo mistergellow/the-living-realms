@@ -14,6 +14,8 @@ export const AP_RULES = {
   moveCostPerHex: 1,
   /** Request #50: entering a Rift costs a little time. */
   riftEntryCost: 2,
+  /** Request #52 (professions phase 2): each gathering attempt. Crafting costs no AP. */
+  gatherCost: 2,
 } as const;
 
 const HOUR_MS = 3_600_000;

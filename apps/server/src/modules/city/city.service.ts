@@ -15,7 +15,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
-import { assertBagRoom, bagUsed, giveItem } from '../characters/bag.js';
+import { assertBagRoom, bagUsed, giveItem, sameGrade } from '../characters/bag.js';
 import {
   assertNotInRift,
   baseAttributesOf,
@@ -186,6 +186,7 @@ export class CityService {
             and(
               eq(items.characterId, c.id),
               eq(items.itemDefId, item.itemDefId),
+              sameGrade(item.grade),
               eq(items.inStorage, true),
             ),
           )
@@ -213,6 +214,7 @@ export class CityService {
             and(
               eq(items.characterId, c.id),
               eq(items.itemDefId, item.itemDefId),
+              sameGrade(item.grade),
               eq(items.inStorage, false),
               isNull(items.equippedSlot),
             ),

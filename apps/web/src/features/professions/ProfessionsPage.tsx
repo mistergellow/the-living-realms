@@ -183,6 +183,17 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
             {p.availableHere ? ' · you are on one' : ' · travel to one on the world map'}
           </p>
         )}
+        {p.node && (
+          <p style={{ margin: 0 }} data-testid="profession-node" data-empty={p.node.amount < 1}>
+            {p.node.richness} spot here: <strong>{p.node.amount}</strong>/{p.node.max} left
+            {p.node.readyAt && (
+              <span className="field-error">
+                {' '}
+                · exhausted, regrows at {new Date(p.node.readyAt).toLocaleTimeString()}
+              </span>
+            )}
+          </p>
+        )}
       </header>
 
       <div className="prof-facts">
@@ -199,8 +210,8 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
         <div title="Only BASE attributes count. They help a little; Mastery matters most.">
           <span className="muted small">Helped by</span>
           <strong data-testid="profession-attributes">
-            {p.attributes.map((a) => ATTRIBUTE_NAMES[a.attribute]).join(', ')} · +
-            {p.attributeBonus}%
+            {p.attributes.map((a) => ATTRIBUTE_NAMES[a.attribute]).join(', ')} · +{p.attributeBonus}
+            %
           </strong>
         </div>
         <div>
@@ -224,8 +235,14 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
           <span className="muted">
             ({result.chance}% chance · +{result.pointsGained} Mastery)
           </span>
+          {result.apSpent > 0 && <span className="muted"> · −{result.apSpent} AP</span>}
           {result.produced.length > 0 && (
-            <div>Got: {result.produced.map((o) => `${o.qty} × ${o.name}`).join(', ')}</div>
+            <div>
+              Got:{' '}
+              {result.produced
+                .map((o) => `${o.qty} × ${o.grade ? `${o.grade} ` : ''}${o.name}`)
+                .join(', ')}
+            </div>
           )}
           {result.consumed.length > 0 && (
             <div className="muted">
@@ -245,7 +262,7 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
               <h3>{a.name}</h3>
               <p className="muted small">{a.description}</p>
               <p className="small">
-                {a.chance}% success · {a.cooldownSeconds}s ·{' '}
+                {a.chance}% success · {a.apCost ? `${a.apCost} AP` : `${a.cooldownSeconds}s`} ·{' '}
                 {a.points > 0 ? (
                   `+${a.points} Mastery`
                 ) : (
@@ -288,6 +305,7 @@ function ProfessionDetail({ p, characterId }: { p: ProfessionDto; characterId: s
                 className="btn btn-primary btn-sm"
                 disabled={
                   !p.availableHere ||
+                  (!!p.node && p.node.amount < 1) ||
                   (!!p.tool && !p.tool.best) ||
                   missing ||
                   needsTarget ||

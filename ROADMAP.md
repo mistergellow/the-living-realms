@@ -99,7 +99,7 @@ Bring the hex world to life for exploration (Rifts placed on the map).
 
 - [x] **Professions (request #33):** professions with materials that stack, crafting and repairs
 - [x] **Professions & Economy — phase 1 (request #51, `docs/PROFESSIONS_ARCHITECTURE.md`):** the spec's 15 professions (5 gathering, 10 crafting), independent Mastery with 6 ranks and complexity-based progress, recipes unlocked by rank, tools as items (basic and fine), BASE-attribute bonus (§21), profession screen with Gathering/Crafting Mastery, statistics and history, other players' profiles
-- [ ] Phase 2: gathering nodes, regeneration, AP for gathering, material quality
+- [x] Phase 2 (request #52): gathering nodes, regeneration, AP for gathering, material quality; storage search, filter and drag and drop
 - [ ] Phase 3: crafting quality, recipes found/bought/discovered, public facilities and fees, processing
 - [ ] Phase 4: player economy (regional market, orders, trading, commissions, shops, professional reputation)
 - [ ] Phase 5: private and guild workshops · Phase 6: book duplication, rare resources, profession events

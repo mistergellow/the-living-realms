@@ -116,6 +116,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D104 | **Ferramentas são itens do inventário** (cana, machado, picareta, faca de caça); não substituem a Mastery                                                                                                                                                                                                              | 2026-11-22 | `TOOLS` (`items.ts`)                                                                                  |
 | D105 | **Atributos BASE podem ajudar** nas profissões (§21), configurável e só no servidor; complementam a Mastery                                                                                                                                                                                                            | 2026-11-22 | `ProfessionDef.attributes`, `PROFESSION_ATTRIBUTE_RULES`                                              |
 | D106 | Ecrã de profissões com **Gathering Mastery** e **Crafting Mastery**; perfil profissional de outros jogadores                                                                                                                                                                                                           | 2026-11-22 | `ProfessionsPage.tsx`, `InspectPage.tsx`                                                              |
+| D107 | Atividades de profissão custam **AP ou tempo real**: recolher gasta AP (sem espera), criar gasta tempo real (sem AP)                                                                                                                                                                                                   | 2026-11-22 | `AP_RULES.gatherCost`, `professions.service.ts`                                                       |
+| D108 | **Pesquisa, filtro e arrastar-e-largar no armazém**                                                                                                                                                                                                                                                                    | 2026-11-22 | `CityPage.tsx` (`Storage`)                                                                            |
+| D109 | **Skills com 21 níveis: 1–10, M1–M10, P**; fracas no início e a melhorar a cada nível; rever todas (ex. Expose Weakness)                                                                                                                                                                                               | 2026-11-22 | por fazer (pedido #53)                                                                                |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -237,6 +240,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A114 | Ferramentas finas                                               | tier 2: +5 % de sucesso; pedem Apprentice para usar; feitas por Crafters (Apprentice)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `TOOLS`, `TOOL_RULES`                                                            |
 | A115 | Atributos BASE (§21)                                            | +1 % por ponto ponderado acima de 5, máx. 8 %; pesos por profissão (ex. Mining: Might 0,5 + Endurance 0,5)                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `PROFESSION_ATTRIBUTE_RULES`, `ProfessionDef.attributes`                         |
 | A116 | Receitas e Scribing                                             | receitas desbloqueiam só por rank nesta fase; Scribing faz pergaminho, tinta e pergaminhos em branco (copiar livros fica para a fase 6); acima de Expert faltam receitas mais complexas (fases 2–3)                                                                                                                                                                                                                                                                                                                                                        | `content/professions.ts`                                                         |
+| A117 | AP das profissões                                               | recolher 2 AP por tentativa; criar sem AP, 20 s de espera por defeito                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `AP_RULES.gatherCost`, `cooldownSeconds`                                         |
+| A118 | Nós de recursos                                                 | um por hexágono e profissão de recolha; 12 / 20 / 30 cargas (pobre / normal / rico; 25 % pobres, 20 % ricos); 5 cargas por hora; só o sucesso gasta uma carga; partilhados por todos                                                                                                                                                                                                                                                                                                                                                                       | `RESOURCE_NODE_RULES`                                                            |
+| A119 | Qualidade dos materiais                                         | Poor, Common, Fine, Superior, Exceptional; rolagem 0–99 + 8 por rank ± 12 pela riqueza; limites 20/70/92/110; gasta-se primeiro o pior; materiais antigos ficam Common                                                                                                                                                                                                                                                                                                                                                                                     | `GRADE_RULES`, `rollGrade`                                                       |
 
 ---
 
@@ -1118,3 +1124,25 @@ interface das profissões, ferramentas e requisitos; §21 atributos BASE).
   `/professions/inspect/:nome` (caixa "Inspect" e link nos amigos).
 - Migração 0016 (ranks, estatísticas, ids antigos, ferramentas para todos).
 - Testes: 133 unitários (game-core), 93 de integração, 20 web, 11 e2e.
+
+### #52 — 2026-11-22 — Profissões: Fase 2 (nós, regeneração, AP, qualidade) e armazém
+
+**Pedido:** "fazer atividades de profissão requer AP ou tempo real"; avançar
+para a Fase 2; pesquisa, filtro e arrastar-e-largar no armazém.
+**Decisões:** D107–D108; valores provisórios A117–A119; ADR-048.
+**Resultado:**
+
+- Recolher gasta 2 AP por tentativa (sem espera); criar continua com tempo
+  real e sem AP.
+- Nós de recursos em cada hexágono de recolha (pobre/normal/rico), partilhados
+  por todos os jogadores; esgotam-se e regeneram com o tempo (como o AP, sem
+  tarefas no worker). Ecrã mostra quanto resta e quando volta.
+- Qualidade dos materiais recolhidos (Poor … Exceptional) pela riqueza do nó e
+  pela Mastery; pilhas separadas por qualidade; ponto colorido no ícone e
+  linha "Quality" na tooltip.
+- Armazém: pesquisa por nome, filtros (All, Gear, Materials, Consumables,
+  Tools) e arrastar itens entre a mochila e o armazém.
+- Migração 0017 (`resource_nodes`, `items.grade`).
+- Testes: 140 unitários (game-core), 95 de integração, 20 web, 12 e2e.
+- Também pedido (próximo, #53): skills com níveis 1–10, M1–M10, P (D109);
+  "o jogo visualmente está meio estranho" — falta saber o quê em concreto.

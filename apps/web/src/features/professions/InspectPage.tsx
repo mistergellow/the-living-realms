@@ -41,9 +41,9 @@ export function InspectPage() {
                         <i style={{ width: `${Math.round(x.progress * 100)}%` }} />
                       </div>
                       <span className="muted small">
-                        {plural(x.stats.attempts, 'attempt')} ·{' '}
-                        {x.stats.successes} {x.stats.successes === 1 ? 'success' : 'successes'} ·{' '}
-                        {x.stats.itemsMade} made
+                        {plural(x.stats.attempts, 'attempt')} · {x.stats.successes}{' '}
+                        {x.stats.successes === 1 ? 'success' : 'successes'} · {x.stats.itemsMade}{' '}
+                        made
                       </span>
                     </article>
                   ))}

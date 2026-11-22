@@ -43,7 +43,8 @@ const GLYPHS = {
   // request #51: tools and scribing
   rod: 'M4 21 18 3M18 3v11M18 14a2 2 0 1 1-2 2M4 21l2-1',
   pickaxe: 'M4 20 14 10M6 6c4-3 9-3 14 1-4-1-7-1-10 1M13 9l2 2',
-  scroll: 'M7 4h11a2 2 0 0 1 0 4H7M7 4a2 2 0 0 0 0 4v10a2 2 0 0 0 2 2h9a2 2 0 0 0 0-4H9M10 11h6M10 14h4',
+  scroll:
+    'M7 4h11a2 2 0 0 1 0 4H7M7 4a2 2 0 0 0 0 4v10a2 2 0 0 0 2 2h9a2 2 0 0 0 0-4H9M10 11h6M10 14h4',
 } as const;
 type Glyph = keyof typeof GLYPHS;
 
@@ -145,6 +146,14 @@ export function ItemIcon({ item }: { item: ItemDto }) {
   return (
     <span className="item-icon" data-tone={itemTone(item)} data-broken={item.broken}>
       <GlyphSvg glyph={glyphFor(item)} />
+      {item.grade && (
+        <i
+          className="grade-pip"
+          data-grade={item.grade.value}
+          title={item.grade.name}
+          aria-label={`${item.grade.name} quality`}
+        />
+      )}
     </span>
   );
 }

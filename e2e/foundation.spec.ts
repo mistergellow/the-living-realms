@@ -355,9 +355,11 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
   await page.getByTestId('profession-fishing').click();
   await expect(page.getByTestId('profession-tool')).toContainText('Fishing Rod');
+  // Request #52: gathering costs AP and uses the spot's resources.
+  await expect(page.getByTestId('profession-node')).toContainText('left');
   await page.getByRole('button', { name: 'Fish', exact: true }).click();
   await expect(page.getByTestId('activity-result')).toContainText('Mastery');
-  await expect(page.getByTestId('profession-level')).toContainText('busy');
+  await expect(page.getByTestId('activity-result')).toContainText('AP');
   await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
@@ -369,6 +371,33 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-profile')).toContainText(angler);
   await expect(page.getByTestId('profile-fishing')).toContainText('1 attempt');
   await page.screenshot({ path: 'test-results/screens/10b-profession-profile.png' });
+});
+
+test('city storage: search, filter and drag and drop (request #52)', async ({ page }) => {
+  await register(page, `e2e-store-${unique()}@example.com`);
+  await createCharacter(page, randomName('Keeper'));
+  // New characters start in their capital, with the four basic tools in the bag.
+  await page.goto('/city/storage');
+  const bag = page.getByTestId('bag');
+  const storage = page.getByTestId('storage');
+  await expect(bag.getByTestId('city-item-fishing_rod')).toBeVisible();
+  // Drag the rod onto the storage.
+  await bag.getByTestId('city-item-fishing_rod').dragTo(storage.locator('..'));
+  await expect(storage.getByTestId('city-item-fishing_rod')).toBeVisible();
+  await expect(bag.getByTestId('city-item-fishing_rod')).toHaveCount(0);
+  // Search and filter apply to both lists.
+  await page.getByLabel('Search the bag and storage').fill('pick');
+  await expect(bag.getByTestId('city-item-pickaxe')).toBeVisible();
+  await expect(bag.getByTestId('city-item-felling_axe')).toHaveCount(0);
+  await expect(storage.getByTestId('city-item-fishing_rod')).toHaveCount(0);
+  await page.getByLabel('Search the bag and storage').fill('');
+  await page.getByRole('tab', { name: 'Materials' }).click();
+  await expect(bag.getByTestId('city-item-pickaxe')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Tools' }).click();
+  // And back into the bag.
+  await storage.getByTestId('city-item-fishing_rod').dragTo(bag.locator('..'));
+  await expect(bag.getByTestId('city-item-fishing_rod')).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/12-storage.png' });
 });
 
 /** From a phone to a 4K monitor, including ultrawide and a short laptop screen. */

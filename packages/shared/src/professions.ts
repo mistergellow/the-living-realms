@@ -20,7 +20,10 @@ export interface ActivityDto {
   complexity: number;
   /** Your success chance now (percent). */
   chance: number;
+  /** Crafting: seconds the profession is busy afterwards (0 for gathering). */
   cooldownSeconds: number;
+  /** Gathering (request #52): AP each attempt costs (0 for crafting). */
+  apCost: number;
   /** Not unlocked yet: your rank is too low. */
   locked: boolean;
   /** Mastery points it gives you now on success (0 = too simple for you). */
@@ -65,6 +68,16 @@ export interface ProfessionDto {
   terrains: string[] | null;
   /** Whether the hex you stand on allows it. */
   availableHere: boolean;
+  /**
+   * Gathering (request #52): the resource node on the hex you stand on, or null
+   * (crafting, or no node here). `readyAt` = when it has a charge again.
+   */
+  node: {
+    richness: string;
+    amount: number;
+    max: number;
+    readyAt: string | null;
+  } | null;
   /** Tool you must carry, or null. */
   tool: ProfessionToolDto | null;
   /** §21: BASE attributes that help, and the bonus (percent) they give you now. */
@@ -92,7 +105,10 @@ export interface ActivityResultDto {
   message: string;
   pointsGained: number;
   ranksGained: number;
-  produced: Array<{ name: string; qty: number }>;
+  /** Gathered items carry their grade name (request #52). */
+  produced: Array<{ name: string; qty: number; grade: string | null }>;
+  /** AP spent (gathering). */
+  apSpent: number;
   consumed: Array<{ name: string; qty: number }>;
   profession: ProfessionDto;
 }

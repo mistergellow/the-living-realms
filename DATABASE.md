@@ -161,6 +161,23 @@ Migration 0016 renamed old ids (`blacksmithing` → `blacksmith`, `runesmithing`
 levels into ranks and gave every living character the four basic tools.
 Rank-ups are `world_events` of type `profession.rank_up` {professionId, rank}.
 
+### `resource_nodes`
+
+Resource nodes (request #52). One per hex and gathering profession, derived
+from the map in game-core (`resourceNodeAt`). A row appears the first time
+someone gathers there; no row = full.
+
+| Column        | Type             | Notes                                                    |
+| ------------- | ---------------- | -------------------------------------------------------- |
+| world_id      | uuid FK → worlds | PK part                                                  |
+| hex_q, hex_r  | integer          | PK part                                                  |
+| profession_id | text             | PK part                                                  |
+| amount        | double precision | charges when `updated_at` was written; regrowth is added |
+| updated_at    | timestamptz      |                                                          |
+
+`items.grade` (smallint 0–4, null): grade of a gathered material (Poor …
+Exceptional); stacks only join the same grade.
+
 ### `rift_runs`
 
 One row per Rift run (a dungeon, request #31) or PvP arena match (`rift_id` = `pvp_arena`, request #33). The whole run state produced by

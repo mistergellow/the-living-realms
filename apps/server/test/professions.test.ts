@@ -1,6 +1,6 @@
 import type { ActivityResultDto, ProfessionProfileDto, ProfessionsDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { worldMapHexes } from '@realms/game-core';
+import { AP_RULES, worldMapHexes } from '@realms/game-core';
 import {
   createCharacter,
   firstRiftSite,
@@ -19,9 +19,9 @@ beforeAll(async () => (t = await createTestApp()));
 beforeEach(() => resetState(t));
 afterAll(() => t.close());
 
-async function hero() {
+async function hero(name = 'Crafter') {
   const user = await registerUser(t.app);
-  const res = await createCharacter(t.app, user.cookie, 'Crafter', {
+  const res = await createCharacter(t.app, user.cookie, name, {
     startingWeapon: 'training_sword',
   });
   const id = res.json().character.id as string;
@@ -124,31 +124,73 @@ describe('professions', () => {
     expect(missing.statusCode).toBe(404);
   });
 
-  it('gathering gives XP and stacking materials; the profession is busy for a while', async () => {
+  it('gathering costs AP (no waiting), gives graded materials and stacks by grade', async () => {
     const h = await hero();
     let got = 0;
+    const grades = new Map<string, number>();
     for (let i = 0; i < 6; i++) {
       const r = (await perform(h, 'fishing', 'fish')).json() as ActivityResultDto;
       expect(r.pointsGained).toBeGreaterThan(0);
-      got += r.produced.reduce((n, p) => n + p.qty, 0);
-      const busy = await perform(h, 'fishing', 'fish');
-      expect(busy.statusCode).toBe(400);
-      await ready(h);
+      expect(r.apSpent).toBe(AP_RULES.gatherCost);
+      for (const p of r.produced) {
+        expect(p.grade).toBeTruthy();
+        grades.set(p.grade!, (grades.get(p.grade!) ?? 0) + p.qty);
+        got += p.qty;
+      }
     }
     const fishing = ((await list(h)).json() as ProfessionsDto).professions.find(
       (p) => p.id === 'fishing',
     )!;
-    expect(fishing.rank + fishing.points).toBeGreaterThan(0);
+    expect(fishing.readyAt).toBeNull();
+    expect(fishing.activities[0]!.apCost).toBe(AP_RULES.gatherCost);
     expect(fishing.stats.attempts).toBe(6);
     expect(fishing.stats.itemsMade).toBe(got);
+    const [c] = await t.dbHandle.sql`select ap from characters where id = ${h.id}`;
+    expect(Number(c!.ap)).toBeLessThanOrEqual(AP_RULES.max - 6 * AP_RULES.gatherCost + 0.1);
     const sheet = (
       await t.app.inject({ url: `/api/characters/${h.id}`, headers: { cookie: h.cookie } })
     ).json();
     const fish = sheet.inventory.filter((i: { defId: string }) => i.defId === 'raw_fish');
-    if (got) {
-      expect(fish).toHaveLength(1); // one stack
-      expect(fish[0].quantity).toBe(got);
+    // One stack per grade.
+    expect(fish).toHaveLength(grades.size);
+    for (const f of fish) expect(f.quantity).toBe(grades.get(f.grade.name));
+  });
+
+  it('gathering needs AP', async () => {
+    const h = await hero();
+    await t.dbHandle.sql`update characters set ap = 1, ap_updated_at = now() where id = ${h.id}`;
+    const r = await perform(h, 'fishing', 'fish');
+    expect(r.json().error.code).toBe('NOT_ENOUGH_AP');
+  });
+
+  it('resource nodes run out and regrow; players share them', async () => {
+    const h = await hero();
+    const node = ((await list(h)).json() as ProfessionsDto).professions.find(
+      (p) => p.id === 'fishing',
+    )!.node!;
+    expect(node.amount).toBe(node.max);
+    // Leave one charge, written now: a success empties it.
+    await t.dbHandle.sql`insert into resource_nodes (world_id, hex_q, hex_r, profession_id, amount, updated_at)
+      select world_id, hex_q, hex_r, 'fishing', 1, now() from characters where id = ${h.id}`;
+    let emptied = false;
+    for (let i = 0; i < 20 && !emptied; i++) {
+      const r = (await perform(h, 'fishing', 'fish')).json() as ActivityResultDto;
+      emptied = r.success;
     }
+    expect(emptied).toBe(true);
+    const other = await hero('Fisher');
+    const blocked = await perform(other, 'fishing', 'fish');
+    expect(blocked.statusCode).toBe(400);
+    expect(blocked.json().error.message).toContain('exhausted');
+    const state = ((await list(other)).json() as ProfessionsDto).professions.find(
+      (p) => p.id === 'fishing',
+    )!.node!;
+    expect(state.amount).toBe(0);
+    expect(state.readyAt).not.toBeNull();
+    // Two hours later it has regrown.
+    await t.dbHandle
+      .sql`update resource_nodes set updated_at = now() - interval '2 hours' where profession_id = 'fishing'`;
+    expect((await perform(other, 'fishing', 'fish')).statusCode).toBe(200);
   });
 
   it('crafting needs materials and level; blacksmiths repair gear', async () => {
