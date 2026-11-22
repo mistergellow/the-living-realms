@@ -17,6 +17,14 @@ export const INVENTORY_RULES = {
   storageSlots: 80,
 } as const;
 
+/** Request #63: player market (cities only). PROVISIONAL (A127). */
+export const MARKET_RULES = {
+  /** Items a player can have for sale at once, in all cities together. */
+  maxListings: 20,
+  /** Share of the price kept by the city (none for now). */
+  feePct: 0,
+} as const;
+
 /** Request #59: the order "Sort" puts items in (by kind, then best first, then name). */
 const SORT_KINDS: readonly string[] = [
   'weapon',

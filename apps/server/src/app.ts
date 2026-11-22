@@ -21,6 +21,8 @@ import { CharactersService } from './modules/characters/characters.service.js';
 import { CharacterSheetService } from './modules/characters/sheet.service.js';
 import { riftsRoutes } from './modules/rifts/rifts.routes.js';
 import { guildsRoutes } from './modules/guilds/guilds.routes.js';
+import { marketRoutes } from './modules/market/market.routes.js';
+import { MarketService } from './modules/market/market.service.js';
 import { GuildsService } from './modules/guilds/guilds.service.js';
 import { professionsRoutes } from './modules/professions/professions.routes.js';
 import { ProfessionsService } from './modules/professions/professions.service.js';
@@ -106,6 +108,10 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
         lobbies: new LobbiesService(ctx, sheets, rifts, friends, worldBoss),
       });
       await api.register(cityRoutes, { prefix: '/characters', city: new CityService(ctx, sheets) });
+      await api.register(marketRoutes, {
+        prefix: '/characters',
+        market: new MarketService(ctx, sheets),
+      });
       await api.register(guildsRoutes, {
         prefix: '/characters',
         guilds: new GuildsService(ctx, sheets),

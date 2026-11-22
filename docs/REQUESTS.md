@@ -129,6 +129,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D117 | **Rifts com 10–20 salas por percurso (pelo tier)**; **fogueiras raras**: máx. 3 num fácil, mín. 1                                                                                                                                                                                                                      | 2026-11-22 | `RIFT_SIZE_RULES`, `mapTemplateForTier`                                                               |
 | D118 | O AP no topo atualiza logo que uma atividade o gasta                                                                                                                                                                                                                                                                   | 2026-11-22 | `GameShell.tsx`                                                                                       |
 | D119 | **Itens com nome (named)**: versões de um item base com bónus fixos que crescem com +1…+10 (ex. 10 espadas); **armaduras Light, Medium e Heavy**; filtro de procura                                                                                                                                                    | 2026-11-22 | `content/named.ts`, `ItemDef.armorClass`                                                              |
+| D120 | **Mercado de jogadores**: o jogador deixa o item com um preço e fica à venda até alguém comprar; **máx. 20 itens por jogador**; só no mercado da cidade onde foi posto (cidades/aldeias)                                                                                                                               | 2026-11-22 | `market.service.ts`, `MARKET_RULES`                                                                   |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -260,6 +261,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A124 | Tamanho dos Rifts                                               | 10, 13, 15, 18, 20 salas por percurso (tier 1–5, boss incluído); fogueiras por percurso: 3, 3, 2, 2, 1 (a de antes do boss conta); pesos de fogueira muito baixos                                                                                                                                                                                                                                                                                                                                                                                          | `RIFT_SIZE_RULES`                                                                |
 | A125 | Grelhas                                                         | mochila 5 × 4; armazém 80 (10 colunas); dividir = Shift ao largar (escolhe-se a quantidade); ordenar: tipo (armas, mãos secundárias, armaduras, acessórios, ferramentas, consumíveis, materiais), depois mais efeitos, mais upgrade, nome, qualidade                                                                                                                                                                                                                                                                                                       | `compareItemsForSort`                                                            |
 | A126 | Itens com nome                                                  | 47 itens (10 espadas, 1 por cada outra arma, 2 mãos secundárias, 9 armaduras, 6 acessórios); efeitos fixos × multiplicador do upgrade (arredondado para baixo); caem raramente no boss (peso 0,12 cada) e um pouco mais nas salas secretas (0,3); Dragon Heavy Armor: Armor +5, Agility −3, 25 % de pegar fogo a quem bate corpo a corpo; armaduras: Light (pouca armadura, mais resistência mágica), Medium, Heavy (muita armadura, −1 Agility no peito, pede Endurance)                                                                                  | `NAMED_ITEMS`, `ITEMS`                                                           |
+| A127 | Mercado                                                         | só nas capitais (ainda não há aldeias); sem taxa; o vendedor recebe o ouro mesmo offline; tirar de volta só na cidade onde está à venda; uma pilha vende-se inteira                                                                                                                                                                                                                                                                                                                                                                                        | `MARKET_RULES`                                                                   |
 
 ---
 
@@ -1314,3 +1316,17 @@ armaduras novas (Cloth Robe, Plate Cuirass, Chain Coif, Iron Helm, Chain
 Boots, Iron Greaves) e classes nas existentes; tooltip com "Named · base",
 efeitos fixos e classe da armadura; filtro "Named" e pesquisa pelo tipo base;
 itens com nome e armaduras novas no saque dos Rifts. Testes: `named.test.ts`.
+
+### #63 — 2026-11-22 — Mercado de jogadores
+
+**Pedido:** Player Market: o jogador deixa lá o item, define o preço e fica
+até alguém comprar; limite de 20 itens por jogador; só fica à venda no
+mercado do hexágono em questão (cidades/aldeias).
+**Decisões:** D120; valores provisórios A127.
+**Resultado:** separador "Market" na cidade (e ação no hub): grelha do que se
+vende nesta cidade (preço, vendedor, comprar ou "Take back" se for teu),
+grelha da mochila para escolher o item e o preço, e a lista dos teus itens à
+venda em todas as cidades. Tabela `market_listings` (migração 0021); rotas
+`/characters/:id/market` (+ `list`, `buy`, `cancel`). Testes: `market.test.ts`
+(4) e passo no e2e. Também neste pedido: artefacto "Living Realms Arsenal" com
+todas as armas, itens com nome, armaduras e skills (níveis 1, 10 e P).

@@ -170,6 +170,14 @@ character (PK `character_id`), `role` leader/member. `guild_invites`: PK
 (guild, character). `guild_items`: the guild storage, with the same item
 fields as `items` (rows move between the two tables).
 
+### `market_listings`
+
+Player market (request #63): an item for sale in one city (`world_id`,
+`hex_q`, `hex_r`), by `seller_character_id`, for `price` gold (> 0). The item's
+fields (`item_def_id`, `quality`, `quantity`, `upgrade_level`, `grade`,
+`specials`, `rune_slots`, `source`) live here while it is listed; buying or
+taking it back moves it into a bag.
+
 ### `profession_jobs`
 
 Real-time profession jobs (request #56); at most one per character
