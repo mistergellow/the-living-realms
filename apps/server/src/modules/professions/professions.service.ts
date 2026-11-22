@@ -30,8 +30,9 @@ import {
   type ProfessionDto,
   type ProfessionsDto,
 } from '@realms/shared';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
+import { giveItem } from '../characters/bag.js';
 import type { AppContext } from '../../context.js';
 import { AppError, errors } from '../../lib/errors.js';
 import { assertNotInRift, type CharacterSheetService } from '../characters/sheet.service.js';
@@ -213,26 +214,22 @@ export class ProfessionsService {
   }
 
   private items(db: DbOrTx, characterId: string): Promise<Item[]> {
-    return db.select().from(items).where(eq(items.characterId, characterId));
+    // Request #50: only what you carry (not the city storage).
+    return db
+      .select()
+      .from(items)
+      .where(and(eq(items.characterId, characterId), eq(items.inStorage, false)));
   }
 
   /** Add items: stackables join an existing stack. */
   private async give(tx: DbOrTx, characterId: string, defId: string, qty: number): Promise<void> {
     if (qty <= 0) return;
+    // Request #50: stacks in the bag; what does not fit goes to storage.
     if (isStackable(getItemDef(defId))) {
-      const [stack] = await tx
-        .update(items)
-        .set({ quantity: sql`${items.quantity} + ${qty}` })
-        .where(and(eq(items.characterId, characterId), eq(items.itemDefId, defId)))
-        .returning({ id: items.id });
-      if (stack) return;
-      await tx
-        .insert(items)
-        .values({ characterId, itemDefId: defId, quantity: qty, source: 'crafted' });
+      await giveItem(tx, characterId, defId, { qty, source: 'crafted' });
       return;
     }
-    for (let i = 0; i < qty; i++)
-      await tx.insert(items).values({ characterId, itemDefId: defId, source: 'crafted' });
+    for (let i = 0; i < qty; i++) await giveItem(tx, characterId, defId, { source: 'crafted' });
   }
 
   private async consume(

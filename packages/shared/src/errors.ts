@@ -27,6 +27,9 @@ export const ErrorCode = {
   NOT_HERE: 'NOT_HERE',
   /** Not enough Action Points (request #50). */
   NOT_ENOUGH_AP: 'NOT_ENOUGH_AP',
+  /** Request #50. */
+  BAG_FULL: 'BAG_FULL',
+  NOT_ENOUGH_GOLD: 'NOT_ENOUGH_GOLD',
   /** The world boss allows one fight per character per day (request #43). */
   NO_ATTEMPTS_LEFT: 'NO_ATTEMPTS_LEFT',
   INTERNAL: 'INTERNAL',

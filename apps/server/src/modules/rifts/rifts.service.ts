@@ -71,6 +71,7 @@ import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { randomInt } from 'node:crypto';
 import type { AppContext } from '../../context.js';
 import { spendAp } from '../characters/ap.js';
+import { giveItem } from '../characters/bag.js';
 import { reputationGearBonus } from '../characters/sheet.service.js';
 import { settleWorldBossFight } from '../worldboss/worldboss.repository.js';
 import { AppError, errors } from '../../lib/errors.js';
@@ -174,11 +175,12 @@ const rollDropAffixes = (rng: Rng, defId: string, tier: number) => {
 };
 
 /** A dropped item for the reward popup (request #50): name and rarity. */
-const dropView = (id: string, defId: string, specials: unknown) => ({
+const dropView = (id: string, defId: string, specials: unknown, inStorage = false) => ({
   id,
   defId,
   name: getItemDef(defId)?.name ?? defId,
   rarity: rarityOf(normalizeAffixes(specials).length),
+  ...(inStorage ? { inStorage } : {}),
 });
 
 export class RiftsService {
@@ -575,33 +577,24 @@ export class RiftsService {
         let roll = rng.next() * totalWeight;
         const entry =
           rift.rewards.loot.find((l) => (roll -= l.weight) < 0) ?? rift.rewards.loot[0]!;
-        const [row] = await tx
-          .insert(items)
-          .values({
-            characterId: p.characterId,
-            itemDefId: entry.item,
-            source: 'drop',
-            specials: rollDropAffixes(rng, entry.item, rift.tier ?? 1),
-          })
-          .returning({ id: items.id, specials: items.specials });
-        dropped.push(dropView(row!.id, entry.item, row!.specials));
+        // Request #50: a full bag sends the drop to the city storage.
+        const given = await giveItem(tx, p.characterId, entry.item, {
+          source: 'drop',
+          specials: rollDropAffixes(rng, entry.item, rift.tier ?? 1),
+        });
+        dropped.push(dropView(given.id, entry.item, given.specials, given.inStorage));
       }
       // Items found on the way (Loot/Secret rooms, events) are only kept on
       // victory, by those still in the party (request #33).
       const state = run.state as RunState;
       const stayed = state.party.some((m) => m.characterId === p.characterId && !m.left);
       for (const g of stayed ? state.grants.filter((x) => x.characterId === p.characterId) : []) {
-        const [row] = await tx
-          .insert(items)
-          .values({
-            characterId: g.characterId,
-            itemDefId: g.itemDefId,
-            source: g.source,
-            // Rolled when found (request #50), by the Rift tier.
-            specials: g.affixes ?? rollDropAffixes(rng, g.itemDefId, rift.tier ?? 1),
-          })
-          .returning({ id: items.id, specials: items.specials });
-        dropped.push(dropView(row!.id, g.itemDefId, row!.specials));
+        const given = await giveItem(tx, g.characterId, g.itemDefId, {
+          source: g.source,
+          // Rolled when found (request #50), by the Rift tier.
+          specials: g.affixes ?? rollDropAffixes(rng, g.itemDefId, rift.tier ?? 1),
+        });
+        dropped.push(dropView(given.id, g.itemDefId, given.specials, given.inStorage));
       }
       // Gold (request #50): the Rift's reward + what was found on the way.
       const gold =

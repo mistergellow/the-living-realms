@@ -178,6 +178,8 @@ export const items = pgTable(
     quantity: integer('quantity').notNull().default(1),
     /** EquipSlot when equipped, null when in the inventory. */
     equippedSlot: text('equipped_slot'),
+    /** In the character's city storage instead of the bag (request #50). */
+    inStorage: boolean('in_storage').notNull().default(false),
     /** Where it came from: 'starter', 'drop', 'loot_room', 'secret_room', 'event', … */
     source: text('source').notNull().default('starter'),
     /** Weapons: upgrade level (+0, +1, …). Same type + level = same stats (request #31). */

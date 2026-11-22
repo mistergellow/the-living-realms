@@ -52,6 +52,7 @@ import {
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { AppError, errors } from '../../lib/errors.js';
 import { toCharacterDto } from './characters.service.js';
+import { assertBagRoom } from './bag.js';
 import { itemsRepository } from './items.repository.js';
 import { riftsRepository } from '../rifts/rifts.repository.js';
 
@@ -297,7 +298,10 @@ export class CharacterSheetService {
       const item = (await itemsRepository.listByCharacter(tx, c.id)).find(
         (i) => i.equippedSlot === slot,
       );
-      if (item) await itemsRepository.setSlot(tx, item.id, null);
+      if (item) {
+        await assertBagRoom(tx, c.id); // request #50: the bag must have room
+        await itemsRepository.setSlot(tx, item.id, null);
+      }
       return this.buildSheet(tx, c);
     });
   }

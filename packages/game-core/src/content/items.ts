@@ -419,6 +419,38 @@ export const MATERIALS = {
   healing_draught: consumable('healing_draught', 'Healing Draught', 'Restores health.'),
   mana_tonic: consumable('mana_tonic', 'Mana Tonic', 'Restores mana.'),
   bandage: consumable('bandage', 'Bandage', 'Stops bleeding.'),
+  // Request #50: the blacksmith's scroll and the weapon-family materials.
+  blessing_scroll: consumable(
+    'blessing_scroll',
+    'Blessing Scroll',
+    'Used at the blacksmith: if an upgrade fails, the weapon loses 1 level instead of breaking.',
+  ),
+  blade_shard: material(
+    'blade_shard',
+    'Blade Shard',
+    'Hardened steel for upgrading blades (+4 and up).',
+  ),
+  axe_iron: material('axe_iron', 'Axe Iron', 'Dense iron for upgrading axes (+4 and up).'),
+  heavy_core: material(
+    'heavy_core',
+    'Heavy Core',
+    'A weighted core for upgrading blunt weapons (+4 and up).',
+  ),
+  polearm_haft: material(
+    'polearm_haft',
+    'Ironwood Haft',
+    'For upgrading spears and lances (+4 and up).',
+  ),
+  sinew_string: material(
+    'sinew_string',
+    'Sinew String',
+    'For upgrading bows, crossbows, slings and chakrams (+4 and up).',
+  ),
+  arcane_focus: material(
+    'arcane_focus',
+    'Arcane Focus',
+    'A humming crystal for upgrading staves, wands, tomes and scepters (+4 and up).',
+  ),
 } satisfies Record<string, ItemDef>;
 
 export type MaterialId = keyof typeof MATERIALS;

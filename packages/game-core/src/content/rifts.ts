@@ -65,6 +65,19 @@ export interface RiftDef {
 
 const rift = (r: RiftDef) => r;
 
+/** Blacksmith materials for +4…+10 (request #50), one per weapon family. */
+const familyMaterials = (weight: number): LootEntry[] =>
+  (
+    [
+      'blade_shard',
+      'axe_iron',
+      'heavy_core',
+      'polearm_haft',
+      'sinew_string',
+      'arcane_focus',
+    ] as ItemDefId[]
+  ).map((item) => ({ item, weight }));
+
 /** Skill Books in the loot (request #47), with a weight each. */
 const books = (weight: number): LootEntry[] =>
   Object.keys(SKILLS).map((id) => ({ item: skillBookId(id) as ItemDefId, weight }));
@@ -257,6 +270,7 @@ export const RIFTS = {
         { item: 'reaper_scythe', weight: 1 },
         { item: 'leather_sling', weight: 1 },
         ...books(0.5),
+        ...familyMaterials(1),
       ],
     },
     lootRoom: {
@@ -275,6 +289,7 @@ export const RIFTS = {
         { item: 'light_crossbow', weight: 1 },
         { item: 'leather_sling', weight: 1 },
         { item: 'oak_scepter', weight: 1 },
+        ...familyMaterials(1.5),
       ],
     },
     secretRoom: {

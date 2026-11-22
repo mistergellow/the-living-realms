@@ -1,5 +1,5 @@
 {
-  "id": "e409e5fe-ad3e-4f37-90f7-f6bbadac401b",
+  "id": "936cefb8-9760-4423-9290-72688b377d52",
   "prevId": "07df5fbd-e94b-4813-9ad4-f99968ceea3e",
   "version": "7",
   "dialect": "postgresql",
@@ -755,6 +755,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "in_storage": {
+          "name": "in_storage",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "source": {
           "name": "source",

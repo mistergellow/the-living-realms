@@ -4,11 +4,14 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const itemsRepository = {
   listByCharacter(db: DbOrTx, characterId: string): Promise<Item[]> {
-    return db
-      .select()
-      .from(items)
-      .where(eq(items.characterId, characterId))
-      .orderBy(asc(items.createdAt));
+    return (
+      db
+        .select()
+        .from(items)
+        // Request #50: items in the city storage are not carried.
+        .where(and(eq(items.characterId, characterId), eq(items.inStorage, false)))
+        .orderBy(asc(items.createdAt))
+    );
   },
 
   async insertMany(db: DbOrTx, values: Array<typeof items.$inferInsert>): Promise<void> {

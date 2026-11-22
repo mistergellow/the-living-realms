@@ -322,7 +322,14 @@ export type RunStatus = 'active' | 'victory' | 'defeat' | 'abandoned';
 
 export interface RunRewardsDto {
   reputation: number;
-  items: Array<{ id: string; name: string; defId?: string; rarity?: ItemRarity }>;
+  items: Array<{
+    id: string;
+    name: string;
+    defId?: string;
+    rarity?: ItemRarity;
+    /** Sent to the city storage because the bag was full (request #50). */
+    inStorage?: boolean;
+  }>;
   /** Gold earned (request #50): the Rift's reward plus what was found on the way. */
   gold?: number;
   /** Request #49: how many times you have beaten this Rift (1 = first time). */
