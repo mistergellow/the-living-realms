@@ -68,7 +68,7 @@ describe('city services (request #50)', () => {
     expect((await post(h, 'shop/sell', { itemId: ore })).statusCode).toBe(400);
   });
 
-  it('storage keeps items out of the bag; the bag holds 20 slots', async () => {
+  it('storage keeps items out of the bag; the bag holds INVENTORY_RULES.bagSlots slots', async () => {
     const h = await hero();
     const axe = await give(h, 'woodcutter_axe');
     let city = (await post(h, 'storage/deposit', { itemId: axe })).json() as CityDto;

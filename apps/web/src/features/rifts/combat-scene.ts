@@ -11,6 +11,7 @@ import {
   type Ticker,
 } from 'pixi.js';
 import { artFromAbilities } from '../avatar/weapon-art';
+import { RIG } from '../avatar/CharacterAvatar';
 import {
   characterTextures,
   enemyTexture,
@@ -239,21 +240,24 @@ class UnitView {
           artFromAbilities(this.view.abilityIds),
         );
         if (this.root.destroyed) return;
+        // Request #72: layers of the articulated base hero, each turning at its joint.
+        const at = (sp: Sprite, p: { x: number; y: number }) => {
+          sp.anchor.set(p.x / 120, p.y / 160);
+          sp.position.set(p.x - 60, p.y - 150);
+        };
         this.base = new Sprite(tex.base);
         this.base.anchor.set(0.5, 150 / 160);
         this.weapon = new Sprite(tex.weapon);
-        this.weapon.anchor.set(97 / 120, 110 / 160);
-        this.weapon.position.set(37, -40);
+        at(this.weapon, RIG.frontShoulder);
         this.offhand = new Sprite(tex.offhand);
-        this.offhand.anchor.set(20 / 120, 104 / 160);
-        this.offhand.position.set(-40, -46);
+        at(this.offhand, RIG.backShoulder);
         this.head = new Sprite(tex.head);
-        this.head.anchor.set(0.5, 88 / 160);
-        this.head.position.set(0, -62);
+        at(this.head, RIG.neck);
         this.headTex = tex.head;
         this.blinkTex = tex.headBlink;
         for (const s of [this.base, this.weapon, this.offhand, this.head]) s.scale.set(k);
-        this.figure.addChild(this.base, this.offhand, this.weapon, this.head);
+        // The back arm stands behind the body.
+        this.figure.addChild(this.offhand, this.base, this.weapon, this.head);
       } else {
         const tex = await enemyTexture(this.view.enemyDefId);
         if (this.root.destroyed) return;
@@ -299,12 +303,14 @@ class UnitView {
     const breathe = Math.sin(w) * idle;
     if (this.base) {
       this.base.scale.set(1 / TEX_SCALE, (1 / TEX_SCALE) * (1 + 0.022 * breathe));
-      this.head!.y = -62 - 2.2 * breathe;
+      // Shoulders and head ride the breathing chest; arms sway at the shoulder.
+      const lift = 2.2 * breathe;
+      this.head!.y = RIG.neck.y - 150 - lift;
       this.head!.rotation = (-1.5 * Math.PI * breathe) / 180;
-      this.weapon!.rotation = (2 * Math.PI * breathe) / 180;
-      this.weapon!.y = -40 - 1.2 * breathe;
-      this.offhand!.rotation = (-2 * Math.PI * breathe) / 180;
-      this.offhand!.y = -46 - 1.2 * breathe;
+      this.weapon!.rotation = (2.5 * Math.PI * breathe) / 180;
+      this.weapon!.y = RIG.frontShoulder.y - 150 - lift * 0.8;
+      this.offhand!.rotation = (-2.5 * Math.PI * breathe) / 180;
+      this.offhand!.y = RIG.backShoulder.y - 150 - lift * 0.8;
       // Blink.
       if (!reduced && this.headTex && this.blinkTex) {
         if (t >= this.blinkAt) {

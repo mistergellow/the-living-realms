@@ -938,3 +938,20 @@ creature (e.g. a Sentinel that reflects) use the same affixes as `innate`.
 
 **Consequences.** New enemies, themes and affixes are data plus art; the sim
 (`SIM=themes`) compares themes with the previous rooms ("Legacy rooms").
+
+## ADR-054 — Player art from the owner's cut-out sheets
+
+**Status:** accepted (request #72)
+
+**Decision.** The player figure is assembled from raster pieces cut out of the
+owner's art sheet (white background removed, one WebP per piece) and placed in
+the existing 120×160 avatar viewBox with SVG `<image>` elements. Pieces are
+imported with Vite's `?inline`, so they are data URLs: the same SVG works in the
+DOM and when rasterised into Pixi textures (an SVG drawn into an image cannot
+fetch other URLs). The four renderer layers keep their names, now as joints:
+`offhand` (back arm, turns at the back shoulder, drawn behind the body), `base`,
+`weapon` (front arm + weapon, turns at the front shoulder) and `head` (at the
+neck); pivots are exported as `RIG`.
+
+**Consequences.** Equipment-driven looks (D136) become "swap the pieces of a
+slot" in `CharacterAvatar`; cut-out sheets need consistent joints per kit.

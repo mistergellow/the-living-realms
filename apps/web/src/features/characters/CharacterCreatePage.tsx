@@ -28,7 +28,6 @@ import { useActiveCharacter } from './active-character';
 import { useCreateCharacter } from './api';
 import { CharacterAvatar } from '../avatar/CharacterAvatar';
 import { weaponArtFor } from '../avatar/weapon-art';
-import { AppearanceEditor } from './AppearanceEditor';
 import { Icon } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
 import { cssColor, REGION_COLORS } from '../world/region-colors';
@@ -50,7 +49,8 @@ function kitAbilities(kit: (typeof STARTER_KITS)[number]) {
 export function CharacterCreatePage() {
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [appearance, setAppearance] = useState<AppearanceV2>(DEFAULT_APPEARANCE);
+  // Request #72: one base hero for everyone for now; the look stays in the data.
+  const [appearance] = useState<AppearanceV2>(DEFAULT_APPEARANCE);
   const [nation, setNation] = useState<NationId | null>(null);
   const [kitId, setKitId] = useState<StarterKitId>('sword');
   const kit = STARTER_KITS.find((k) => k.id === kitId)!;
@@ -200,12 +200,6 @@ export function CharacterCreatePage() {
                   ))}
                 </div>
               </fieldset>
-            </section>
-            <section className="panel">
-              <div className="panel-title">
-                <span>Appearance</span>
-              </div>
-              <AppearanceEditor value={appearance} onChange={setAppearance} />
             </section>
           </div>
         </div>

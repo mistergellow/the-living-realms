@@ -12,7 +12,8 @@ import type { WeaponType } from './weapons.js';
 
 export const INVENTORY_RULES = {
   /** Bag slots (a stack of materials uses one slot). Equipped items do not count. */
-  bagSlots: 20,
+  // Request #72: 40 (was 20, D97).
+  bagSlots: 40,
   /** Request #59: city storage slots (more can be unlocked later). */
   storageSlots: 80,
 } as const;

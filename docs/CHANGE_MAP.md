@@ -152,13 +152,14 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Contrato: `packages/shared/src/api.ts` (`appearanceV1Schema` antigo, `appearanceV2Schema`, `BODY_TYPES`, `SKIN_TONES`, `HAIR_STYLES`, `HAIR_COLORS`, `EYE_COLORS`, `APPEARANCE_COLORS` = roupa, `DEFAULT_APPEARANCE`, `normalizeAppearance`)
 - BD: `characters.appearance` (JSONB com `version`); ao mudar a forma, **criar nova versão** e manter `normalizeAppearance` a converter as antigas
-- Arte (SVG em camadas, provisória; estilo gótico ¾ desde o pedido #69, D127): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente; mão da arma em (97, 113), mão secundária em (23, 110) — as armas desenham-se nessas posições), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
+- **Herói base (pedido #72, ADR-054):** peças da arte do dono em `apps/web/src/features/avatar/base/*.webp` (importadas com `?inline`, para o canvas também as ler); posições e pivôs (`RIG`: pescoço, ombros, mão, punho de trás) em `CharacterAvatar.tsx`; o combate (`combat-scene.ts` → `loadArt`) usa `RIG` para as âncoras. **Peça nova / arte nova:** recortar, juntar a `PARTS` e à camada certa
+- Arte antiga (SVG em camadas; estilo gótico ¾ desde o pedido #69, D127; só as armas continuam em uso): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente; mão da arma em (97, 113), mão secundária em (23, 110) — as armas desenham-se nessas posições), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
 - Inimigos: `apps/web/src/features/avatar/EnemyAvatar.tsx` (um desenho por `enemyDefId`) — **inimigo novo precisa de arte aqui**
 - Usos no DOM: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói: `CharacterSheetPage` em `/characters/:id`, `HeroPage` em `/hero`), `rifts/CombatStage.tsx` (só sem WebGL)
 - Usos no canvas (PixiJS): `apps/web/src/features/render/avatar-textures.tsx` transforma as camadas em texturas (`part`: `base`/`weapon`/`head` + `eyesClosed`; âncoras usadas em `rifts/combat-scene.ts` → `UnitView`). **Camada nova** (ex.: equipamento) → acrescentar a `AvatarPart`, a `characterTextures` e ao `UnitView` (a mão secundária já é a camada `offhand`); retrato do mapa → `portraitTexture` (`world/map-scene.ts`)
 - Presença: `PresencePlayer.appearance` (`protocol.ts`)
 - Testes: `helpers.ts` (v1, compatibilidade), `server-kit/test/presence.test.ts`, `web/test/world-state.test.ts`, `e2e` (botões "Hair style …")
-- Futuro (D32): camadas de equipamento por cima do corpo base, no mesmo `CharacterAvatar`
+- Futuro (D136): a armadura equipada muda as peças (kits); na criação só cabelo e cara
 
 ## Posição no mapa / hexágonos
 

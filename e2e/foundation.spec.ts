@@ -57,7 +57,6 @@ async function createCharacter(page: Page, name: string, kit = 'Sword') {
     .getByTestId('starter-kits')
     .getByRole('button', { name: new RegExp(`^${kit}`) })
     .click();
-  await page.getByRole('button', { name: 'Hair style spiky' }).click();
   await page.getByRole('button', { name: 'Create and enter the world' }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByTestId('self-name')).toHaveText(name);
