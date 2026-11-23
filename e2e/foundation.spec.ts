@@ -493,7 +493,9 @@ async function expectFitsViewport(page: Page, label = '') {
 }
 
 test('screens fit every screen size', async ({ page }) => {
-  test.setTimeout(300_000); // 42 screenshots up to 4K, canvas rendered in software on CI
+  // 42+ screenshots up to 4K, canvas rendered in software on CI (took ~5 min there
+  // with the heavier gothic backdrops of request #69).
+  test.setTimeout(600_000);
   await register(page, `e2e-sizes-${unique()}@example.com`);
   const name = randomName('Vista');
   await createCharacter(page, name);
