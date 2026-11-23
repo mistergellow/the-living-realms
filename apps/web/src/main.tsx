@@ -5,14 +5,16 @@ import { RouterProvider } from 'react-router';
 import { router } from './app/router';
 import { installAppFeel } from './lib/app-feel';
 import { queryClient } from './lib/query-client';
-import '@fontsource/alegreya-sans/400.css';
-import '@fontsource/alegreya-sans/500.css';
-import '@fontsource/alegreya-sans/700.css';
-import '@fontsource/cinzel/600.css';
-import '@fontsource/cinzel/700.css';
-import '@fontsource/cinzel/800.css';
+import '@fontsource/alegreya/400.css';
+import '@fontsource/alegreya/400-italic.css';
+import '@fontsource/alegreya/500.css';
+import '@fontsource/alegreya/700.css';
+import '@fontsource/alegreya-sc/500.css';
+import '@fontsource/alegreya-sc/700.css';
+import '@fontsource/grenze-gotisch/600.css';
+import '@fontsource/grenze-gotisch/800.css';
 import './styles/global.css';
-// Request #58: the premium RPG look (overrides the feature stylesheets).
+// Request #69: the gothic "Darkest" look (overrides the feature stylesheets).
 import './styles/theme.css';
 
 installAppFeel();

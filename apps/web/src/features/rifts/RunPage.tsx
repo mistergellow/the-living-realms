@@ -11,8 +11,8 @@ import { CombatScreen } from './CombatPage';
 import './combat.css';
 import { LootList } from './LootList';
 import { EndOverlay } from './EndOverlay';
-import { MapLegend, RiftMap } from './RiftMap';
-import './rift-map.css';
+import { RiftDoors } from './RiftDoors';
+import './rift-doors.css';
 
 /** Seconds left on the current decision or planning phase, refreshed every 250 ms. */
 function useCountdown(deadline: string | null): number | null {
@@ -27,8 +27,8 @@ function useCountdown(deadline: string | null): number | null {
 
 /**
  * A Rift run (request #31). Fights use the combat screen; everything else
- * (the branching map, events, campsites, loot and secret rooms) happens on
- * the exploration screen.
+ * (choosing the next door, events, campsites, loot and secret rooms) happens
+ * on the exploration screen.
  */
 export function RunPage() {
   const { runId = '' } = useParams();
@@ -101,48 +101,53 @@ function ExplorationScreen({
   return (
     <div className="combat explore">
       <header className="combat-top">
-        <span className="title">{run.riftName}</span>
-        <span className="muted">
-          Rooms explored {run.roomsVisited} · {active.length} in the party
-        </span>
-        <span
-          className="threat"
-          data-testid="threat"
-          data-tier={run.threat.tier?.name ?? 'calm'}
-          title={
-            (run.threat.tier
-              ? `${run.threat.tier.name}: ${run.threat.tier.description}`
-              : 'Calm: no effect yet.') +
-            (run.threat.next
-              ? ` Next at ${run.threat.next.at}: ${run.threat.next.description}`
-              : '') +
-            ' Failed tests and timed-out votes raise it; clearing an Elite lowers it.'
-          }
-        >
-          Threat {run.threat.value}
-          {run.threat.tier ? ` · ${run.threat.tier.name}` : ''}
-        </span>
-        <span className="spacer" />
-        {deciding && secondsLeft !== null && (
-          <span className="timer" data-low={secondsLeft <= 10}>
-            {secondsLeft}s
+        <div className="combat-where">
+          <span className="title">{run.riftName}</span>
+          <span className="muted small">
+            Rooms explored {run.roomsVisited} · {active.length} in the party
           </span>
-        )}
-        {run.status === 'active' && (
-          <button
-            className="btn btn-ghost btn-sm btn-danger"
-            onClick={() => {
-              if (
-                confirm(
-                  'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps going.',
-                )
-              )
-                send({ type: 'abandon' });
-            }}
+        </div>
+        <div className="combat-round">
+          <span
+            className="threat"
+            data-testid="threat"
+            data-tier={run.threat.tier?.name ?? 'calm'}
+            title={
+              (run.threat.tier
+                ? `${run.threat.tier.name}: ${run.threat.tier.description}`
+                : 'Calm: no effect yet.') +
+              (run.threat.next
+                ? ` Next at ${run.threat.next.at}: ${run.threat.next.description}`
+                : '') +
+              ' Failed tests and timed-out votes raise it; clearing an Elite lowers it.'
+            }
           >
-            Abandon
-          </button>
-        )}
+            Threat {run.threat.value}
+            {run.threat.tier ? ` · ${run.threat.tier.name}` : ''}
+          </span>
+        </div>
+        <div className="combat-tools">
+          {deciding && secondsLeft !== null && (
+            <span className="timer" data-low={secondsLeft <= 10}>
+              {secondsLeft}s
+            </span>
+          )}
+          {run.status === 'active' && (
+            <button
+              className="btn btn-ghost btn-sm btn-danger"
+              onClick={() => {
+                if (
+                  confirm(
+                    'Leave the Rift? It counts as a defeat for you: your equipped items lose quality. Your group keeps going.',
+                  )
+                )
+                  send({ type: 'abandon' });
+              }}
+            >
+              Abandon
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="explore-body">
@@ -187,11 +192,13 @@ function ExplorationScreen({
               </div>
             </div>
           ))}
-          <MapLegend />
         </aside>
 
         <main className="map-area">
-          <RiftMap
+          {run.phase === 'map' && run.status === 'active' && (
+            <h2 className="doors-title">Which way?</h2>
+          )}
+          <RiftDoors
             map={run.map}
             votes={run.votes}
             nameOf={nameOf}
@@ -205,7 +212,13 @@ function ExplorationScreen({
                 ? active.length > 1
                   ? 'Waiting for the others to vote…'
                   : ''
-                : 'Choose the next room. Glowing rooms are reachable.'}
+                : 'Pick a door. You will only know what waits behind it once you step through.'}
+            </p>
+          )}
+          {run.phase === 'map' && (
+            <p className="map-lore muted small">
+              Fights cost HP and Mana and give no drops. The main rewards wait at the boss — arrive
+              with as much strength as you can. Campsites heal part of your HP and Mana.
             </p>
           )}
         </main>
@@ -335,15 +348,6 @@ function ExplorationScreen({
                   Continue
                 </button>
               </div>
-            </div>
-          )}
-          {run.phase === 'map' && (
-            <div className="panel stack">
-              <h2>Choose your path</h2>
-              <p className="muted small">
-                Fights cost HP and Mana and give no drops. The main rewards wait at the boss —
-                arrive with as much strength as you can. Campsites heal part of your HP and Mana.
-              </p>
             </div>
           )}
         </aside>

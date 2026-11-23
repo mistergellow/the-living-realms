@@ -11,12 +11,14 @@ interface AbilityBarProps {
   selected: string | null;
   disabled: boolean;
   onPick: (abilityId: string) => void;
+  /** The skill under the pointer / keyboard focus (null when it leaves). */
+  onHover?: (abilityId: string | null) => void;
   onCancel: () => void;
 }
 
 /**
- * Classic MMO action bar (request #30): one square icon per ability with its
- * name underneath, cost badges and a hotkey (1–9). Hovering or focusing a slot
+ * Skill bar (request #30; Darkest Dungeon look since request #69): one square
+ * icon per ability with its name underneath, cost badges and a hotkey (1–9). Hovering or focusing a slot
  * shows a tooltip with everything the ability does. Esc cancels a selection.
  */
 export function AbilityBar(props: AbilityBarProps) {
@@ -62,6 +64,7 @@ export function AbilityBar(props: AbilityBarProps) {
           selected={props.selected === id}
           disabled={props.disabled}
           onPick={() => props.onPick(id)}
+          onHover={(on) => props.onHover?.(on ? id : null)}
         />
       ))}
     </div>
@@ -75,12 +78,19 @@ function AbilitySlot(props: {
   selected: boolean;
   disabled: boolean;
   onPick: () => void;
+  onHover?: (on: boolean) => void;
 }) {
   const a = getAbility(props.abilityId)!;
   const tipId = useId();
   const cost = `${a.focusCost} Focus${a.manaCost ? ` + ${a.manaCost} Mana` : ''}`;
   return (
-    <div className="slot-wrap">
+    <div
+      className="slot-wrap"
+      onPointerEnter={() => props.onHover?.(true)}
+      onPointerLeave={() => props.onHover?.(false)}
+      onFocus={() => props.onHover?.(true)}
+      onBlur={() => props.onHover?.(false)}
+    >
       <button
         type="button"
         className={`ability-slot school-${abilitySchool(a.id)}`}

@@ -10,45 +10,68 @@
 :root {
   font-size: clamp(13px, calc(5px + min(0.55vw, 1vh)), 26px);
 
-  /* surfaces */
-  --bg: #0b0a10;
-  --bg-elevated: #15141d;
-  --bg-sunken: #08070c;
-  --surface: #1e1c29;
-  --surface-hi: #2a2738;
-  --border: #2e2a3a;
-  --border-strong: #463f55;
-
   /*
-   * Frames (request #58, "premium RPG" look): thin antique-gold borders on
-   * near-opaque dark panels (was white lines on glass, request #30).
+   * Request #69 — the "Darkest" look (after Darkest Dungeon, the owner's
+   * reference): warm pitch-black, bone-white text, blood red for life and
+   * danger, torchlight amber for the things you can act on, rusted iron for
+   * frames. The old token names are kept (gold-*, frame-*, glass-*) so every
+   * feature stylesheet follows the new palette; they now mean "torch brass".
    */
-  --gold-1: #f3dc9a;
-  --gold-2: #d4a849;
-  --gold-3: #8a6424;
-  --gold-4: #4a3514;
-  --frame: rgb(196 152 72 / 0.55);
-  --frame-hi: #e3c27a;
-  --frame-glow: rgb(228 184 92 / 0.4);
-  --glass: rgb(14 13 19 / 0.9);
-  --glass-strong: rgb(10 10 15 / 0.96);
-  --glass-border: rgb(196 152 72 / 0.5);
-  --glass-border-hi: #e3c27a;
+  --ink: #050403;
+  --pitch: #0f0c0a;
+  --umber: #1d1612;
+  --umber-hi: #2b211a;
+  --bone: #e2d6bb;
+  --ash: #8f8471;
+  --blood: #9b1d14;
+  --blood-hi: #c8331f;
+  --torch: #d0912f;
+  --torch-hi: #f0c06a;
+  --iron: #4b443b;
+  --iron-hi: #6d6253;
+  --rust: #5e3a22;
+
+  /* surfaces */
+  --bg: var(--ink);
+  --bg-elevated: #14100d;
+  --bg-sunken: #030202;
+  --surface: var(--umber);
+  --surface-hi: var(--umber-hi);
+  --border: #2a221b;
+  --border-strong: var(--iron);
+
+  /* frames: rusted iron with a faint torch-brass highlight */
+  --gold-1: var(--torch-hi);
+  --gold-2: var(--torch);
+  --gold-3: #7a5524;
+  --gold-4: #3a2a18;
+  --frame: rgb(109 98 83 / 0.7);
+  --frame-hi: #a8916b;
+  --frame-glow: rgb(208 145 47 / 0.35);
+  --glass: rgb(12 9 7 / 0.92);
+  --glass-strong: rgb(7 5 4 / 0.97);
+  --glass-border: rgb(109 98 83 / 0.6);
+  --glass-border-hi: var(--torch-hi);
 
   /* text */
-  --text: #f3f1ec;
-  --text-muted: #b7b4ad;
-  --text-faint: #7d7a74;
+  --text: var(--bone);
+  --text-muted: #a89c86;
+  --text-faint: #6f6657;
 
   /* accents */
-  --accent: #d9a441;
-  --accent-strong: #f0cf7a;
-  --accent-ink: #2a1600;
-  --danger: #e2604c;
-  --success: #6cc08b;
-  --warning: #e0b35a;
-  --mana: #5b8def;
-  --arcane: #8f7cf0;
+  --accent: var(--torch);
+  --accent-strong: var(--torch-hi);
+  --accent-ink: #1c0f03;
+  --danger: var(--blood-hi);
+  --success: #7fa35a;
+  --warning: #d9a441;
+  --mana: #4f78b8;
+  --arcane: #7e6bb8;
+  --hp: #a3221a;
+  --hp-hi: #d8402b;
+
+  /* stone grain, laid over panels and the background */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* item rarity = number of bonus effects (request #37) */
   --rarity-common: #a3a19c;
   --rarity-uncommon: #5fcf6b;
@@ -57,8 +80,8 @@
   --rarity-legendary: #f39a2b;
   --rarity-mythic: #e8493a;
 
-  --radius: 0.375rem;
-  --radius-sm: 0.25rem;
+  --radius: 0.125rem;
+  --radius-sm: 0.0625rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -66,10 +89,13 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
-  --font-body: 'Alegreya Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+  /* Request #69: Alegreya for reading, Alegreya SC for labels and buttons,
+     Grenze Gotisch (blackletter) only for big titles and names. */
+  --font-body: 'Alegreya', Georgia, 'Times New Roman', serif;
+  --font-display: 'Alegreya SC', 'Alegreya', Georgia, serif;
+  --font-title: 'Grenze Gotisch', 'Alegreya SC', Georgia, serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  --shadow: 0 0.6rem 2.2rem rgb(0 0 0 / 0.55);
+  --shadow: 0 0.6rem 2.2rem rgb(0 0 0 / 0.8);
   --hud-gap: clamp(0.5rem, 1.2vmin, 1.5rem);
 }

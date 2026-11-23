@@ -22,6 +22,8 @@ interface CombatStageProps {
   onCaughtUp?: (seq: number) => void;
   /** The selected ability hits a whole column: hovering a unit highlights its column. */
   columnMode?: boolean;
+  /** The unit under the pointer or keyboard focus (for the HUD's unit card). */
+  onInspect?: (unitId: string | null) => void;
   /** Overlays drawn above the battlefield (room cleared, results). */
   children?: ReactNode;
 }
@@ -46,6 +48,7 @@ export function CombatStage({
   onProgress,
   onCaughtUp,
   columnMode = false,
+  onInspect,
   children,
 }: CombatStageProps) {
   const cbRef = useRef({ onProgress, onCaughtUp });
@@ -82,6 +85,9 @@ export function CombatStage({
     );
   }, [combat, hoverId, columnMode]);
 
+  useEffect(() => {
+    onInspect?.(hoverId);
+  }, [hoverId, onInspect]);
   useEffect(() => {
     cbRef.current = { onProgress, onCaughtUp };
   }, [onProgress, onCaughtUp]);

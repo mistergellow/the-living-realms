@@ -39,7 +39,7 @@
   width: 18rem;
   padding: 0.6rem;
   border-radius: var(--radius-sm);
-  background: #141320;
+  background: #18140f;
   border: 1px solid var(--border-strong);
 }
 .city-name:hover .city-tip {

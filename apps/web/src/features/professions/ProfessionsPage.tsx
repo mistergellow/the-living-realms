@@ -74,9 +74,13 @@ function InspectBox() {
         if (name.trim()) navigate(`/professions/inspect/${encodeURIComponent(name.trim())}`);
       }}
     >
-      <h1 className="page-title" style={{ margin: 0 }}>
-        Professions
-      </h1>
+      <div className="page-head-text">
+        <h1 className="page-title">Professions</h1>
+        <p className="page-lead">
+          Gather, craft and mend. Every attempt costs AP and teaches Mastery — pick a craft on the
+          left to see what you can do with it.
+        </p>
+      </div>
       <span className="spacer" />
       <input
         value={name}

@@ -94,8 +94,9 @@ async function clearRift(h: Hero, runId: string): Promise<{ run: RunDto; types: 
   for (let step = 0; step < 40 && run.status === 'active'; step++) {
     if (run.phase === 'map') {
       const next = run.map.nodes.find((n) => n.available)!;
-      types.push(next.type);
       run = (await act(h, runId, { type: 'vote', optionId: next.id })).json();
+      // Request #69: what a room holds is only known once you are in it.
+      types.push(run.roomType ?? '?');
     } else if (run.phase === 'combat') {
       if (run.combat!.phase === 'planning') run = await winFight(h, runId);
       else run = (await act(h, runId, { type: 'continue' })).json();
@@ -145,6 +146,8 @@ describe('Rifts', () => {
     expect(run.map.nodes.length).toBeGreaterThanOrEqual(10);
     expect(run.map.nodes.filter((n) => n.available).length).toBeGreaterThanOrEqual(2);
     expect(run.map.nodes.some((n) => n.type === 'secret')).toBe(false); // hidden until found
+    // Request #69: behind each door is unknown, except the boss lair.
+    expect(run.map.nodes.filter((n) => n.type !== null).map((n) => n.type)).toEqual(['boss']);
     expect(run.party[0]).toMatchObject({ characterId: h.characterId, conditions: [] });
     const left = new Date(run.deadline!).getTime() - Date.now();
     expect(left).toBeGreaterThan(55_000);

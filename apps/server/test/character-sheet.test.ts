@@ -342,8 +342,7 @@ describe('Skill Books (request #47)', () => {
     expect(sheet.loadout[0]).toBe('second_wind');
     expect(sheet.inventory.some((i) => i.id === book)).toBe(false);
     // Request #66: reaching level N takes N books at once, and it can fail.
-    const healAt = (sh: CharacterSheetDto) =>
-      sh.learnedSkills.find((s) => s.id === 'second_wind')!;
+    const healAt = (sh: CharacterSheetDto) => sh.learnedSkills.find((s) => s.id === 'second_wind')!;
     expect(healAt(sheet).levelLabel).toBe('1');
     expect(healAt(sheet).nextLevel).toEqual({ label: '2', books: 2, chance: readChance(2) });
     const one = await give(id, 'book_second_wind');

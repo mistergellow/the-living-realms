@@ -1,0 +1,317 @@
+/*
+ * The Rift exploration screen (request #31; doors since request #69): party
+ * on the left, a stone corridor with the doors you can take in the middle.
+ */
+.explore {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.explore-body {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+.party-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--grain), linear-gradient(90deg, rgb(16 12 9 / 0.97), rgb(8 6 5 / 0.95));
+  border-right: 2px solid #2c251e;
+}
+.party-panel h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--bone);
+}
+.party-member {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.party-member[data-left='true'] {
+  opacity: 0.45;
+}
+.party-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+.party-info strong {
+  font-family: var(--font-display);
+}
+.conditions {
+  display: flex;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+}
+.condition {
+  font-size: 0.75rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid;
+}
+.condition[data-kind='debuff'] {
+  color: #e47a62;
+  border-color: var(--blood);
+}
+.condition[data-kind='boon'] {
+  color: #a9c98a;
+  border-color: #4d6a34;
+}
+/* The corridor. */
+.map-area {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow-y: auto;
+  background:
+    var(--grain),
+    radial-gradient(ellipse 60% 50% at 50% 60%, rgb(208 145 47 / 0.1), transparent 70%),
+    linear-gradient(180deg, #0a0806 0%, #17120e 55%, #0b0806 56%, #050403 100%);
+}
+:root .doors-title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow:
+    0 2px 0 var(--ink),
+    0 0 1.4rem rgb(0 0 0 / 0.9);
+}
+.rift-doors {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+.doors {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.75rem, 3vw, 3rem);
+  width: 100%;
+}
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: clamp(8rem, 22vw, 16rem);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--bone);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+.door:disabled {
+  cursor: default;
+}
+.door-art {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0.6rem 1rem rgb(0 0 0 / 0.9));
+  transition:
+    filter 0.2s,
+    transform 0.2s;
+}
+.door-leaf {
+  transform-origin: 24px 100px;
+  transition: transform 0.25s ease-out;
+}
+.door:hover:not(:disabled) .door-leaf,
+.door:focus-visible .door-leaf,
+.door[data-mine='true'] .door-leaf {
+  transform: scaleX(0.55);
+}
+.door:hover:not(:disabled) .door-art,
+.door:focus-visible .door-art {
+  filter: drop-shadow(0 0 1.2rem rgb(208 145 47 / 0.45)) drop-shadow(0 0.6rem 1rem rgb(0 0 0 / 0.9));
+  transform: translateY(-2px);
+}
+.door:focus-visible {
+  outline: none;
+}
+.door:focus-visible .door-name {
+  outline: 2px solid var(--torch-hi);
+  outline-offset: 3px;
+}
+.door[data-mine='true'] .door-art {
+  filter: drop-shadow(0 0 1.4rem rgb(208 145 47 / 0.7));
+}
+.door[data-known='boss'] .door-name {
+  color: #e47a62;
+}
+.door-name {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.door-hint {
+  font-size: 0.88rem;
+  font-style: italic;
+  max-width: 12rem;
+}
+.door-votes {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--torch-hi);
+}
+.rift-path {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.path-step {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 0.95rem;
+  background: #0a0806;
+  border: 1px solid #4b3f31;
+  color: var(--bone);
+}
+.path-step[data-current='true'] {
+  border-color: var(--torch);
+  box-shadow: 0 0 0.6rem rgb(208 145 47 / 0.5);
+}
+.path-step[data-kind='elite'],
+.path-step[data-kind='boss'] {
+  color: #e47a62;
+}
+.path-depth {
+  margin-left: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+}
+.map-hint {
+  margin: 0;
+  font-size: 1rem;
+  font-style: italic;
+  text-align: center;
+}
+.map-lore {
+  margin: 0;
+  max-width: 36rem;
+  text-align: center;
+}
+/* Room messages (errors, the search roll) float over the corridor; rooms
+   themselves open as modals. */
+.room-panel {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  z-index: 4;
+  width: min(36rem, 90%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.room-panel > * {
+  pointer-events: auto;
+}
+.room-panel h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+@media (max-width: 56.25em) {
+  .explore-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .party-panel {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 2px solid #2c251e;
+    padding: var(--space-2);
+  }
+  .party-panel h3 {
+    display: none;
+  }
+  .party-member {
+    min-width: 12rem;
+  }
+  .doors-title {
+    font-size: 1.8rem;
+  }
+  .door-name {
+    font-size: 1.2rem;
+  }
+  .door-hint {
+    display: none;
+  }
+}
+.approaches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.approach {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+  height: auto;
+  white-space: normal;
+}
+.approach[data-mine='true'] {
+  border-color: var(--torch-hi);
+}
+.test-line[data-success='true'] strong {
+  color: var(--success);
+}
+.test-line[data-success='false'] strong {
+  color: var(--danger);
+}
+.effects {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+.room-panel h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.threat {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.1rem 0.6rem;
+  border: 1px solid var(--iron);
+  color: var(--text-muted);
+}
+.threat[data-tier='Stirring'] {
+  color: var(--torch-hi);
+  border-color: var(--torch);
+}
+.threat[data-tier='Restless'],
+.threat[data-tier='Awakened'] {
+  color: var(--danger);
+  border-color: var(--danger);
+}

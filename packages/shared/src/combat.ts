@@ -216,7 +216,12 @@ export interface MapNodeDto {
   row: number;
   /** Horizontal lane (for drawing). */
   col: number;
-  type: RoomType;
+  /**
+   * Request #69: what the room is — null until the party has entered it (the
+   * boss room and found secret rooms are always known). Players pick a door
+   * (left / middle / right) without knowing what waits behind it.
+   */
+  type: RoomType | null;
   visited: boolean;
   current: boolean;
   /** Can be chosen as the next room right now. */

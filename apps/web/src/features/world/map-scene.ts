@@ -53,20 +53,21 @@ const MAP_BOUNDS = (() => {
   return { x, y, radius };
 })();
 
+// Request #69: the gothic palette (tokens.css).
 const C = {
-  bg: 0x0b0d12,
-  fill: 0x1a2030,
-  fillAlt: 0x1f2638,
-  stroke: 0x2f374b,
-  hover: 0x2a3350,
-  selected: 0x3a3420,
-  accent: 0xd4a64a,
-  accentStrong: 0xe8bd5f,
-  ink: 0x1a1408,
-  text: 0xe7e3d8,
-  faint: 0x6b7283,
+  bg: 0x050403,
+  fill: 0x17120e,
+  fillAlt: 0x1d1612,
+  stroke: 0x2c251e,
+  hover: 0x2b211a,
+  selected: 0x3a2a14,
+  accent: 0xd0912f,
+  accentStrong: 0xf0c06a,
+  ink: 0x1c0f03,
+  text: 0xe2d6bb,
+  faint: 0x4f473c,
 };
-const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const FONT = '"Alegreya SC", "Alegreya", Georgia, serif';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 const CORNERS = hexCorners(HEX_SIZE - 1).flatMap((p) => [p.x, p.y]);
 
@@ -91,9 +92,9 @@ function mix(a: number, b: number, t: number): number {
 
 /** Terrain changes the region colour (request #43): water, rock and deep forest. */
 function terrainTint(base: number, terrain: MapHex['terrain']): number {
-  if (terrain === 'river') return mix(base, 0x2f6fb0, 0.6);
-  if (terrain === 'mountain') return mix(base, 0x6f6a60, 0.45);
-  if (terrain === 'forest') return mix(base, 0x16351c, 0.3);
+  if (terrain === 'river') return mix(base, 0x2c4656, 0.6);
+  if (terrain === 'mountain') return mix(base, 0x57524a, 0.45);
+  if (terrain === 'forest') return mix(base, 0x1d2a1a, 0.35);
   return base;
 }
 
@@ -417,7 +418,7 @@ export class MapScene implements PixiScene {
       for (let i = 0; i < 14; i++) {
         const s = new Sprite(glowTexture());
         s.anchor.set(0.5);
-        s.tint = 0x8fa2d0;
+        s.tint = 0x8d8a78;
         s.alpha = 0.035 + Math.random() * 0.03;
         s.scale.set(3 + Math.random() * 3, 1.6 + Math.random() * 1.5);
         this.fogLayer.addChild(s);
@@ -467,7 +468,7 @@ export class MapScene implements PixiScene {
         g.moveTo(x - 12, y + dy)
           .quadraticCurveTo(x - 4, y + dy - 5, x + 4, y + dy)
           .quadraticCurveTo(x + 10, y + dy + 4, x + 14, y + dy)
-          .stroke({ width: 1.5, color: 0xbfe0ff, alpha: 0.5 });
+          .stroke({ width: 1.5, color: 0x8d8a78, alpha: 0.5 });
     }
   }
 
@@ -477,17 +478,17 @@ export class MapScene implements PixiScene {
     c.position.set(x, y);
     const ring = new Graphics()
       .ellipse(0, 0, 11, 15)
-      .fill({ color: 0x2a0f3d })
-      .stroke({ width: 3, color: 0xc77dff })
+      .fill({ color: 0x1d1224 })
+      .stroke({ width: 3, color: 0x9a7fc9 })
       .ellipse(0, 0, 5, 8)
-      .fill({ color: 0xe0b3ff, alpha: 0.8 });
+      .fill({ color: 0xc2b2dc, alpha: 0.8 });
     const label = new Text({
       text: `T${tier}`,
       style: {
         fontFamily: FONT,
         fontSize: 10,
         fontWeight: '800',
-        fill: 0xf3e2ff,
+        fill: 0xe2d6bb,
         stroke: { color: 0x000000, width: 3, join: 'round' },
       },
       resolution: 3,
@@ -509,21 +510,21 @@ export class MapScene implements PixiScene {
     this.bossMarker.position.set(x, y);
     const g = new Graphics()
       .circle(0, 0, 17)
-      .fill({ color: 0x3a0606 })
-      .stroke({ width: 3, color: 0xff4d4d })
+      .fill({ color: 0x2a0705 })
+      .stroke({ width: 3, color: 0xc8331f })
       .circle(-5, -2, 3.5)
-      .fill(0xffd0d0)
+      .fill(0xe2d6bb)
       .circle(5, -2, 3.5)
-      .fill(0xffd0d0)
+      .fill(0xe2d6bb)
       .rect(-5, 6, 10, 4)
-      .fill(0xffd0d0);
+      .fill(0xe2d6bb);
     const label = new Text({
       text: 'World boss',
       style: {
         fontFamily: FONT,
         fontSize: 10,
         fontWeight: '800',
-        fill: 0xff9a9a,
+        fill: 0xe47a62,
         stroke: { color: 0x000000, width: 3, join: 'round' },
       },
       resolution: 3,

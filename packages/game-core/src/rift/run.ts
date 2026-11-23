@@ -315,13 +315,31 @@ export function worldBossDamage(s: RunState): number {
   return Math.max(0, s.worldBoss.startHp - (boss?.hp ?? 0));
 }
 
-/** Rooms the party can go to next (hidden secrets excluded). */
+/**
+ * Request #69: at most this many doors at once — left, middle, right. When a
+ * room leads to more, the outer ones and the middle one are kept (provisional,
+ * A131). A secret passage you found comes on top.
+ */
+export const MAX_DOORS = 3;
+
+/** Rooms the party can go to next (hidden secrets excluded), left to right. */
 export function availableRooms(s: RunState): string[] {
   if (s.phase !== 'map') return [];
   const ids = s.currentId
     ? childrenOf(s.map, s.currentId)
     : s.map.nodes.filter((n) => n.row === 0).map((n) => n.id);
-  return ids.filter((id) => !isHidden(s, id));
+  const nodes = ids
+    .filter((id) => !isHidden(s, id))
+    .map((id) => findNode(s.map, id)!)
+    .sort((a, b) => a.col - b.col);
+  // A secret passage you found is always offered, on top of the doors.
+  const secrets = nodes.filter((n) => n.type === 'secret').map((n) => n.id);
+  const open = nodes.filter((n) => n.type !== 'secret').map((n) => n.id);
+  const doors =
+    open.length <= MAX_DOORS
+      ? open
+      : [open[0]!, open[Math.floor((open.length - 1) / 2)]!, open[open.length - 1]!];
+  return [...doors, ...secrets];
 }
 
 /** The decision being voted on, if any: its options in display order. */
@@ -870,7 +888,11 @@ export function timeoutRun(prev: RunState): RunState {
 // ---------------------------------------------------------------------------
 // Views
 // ---------------------------------------------------------------------------
-/** The map as players see it: hidden secret rooms (and their connections) are never sent. */
+/**
+ * The map as players see it: hidden secret rooms (and their connections) are
+ * never sent, and (request #69) what a room holds stays unknown until the
+ * party enters it — only the boss room and found secrets are named.
+ */
 export function toMapDto(s: RunState): MapDto {
   const available = new Set(availableRooms(s));
   const visible = s.map.nodes.filter((n) => !isHidden(s, n.id));
@@ -882,7 +904,10 @@ export function toMapDto(s: RunState): MapDto {
       id: n.id,
       row: n.row,
       col: n.col,
-      type: n.type,
+      type:
+        n.type === 'boss' || n.type === 'secret' || s.visited.includes(n.id) || s.currentId === n.id
+          ? n.type
+          : null,
       visited: s.visited.includes(n.id),
       current: s.currentId === n.id,
       available: available.has(n.id),

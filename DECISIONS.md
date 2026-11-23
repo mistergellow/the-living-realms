@@ -868,3 +868,39 @@ server and in the browser. A Rift id encodes position, tier and day
 and lobbies that started before midnight keep working, while `assertAtRift`
 only lets parties enter a Rift that is open today (`isRiftOpen`). Old ids
 (`rift_q_r`) still resolve with the tier of their depth.
+
+## ADR-050 — The "Darkest" visual system (supersedes the premium-RPG theme of ADR-030 / request #58)
+
+**Status:** accepted (request #69)
+
+**Decision.** One gothic look across every screen, after Darkest Dungeon:
+warm pitch-black surfaces with a stone grain, bone text, blood red for life,
+danger and the main action, torch amber for what can be used or is selected,
+rusted-iron frames with corner rivets. Type: Grenze Gotisch for titles and
+names, Alegreya for reading, Alegreya SC for labels and buttons (true small
+caps instead of tracked capitals). Tokens live in `tokens.css`; `theme.css`
+is the last stylesheet and the single place for the look. Old token names
+(`--gold-*`, `--frame-*`, `--glass-*`) are kept and remapped, so feature
+stylesheets follow without edits; leftover cool (blue/purple) dark colours
+in feature CSS were converted to warm equivalents. Characters and enemies are
+redrawn as gothic ink figures in three-quarter view (still placeholders), with
+the same layered API so the canvas renderer is unchanged. The HUD is a
+placeholder kept on stable class names for the owner's own art.
+
+**Consequences.** New screens use `PageHeader` and tokens only; no new fonts
+or cool backgrounds. Pages that are a stack of panels never squash panels:
+panels keep their height and the page body scrolls once if needed.
+
+## ADR-051 — Rift doors: the map stays on the server
+
+**Status:** accepted (request #69)
+
+**Decision.** The branching Rift map (ADR-032) is still generated and
+validated as before, but players no longer see it. `toMapDto` sends the
+graph with `type: null` for every room the party has not entered (the boss
+room and found secret rooms keep their type), and `availableRooms` offers at
+most `MAX_DOORS` (3) doors, left to right. The web shows the next doors, the
+rooms walked so far and the depth; a fight opens with a short reveal banner.
+
+**Why.** Choosing blind is more tense than reading a map, and hiding the type
+on the server means the browser cannot peek.
