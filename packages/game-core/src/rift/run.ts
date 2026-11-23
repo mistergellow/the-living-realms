@@ -20,6 +20,7 @@ import type {
 import { getEvent, type EventEffect, type EventTarget } from '../content/events.js';
 import { getItemDef } from '../content/items.js';
 import type { EnemyId } from '../content/enemies.js';
+import { championRulesForTier } from '../content/champions.js';
 import { WORLD_BOSS_ID, worldBossEnemy } from '../content/world-boss.js';
 import {
   getRift,
@@ -575,10 +576,9 @@ function enterRoom(s: RunState, nodeId: string): void {
     case 'combat':
     case 'elite':
     case 'boss': {
-      const room =
-        node.type === 'boss'
-          ? rift.encounters.boss
-          : rift.encounters[node.type][node.encounter ?? 0]!;
+      // Request #71: themes have their own room lists; old runs may point past the end.
+      const rooms = node.type === 'boss' ? null : rift.encounters[node.type];
+      const room = rooms ? rooms[(node.encounter ?? 0) % rooms.length]! : rift.encounters.boss;
       const threat = node.type === 'boss' ? threatTier(s.threat) : null;
       // Every fight is scaled by the Rift's tier; the boss also by the Threat.
       const site = riftTierModifiers(rift.tier);
@@ -593,7 +593,7 @@ function enterRoom(s: RunState, nodeId: string): void {
         roomIndex: s.roomsVisited,
         isLastRoom: node.type === 'boss',
         seed: rng.int(2 ** 31),
-        enemyModifiers: tier,
+        enemyModifiers: { ...tier, champions: championRulesForTier(rift.tier) },
       });
       // Exploration conditions with combat effects were applied; anything the
       // combat statuses carry is visible on the fighters.

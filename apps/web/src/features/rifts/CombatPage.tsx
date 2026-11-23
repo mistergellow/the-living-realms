@@ -1,5 +1,6 @@
 import { StatusIcon } from '../../shared/ui/EffectIcon';
 import {
+  CHAMPION_AFFIXES,
   describeEffects,
   describeTargeting,
   getAbility,
@@ -152,6 +153,10 @@ export function CombatScreen({
   const inspected =
     (inspectId && byId(inspectId)) || enemies.find((e) => !e.downed) || enemies[0] || null;
   const readoutId = hoverAbility ?? selected;
+  const lastPhase = [...combat.log]
+    .reverse()
+    .find((e) => e.t === 'phase' && e.seq <= replay.logUpTo) as
+    { seq: number; text: string } | undefined;
 
   return (
     <div className="combat">
@@ -257,6 +262,12 @@ export function CombatScreen({
           )}
           {combat.round === 1 && combat.log.length <= 2 && run.status === 'active' && (
             <RoomReveal roomType={run.roomType} pvp={pvp} />
+          )}
+          {lastPhase && (
+            // Request #71: a boss changes — the same banner as the room reveal.
+            <div className="room-reveal phase-reveal" key={lastPhase.seq} aria-live="polite">
+              <span>{lastPhase.text}</span>
+            </div>
           )}
         </CombatStage>
 
@@ -441,6 +452,19 @@ function UnitCard({ unit }: { unit: CombatantView }) {
       {mechanic && (
         <span className="enemy-mechanic small" data-testid="enemy-mechanic">
           {mechanic}
+        </span>
+      )}
+      {!!unit.affixes?.length && (
+        <span className="small unit-card-affixes">
+          Champion:{' '}
+          {unit.affixes
+            .map(
+              (id) =>
+                (CHAMPION_AFFIXES as Record<string, { description: string; name: string }>)[id],
+            )
+            .filter(Boolean)
+            .map((a) => `${a!.name}: ${a!.description}`)
+            .join(' ')}
         </span>
       )}
       {(unit.statuses.length > 0 || unit.intents.length > 0) && (

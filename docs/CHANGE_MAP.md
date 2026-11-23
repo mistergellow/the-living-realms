@@ -397,7 +397,21 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Conteúdo: `packages/game-core/src/content/enemies.ts` + habilidades em `content/abilities.ts` (`source: 'enemy'`)
 - Arte: `apps/web/src/features/avatar/EnemyAvatar.tsx` (usada no canvas via `enemyTexture` em `render/avatar-textures.tsx`)
 - Tipo de animação (corpo a corpo / projétil / magia / cura) vem da habilidade: `abilityFxKind` em `rifts/combat-timeline.ts`
-- Uso em Rifts: `content/rifts.ts`
+- Uso em Rifts: `content/themes.ts` (salas de cada tema) e `content/rifts.ts` (modelo)
+- **Inimigo novo (pedido #71):** `ENEMIES` (com `theme`, e se for o caso `isMiniBoss`/`isBoss`, `phases`, `innate`, `mechanic`) → habilidades em `ABILITIES` (`enemyAbilities({...})`) → salas em `RIFT_THEMES` → arte em `EnemyAvatar.tsx` (`ART`) → teste `rift-themes.test.ts` confirma que tudo existe
+- **Fases de boss (pedido #71):** `EnemyDef.phases` (`atHpPct`, `text`, `abilities`, `statuses`, `summon`, `healPct`); motor `checkPhases` (`combat/engine.ts`); registo `{ t: 'phase' }` (`shared/combat.ts`) → texto em `combat-text.ts`, faixa em `CombatPage.tsx` (`phase-reveal`)
+- **Campeões (pedido #71):** `content/champions.ts` (`CHAMPION_AFFIXES`, `CHAMPION_RULES`, `makeChampion`); escolhidos em `pickChampions` (`engine.ts`) com `EnemyModifiers.champions` (vindo de `championRulesForTier` em `rift/run.ts`); `CombatantView.affixes`; UI `AffixChips` (`UnitChips.tsx`) e `UnitCard` (`CombatPage.tsx`). **Afixo novo:** acrescentar a `CHAMPION_AFFIXES` e um `case` em `makeChampion`
+- **Estado Taunt (pedido #71):** `STATUS_IDS` (`shared`), `STATUS_NAMES`/`STATUS_DESCRIPTIONS`, `validTargets` (`engine.ts`), ícone em `EffectIcon.tsx`, cor em `combat-scene.ts` (`STATUS_COLORS`)
+
+## Temas de Rift (pedido #71)
+
+- Dados: `packages/game-core/src/content/themes.ts` (`RIFT_THEMES`: nome, descrição, `minTier`, salas `combat`/`elite`/`boss`; `themeFor(q, r, tier, day)`, `themesForTier`)
+- Ligação: `siteRift` em `content/rifts.ts` (cada entrada do mapa recebe um tema; `RiftDef.theme`), `themedRift` (sim e testes; ids `theme_<id>_<tier>` resolvidos por `getRift`)
+- Corridas antigas: `enterRoom` (`rift/run.ts`) usa o índice da sala módulo o número de salas do tema
+- Dificuldade por tier: `RIFT_TIER_RULES` (`hpPerTier`, `powerPerTier`) e `CHAMPION_RULES`
+- **Tema novo:** entrada em `RIFT_THEMES` + inimigos/arte (ver "Inimigos") + `pnpm sim` com `SIM=themes THEME=<id>` + `rift-themes.test.ts`
+- Equilíbrio: `SIM=themes pnpm sim` (opções `THEME`, `TIER`, `RUNS`, `SAMPLE`, `VERBOSE`, `ROOMS`; "Legacy rooms" = salas de antes, para comparar)
+- Servidor: `bossName` em `rifts.service.ts` vem das salas do tema; teste `apps/server/test/rifts.test.ts`
 
 ## Rifts e corridas (runs)
 

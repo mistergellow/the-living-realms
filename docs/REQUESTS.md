@@ -140,6 +140,10 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D128 | **Combate ao estilo Darkest Dungeon:** campo de batalha a toda a largura (corredor com tochas), figuras grandes, HUD em baixo: herói (retrato, HP, Mana, Focus) · habilidades + leitura da escolhida · unidade apontada + End turn; log recolhível                                                                                                                                                                                | 2026-11-22 | `CombatPage.tsx`, `CombatStage.tsx`, `combat-layout.ts`, `combat-scene.ts`                            |
 | D129 | **Dungeon por portas** (substitui o mapa visível de D43): escolhe-se Esquerda / Meio / Direita sem saber o que há atrás; a sala só se revela ao entrar (o servidor não envia o tipo). O mapa ramificado continua a existir por baixo                                                                                                                                                                                              | 2026-11-22 | `toMapDto`, `availableRooms`, `RiftDoors.tsx`, ADR-051                                                |
 | D130 | **Liberdade para reorganizar páginas e menus** para ficar tudo coerente e fácil para quem começa                                                                                                                                                                                                                                                                                                                                  | 2026-11-22 | navegação, `PageHeader`, guia "próximo passo"                                                         |
+| D131 | **Temas de Rift** (pedido #71): cada entrada de Rift no mapa abre num tema com inimigos, salas e boss próprios; os temas mais duros só abrem a partir de certos tiers                                                                                                                                                                                                                                                             | 2026-11-23 | `content/themes.ts`, `siteRift`, ADR-053                                                              |
+| D132 | **Campeões com afixos:** qualquer inimigo normal pode aparecer como Campeão com afixos visíveis; mais frequentes e com mais afixos nos tiers altos                                                                                                                                                                                                                                                                                | 2026-11-23 | `content/champions.ts`                                                                                |
+| D133 | **Inimigos que castigam táticas, mini-bosses nas elites e bosses com fases**                                                                                                                                                                                                                                                                                                                                                      | 2026-11-23 | `content/enemies.ts`, `checkPhases`                                                                   |
+| D134 | **Dificuldade:** tier 1 ao nível do que havia, tiers acima a subir a pique; **D18 mantém-se** (a dificuldade não sobe com o número de jogadores)                                                                                                                                                                                                                                                                                  | 2026-11-23 | `RIFT_TIER_RULES`, `CHAMPION_RULES`                                                                   |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -279,6 +283,9 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A132 | Revelação da sala de combate (pedido #69)                       | faixa "Ambush!" / "A terrible foe!" (elite) / "The lair of the beast" (boss) durante ~2 s no início da luta; salas sem luta revelam-se pela janela da sala (título)                                                                                                                                                                                                                                                                                                                                                                                        | `RoomReveal` (`CombatPage.tsx`)                                                  |
 | A133 | Navegação (pedido #69)                                          | 5 entradas: Character · World · Here (o hexágono onde estás; cidade, Rifts e world boss contam como "Here") · Crafts (profissões) · Allies (Amigos + Guilda em separadores)                                                                                                                                                                                                                                                                                                                                                                                | `GameShell.tsx` (`BottomNav`), `AlliesTabs.tsx`                                  |
 | A134 | Guia "próximo passo" (pedido #69)                               | aparece no hexágono até à primeira reputação: gastar pontos de atributo → encontrar um Rift → entrar                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `NextStep` (`HomePage.tsx`)                                                      |
+| A135 | Campeões (pedido #71)                                           | chance por inimigo normal 10/20/30/40/50 % (tiers 1–5); 1/1/2/2/3 afixos; elites sempre Campeões a partir do tier 2; bosses e mini-bosses nunca; 10 afixos: Vampiric (40 % roubo de vida), Armored (+25 armadura/resistência), Enraged (Strength 3), Thorned (4), Regenerating (8 %/ronda), Swift (+1 Focus), Giant (+60 % vida), Mirrored (35 % refletir corpo a corpo), Venomous (Bleed 60 %), Unyielding (50 % ignorar estados)                                                                                                                         | `CHAMPION_RULES`, `CHAMPION_AFFIXES`                                             |
+| A136 | Temas e inimigos (pedido #71)                                   | 5 temas: Hollow Breach e Crystal Nest (tier 1+), Crimson Cult (2+), Drowned Depths (3+), Rift Heart (4+); 23 inimigos novos com 4 mini-bosses e 4 bosses novos (o Warden ganhou fases); números provisórios afinados com `SIM=themes pnpm sim`                                                                                                                                                                                                                                                                                                             | `RIFT_THEMES`, `ENEMIES`                                                         |
+| A137 | Escala por tier (pedido #71)                                    | +45 % vida e +25 % dano por tier acima do 1 (era +25 % / +15 %)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `RIFT_TIER_RULES`                                                                |
 
 ---
 
@@ -1542,3 +1549,34 @@ as coisas mudam de sítio — incomoda imenso.
   deslizar; hexágono com cena, ações e chat em sequência.
 - Combate: tochas mais altas e mais juntas; entrar e sair de uma luta é um
   fade curto em vez de um corte com o palco vazio.
+
+### #71 — 2026-11-23 — Monstros e Rifts mais variados e mais difíceis
+
+**Pedido:** os monstros e Rifts estão monótonos e com pouca variedade; precisa de
+monstros mais diferenciados e alguns difíceis — está (ou parece) muito fácil.
+**Análise:** havia um único modelo de Rift para todos os tiers (as mesmas 9 salas,
+4 elites e o mesmo boss, o Warden); o tier só multiplicava vida e dano.
+**Perguntas e respostas:** variedade por temas de Rift; manter D18 (grupos não
+escalam); quer Campeões com afixos, inimigos que castigam táticas, bosses com
+fases e mini-bosses nas elites; alvo ~50 % a solo no tier 1 e tiers a subir a pique.
+**Decisões:** D131–D134; provisórios A135–A137.
+**Resultado:**
+
+- 5 temas (`content/themes.ts`), cada entrada de Rift no mapa tem o seu (estável
+  durante o dia); o nome do Rift é o do tema.
+- 23 inimigos novos com arte (placeholder): assassinos e crawlers que atacam a
+  retaguarda, sentinelas que refletem golpes, quem quebra Dodge, quem rouba Focus
+  (Chill), curandeiros, flagelantes com espinhos e ritual, sereias que
+  enfraquecem e cegam, cavaleiros com Taunt (estado novo: tens de lhes bater
+  primeiro). 4 mini-bosses nas elites e 4 bosses novos; todos com fases (o
+  Warden também).
+- Campeões com 10 afixos visíveis (nome, plaquinhas por baixo e no cartão da
+  unidade); fases anunciadas com uma faixa no ecrã.
+- Equilíbrio (simulador, heróis novos sem equipamento): no tier 1 a solo o Hollow
+  Breach dá 17 % e o Crystal Nest 11 %, contra 14 % das salas antigas na mesma
+  rota de 10 salas (o simulador joga pior do que uma pessoa; o antigo "49 %"
+  usava uma rota mais curta). Grupos de 3 sem equipamento: tier 2 ~100 %, tier 3
+  ~70–100 %, tier 4 0–33 %, tier 5 ~0 % — os tiers altos pedem equipamento.
+  Com D18 mantido, em grupo continua bastante mais fácil do que a solo.
+- Testes: `rift-themes.test.ts` (temas, inimigos e habilidades existem,
+  Campeões, Taunt, fases), teste do servidor com o boss do tema.

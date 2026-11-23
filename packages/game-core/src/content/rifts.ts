@@ -4,7 +4,8 @@ import type { EnemyId } from './enemies.js';
 import type { EventId } from './events.js';
 import type { HexCoord } from '@realms/shared';
 import type { MapTemplate } from '../rift/map.js';
-import { riftSiteById } from './world-map.js';
+import { parseRiftId, riftSiteById } from './world-map.js';
+import { getRiftTheme, themeFor, type RiftTheme } from './themes.js';
 import { NAMED_ITEMS } from './named.js';
 
 /*
@@ -45,6 +46,8 @@ export interface RiftDef {
   };
   /** Random Events that can appear in this Rift. */
   events: EventId[];
+  /** Request #71: the theme of a Rift entrance (who you fight in it). */
+  theme?: { id: string; name: string; description: string };
   /** Main rewards, after the boss (request #31: the big rewards come at the end). */
   rewards: {
     /** Reputation granted to each participant on victory. */
@@ -379,8 +382,9 @@ export type RiftId = keyof typeof RIFTS;
  * reputation.
  */
 export const RIFT_TIER_RULES = {
-  hpPerTier: 0.25,
-  powerPerTier: 0.15,
+  // Request #71: steeper (was +25% HP and +15% damage per tier).
+  hpPerTier: 0.45,
+  powerPerTier: 0.25,
   threatPerTier: 1,
   reputationPerTier: 0.5,
   names: ['Fringe Rift', 'Shallow Rift', 'Deep Rift', 'Abyssal Rift', 'Heart Rift'],
@@ -409,20 +413,24 @@ export function riftTierModifiers(tier = 1): { hpMultiplier: number; powerMultip
   };
 }
 
-/** The Rift at a map entrance: the template Rift scaled to the site's tier. */
+/** The Rift at a map entrance: the template Rift, in its theme, scaled to the site's tier. */
 function siteRift(id: string): RiftDef | undefined {
   const h = riftSiteById(id);
   if (!h?.rift) return undefined;
   const base = RIFTS.shattered_breach as RiftDef;
   const tier = h.rift.tier;
   const t = tier - 1;
+  // Request #71: each entrance opens into a theme (stable for that Rift).
+  const theme: RiftTheme = themeFor(h.q, h.r, tier, parseRiftId(id)?.day ?? 0);
   return {
     ...base,
     map: mapTemplateForTier(tier),
     id,
-    name: `${RIFT_TIER_RULES.names[t] ?? 'Rift'} (${h.q}, ${h.r})`,
-    description: `A Rift of tier ${tier}. The deeper into the Riftlands, the stronger what waits inside.`,
+    name: `${theme.name} (${h.q}, ${h.r})`,
+    description: `${RIFT_TIER_RULES.names[t] ?? 'Rift'}, tier ${tier}. ${theme.description}`,
     tier,
+    theme: { id: theme.id, name: theme.name, description: theme.description },
+    encounters: { combat: theme.combat, elite: theme.elite, boss: theme.boss },
     site: { q: h.q, r: h.r },
     startingThreat: RIFT_TIER_RULES.threatPerTier * t,
     rewards: {
@@ -432,7 +440,31 @@ function siteRift(id: string): RiftDef | undefined {
   };
 }
 
+/**
+ * Request #71 (sim, tests, admin): the template Rift dressed in a theme at a
+ * tier, without a map entrance.
+ */
+export function themedRift(theme: RiftTheme, tier = 1): RiftDef {
+  const base = RIFTS.shattered_breach as RiftDef;
+  const t = Math.max(1, tier) - 1;
+  return {
+    ...base,
+    id: `theme_${theme.id}_${tier}`,
+    name: theme.name,
+    map: mapTemplateForTier(tier),
+    tier,
+    theme: { id: theme.id, name: theme.name, description: theme.description },
+    encounters: { combat: theme.combat, elite: theme.elite, boss: theme.boss },
+    startingThreat: RIFT_TIER_RULES.threatPerTier * t,
+  };
+}
+
 /** A Rift by id: a map entrance (`rift_q_r`) or a template. */
 export function getRift(id: string): RiftDef | undefined {
+  const themed = /^theme_([a-z]+)_(\d)$/.exec(id);
+  if (themed) {
+    const theme = getRiftTheme(themed[1]);
+    return theme ? themedRift(theme, Number(themed[2])) : undefined;
+  }
   return (RIFTS as Record<string, RiftDef>)[id] ?? siteRift(id);
 }

@@ -17,6 +17,8 @@ export * from './content/affixes.js';
 export * from './content/custom.js';
 export * from './content/custom-rules.js';
 export * from './content/enemies.js';
+export * from './content/champions.js';
+export * from './content/themes.js';
 export * from './content/rifts.js';
 export * from './combat/index.js';
 export * from './content/rooms.js';

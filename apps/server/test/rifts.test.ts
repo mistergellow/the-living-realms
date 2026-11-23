@@ -1,4 +1,4 @@
-import { riftLength } from '@realms/game-core';
+import { getEnemy, getRift, riftLength } from '@realms/game-core';
 import type { RunDto, RiftDto } from '@realms/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -117,7 +117,8 @@ describe('Rifts', () => {
     expect(rifts.length).toBeGreaterThan(5);
     expect(rifts.find((r) => r.id === SITE.id)).toMatchObject({
       depth: riftLength(1), // request #60: tier 1 routes have 10 rooms
-      bossName: 'Rift Warden',
+      // Request #71: the boss of the Rift's theme.
+      bossName: getEnemy(getRift(SITE.id)!.encounters.boss.enemies[0]!.enemy)!.name,
       site: SITE.hex,
     });
     expect(rifts.every((r) => r.tier! >= 1 && r.tier! <= 5)).toBe(true);

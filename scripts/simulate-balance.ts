@@ -23,6 +23,9 @@ import {
   getAbility,
   getEvent,
   getRift,
+  RIFT_THEMES,
+  themedRift,
+  type RiftDef,
   reservedBy,
   targetColumns,
   testChance,
@@ -234,7 +237,7 @@ function planRound(run: RunState): RunState {
   return s;
 }
 
-const rift = getRift('shattered_breach')!;
+let rift: RiftDef = getRift('shattered_breach')!;
 
 /** One whole run; returns the outcome and the room type where it ended. */
 function playRun(names: string[], seed: number) {
@@ -277,7 +280,12 @@ function playRun(names: string[], seed: number) {
       s = r.state;
     }
   }
-  const where = s.currentId ? findNode(s.map, s.currentId)!.type : 'none';
+  const node = s.currentId ? findNode(s.map, s.currentId)! : null;
+  let where = node ? node.type : 'none';
+  if (node && process.env.ROOMS && (node.type === 'combat' || node.type === 'elite')) {
+    const list = rift.encounters[node.type];
+    where = list[(node.encounter ?? 0) % list.length]!.name;
+  }
   return { won: s.status === 'victory', where, fights, rooms: s.roomsVisited };
 }
 
@@ -302,16 +310,60 @@ function simulate(names: string[], runs = RUNS) {
   };
 }
 
-const solo = Object.keys(BUILDS).map((b) => {
-  const r = simulate([b]);
-  console.log(b.padEnd(15), r.line);
-  return r.win;
-});
-console.log(`solo average ${Math.round((solo.reduce((a, b) => a + b, 0) / solo.length) * 100)}%`);
-for (const group of [
-  ['sword+shield', 'bow'],
-  ['sword+shield', 'bow', 'staff'],
-  ['axe+shield', 'dual dagger', 'tome+talisman'],
-]) {
-  console.log(group.join(' + ').padEnd(40), simulate(group, 100).line);
+if (process.env.SIM === 'themes') {
+  // Request #71: every theme at every tier it opens at — solo average over all
+  // builds, and one group of three.
+  const runs = Number(process.env.RUNS ?? 30);
+  // A spread of builds (fast); THEME / TIER narrow the table.
+  const sample = process.env.SAMPLE?.split(',') ?? [
+    'sword+shield',
+    'dual dagger',
+    'bow',
+    'staff',
+    'greatsword',
+    'tome+talisman',
+  ];
+  const base = getRift('shattered_breach')!;
+  // "legacy": the rooms every Rift had before request #71, for comparison.
+  const legacy = {
+    id: 'legacy',
+    name: 'Legacy rooms',
+    description: '',
+    minTier: 1,
+    ...base.encounters,
+  };
+  // Runs look their Rift up by id: let getRift find the comparison rooms (sim only).
+  (RIFT_THEMES as Record<string, unknown>).legacy = legacy;
+  const themes = Object.values(RIFT_THEMES).filter(
+    (t) => !process.env.THEME || t.id === process.env.THEME,
+  );
+  for (const theme of themes) {
+    for (let tier = theme.minTier; tier <= Number(process.env.TIER ?? 5); tier++) {
+      rift = themedRift(theme, tier);
+      const wins = sample.map((b) => {
+        const r = simulate([b], runs);
+        if (process.env.VERBOSE) console.log(`   ${b.padEnd(15)} ${r.line}`);
+        return r.win;
+      });
+      const solo = Math.round((wins.reduce((a, b) => a + b, 0) / wins.length) * 100);
+      const group = simulate(['sword+shield', 'bow', 'tome+talisman'], runs);
+      console.log(
+        `${theme.name.padEnd(20)} tier ${tier}  solo ${String(solo).padStart(3)}%  group ${String(Math.round(group.win * 100)).padStart(3)}%  ${group.line.split('died in')[1] ? 'group died in' + group.line.split('died in')[1] : ''}`,
+      );
+    }
+  }
+} else {
+  const solo = Object.keys(BUILDS).map((b) => {
+    const r = simulate([b]);
+    console.log(b.padEnd(15), r.line);
+    return r.win;
+  });
+  console.log(`solo average ${Math.round((solo.reduce((a, b) => a + b, 0) / solo.length) * 100)}%`);
+  for (const group of [
+    ['sword+shield', 'bow'],
+    ['sword+shield', 'bow', 'staff'],
+    ['axe+shield', 'dual dagger', 'tome+talisman'],
+  ]) {
+    console.log(group.join(' + ').padEnd(40), simulate(group, 100).line);
+  }
 }
