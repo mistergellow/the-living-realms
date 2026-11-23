@@ -97,6 +97,13 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Testes: `character-system.test.ts`, `character-sheet.test.ts` (loadout), `e2e` (tab Abilities)
 - Futuro: execução em combate no motor M2
 
+## Ícones dos itens (pedido #73)
+
+- `apps/web/src/features/characters/sheet/ItemIcon.tsx`: `paintedIconFor` (arte por tipo de arma — `item.weapon.type` ou `weaponType` da definição para escudos — e por ferramenta em `TOOL_ICON`), senão `GLYPHS`
+- Arte: `sheet/icons/<tipo>.webp` (o nome do ficheiro = tipo de arma), moldura `frame.webp`, fundo `tile.webp`; estilos em `styles/theme.css` (`.item-icon`, `::before` = cor da raridade, `::after` = moldura)
+- **Arma nova / arte nova:** recortar com `scripts/art/cut-sheet.py`, gravar como `icons/<tipo>.webp` (fica ligado sozinho)
+- Usado na mochila, equipamento, cidade (loja, mercado, armazém, ferreiro) e banco da guilda
+
 ## Ficha do personagem (tabs, pedido #39)
 
 - `apps/web/src/features/characters/CharacterSheetPage.tsx` (`TABS`, `?tab=`), `sheet/EquipmentTab.tsx`, `sheet/AbilitiesTab.tsx`, `professions/ProfessionsPage.tsx` (`ProfessionsPanel`, também usado na tab Professions), `sheet/sheet.css`

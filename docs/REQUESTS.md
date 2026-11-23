@@ -146,6 +146,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | D134 | **Dificuldade:** tier 1 ao nível do que havia, tiers acima a subir a pique; **D18 mantém-se** (a dificuldade não sobe com o número de jogadores)                                                                                                                                                                                                                                                                                  | 2026-11-23 | `RIFT_TIER_RULES`, `CHAMPION_RULES`                                                                   |
 | D135 | **Mochila com 40 espaços** (era 20)                                                                                                                                                                                                                                                                                                                                                                                               | 2026-11-23 | `INVENTORY_RULES.bagSlots`                                                                            |
 | D136 | **Herói base a partir da arte do dono** (recortada e articulada) em vez dos SVG; mais tarde **a armadura equipada muda o aspeto** e só **cabelo e cara** se escolhem na criação; monstros com kits de arte do dono (virados para a esquerda)                                                                                                                                                                                      | 2026-11-23 | `CharacterAvatar.tsx`, `avatar/base/*.webp`, ADR-054                                                  |
+| D137 | **Ícones dos itens com a arte do dono:** armas e escudos pintados; **todos os itens** numa moldura de ferro com rebites sobre um fundo escuro **com a cor da raridade**; o item sai um pouco da moldura                                                                                                                                                                                                                           | 2026-11-23 | `ItemIcon.tsx`, `sheet/icons/*.webp`, `theme.css`                                                     |
 
 ## Decisões em aberto / valores provisórios (confirmar com o dono)
 
@@ -1606,3 +1607,25 @@ Gárgula), que têm de ficar virados para o outro lado.
 - **Por fazer:** as imagens de armas, kits e monstros chegaram só na conversa,
   sem ficheiro — pedir ao dono que as envie como anexo (ou as ponha no
   repositório) para as recortar.
+
+### #73 — 2026-11-23 — Ícones das armas, moldura e fundo por raridade
+
+**Pedido:** usar as armas das imagens enviadas como ícone das armas
+correspondentes; a moldura para todos os itens; o fundo da imagem, mas com a cor
+a mudar conforme a raridade. Durante o trabalho: prefere as referências em que o
+item sai um bocado da moldura.
+**Decisões:** D137.
+**Resultado:**
+
+- `scripts/art/cut-sheet.py` melhorado (o branco dentro das peças — corda do
+  arco, buraco do chakram — também é fundo). Folha recortada: 22 armas (espada,
+  machado, adaga, arco, cajado, lança, maça, varinha, tomo, montante, machado
+  duplo, machadinha, martelo, marreta, maça-estrela, lança de cavalaria, besta,
+  cetro, chakram, foice, funda) + aljava, escudo e broquel (dos ícones
+  emoldurados), moldura e fundo → `apps/web/src/features/characters/sheet/icons/`.
+- `ItemIcon`: armas, escudos e ferramentas com arma equivalente (faca de caça,
+  machado) usam a arte; os outros itens mantêm o desenho simples até haver arte.
+  Todos ficam em fundo + moldura; a raridade pinta o fundo (comum cinzento,
+  incomum verde, raro azul, épico roxo, lendário laranja, mítico vermelho);
+  a arte fica por cima da moldura e um pouco maior, como na referência.
+- Folhas originais em `art/source/`.

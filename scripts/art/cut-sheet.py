@@ -29,14 +29,15 @@ def main() -> None:
     darkest = a[:, :, :3].min(axis=2)
     ink = darkest < WHITE
     labels, _ = ndimage.label(ndimage.binary_dilation(ink, iterations=2))
-    soft = np.clip((255 - darkest) / 30.0, 0, 1)  # feathered edge
+    soft = np.clip((245 - darkest) / 25.0, 0, 1)  # feathered edge; near-white is background
     pieces = []
     for i, box in enumerate(ndimage.find_objects(labels), start=1):
-        mask = ndimage.binary_fill_holes(labels == i)
+        # No hole filling: white inside a piece (a bow's string gap, a ring's
+        # hole) is background too. Ink and colour stay opaque.
+        mask = labels == i
         if mask.sum() < MIN_AREA:
             continue
-        core = ndimage.binary_erosion(mask, iterations=2)
-        alpha = np.where(core, 1.0, np.where(mask, soft, 0.0))
+        alpha = np.where(mask, soft, 0.0)
         rgba = a.copy()
         rgba[:, :, 3] = alpha * 255
         ys, xs = np.where(mask)
