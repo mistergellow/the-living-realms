@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
+import { Modal } from '../../shared/ui/Modal';
 import { useActiveCharacter } from '../characters/active-character';
 import { CharacterToken } from '../characters/CharacterToken';
 import { useRun, useRunAction } from './api';
@@ -228,12 +229,7 @@ function ExplorationScreen({
           {run.outcome?.search && run.phase !== 'room' && <TestLine test={run.outcome.search} />}
           {/* Request #64: rooms (challenges, events, loot, campsites) open in front of everything. */}
           {run.phase === 'event' && run.event && (
-            <div
-              className="loot-popup room-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label={run.event.title}
-            >
+            <Modal label={run.event.title}>
               <div className="panel stack" data-testid="event">
                 <h2>{run.event.title}</h2>
                 <p>{run.event.text}</p>
@@ -313,16 +309,11 @@ function ExplorationScreen({
                   </>
                 )}
               </div>
-            </div>
+            </Modal>
           )}
           {run.phase === 'room' && run.outcome && (
             // Request #50: what was found pops up, coloured by rarity.
-            <div
-              className="loot-popup room-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label={run.outcome.title}
-            >
+            <Modal label={run.outcome.title}>
               <div className="panel stack" data-testid="room-outcome">
                 <h2>{run.outcome.title}</h2>
                 {run.outcome.search && <TestLine test={run.outcome.search} />}
@@ -348,7 +339,7 @@ function ExplorationScreen({
                   Continue
                 </button>
               </div>
-            </div>
+            </Modal>
           )}
         </aside>
       </div>

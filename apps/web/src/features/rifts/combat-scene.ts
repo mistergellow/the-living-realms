@@ -578,9 +578,10 @@ class Backdrop {
     this.rift.position.set(0, 0);
 
     // Two wall torches between the sides, and (boss) a burning crack.
-    const tx = [layout.riftX - w * 0.07, layout.riftX + w * 0.07];
-    const ty = horizon * 0.52;
-    const ts = Math.max(0.6, layout.base);
+    // High on the wall, between the sides: never behind a head or a name.
+    const tx = [layout.riftX - w * 0.045, layout.riftX + w * 0.045];
+    const ty = horizon * 0.26;
+    const ts = Math.max(0.5, layout.base * 0.8);
     this.rings.forEach((g, i) => {
       g.clear();
       if (i < 2) {

@@ -1506,3 +1506,39 @@ o chibi de D32); layout de combate DD (sim).
 - Corrigido: título "The Living Ri" cortado no login.
 - Testes: `rift.test.ts` (tipos escondidos, ≤ 3 portas), `rifts.test.ts`, e2e
   (portas, Allies → Guild).
+
+### #70 — 2026-11-23 — Salas que bloqueiam, ecrãs pequenos e flickering
+
+**Pedido:** algumas salas fazem soft block (o tesouro, por exemplo); muitas
+páginas estão mal em ecrãs pequenos; demasiado flickering entre cenas e ecrãs,
+as coisas mudam de sítio — incomoda imenso.
+**Causas encontradas:**
+
+- Bloqueio: as janelas das salas (tesouro, campsite, eventos, segredos) ficavam
+  dentro de uma caixa com `transform`; o `position: fixed` passava a contar a
+  partir dessa caixa e o botão "Continue" ficava fora do ecrã (y = 981 num
+  ecrã de 844).
+- Saltos: o fundo mudava de brilho com transição em cada página; "Character"
+  saía do ecrã de jogo (barra de topo e navegação desapareciam); a fonte
+  trocava depois de carregar; o cartão de atividade / próximo passo aparecia
+  depois e empurrava os botões do hexágono; a barra de scroll a aparecer
+  encolhia a página; nevoeiro e nuvens do fundo a deslizar.
+- Ecrãs pequenos: caixas pequenas com scroll próprio dentro da página (lista
+  de profissões, ação do hexágono, atributos); tochas do combate atrás das
+  cabeças em ecrãs baixos.
+  **Resultado:**
+- `shared/ui/Modal.tsx`: as janelas abrem num portal no `<body>` — nada as pode
+  prender. Teste e2e novo (sala de tesouro num telemóvel: o botão fica dentro
+  do ecrã e a corrida continua); confirmado que falhava com o código antigo.
+- Ficha do herói dentro do jogo: rota nova `/hero` (mesma barra de topo e
+  navegação); `/characters/:id` fica para a lista de personagens.
+- Fundo com um só escurecimento e parado; fontes carregadas antes do primeiro
+  desenho (máx. 1,5 s); espaço da barra de scroll reservado; números com
+  largura fixa; pílula de AP com lugar reservado; cartões que chegam depois
+  ficam por baixo das ações. Medido com o "layout shift" do browser a navegar
+  pelas 5 entradas: ~0.
+- Ecrãs estreitos (≤ 900 px) ou baixos (≤ 750 px): a página rola uma vez, as
+  caixas ficam com a altura natural; profissões viram uma fila de botões a
+  deslizar; hexágono com cena, ações e chat em sequência.
+- Combate: tochas mais altas e mais juntas; entrar e sair de uma luta é um
+  fade curto em vez de um corte com o palco vazio.

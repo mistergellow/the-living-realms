@@ -904,3 +904,18 @@ rooms walked so far and the depth; a fight opens with a short reveal banner.
 
 **Why.** Choosing blind is more tense than reading a map, and hiding the type
 on the server means the browser cannot peek.
+
+## ADR-052 — Modals in a portal; one scroll on small screens; the hero inside the game frame
+
+**Status:** accepted (request #70)
+
+**Decision.** Windows that cover the screen render through `Modal`
+(`createPortal` into `<body>`): a parent with a transform once turned their
+`position: fixed` into a box-relative position and pushed "Continue" off
+screen, soft-locking Rift rooms. On narrow (≤ 56.25em) or short (≤ 47em)
+screens every page scrolls once and boxes keep their natural height, instead of
+small boxes with their own scrollbars. The active hero's sheet lives at `/hero`
+inside `GameShell`, so the top bar and navigation never disappear while you
+play. To stop screens jumping: one backdrop dim, no drifting backdrop, fonts
+loaded before the first paint, reserved scrollbar gutter, and late-arriving
+cards placed below what is already on screen.

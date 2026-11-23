@@ -220,9 +220,10 @@
    themselves open as modals. */
 .room-panel {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: var(--space-3);
-  transform: translateX(-50%);
+  margin: 0 auto;
   z-index: 4;
   width: min(36rem, 90%);
   display: flex;

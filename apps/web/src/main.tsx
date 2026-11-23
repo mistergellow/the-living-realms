@@ -19,10 +19,27 @@ import './styles/theme.css';
 
 installAppFeel();
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
+/*
+ * Request #70: wait (briefly) for the game fonts before the first paint, so
+ * text does not jump when they arrive. Never longer than 1.5 s.
+ */
+const FONTS = [
+  '400 1em Alegreya',
+  '700 1em Alegreya',
+  '500 1em "Alegreya SC"',
+  '700 1em "Alegreya SC"',
+  '600 1em "Grenze Gotisch"',
+  '800 1em "Grenze Gotisch"',
+];
+void Promise.race([
+  Promise.all(FONTS.map((f) => document.fonts.load(f))).catch(() => undefined),
+  new Promise((r) => setTimeout(r, 1500)),
+]).then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  ),
 );
