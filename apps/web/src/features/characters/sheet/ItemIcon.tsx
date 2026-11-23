@@ -1,10 +1,31 @@
+import { getItemDef } from '@realms/game-core';
 import type { EquipSlot, ItemDto } from '@realms/shared';
 
 /*
- * PLACEHOLDER item icons (request #39): a simple stroke glyph per kind of item
- * on a tinted tile. Real item art can replace `GLYPHS` entries later without
- * touching the inventory or the tooltips.
+ * Item icons. Request #73: weapons and shields use the owner's painted icons
+ * (`icons/*.webp`, cut from art/source/weapon-icons.png); every item sits on the
+ * same iron frame over a dark tile tinted by its rarity (sheet.css). Items
+ * without painted art yet keep a stroke glyph (request #39).
  */
+
+/** Painted icons by name (file name without extension). */
+const PAINTED = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>('./icons/*.webp', { eager: true, query: '?url', import: 'default' }),
+  ).map(([path, url]) => [path.slice('./icons/'.length, -'.webp'.length), url]),
+) as Record<string, string>;
+
+/** Tools drawn with a weapon's icon. */
+const TOOL_ICON: Record<string, string> = { hunting_knife: 'dagger', axe: 'handaxe' };
+
+/** The painted icon of an item, if there is one. */
+export function paintedIconFor(item: ItemDto): string | null {
+  if (item.weapon) return PAINTED[item.weapon.type] ?? null;
+  if (item.tool) return PAINTED[TOOL_ICON[item.tool.type] ?? ''] ?? null;
+  // Off-hands (shields…) have a weapon type but no weapon stats.
+  const type = getItemDef(item.defId)?.weaponType;
+  return type ? (PAINTED[type] ?? null) : null;
+}
 
 const GLYPHS = {
   belt: 'M3 10h18v4H3zM10 9h4v6h-4z',
@@ -143,9 +164,19 @@ export function GlyphSvg({ glyph }: { glyph: Glyph }) {
 }
 
 export function ItemIcon({ item }: { item: ItemDto }) {
+  const painted = paintedIconFor(item);
   return (
-    <span className="item-icon" data-tone={itemTone(item)} data-broken={item.broken}>
-      <GlyphSvg glyph={glyphFor(item)} />
+    <span
+      className="item-icon"
+      data-tone={itemTone(item)}
+      data-rarity={item.rarity}
+      data-broken={item.broken}
+    >
+      {painted ? (
+        <img className="item-art" src={painted} alt="" draggable={false} />
+      ) : (
+        <GlyphSvg glyph={glyphFor(item)} />
+      )}
       {item.grade && (
         <i
           className="grade-pip"
