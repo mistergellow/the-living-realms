@@ -18,6 +18,7 @@ import { SLOT_LABELS } from './slots';
 import { useActiveCharacter } from '../active-character';
 import { useCharacterSheet } from '../api';
 import { AbilityIcon } from '../../rifts/AbilityIcon';
+import { ItemIcon } from './ItemIcon';
 
 const DAMAGE_TYPE_NAMES: Record<string, string> = {
   physical: 'Physical',
@@ -79,26 +80,32 @@ export function ItemTooltipBody({ item }: { item: ItemDto }) {
       data-rarity={item.rarity}
       data-named={item.named ? true : undefined}
     >
-      <header>
-        <strong className="tip-name rarity-text" data-kind={item.kind}>
-          {item.name}
-          {item.quantity > 1 && <span className="muted"> ×{item.quantity}</span>}
-        </strong>
-        <span className="tip-sub">
-          {w
-            ? `${w.typeName} · ${w.hands === 2 ? 'Two-handed' : 'One-handed'}`
-            : KIND_LABEL[item.kind]}
-          {item.armorClass && ` · ${ARMOR_CLASS_NAMES[item.armorClass]}`}
-          {item.slots.length > 0 && ` · ${slotsText(item.slots)}`}
+      <header className="tip-head">
+        {/* Request #74: the item's own icon, as on the item card reference. */}
+        <span className="tip-head-icon" aria-hidden>
+          <ItemIcon item={item} />
         </span>
-        {item.named && (
-          <span className="tip-named" data-testid="item-named">
-            Named · {item.named.baseName}
+        <span className="tip-head-text">
+          <strong className="tip-name rarity-text" data-kind={item.kind}>
+            {item.name}
+            {item.quantity > 1 && <span className="muted"> ×{item.quantity}</span>}
+          </strong>
+          <span className="tip-sub">
+            {w
+              ? `${w.typeName} · ${w.hands === 2 ? 'Two-handed' : 'One-handed'}`
+              : KIND_LABEL[item.kind]}
+            {item.armorClass && ` · ${ARMOR_CLASS_NAMES[item.armorClass]}`}
+            {item.slots.length > 0 && ` · ${slotsText(item.slots)}`}
           </span>
-        )}
-        {item.slots.length > 0 && (
-          <span className="tip-rarity rarity-text">{RARITY_NAMES[item.rarity]}</span>
-        )}
+          {item.named && (
+            <span className="tip-named" data-testid="item-named">
+              Named · {item.named.baseName}
+            </span>
+          )}
+          {item.slots.length > 0 && (
+            <span className="tip-rarity rarity-text">{RARITY_NAMES[item.rarity]}</span>
+          )}
+        </span>
       </header>
 
       {w && (
