@@ -486,6 +486,752 @@ function Colossus() {
   );
 }
 
+// ---- request #71: the Rift themes (PROVISIONAL art) ----
+const SEA = '#2c4448';
+const SEA_HI = '#46676a';
+const CRYSTAL = '#7f97a6';
+const CRYSTAL_HI = '#b8cad3';
+const CLOTH = '#3a1512';
+
+/** Grave Crawler: a corpse on all fours, reaching for your back line. */
+function Crawler() {
+  return (
+    <>
+      <path
+        d="M30 140 C34 120 52 112 74 114 C92 116 102 126 100 140 L92 150 L84 150 L86 138 L62 138 L56 150 L48 150 L50 138 C40 140 34 142 30 140 Z"
+        fill={FLESH}
+      />
+      <path
+        d="M40 126 L20 128 L8 140 M38 132 L22 142 L14 150"
+        stroke={FLESH_DARK}
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M8 140 L2 136 M8 140 L3 144 M14 150 L8 150" stroke={BONE} strokeWidth="1.6" />
+      <path
+        d="M58 118 L60 126 M68 116 L70 126 M78 118 L78 128"
+        stroke={FLESH_DARK}
+        strokeWidth="1.6"
+      />
+      <path d="M26 122 C22 110 34 104 42 110 C46 116 42 126 34 128 Z" fill={FLESH} />
+      <Eyes pts={[[30, 116]]} r={1.4} />
+    </>
+  );
+}
+
+/** Bone Archer: a skeleton with a bow. */
+function BoneArcher() {
+  return (
+    <>
+      <path
+        d="M54 150 L56 110 M68 150 L64 110"
+        stroke={BONE}
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <path d="M50 112 L72 112 L70 74 L54 74 Z" fill={INK} />
+      <path d="M52 80 H70 M52 88 H70 M52 96 H70 M53 104 H69" stroke={BONE} strokeWidth="2" />
+      <path
+        d="M54 78 L36 96 L28 92"
+        stroke={BONE}
+        strokeWidth="3.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M26 60 C14 80 14 106 26 126" stroke="#523620" strokeWidth="4" fill="none" />
+      <path d="M26 60 L26 126" stroke="#cfc6ad" strokeWidth="1" />
+      <circle cx="62" cy="62" r="11" fill={BONE} />
+      <path d="M55 60 h5 v4 h-5 Z M64 60 h5 v4 h-5 Z M58 70 h8" fill={INK} stroke="none" />
+      <Eyes
+        pts={[
+          [57, 62],
+          [66, 62],
+        ]}
+        c={EMBER}
+        r={1}
+      />
+    </>
+  );
+}
+
+/** Husk Abomination (mini-boss): stitched, bloated, huge. */
+function Abomination() {
+  return (
+    <>
+      <path
+        d="M30 150 L36 120 L52 122 L48 150 Z M74 150 L72 122 L90 120 L96 150 Z"
+        fill={FLESH_DARK}
+      />
+      <path d="M14 124 C8 80 30 44 64 42 C98 44 116 80 108 124 Z" fill={FLESH} />
+      <path
+        d="M66 44 C98 46 116 80 108 124 L86 124 C94 92 86 60 66 44 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M40 70 L44 110 M40 80 L48 78 M41 92 L49 90 M42 104 L50 102"
+        stroke={BLOOD}
+        strokeWidth="2"
+        fill="none"
+      />
+      <path d="M14 90 C2 98 -2 116 4 130 L16 128 C14 116 16 106 22 100 Z" fill={FLESH} />
+      <path
+        d="M2 130 L-4 140 M6 132 L4 142"
+        stroke={BONE}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <circle cx="46" cy="40" r="12" fill={FLESH} />
+      <Eyes pts={[[42, 40]]} c={EMBER} r={1.8} />
+      <path d="M38 48 L42 50 L46 48" stroke={INK} strokeWidth="1.4" fill="none" />
+    </>
+  );
+}
+
+/** Prism Sentinel: a crystal obelisk with one eye. */
+function PrismSentinel() {
+  return (
+    <>
+      <path d="M60 30 L82 70 L76 150 L44 150 L38 70 Z" fill={CRYSTAL} />
+      <path d="M60 30 L82 70 L76 150 L62 150 Z" fill={INK} opacity="0.3" stroke="none" />
+      <path
+        d="M60 30 L60 150 M38 70 L82 70 M42 110 L78 110"
+        stroke={CRYSTAL_HI}
+        strokeWidth="1"
+        opacity="0.6"
+      />
+      <circle cx="58" cy="82" r="8" fill={INK} />
+      <Eyes pts={[[57, 82]]} c={CRYSTAL_HI} r={2.6} />
+    </>
+  );
+}
+
+/** Geode Crusher: a rock brute with crystal fists. */
+function GeodeCrusher() {
+  return (
+    <>
+      <path d="M42 150 L46 120 L58 120 L56 150 Z M70 150 L70 120 L82 120 L86 150 Z" fill={IRON} />
+      <path d="M30 124 C26 92 42 72 66 72 C90 72 100 94 96 124 Z" fill="#5a5146" />
+      <path
+        d="M68 72 C90 72 100 94 96 124 L80 124 C84 100 80 84 68 72 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M30 92 L12 112 L16 128"
+        stroke="#5a5146"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M8 124 L16 118 L24 126 L18 136 Z" fill={CRYSTAL} />
+      <path d="M60 72 L64 58 L70 72 Z M76 76 L84 64 L84 80 Z" fill={CRYSTAL} />
+      <Eyes
+        pts={[
+          [46, 92],
+          [56, 92],
+        ]}
+        c={CRYSTAL_HI}
+        r={1.4}
+      />
+    </>
+  );
+}
+
+/** Geode Titan (mini-boss): a golem bristling with crystal. */
+function GeodeTitan() {
+  return (
+    <>
+      <path d="M34 150 L38 116 L56 116 L54 150 Z M70 150 L68 116 L86 116 L92 150 Z" fill={IRON} />
+      <path d="M18 118 C14 70 36 36 64 34 C94 36 110 70 104 118 Z" fill="#5a5146" />
+      <path
+        d="M66 36 C94 38 110 70 104 118 L84 118 C92 84 84 54 66 36 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M44 36 L48 10 L58 34 Z M64 34 L72 4 L78 36 Z M84 44 L100 22 L96 50 Z M30 52 L18 32 L36 46 Z"
+        fill={CRYSTAL}
+      />
+      <path d="M18 76 C4 86 0 108 6 126 L18 124 C16 108 18 96 26 88 Z" fill="#5a5146" />
+      <path d="M0 122 L8 116 L16 124 L10 134 Z" fill={CRYSTAL} />
+      <rect x="34" y="58" width="30" height="8" fill={INK} />
+      <Eyes
+        pts={[
+          [40, 62],
+          [56, 62],
+        ]}
+        c={CRYSTAL_HI}
+        r={1.8}
+      />
+    </>
+  );
+}
+
+/** The Crystal Matriarch (boss): a crystal spider-queen. */
+function Matriarch() {
+  return (
+    <>
+      <path
+        d="M30 110 L6 150 M40 116 L24 150 M82 116 L98 150 M90 108 L114 150 M28 96 L0 104 M92 94 L118 100"
+        stroke={INK}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M30 110 L6 150 M40 116 L24 150 M82 116 L98 150 M90 108 L114 150"
+        stroke={CRYSTAL}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <ellipse cx="62" cy="98" rx="38" ry="26" fill={CRYSTAL} />
+      <path
+        d="M70 74 C94 80 104 98 96 116 C88 122 78 124 66 124 C82 112 84 92 70 74 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M44 76 L40 48 L52 74 Z M62 72 L64 36 L72 74 Z M80 78 L92 54 L88 82 Z"
+        fill={CRYSTAL_HI}
+      />
+      <path d="M40 60 C30 52 24 60 26 70 C30 78 40 78 44 72 Z" fill={CRYSTAL} />
+      <circle cx="32" cy="66" r="9" fill={CRYSTAL_HI} />
+      <Eyes
+        pts={[
+          [28, 64],
+          [34, 62],
+          [30, 70],
+        ]}
+        c={VOID}
+        r={1.3}
+      />
+    </>
+  );
+}
+
+/** Hooded cultist body, shared by the cult. */
+function Cultist({ robe, children }: { robe: string; children?: React.ReactNode }) {
+  return (
+    <>
+      <path d="M42 150 C44 120 48 96 60 84 C72 96 76 120 78 150 Z" fill={robe} />
+      <path
+        d="M62 86 C72 98 76 120 78 150 L68 150 C70 124 68 102 62 86 Z"
+        fill={INK}
+        opacity="0.35"
+        stroke="none"
+      />
+      <path d="M48 82 L60 50 L72 82 C66 86 54 86 48 82 Z" fill={robe} />
+      <path d="M54 76 C54 68 66 68 66 76 L65 84 L55 84 Z" fill={INK} />
+      {children}
+    </>
+  );
+}
+
+function CultAssassin() {
+  return (
+    <Cultist robe="#1c1212">
+      <Eyes
+        pts={[
+          [58, 78],
+          [63, 78],
+        ]}
+        c={EMBER}
+        r={0.9}
+      />
+      <path
+        d="M46 104 L30 96 M48 112 L30 120"
+        stroke="#1c1212"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path d="M30 96 L18 88 L22 98 Z M30 120 L16 124 L24 128 Z" fill={BONE} strokeWidth="1" />
+      <path d="M50 92 L70 92" stroke={BLOOD} strokeWidth="2" />
+    </Cultist>
+  );
+}
+
+function Flagellant() {
+  return (
+    <>
+      <path d="M48 150 L52 112 L62 112 L60 150 Z M66 150 L66 112 L76 112 L80 150 Z" fill={CLOTH} />
+      <path d="M44 114 C42 92 48 74 62 70 C78 74 82 92 80 114 Z" fill={FLESH} />
+      <path d="M60 76 L72 108 M66 74 L78 100 M54 80 L64 110" stroke={BLOOD} strokeWidth="2" />
+      <path d="M44 114 H80 V122 H44 Z" fill={CLOTH} />
+      <path
+        d="M46 84 C34 88 26 96 22 106"
+        stroke={FLESH}
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M22 106 C14 112 12 124 18 132 M22 106 C18 116 22 126 30 130"
+        stroke="#523620"
+        strokeWidth="1.6"
+        fill="none"
+      />
+      <path d="M52 54 C52 42 72 42 72 54 C72 64 66 70 62 70 C56 70 52 64 52 54 Z" fill={CLOTH} />
+      <Eyes
+        pts={[
+          [57, 58],
+          [64, 58],
+        ]}
+        c={EMBER}
+        r={1}
+      />
+    </>
+  );
+}
+
+function BloodPriest() {
+  return (
+    <Cultist robe={BLOOD}>
+      <Eyes
+        pts={[
+          [58, 78],
+          [63, 78],
+        ]}
+        c={BONE}
+        r={0.9}
+      />
+      <path d="M50 100 L60 118 L70 100" stroke="#a8853e" strokeWidth="1.6" fill="none" />
+      <path
+        d="M46 104 C38 104 34 100 33 94"
+        stroke={BLOOD}
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M26 86 H40 L36 94 H30 Z M33 94 V100" fill="#a8853e" />
+      <path d="M28 86 H38" stroke={BLOOD} strokeWidth="2" />
+    </Cultist>
+  );
+}
+
+function Fanatic() {
+  return (
+    <Cultist robe="#4a2a22">
+      <Eyes
+        pts={[
+          [58, 78],
+          [63, 78],
+        ]}
+        c={EMBER}
+        r={0.9}
+      />
+      <path
+        d="M46 98 C38 98 32 92 30 86"
+        stroke="#4a2a22"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M30 86 L22 70 L32 66 L36 82 Z" fill={IRON_HI} />
+    </Cultist>
+  );
+}
+
+/** High Inquisitor (mini-boss): tall hat, armour, a branding staff. */
+function Inquisitor() {
+  return (
+    <>
+      <path d="M38 150 C40 116 46 88 60 76 C74 88 80 116 82 150 Z" fill={IRON} />
+      <path
+        d="M62 78 C74 90 80 116 82 150 L70 150 C72 120 70 96 62 78 Z"
+        fill={INK}
+        opacity="0.35"
+        stroke="none"
+      />
+      <path d="M44 110 H76 V118 H44 Z" fill={BLOOD} />
+      <path d="M50 74 L54 30 L66 30 L70 74 Z" fill={CLOTH} />
+      <path d="M50 60 H70" stroke="#a8853e" strokeWidth="2" />
+      <path d="M52 74 C52 66 68 66 68 74 L67 82 L53 82 Z" fill={INK} />
+      <Eyes
+        pts={[
+          [57, 76],
+          [63, 76],
+        ]}
+        c={EMBER}
+        r={1}
+      />
+      <path d="M28 150 L32 60" stroke="#3a2a1b" strokeWidth="3.5" />
+      <path d="M26 56 L38 56 L36 64 L28 64 Z" fill={EMBER} className="av-glow" />
+    </>
+  );
+}
+
+/** The Bleeding Saint (boss): haloed, red-robed, weeping blood. */
+function Saint() {
+  return (
+    <>
+      <circle
+        cx="60"
+        cy="40"
+        r="26"
+        fill="none"
+        stroke="#a8853e"
+        strokeWidth="3"
+        className="av-glow"
+      />
+      <path d="M30 150 C32 110 40 76 60 62 C80 76 88 110 90 150 Z" fill={BLOOD} />
+      <path
+        d="M62 64 C80 78 88 110 90 150 L74 150 C76 116 72 86 62 64 Z"
+        fill={INK}
+        opacity="0.35"
+        stroke="none"
+      />
+      <path d="M46 100 L60 130 L74 100" stroke="#a8853e" strokeWidth="2" fill="none" />
+      <path d="M48 60 C48 42 72 42 72 60 C72 72 66 78 60 78 C54 78 48 72 48 60 Z" fill={FLESH} />
+      <path d="M48 52 C50 40 70 40 72 52 C68 46 52 46 48 52 Z" fill={CLOTH} />
+      <path d="M54 60 L54 72 M66 60 L66 74" stroke={BLOOD} strokeWidth="1.6" />
+      <Eyes
+        pts={[
+          [54, 58],
+          [66, 58],
+        ]}
+        c={BLOOD}
+        r={1.3}
+      />
+      <path
+        d="M34 110 C24 108 18 100 18 92"
+        stroke={BLOOD}
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </>
+  );
+}
+
+/** Drowned Thrall: bloated, weed-draped. */
+function Thrall() {
+  return (
+    <>
+      <path d="M44 150 L48 116 L60 116 L58 150 Z M66 150 L66 116 L78 116 L80 150 Z" fill={SEA} />
+      <path d="M36 118 C32 90 44 68 62 66 C82 68 90 90 86 118 Z" fill={SEA_HI} />
+      <path
+        d="M64 68 C82 70 90 90 86 118 L72 118 C76 96 72 80 64 68 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M44 74 C42 92 46 108 44 122 M52 70 C52 90 56 104 52 120"
+        stroke={ROT}
+        strokeWidth="2.4"
+        fill="none"
+      />
+      <path
+        d="M38 84 C28 92 24 104 24 116"
+        stroke={SEA_HI}
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M48 52 C48 40 70 40 70 52 C70 62 64 68 58 68 C52 68 48 62 48 52 Z" fill={SEA_HI} />
+      <Eyes
+        pts={[
+          [53, 54],
+          [61, 54],
+        ]}
+        c={GLOW}
+        r={1.2}
+      />
+    </>
+  );
+}
+
+/** Tide Lurker: an eel-thing rising from the water. */
+function Lurker() {
+  return (
+    <>
+      <path
+        d="M96 150 C100 120 84 100 64 96 C44 92 34 76 40 60 C44 50 34 44 26 50"
+        stroke={INK}
+        strokeWidth="16"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M96 150 C100 120 84 100 64 96 C44 92 34 76 40 60 C44 50 34 44 26 50"
+        stroke={SEA}
+        strokeWidth="12"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M70 92 L78 82 L80 96 M54 84 L58 72 L62 88" fill={SEA_HI} />
+      <path d="M18 50 L30 42 L32 56 Z" fill={SEA} />
+      <path d="M16 52 L26 50 L18 56" fill={BONE} strokeWidth="1" />
+      <Eyes pts={[[28, 46]]} c={GLOW} r={1.4} />
+      <path d="M60 150 C70 144 82 144 100 150" stroke={SEA_HI} strokeWidth="2" fill="none" />
+    </>
+  );
+}
+
+/** Siren: a pale drowned singer above the water. */
+function Siren() {
+  return (
+    <>
+      <path d="M50 150 C44 130 52 112 60 104 C70 112 76 132 70 150 Z" fill={SEA} />
+      <path d="M70 150 L84 140 L80 154 Z" fill={SEA} />
+      <path d="M48 106 C46 86 52 70 60 66 C68 70 74 86 72 106 Z" fill="#a8a28e" />
+      <path
+        d="M50 70 C40 74 34 94 34 120 M70 70 C78 76 82 96 80 118"
+        stroke="#2a2420"
+        strokeWidth="4"
+        fill="none"
+      />
+      <path d="M50 52 C50 40 70 40 70 52 C70 62 64 68 60 68 C56 68 50 62 50 52 Z" fill="#a8a28e" />
+      <path
+        d="M48 50 C48 34 72 34 72 52 L76 78 C72 66 66 56 60 54 C54 56 48 66 44 78 Z"
+        fill="#2a2420"
+      />
+      <Eyes
+        pts={[
+          [56, 54],
+          [64, 54],
+        ]}
+        c={GLOW}
+        r={1.2}
+      />
+      <path d="M56 62 Q60 66 64 62" stroke={INK} strokeWidth="1.4" fill="none" />
+    </>
+  );
+}
+
+/** The Drowned Knight (mini-boss): barnacled armour and a trident. */
+function DrownedKnight() {
+  return (
+    <>
+      <path d="M44 150 L48 112 L60 112 L58 150 Z M66 150 L66 112 L78 112 L82 150 Z" fill={IRON} />
+      <path d="M36 116 C32 86 42 64 62 60 C82 64 90 86 86 116 Z" fill={SEA_HI} />
+      <path d="M64 62 C82 66 90 86 86 116 L72 116 Z" fill={INK} opacity="0.35" stroke="none" />
+      <circle cx="46" cy="84" r="2.5" fill={BONE} />
+      <circle cx="74" cy="96" r="2" fill={BONE} />
+      <circle cx="52" cy="104" r="2" fill={BONE} />
+      <path d="M48 40 C48 28 76 28 76 40 L76 60 L48 60 Z" fill={SEA_HI} />
+      <rect x="50" y="46" width="24" height="4" fill={INK} />
+      <Eyes
+        pts={[
+          [56, 48],
+          [66, 48],
+        ]}
+        c={GLOW}
+        r={1.2}
+      />
+      <path d="M28 150 L28 46" stroke="#3a2a1b" strokeWidth="3.5" />
+      <path
+        d="M20 46 L20 34 M28 46 L28 30 M36 46 L36 34 M20 46 H36"
+        stroke={IRON_HI}
+        strokeWidth="2.5"
+        fill="none"
+      />
+    </>
+  );
+}
+
+/** The Leviathan Maw (boss): a vast jaw rising from black water. */
+function Maw() {
+  return (
+    <>
+      <path d="M4 150 C6 90 30 40 70 30 C100 28 116 60 116 150 Z" fill={SEA} />
+      <path
+        d="M74 32 C102 32 116 62 116 150 L96 150 C100 90 92 54 74 32 Z"
+        fill={INK}
+        opacity="0.35"
+        stroke="none"
+      />
+      <path d="M14 96 C30 70 56 66 80 80 C60 92 34 104 14 96 Z" fill={INK} />
+      <path
+        d="M20 92 L24 84 L28 92 L34 80 L38 92 L46 78 L50 90 L58 78 L62 88 L70 80 L72 86"
+        fill="none"
+        stroke={BONE}
+        strokeWidth="2.5"
+      />
+      <path
+        d="M22 100 L28 108 L34 100 L42 110 L48 100 L56 108 L62 98"
+        fill="none"
+        stroke={BONE}
+        strokeWidth="2.5"
+      />
+      <Eyes
+        pts={[
+          [64, 52],
+          [80, 50],
+        ]}
+        c={GLOW}
+        r={2}
+      />
+      <path
+        d="M0 150 C20 140 40 142 60 150 C80 142 100 140 120 150"
+        stroke={SEA_HI}
+        strokeWidth="2"
+        fill="none"
+      />
+    </>
+  );
+}
+
+/** Void Horror: a floating mass of eyes and tendrils. */
+function Horror() {
+  return (
+    <>
+      <path
+        d="M40 110 C30 130 34 146 44 150 M56 114 C54 132 60 144 66 150 M72 110 C80 126 84 140 92 146"
+        stroke={INK}
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M40 110 C30 130 34 146 44 150 M56 114 C54 132 60 144 66 150 M72 110 C80 126 84 140 92 146"
+        stroke="#2c2433"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="58" cy="86" r="30" fill="#2c2433" />
+      <path
+        d="M62 56 C86 60 92 92 80 110 C76 98 72 76 62 56 Z"
+        fill={INK}
+        opacity="0.35"
+        stroke="none"
+      />
+      <circle cx="50" cy="82" r="8" fill={BONE} />
+      <circle cx="48" cy="82" r="3.5" fill={VOID} stroke="none" />
+      <Eyes
+        pts={[
+          [66, 70],
+          [70, 96],
+          [40, 100],
+        ]}
+        c={VOID}
+        r={1.5}
+      />
+    </>
+  );
+}
+
+/** Rift Knight: black armour, rift-light in the visor, a greatsword. */
+function RiftKnight() {
+  return (
+    <>
+      <path d="M44 150 L48 110 L60 110 L58 150 Z M66 150 L66 110 L78 110 L82 150 Z" fill={IRON} />
+      <path d="M36 114 C32 84 42 62 62 58 C82 62 90 84 86 114 Z" fill="#2a2730" />
+      <path d="M64 60 C82 64 90 84 86 114 L72 114 Z" fill={INK} opacity="0.35" stroke="none" />
+      <path d="M60 70 L60 100" stroke={VOID} strokeWidth="2" className="av-glow" />
+      <path d="M48 38 C48 26 74 26 74 38 L74 58 L48 58 Z" fill="#2a2730" />
+      <path d="M50 44 H72 V48 H50 Z" fill={VOID} stroke="none" className="av-glow" />
+      <path d="M30 140 L26 30 L34 30 Z" fill={IRON_HI} />
+      <path d="M20 128 H40" stroke={IRON_HI} strokeWidth="4" />
+    </>
+  );
+}
+
+/** Unmaker: a thin floating figure with a hole for a face. */
+function Unmaker() {
+  return (
+    <>
+      <path d="M52 140 C46 110 50 84 60 72 C70 84 74 110 68 140 L60 150 Z" fill="#1d1a22" />
+      <path
+        d="M50 92 L32 104 L26 120 M70 92 L86 104 L92 118"
+        stroke="#1d1a22"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="60" cy="56" rx="12" ry="16" fill="#1d1a22" />
+      <ellipse cx="58" cy="58" rx="6" ry="9" fill={INK} stroke="none" />
+      <ellipse
+        cx="58"
+        cy="58"
+        rx="9"
+        ry="12"
+        fill={VOID}
+        opacity="0.2"
+        stroke="none"
+        className="av-glow"
+      />
+    </>
+  );
+}
+
+/** Void Herald (mini-boss): horned and winged. */
+function Herald() {
+  return (
+    <>
+      <path
+        d="M58 70 C30 50 8 60 4 90 C20 80 34 84 46 96 Z M64 70 C90 50 112 60 116 90 C100 80 86 84 74 96 Z"
+        fill="#2c2433"
+      />
+      <path d="M44 150 C44 116 50 88 60 76 C70 88 76 116 76 150 Z" fill="#2c2433" />
+      <path d="M62 78 C70 90 76 116 76 150 L68 150 Z" fill={INK} opacity="0.35" stroke="none" />
+      <path d="M50 58 C50 46 70 46 70 58 C70 70 66 76 60 76 C54 76 50 70 50 58 Z" fill="#1d1a22" />
+      <path
+        d="M50 50 C44 40 42 30 46 22 C48 34 52 40 56 46 Z M70 50 C76 40 78 30 74 22 C72 34 68 40 64 46 Z"
+        fill={BONE}
+      />
+      <Eyes
+        pts={[
+          [56, 60],
+          [64, 60],
+        ]}
+        c={VOID}
+        r={1.4}
+      />
+    </>
+  );
+}
+
+/** The Rift Heart (boss): a vast beating heart of the Rift. */
+function RiftHeartArt() {
+  return (
+    <>
+      <path
+        d="M20 150 C30 136 40 130 50 126 M100 150 C90 136 80 130 70 126 M60 150 V126"
+        stroke={INK}
+        strokeWidth="7"
+        fill="none"
+      />
+      <path
+        d="M20 150 C30 136 40 130 50 126 M100 150 C90 136 80 130 70 126 M60 150 V126"
+        stroke={BLOOD}
+        strokeWidth="4"
+        fill="none"
+      />
+      <path
+        d="M60 128 C20 110 6 80 18 56 C30 34 54 38 60 56 C66 38 90 34 102 56 C114 80 100 110 60 128 Z"
+        fill="#5a1a14"
+      />
+      <path
+        d="M62 56 C68 40 90 36 102 56 C112 76 102 104 66 124 C88 100 92 74 62 56 Z"
+        fill={INK}
+        opacity="0.3"
+        stroke="none"
+      />
+      <path
+        d="M34 60 C44 72 40 90 52 100 M78 52 C72 70 84 84 74 102"
+        stroke={VOID}
+        strokeWidth="2.5"
+        fill="none"
+        className="av-glow"
+      />
+      <path
+        d="M50 30 L54 14 M66 30 L70 12"
+        stroke="#5a1a14"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Eyes pts={[[58, 80]]} c={VOID} r={3} />
+    </>
+  );
+}
+
 const ART: Record<string, () => React.JSX.Element> = {
   rift_husk: Husk,
   shard_spitter: Spitter,
@@ -500,6 +1246,30 @@ const ART: Record<string, () => React.JSX.Element> = {
   phase_stalker: Stalker,
   rift_zealot: Zealot,
   hollow_colossus: Colossus,
+  // request #71
+  grave_crawler: Crawler,
+  bone_archer: BoneArcher,
+  husk_abomination: Abomination,
+  prism_sentinel: PrismSentinel,
+  geode_crusher: GeodeCrusher,
+  geode_titan: GeodeTitan,
+  crystal_matriarch: Matriarch,
+  cult_assassin: CultAssassin,
+  flagellant: Flagellant,
+  blood_priest: BloodPriest,
+  cult_fanatic: Fanatic,
+  high_inquisitor: Inquisitor,
+  bleeding_saint: Saint,
+  drowned_thrall: Thrall,
+  tide_lurker: Lurker,
+  drowned_siren: Siren,
+  drowned_knight: DrownedKnight,
+  leviathan_maw: Maw,
+  void_horror: Horror,
+  rift_knight: RiftKnight,
+  unmaker: Unmaker,
+  void_herald: Herald,
+  rift_heart: RiftHeartArt,
 };
 
 export function EnemyAvatar({

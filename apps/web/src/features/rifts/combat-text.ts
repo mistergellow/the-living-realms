@@ -50,6 +50,8 @@ export function describeLog(e: CombatLogEntry, combat: CombatView): string | nul
       return `${name(e.actorId)} calls ${name(e.unitId)} into the fight!`;
     case 'explode':
       return `${name(e.actorId)} explodes!`;
+    case 'phase':
+      return e.text;
     case 'room':
       return e.outcome === 'cleared' ? 'The room is clear.' : 'The party has fallen.';
   }

@@ -919,3 +919,22 @@ inside `GameShell`, so the top bar and navigation never disappear while you
 play. To stop screens jumping: one backdrop dim, no drifting backdrop, fonts
 loaded before the first paint, reserved scrollbar gutter, and late-arriving
 cards placed below what is already on screen.
+
+## ADR-053 — Rift themes, Champions, Taunt and boss phases
+
+**Status:** accepted (request #71)
+
+**Decision.** Content variety lives in data: `RIFT_THEMES` lists each theme's
+ordinary, Elite and boss rooms; `siteRift` picks a theme per map entrance with
+a stable hash of position, tier and day, among the themes open at that tier.
+The map generator and events are unchanged. Champions reuse the gear-effect
+model players already have (`GearCombatEffects` on the enemy combatant), so the
+combat engine needed no per-affix code beyond stat changes; they are chosen at
+encounter creation from the seeded RNG. Boss phases are data on `EnemyDef`
+(`phases`) checked after every action and at round start (`checkPhases`), each
+firing once and logged as `{ t: 'phase' }`. Taunt is a status that narrows
+`validTargets` for single and column attacks. Enemy traits that are part of a
+creature (e.g. a Sentinel that reflects) use the same affixes as `innate`.
+
+**Consequences.** New enemies, themes and affixes are data plus art; the sim
+(`SIM=themes`) compares themes with the previous rooms ("Legacy rooms").

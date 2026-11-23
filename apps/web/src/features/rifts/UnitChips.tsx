@@ -1,4 +1,4 @@
-import { describeEffects, getAbility } from '@realms/game-core';
+import { CHAMPION_AFFIXES, describeEffects, getAbility } from '@realms/game-core';
 import type { CombatantView, IntentView } from '@realms/shared';
 import { EffectIcon, StatusIcon, type EffectKind } from '../../shared/ui/EffectIcon';
 
@@ -83,6 +83,23 @@ export function IntentChips({
         );
       })}
     </div>
+  );
+}
+
+/** Request #71: a Champion's affixes, as small labelled plates with their effect. */
+export function AffixChips({ unit }: { unit: CombatantView }) {
+  if (unit.downed || !unit.affixes?.length) return null;
+  return (
+    <span className="affixes" data-testid="affixes">
+      {unit.affixes.map((id) => {
+        const a = (CHAMPION_AFFIXES as Record<string, { name: string; description: string }>)[id];
+        return a ? (
+          <span key={id} className="affix-chip" title={`${a.name}: ${a.description}`}>
+            {a.name}
+          </span>
+        ) : null;
+      })}
+    </span>
   );
 }
 

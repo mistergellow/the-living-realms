@@ -6,7 +6,7 @@ import { artFromAbilities } from '../avatar/weapon-art';
 import { prefersReducedMotion, usePixiScene } from '../render/usePixiScene';
 import { combatLayout, unitRect } from './combat-layout';
 import type { CombatScene } from './combat-scene';
-import { IntentChips, StatusChips } from './UnitChips';
+import { AffixChips, IntentChips, StatusChips } from './UnitChips';
 
 interface CombatStageProps {
   combat: CombatView;
@@ -196,8 +196,9 @@ export function CombatStage({
                     <IntentChips unit={unit} nameOf={nameOf} />
                   </div>
                 )}
-                <div className="unit-chips" style={{ left: p.x, top: p.y + 6 }}>
+                <div className="unit-chips unit-chips-below" style={{ left: p.x, top: p.y + 6 }}>
                   <StatusChips unit={unit} />
+                  <AffixChips unit={unit} />
                 </div>
               </Fragment>
             );

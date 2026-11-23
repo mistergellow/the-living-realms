@@ -71,6 +71,62 @@ export interface AbilityDef {
   scaling: Partial<Attributes>;
 }
 
+// ---- request #71: compact enemy ability builders ----
+const BACK: AbilityTargeting = { side: 'enemy', reach: ['third', 'back'], area: 'single' };
+const ANY: AbilityTargeting = { side: 'enemy', reach: 'any', area: 'single' };
+const FIRST: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'single' };
+const FIRST2_ALL: AbilityTargeting = { side: 'enemy', reach: 'first2', area: 'all' };
+const ALL: AbilityTargeting = { side: 'enemy', reach: 'any', area: 'all' };
+const SELF: AbilityTargeting = { side: 'self', reach: 'any', area: 'single' };
+const ALLY_ALL: AbilityTargeting = { side: 'ally', reach: 'any', area: 'all' };
+const dmg = (
+  damageType: DamageType,
+  min: number,
+  max: number,
+  o: { vsBlock?: number; drain?: boolean } = {},
+): AbilityEffect => ({
+  kind: 'damage',
+  damageType,
+  min,
+  max,
+  ...(o.vsBlock ? { bonusVsBlock: o.vsBlock } : {}),
+  ...(o.drain ? { drain: true } : {}),
+});
+const st = (status: StatusId, turns: number, value?: number): AbilityEffect => ({
+  kind: 'status',
+  status,
+  turns,
+  ...(value !== undefined ? { value } : {}),
+});
+const blk = (min: number, max: number): AbilityEffect => ({ kind: 'block', min, max });
+type EnemyAbilitySpec = [
+  name: string,
+  description: string,
+  focusCost: number,
+  targeting: AbilityTargeting,
+  effects: AbilityEffect[],
+];
+function enemyAbilities<K extends string>(
+  specs: Record<K, EnemyAbilitySpec>,
+): Record<K, AbilityDef> {
+  const out = {} as Record<K, AbilityDef>;
+  for (const id of Object.keys(specs) as K[]) {
+    const [name, description, focusCost, targeting, effects] = specs[id];
+    out[id] = {
+      id,
+      name,
+      description,
+      source: 'enemy',
+      focusCost,
+      manaCost: 0,
+      targeting,
+      effects,
+      scaling: {},
+    };
+  }
+  return out;
+}
+
 const ability = (a: AbilityDef) => a;
 // Request #35: one line of 4 positions per side; a "column" is one position.
 const ENEMY_FIRST_COLUMN: AbilityTargeting = { side: 'enemy', reach: 'first', area: 'column' };
@@ -948,6 +1004,292 @@ export const ABILITIES = {
     ],
     scaling: {},
   }),
+
+  // ---- request #71: Rift themes (PROVISIONAL numbers, tuned by `pnpm sim`) ----
+  // Shared shapes: hit the nearest, hit anyone, hit the back line, everyone.
+  ...enemyAbilities({
+    // The Hollow Breach
+    crawler_rake: [
+      'Back Rake',
+      'Crawls past the front line and rakes the back: Bleed.',
+      2,
+      BACK,
+      [dmg('physical', 4, 6), st('bleed', 2, 2)],
+    ],
+    bone_volley: [
+      'Bone Volley',
+      'Bone shards at any foe; marks it.',
+      2,
+      ANY,
+      [dmg('ranged', 3, 5), st('mark', 2)],
+    ],
+    abom_taunt: [
+      'Bellow',
+      'Roars a challenge: you must strike it first (Taunt), and it braces.',
+      1,
+      SELF,
+      [st('taunt', 2), blk(5, 7)],
+    ],
+    abom_crush: ['Crush', 'Crushes the two nearest foes.', 2, FIRST2_ALL, [dmg('physical', 6, 8)]],
+    warden_quake: [
+      'Rift Quake',
+      'The floor splits under everyone.',
+      3,
+      ALL,
+      [dmg('physical', 5, 7), st('weaken', 1)],
+    ],
+    // The Crystal Nest
+    prism_beam: [
+      'Prism Beam',
+      'Light through crystal: magic at any foe.',
+      1,
+      ANY,
+      [dmg('magic', 3, 5)],
+    ],
+    geode_shatter: [
+      'Shatter',
+      'A blow that breaks guards: double damage against Dodge, and Chill.',
+      2,
+      FIRST,
+      [dmg('physical', 4, 6, { vsBlock: 2 }), st('chill', 2, 1)],
+    ],
+    titan_guard: [
+      'Crystal Guard',
+      'Draws every blow to itself (Taunt) and hardens.',
+      1,
+      SELF,
+      [st('taunt', 2), blk(6, 9)],
+    ],
+    titan_quake: [
+      'Geode Quake',
+      'Crystal spikes under the two nearest foes: Chill.',
+      2,
+      FIRST2_ALL,
+      [dmg('physical', 4, 6), st('chill', 2, 1)],
+    ],
+    shard_storm: [
+      'Shard Storm',
+      'A storm of crystal cuts everyone.',
+      3,
+      ALL,
+      [dmg('ranged', 4, 5), st('bleed', 2, 1)],
+    ],
+    crystallize: [
+      'Crystallize',
+      'Encases one foe in crystal: Stunned.',
+      2,
+      ANY,
+      [dmg('magic', 2, 3), st('stun', 1)],
+    ],
+    crystal_rend: [
+      'Crystal Rend',
+      'Tears the nearest foe apart.',
+      2,
+      FIRST,
+      [dmg('physical', 9, 12)],
+    ],
+    matriarch_call: [
+      'Brood Call',
+      'Calls a Volatile Mite.',
+      2,
+      SELF,
+      [{ kind: 'summon', enemy: 'volatile_mite' }],
+    ],
+    // The Crimson Cult
+    assassin_stab: [
+      'Back Stab',
+      'Slips behind your lines: heavy hit on the back, Bleed.',
+      2,
+      BACK,
+      [dmg('physical', 6, 8), st('bleed', 2, 2)],
+    ],
+    assassin_veil: [
+      'Veil',
+      'Hides in shadow: Intangible until its next turn.',
+      1,
+      SELF,
+      [st('intangible', 2)],
+    ],
+    flagellant_scourge: [
+      'Scourge',
+      'Whips itself into a frenzy and lashes the nearest foe.',
+      1,
+      FIRST,
+      [dmg('physical', 4, 6)],
+    ],
+    flagellant_zeal: [
+      'Mortify',
+      'Bleeding for its god: +2 Strength every round.',
+      2,
+      SELF,
+      [st('ritual', 99, 2)],
+    ],
+    priest_rite: [
+      'Blood Rite',
+      'Heals every ally a little.',
+      2,
+      ALLY_ALL,
+      [{ kind: 'heal', min: 4, max: 6 }],
+    ],
+    priest_curse: ['Curse of Frailty', 'Every foe is Weakened.', 2, ALL, [st('weaken', 2)]],
+    fanatic_charge: [
+      'Fanatic Charge',
+      'Throws itself at the nearest foe.',
+      1,
+      FIRST,
+      [dmg('physical', 5, 7)],
+    ],
+    inquisitor_brand: [
+      'Brand',
+      'Brands any foe: Marked and Stunned.',
+      3,
+      ANY,
+      [dmg('magic', 3, 4), st('mark', 2), st('stun', 1)],
+    ],
+    inquisitor_verdict: [
+      'Verdict',
+      'Breaks guards: double damage against Dodge.',
+      2,
+      FIRST,
+      [dmg('physical', 6, 9, { vsBlock: 2 })],
+    ],
+    saint_rain: [
+      'Blood Rain',
+      'Blood falls on everyone: Bleed.',
+      3,
+      ALL,
+      [dmg('magic', 3, 4), st('bleed', 3, 2)],
+    ],
+    saint_sacrament: [
+      'Sacrament',
+      'Drinks from the wounded: heals for the damage dealt.',
+      2,
+      ANY,
+      [dmg('magic', 5, 7, { drain: true })],
+    ],
+    // The Drowned Depths
+    thrall_grasp: [
+      'Cold Grasp',
+      'A drowned hand: Chill.',
+      1,
+      FIRST,
+      [dmg('physical', 3, 5), st('chill', 2, 1)],
+    ],
+    thrall_wall: [
+      'Drowned Wall',
+      'Stands in the way (Taunt).',
+      1,
+      SELF,
+      [st('taunt', 2), blk(4, 6)],
+    ],
+    lurker_undertow: [
+      'Undertow',
+      'Drags a back-line foe under: Chill and Bleed.',
+      2,
+      BACK,
+      [dmg('physical', 4, 6), st('chill', 2, 1), st('bleed', 2, 1)],
+    ],
+    siren_song: [
+      'Drowning Song',
+      'Every foe is Weakened and Blinded.',
+      3,
+      ALL,
+      [st('weaken', 2), st('blind', 2, 25)],
+    ],
+    siren_wail: ['Wail', 'A scream at any foe.', 1, ANY, [dmg('magic', 3, 5)]],
+    knight_tide: [
+      'Tidebreaker',
+      'Breaks guards: double damage against Dodge.',
+      2,
+      FIRST,
+      [dmg('physical', 6, 8, { vsBlock: 2 })],
+    ],
+    maw_crush: [
+      'Maw Crush',
+      'Jaws close on the two nearest foes.',
+      2,
+      FIRST2_ALL,
+      [dmg('physical', 6, 8)],
+    ],
+    maw_wave: [
+      'Tidal Wave',
+      'Floods the room: everyone, Chill.',
+      3,
+      ALL,
+      [dmg('magic', 4, 5), st('chill', 2, 1)],
+    ],
+    maw_swallow: [
+      'Swallow',
+      'Swallows one foe whole: heavy damage, Stunned.',
+      3,
+      ANY,
+      [dmg('physical', 9, 12), st('stun', 1)],
+    ],
+    // The Rift Heart
+    horror_gaze: [
+      'Unmaking Gaze',
+      'Everyone is hurt and Marked.',
+      3,
+      ALL,
+      [dmg('magic', 3, 4), st('mark', 2)],
+    ],
+    knight_rend: [
+      'Rift Rend',
+      'Breaks guards: triple damage against Dodge.',
+      2,
+      FIRST,
+      [dmg('physical', 5, 7, { vsBlock: 3 })],
+    ],
+    knight_stand: [
+      'Hold the Line',
+      'You must strike it first (Taunt).',
+      1,
+      SELF,
+      [st('taunt', 2), blk(5, 8)],
+    ],
+    unmaker_drain: [
+      'Unmake',
+      'Pulls the Focus out of a foe: Chill 2.',
+      2,
+      ANY,
+      [dmg('magic', 3, 5), st('chill', 2, 2)],
+    ],
+    herald_command: [
+      'Command',
+      'Every ally gains +2 Strength for 2 rounds.',
+      2,
+      ALLY_ALL,
+      [st('strength', 2, 2)],
+    ],
+    herald_call: [
+      'Call the Stalkers',
+      'Calls a Phase Stalker.',
+      2,
+      SELF,
+      [{ kind: 'summon', enemy: 'phase_stalker' }],
+    ],
+    heart_pulse: [
+      'Heartbeat',
+      'The Rift beats: everyone burns.',
+      3,
+      ALL,
+      [dmg('magic', 4, 6), st('burn', 2, 2)],
+    ],
+    heart_tendril: [
+      'Tendril',
+      'A tendril takes any foe: drains it.',
+      2,
+      ANY,
+      [dmg('magic', 6, 8, { drain: true })],
+    ],
+    heart_collapse: [
+      'Collapse',
+      'Reality folds on the nearest two: Stunned.',
+      3,
+      FIRST2_ALL,
+      [dmg('physical', 6, 8), st('stun', 1)],
+    ],
+  }),
 } satisfies Record<string, AbilityDef>;
 
 export type AbilityId = keyof typeof ABILITIES;
@@ -978,6 +1320,7 @@ export const STATUS_NAMES: Record<StatusId, string> = {
   chill: 'Chilled',
   blind: 'Blinded',
   impale: 'Impaled',
+  taunt: 'Taunting',
 };
 
 export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
@@ -995,6 +1338,7 @@ export const STATUS_DESCRIPTIONS: Record<StatusId, string> = {
   chill: 'Gets that much less Focus at the start of every round.',
   blind: 'Its attacks have that % chance to miss.',
   impale: 'The next hit it takes deals that much extra damage.',
+  taunt: 'Its foes must aim at it while it stands (spells that hit everyone still do).',
 };
 
 /** Statuses that hurt the one who has them: what a cleanse removes (request #47). */

@@ -9,6 +9,7 @@ import type {
   StatusView,
 } from '@realms/shared';
 import { ELITE_RULES, getEnemy, type EnemyDef } from '../content/enemies.js';
+import { makeChampion } from '../content/champions.js';
 import type { RiftRoomDef } from '../content/rifts.js';
 import { focusPerRound, reductionFromRating } from '../stats.js';
 
@@ -139,6 +140,11 @@ export interface EnemyModifiers {
   hpMultiplier?: number;
   powerMultiplier?: number;
   precisionBonus?: number;
+  /**
+   * Request #71: Champions — the % chance per ordinary enemy, how many
+   * affixes, and whether Elite enemies are always Champions.
+   */
+  champions?: { chance: number; affixes: number; elite: boolean };
 }
 
 export function enemyCombatants(
@@ -166,7 +172,7 @@ export function enemyCombatant(
     def.maxHp * (elite ? ELITE_RULES.hpMultiplier : 1) * (mods.hpMultiplier ?? 1),
   );
   const stats = { ...enemyStats(def, precision), maxHp };
-  return {
+  const unit: Combatant = {
     id,
     side: 'enemies',
     kind: 'enemy',
@@ -191,11 +197,14 @@ export function enemyCombatant(
     abilityMultipliers: {},
     intents: [],
     downed: false,
-    isBoss: !!def.isBoss,
+    isBoss: !!(def.isBoss || def.isMiniBoss),
     family: def.family,
-    abilityIds: def.abilities,
+    phase: 0,
+    abilityIds: [...def.abilities],
     stats,
   };
+  if (def.innate?.length) makeChampion(unit, [...def.innate], { innate: true });
+  return unit;
 }
 
 export function pushLog(state: CombatState, entry: CombatLogEntry): void {

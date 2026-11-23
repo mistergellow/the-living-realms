@@ -1014,3 +1014,42 @@
     animation: none;
   }
 }
+
+/* Request #71: Champion affixes under a unit; a boss changing phase. */
+.unit-chips-below {
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.affixes {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 160px;
+}
+.affix-chip {
+  padding: 0 5px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: #f0c06a;
+  background: rgb(10 7 5 / 0.9);
+  border: 1px solid #7a5524;
+  box-shadow: 0 0 0 1px var(--ink);
+  white-space: nowrap;
+  cursor: help;
+}
+.unit-card-affixes {
+  color: var(--torch-hi);
+}
+.phase-reveal span {
+  font-size: clamp(1.6rem, 4.5vw, 3rem);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(70 20 60 / 0.85) 20%,
+    rgb(70 20 60 / 0.85) 80%,
+    transparent
+  );
+}

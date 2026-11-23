@@ -71,6 +71,7 @@ const STATUS_COLORS: Record<StatusId, number> = {
   chill: 0x8fd8ff,
   blind: 0x9aa3b2,
   impale: 0xe0a36b,
+  taunt: 0xe47a62,
 };
 
 const FONT = '"Alegreya SC", "Alegreya", Georgia, serif';

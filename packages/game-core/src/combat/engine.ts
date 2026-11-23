@@ -11,6 +11,8 @@ import {
   type StatusId,
 } from '@realms/shared';
 import { AFFIX_RULES } from '../content/affixes.js';
+import { CHAMPION_AFFIX_IDS, makeChampion, type ChampionAffixId } from '../content/champions.js';
+import { getEnemy } from '../content/enemies.js';
 import {
   BASIC_ACTIONS,
   getAbility,
@@ -119,6 +121,7 @@ export function createEncounter(opts: {
   };
   const rng = new Rng(state.rng);
   for (const c of state.combatants) state.tiebreak[c.id] = rng.next();
+  pickChampions(state, opts.room, rng, opts.enemyModifiers?.champions);
   state.rng = rng.state;
   startRound(state);
   // Exploration effects carried into the fight (debuffs and boons).
@@ -131,6 +134,31 @@ export function createEncounter(opts: {
     if (p.firstRoundBlock) unit.block += p.firstRoundBlock;
   }
   return state;
+}
+
+/**
+ * Request #71: some ordinary enemies are Champions with random affixes;
+ * Elite enemies always are from a tier on. Bosses and mini-bosses never.
+ */
+function pickChampions(
+  state: CombatState,
+  room: RiftRoomDef,
+  rng: Rng,
+  rules: { chance: number; affixes: number; elite: boolean } | undefined,
+): void {
+  if (!rules || room.isBoss) return;
+  const enemies = state.combatants.filter((c) => c.kind === 'enemy');
+  enemies.forEach((unit, i) => {
+    const def = unit.enemyDefId ? getEnemy(unit.enemyDefId) : undefined;
+    if (!def || def.isBoss || def.isMiniBoss) return;
+    const elite = !!room.enemies[i]?.elite;
+    if (!(elite && rules.elite) && !rng.chance(rules.chance)) return;
+    const pool = [...CHAMPION_AFFIX_IDS];
+    const chosen: ChampionAffixId[] = [];
+    for (let k = 0; k < rules.affixes && pool.length; k++)
+      chosen.push(pool.splice(rng.int(pool.length), 1)[0]!);
+    makeChampion(unit, chosen);
+  });
 }
 
 /**
@@ -216,6 +244,7 @@ function startRound(state: CombatState): void {
     );
     u.mana = Math.min(u.maxMana, u.mana + u.stats.manaRegen);
   }
+  checkPhases(state);
   if (checkEnd(state)) return;
   // PvE: the party always acts first, then the enemies (no initiative roll).
   if (isPvp(state)) rollInitiative(state);
@@ -276,7 +305,12 @@ export function validTargets(
   const t = ability.targeting;
   if (t.side === 'self') return [actor];
   const side = t.side === 'enemy' ? opposite(actor.side) : actor.side;
-  const units = state.combatants.filter((c) => c.side === side && alive(c));
+  const all = state.combatants.filter((c) => c.side === side && alive(c));
+  // Request #71: Taunt — single and column attacks must aim at a taunting foe.
+  const taunting =
+    t.side === 'enemy' && t.area !== 'all' ? all.filter((c) => hasStatus(c, 'taunt')) : [];
+  const units = taunting.length ? taunting : all;
+  if (taunting.length) return units;
   if (t.reach === 'any') return units;
   if (t.reach === 'first' || t.reach === 'first2') {
     const wanted = t.reach === 'first' ? 1 : 2;
@@ -763,6 +797,29 @@ function explode(state: CombatState, u: Combatant, damage: number): void {
   knockDown(state, u);
 }
 
+/**
+ * Request #71: boss and mini-boss phases. Called after every action and at
+ * the start of each round; each phase triggers once, in order.
+ */
+function checkPhases(state: CombatState): void {
+  for (const u of state.combatants) {
+    if (u.kind !== 'enemy' || u.downed || !u.enemyDefId) continue;
+    const phases = getEnemy(u.enemyDefId)?.phases;
+    if (!phases) continue;
+    let done = u.phase ?? 0;
+    while (done < phases.length && (u.hp / u.maxHp) * 100 <= phases[done]!.atHpPct) {
+      const ph = phases[done]!;
+      done += 1;
+      u.phase = done;
+      pushLog(state, { t: 'phase', actorId: u.id, text: ph.text });
+      if (ph.abilities) u.abilityIds = [...ph.abilities];
+      for (const st of ph.statuses ?? []) addStatus(state, u, st.id, st.turns ?? 99, st.value);
+      if (ph.healPct) heal(state, u, (u.maxHp * ph.healPct) / 100);
+      for (const e of ph.summon ?? []) summon(state, u, e);
+    }
+  }
+}
+
 /** Summon (request #44): a new enemy in the first empty position of the actor's side. */
 function summon(state: CombatState, actor: Combatant, enemyId: string): void {
   const taken = new Set(
@@ -1197,6 +1254,7 @@ function resolvePlanned(state: CombatState, rng: Rng, p: PlannedActionView): voi
   );
   if (!targets.length) return skip(state, actor.id, ability.id, 'no target');
   applyAbility(state, rng, actor, ability, targets);
+  checkPhases(state);
 }
 
 function resolveIntent(state: CombatState, rng: Rng, actorId: string, intent: IntentView): void {
@@ -1207,6 +1265,7 @@ function resolveIntent(state: CombatState, rng: Rng, actorId: string, intent: In
   const targets = currentTargets(state, enemy, a, intent.column, intent.targetIds, rng);
   if (!targets.length) return skip(state, enemy.id, a.id, 'no target');
   applyAbility(state, rng, enemy, a, targets);
+  checkPhases(state);
 }
 
 /** Change position (D27): costs the actor; swapping with another living player costs them too. */

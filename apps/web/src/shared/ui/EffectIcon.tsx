@@ -127,6 +127,11 @@ const ICONS: Record<EffectKind, { color: string; path: string; label: string }> 
     label: 'Impaled',
     path: 'M3 21 15 9M15 9l6-6M15 9l-2-5M15 9l5 2M8 12l4 4',
   },
+  taunt: {
+    color: '#e47a62',
+    label: 'Taunting',
+    path: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Zm0 5v5m0 3v.5',
+  },
   fuse: {
     color: '#ff5d5d',
     label: 'Fuse',

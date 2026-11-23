@@ -50,6 +50,8 @@ export const STATUS_IDS = [
   'chill',
   'blind',
   'impale',
+  // request #71: foes must attack this unit first
+  'taunt',
 ] as const;
 export type StatusId = (typeof STATUS_IDS)[number];
 
@@ -112,6 +114,10 @@ export interface CombatantView {
   isBoss: boolean;
   /** Enemies only (request #67): family for "strong against" bonuses. */
   family?: EnemyFamily;
+  /** Request #71: Champion affixes of this enemy (ids from CHAMPION_AFFIXES). */
+  affixes?: string[];
+  /** Request #71: how many boss/mini-boss phases it has gone through. */
+  phase?: number;
   abilityIds: string[];
   stats: DerivedStatsDto;
   /** Player characters: combat bonuses from gear effects (request #37). */
@@ -142,7 +148,9 @@ export type CombatLogEntry =
   /** A unit called another into the fight (request #44). */
   | { t: 'summon'; actorId: string; unitId: string }
   /** A unit's fuse ran out: it explodes, hurting the other side (request #44). */
-  | { t: 'explode'; actorId: string };
+  | { t: 'explode'; actorId: string }
+  /** A boss or mini-boss enters a new phase (request #71). */
+  | { t: 'phase'; actorId: string; text: string };
 
 /**
  * Round structure (combat spec, request #31): `planning` = players choose
