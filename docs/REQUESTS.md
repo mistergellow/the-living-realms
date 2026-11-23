@@ -1629,3 +1629,14 @@ item sai um bocado da moldura.
   incomum verde, raro azul, épico roxo, lendário laranja, mítico vermelho);
   a arte fica por cima da moldura e um pouco maior, como na referência.
 - Folhas originais em `art/source/`.
+
+### #74 — 2026-11-23 — Ícone no tooltip e ícones do tamanho certo
+
+**Pedido:** pôr o ícone da arma no tooltip, como na referência do cartão do item
+(D62); alguns ícones estavam demasiado grandes para o quadrado (a funda).
+**Resultado:** o tooltip de qualquer item mostra o seu ícone (moldura e cor da
+raridade) ao lado do nome. Os ícones passaram a partilhar uma tela do mesmo
+tamanho com a arte ao tamanho em que foi pintada na folha — já não são todos
+esticados até encher o quadrado; os grandes continuam a passar um pouco por
+cima da moldura. A folha de livros, máscaras, botas, cintos e capacetes chegou
+só na conversa (sem ficheiro): fica para quando for reenviada.
