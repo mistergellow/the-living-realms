@@ -18,13 +18,45 @@ const PAINTED = Object.fromEntries(
 /** Tools drawn with a weapon's icon. */
 const TOOL_ICON: Record<string, string> = { hunting_knife: 'dagger', axe: 'handaxe' };
 
+/** Stable pick from a list of variants for an item id (same item, same icon). */
+function variant(id: string, pool: number[]): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return pool[Math.abs(h) % pool.length]!;
+}
+
+/**
+ * Request #75: gear sheet variants (`<kind>_<n>.webp`, 7 each). Helmets and
+ * boots follow the armour weight: leather, chain/mixed, plate.
+ */
+const BY_WEIGHT: Record<'helm' | 'boots', Record<string, number[]>> = {
+  helm: { light: [5, 4], medium: [2, 3], heavy: [1, 6, 7] },
+  boots: { light: [1, 3], medium: [2, 4, 5], heavy: [6, 7] },
+};
+const ALL = [1, 2, 3, 4, 5, 6, 7];
+const SLOT_ART: Partial<Record<EquipSlot, 'helm' | 'boots' | 'belt' | 'mask'>> = {
+  head: 'helm',
+  feet: 'boots',
+  belt: 'belt',
+  face: 'mask',
+};
+
 /** The painted icon of an item, if there is one. */
 export function paintedIconFor(item: ItemDto): string | null {
   if (item.weapon) return PAINTED[item.weapon.type] ?? null;
   if (item.tool) return PAINTED[TOOL_ICON[item.tool.type] ?? ''] ?? null;
+  const def = getItemDef(item.defId);
   // Off-hands (shields…) have a weapon type but no weapon stats.
-  const type = getItemDef(item.defId)?.weaponType;
-  return type ? (PAINTED[type] ?? null) : null;
+  if (def?.weaponType) return PAINTED[def.weaponType] ?? null;
+  // Skill books.
+  if (def?.teaches) return PAINTED[`book_${variant(item.defId, ALL)}`] ?? null;
+  const kind = item.slots[0] ? SLOT_ART[item.slots[0]] : undefined;
+  if (!kind) return null;
+  const pool =
+    kind === 'helm' || kind === 'boots'
+      ? (BY_WEIGHT[kind][item.armorClass ?? 'medium'] ?? ALL)
+      : ALL;
+  return PAINTED[`${kind}_${variant(item.defId, pool)}`] ?? null;
 }
 
 const GLYPHS = {

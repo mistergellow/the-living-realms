@@ -290,6 +290,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A136 | Temas e inimigos (pedido #71)                                   | 5 temas: Hollow Breach e Crystal Nest (tier 1+), Crimson Cult (2+), Drowned Depths (3+), Rift Heart (4+); 23 inimigos novos com 4 mini-bosses e 4 bosses novos (o Warden ganhou fases); números provisórios afinados com `SIM=themes pnpm sim`                                                                                                                                                                                                                                                                                                             | `RIFT_THEMES`, `ENEMIES`                                                         |
 | A137 | Escala por tier (pedido #71)                                    | +45 % vida e +25 % dano por tier acima do 1 (era +25 % / +15 %)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `RIFT_TIER_RULES`                                                                |
 | A138 | Herói base (pedido #72)                                         | todos os jogadores usam o mesmo herói até haver arte de caras/cabelos e de armaduras; o editor de aparência saiu da criação (os dados ficam guardados); espada da arte para espadas, as outras armas ainda são desenhos SVG na mão                                                                                                                                                                                                                                                                                                                         | `CharacterAvatar.tsx`, `CharacterCreatePage.tsx`                                 |
+| A139 | Ícones por peso de armadura (pedido #75)                        | capacetes: leve 5/4, média 2/3, pesada 1/6/7; botas: leve 1/3, média 2/4/5, pesada 6/7 (números = ordem na folha)                                                                                                                                                                                                                                                                                                                                                                                                                                          | `BY_WEIGHT` (`ItemIcon.tsx`)                                                     |
 
 ---
 
@@ -1640,3 +1641,14 @@ tamanho com a arte ao tamanho em que foi pintada na folha — já não são todo
 esticados até encher o quadrado; os grandes continuam a passar um pouco por
 cima da moldura. A folha de livros, máscaras, botas, cintos e capacetes chegou
 só na conversa (sem ficheiro): fica para quando for reenviada.
+
+### #75 — 2026-11-23 — Ícones de livros, máscaras, botas, cintos e capacetes
+
+**Pedido:** mais ícones (folha com 7 livros, 7 máscaras, 7 botas, 7 cintos e 7
+capacetes).
+**Resultado:** folha recortada para `sheet/icons/<tipo>_<n>.webp` (book, mask,
+boots, belt, helm; 1–7). Livros de skill → livros; espaço da cara → máscaras;
+pés → botas; cinto → cintos; cabeça → capacetes. Cada item fica sempre com o
+mesmo ícone (escolhido pelo id); capacetes e botas seguem o peso da armadura
+(leve: couro; média: mista; pesada: placas). Valor provisório A139: estas
+correspondências por peso.
