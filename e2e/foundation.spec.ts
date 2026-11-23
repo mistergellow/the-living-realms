@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { hexDistance, REGIONS, riftSites, worldMapHexes } from '../packages/game-core/src/index.js';
+import { createDb } from '../packages/db/src/client.js';
 
 const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const PASSWORD = 'correct horse battery';
@@ -279,6 +280,38 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
   await expect(page.getByTestId('run-result')).toContainText('You fled the Rift');
   // Request #43: a lost Rift costs every equipped item 1–3% durability.
   await expect(page.getByTestId('run-result')).toContainText(/Training Sword: quality 9[789]/);
+});
+
+test('rooms without a fight never lock the run, on a phone too (request #70)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await register(page, `e2e-room-${unique()}@example.com`);
+  const name = randomName('Looter');
+  await createCharacter(page, name);
+  await travel(page, name, 'rift');
+  await page.goto('/rifts');
+  await page.getByRole('button', { name: 'Enter solo' }).click();
+  await expect(page.getByTestId('rift-doors')).toBeVisible();
+  // Make every first room a treasure room (the doors do not say what is behind them).
+  const runId = page.url().split('/').pop()!;
+  const { sql, close } = createDb(
+    process.env.TEST_DATABASE_URL ?? 'postgres://realms:realms@localhost:5432/living_realms_test',
+  );
+  const [row] = await sql`select state from rift_runs where id = ${runId}`;
+  const state = row!.state as { map: { nodes: Array<{ row: number; type: string }> } };
+  for (const n of state.map.nodes) if (n.row === 0) n.type = 'loot';
+  await sql`update rift_runs set state = ${JSON.stringify(state)}::jsonb where id = ${runId}`;
+  await close();
+  await page.reload();
+  await page.getByTestId('door').first().click();
+  const outcome = page.getByTestId('room-outcome');
+  await expect(outcome).toBeVisible();
+  // The window and its button sit inside the screen (they once rendered off it).
+  const box = (await page.getByRole('button', { name: 'Continue' }).boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByTestId('rift-doors')).toBeVisible();
+  await expect(outcome).toHaveCount(0);
 });
 
 test('friends + private lobby + group Rift with two players', async ({ browser }) => {

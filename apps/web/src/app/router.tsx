@@ -4,7 +4,7 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { CharacterCreatePage } from '../features/characters/CharacterCreatePage';
 import { CharacterSelectPage } from '../features/characters/CharacterSelectPage';
-import { CharacterSheetPage } from '../features/characters/CharacterSheetPage';
+import { CharacterSheetPage, HeroPage } from '../features/characters/CharacterSheetPage';
 import { PlayEntry } from '../features/characters/PlayEntry';
 import { WorldPage } from '../features/world/WorldPage';
 import { RiftsPage } from '../features/rifts/RiftsPage';
@@ -27,7 +27,8 @@ import { AdminPage } from '../features/admin/AdminPage';
  *   /                        front door: back into the game with the last character played
  *   /characters              account area: switch / create characters (secondary)
  *   /characters/new          character creation
- *   /characters/:id          character sheet (attributes, stats, equipment, abilities)
+ *   /characters/:id          character sheet of any of your characters (own screen)
+ *   /hero                    the sheet of the hero you are playing (in GameShell, request #70)
  *   /home                    the hex you are on: its scene, actions and hex chat (in GameShell)
  *   /world                   exploration map (in GameShell)
  *   /rifts                   Rift list, lobbies (in GameShell)
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
         element: <GameShell />,
         children: [
           { path: '/home', element: <HomePage /> },
+          { path: '/hero', element: <HeroPage /> },
           { path: '/world', element: <WorldPage /> },
           { path: '/rifts', element: <RiftsPage /> },
           { path: '/friends', element: <FriendsPage /> },

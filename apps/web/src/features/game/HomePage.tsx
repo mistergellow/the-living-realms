@@ -74,9 +74,6 @@ export function HomePage() {
         </section>
         <p className="place-desc">{place.description}</p>
 
-        <ActivityCard characterId={characterId} />
-        <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
-
         <nav className="place-actions" aria-label={`What to do in ${place.name}`}>
           {place.actions.map((a) => {
             const to = ACTION_TO[a.id];
@@ -108,6 +105,9 @@ export function HomePage() {
             );
           })}
         </nav>
+        {/* Below the actions: when these load they do not push anything down (request #70). */}
+        <ActivityCard characterId={characterId} />
+        <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
       </div>
 
       <HexChat hex={position} />
@@ -242,7 +242,7 @@ function NextStep({ characterId, atRift }: { characterId: string; atRift: boolea
       ? {
           title: `Spend your ${s.attributePoints} attribute points`,
           body: 'Make your hero stronger before the first fight. Might hits harder, Endurance keeps you standing.',
-          to: `/characters/${characterId}`,
+          to: '/hero',
           label: 'Open your hero',
         }
       : atRift

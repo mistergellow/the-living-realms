@@ -23,8 +23,12 @@ const STATUS_LABEL = {
   offline: 'Offline',
 } as const;
 
-/** How much the painted backdrop is darkened per screen (0 = as painted). */
-const DIM: Record<string, number> = { '/home': 0.45, '/world': 0.4 };
+/**
+ * How much the painted backdrop is darkened. One value for every page
+ * (request #70): a different value per page made the background pulse on
+ * every navigation.
+ */
+const DIM = 0.55;
 
 /**
  * The in-game frame shared by the hex screen, the world map, Rifts and Friends:
@@ -36,7 +40,6 @@ const DIM: Record<string, number> = { '/home': 0.45, '/world': 0.4 };
 export function GameShell() {
   const characterId = useActiveCharacter((s) => s.characterId);
   const clearCharacter = useActiveCharacter((s) => s.clear);
-  const location = useLocation();
   useWorldConnection(characterId);
   // Request #59: actions that spend AP (gathering, jobs, Rifts) refresh the
   // character; keep the header's AP in step with it right away.
@@ -60,7 +63,7 @@ export function GameShell() {
   if (status === 'unauthenticated') return <Navigate to="/login" replace />;
 
   return (
-    <Screen className="game" dim={DIM[location.pathname] ?? 0.62}>
+    <Screen className="game" dim={DIM}>
       <TopBar
         characterId={characterId}
         status={status}
@@ -128,7 +131,12 @@ function TopBar(props: {
   const navigate = useNavigate();
   return (
     <header className="game-top">
-      <Link className="profile-plate" to={`/characters/${props.characterId}`} title="Your hero">
+      <Link
+        className="profile-plate"
+        to={'/hero'}
+        title="Your hero"
+        aria-label={`Your hero: ${props.name ?? ''}`}
+      >
         {props.appearance && <CharacterToken appearance={props.appearance} size={44} />}
         <span className="profile-text">
           <span className="profile-name" data-testid="self-name">
@@ -207,7 +215,7 @@ function BottomNav({ characterId }: { characterId: string }) {
     testId?: string;
     also?: string[];
   }> = [
-    { to: `/characters/${characterId}`, label: 'Character', icon: 'hero' },
+    { to: '/hero', label: 'Character', icon: 'hero' },
     { to: '/world', label: 'World', icon: 'compass' },
     {
       to: '/home',
@@ -260,7 +268,17 @@ function ApPill() {
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
-  if (!ap) return null;
+  // Keep the pill's place while loading, so the top bar does not shift.
+  if (!ap)
+    return (
+      <div className="res-pill" aria-hidden>
+        <Icon name="bolt" />
+        <span className="res-text">
+          <strong>—</strong>
+          <small>Action points</small>
+        </span>
+      </div>
+    );
   const full = fullIn(ap);
   return (
     <div

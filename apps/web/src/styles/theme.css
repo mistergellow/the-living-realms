@@ -807,3 +807,109 @@
     display: none;
   }
 }
+
+/* ======================================================================
+ * Request #70 — calm screens: nothing drifts or jumps on its own
+ * ==================================================================== */
+/* The backdrop stays still (no drifting mist or clouds, no dim fade). */
+:root .scene-bg::before,
+:root .scene-bg::after,
+:root .landscape .ls-clouds {
+  animation: none;
+}
+:root .scene-dim {
+  transition: none;
+}
+/* A scrollbar that appears must not squeeze the page sideways. */
+:root .screen-body > .contain,
+:root .screen-body,
+:root .map-area {
+  scrollbar-gutter: stable;
+}
+/* Numbers that change (AP, gold, timers) keep their width. */
+:root .res-pill strong,
+:root .timer,
+:root .bar > em {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+/* The hero sheet inside the game frame: name and tabs on one line. */
+.sheet-tabs .sheet-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: var(--space-4);
+}
+.sheet-tabs .sheet-header h1 {
+  font-family: var(--font-title);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/*
+ * Request #70 — small screens. One rule for phones and narrow windows: the
+ * page scrolls once, top to bottom; boxes take their natural height (no small
+ * boxes with their own scrollbars inside a page).
+ */
+@media (max-width: 56.25em), (max-height: 47em) {
+  :root .screen-body > .contain {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  :root .screen-body > .contain > *,
+  :root .screen-body > .contain > * > * {
+    min-height: auto;
+    flex-shrink: 0;
+  }
+  :root .screen-body .panel,
+  :root .rifts-side .rift-sites-panel {
+    overflow: visible;
+    max-height: none;
+  }
+  :root .equip-grid,
+  :root .abilities-cols {
+    flex: none;
+    grid-template-rows: none;
+  }
+}
+@media (max-width: 56.25em) {
+  /* Professions: the crafts become a row of chips you swipe through. */
+  :root .professions {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  :root .prof-list {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--space-2);
+    scrollbar-width: none;
+  }
+  :root .prof-list > section {
+    display: flex;
+    gap: var(--space-1);
+    flex: none;
+  }
+  :root .prof-list .panel-title {
+    display: none;
+  }
+  :root .prof-list .prof-row {
+    width: auto;
+    min-width: 8.5rem;
+    border-color: #2c251e;
+  }
+
+  /* The hex screen: scene, actions and then the chat, in one scroll. */
+  :root .place {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  :root .place-main {
+    overflow: visible;
+  }
+  :root .hex-chat {
+    height: 20rem;
+  }
+}

@@ -154,7 +154,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - BD: `characters.appearance` (JSONB com `version`); ao mudar a forma, **criar nova versão** e manter `normalizeAppearance` a converter as antigas
 - Arte (SVG em camadas, provisória; estilo gótico ¾ desde o pedido #69, D127): `apps/web/src/features/avatar/CharacterAvatar.tsx` (camadas: cabelo de trás, pernas, tronco, braços, arma, cabeça, olhos, cabelo da frente; mão da arma em (97, 113), mão secundária em (23, 110) — as armas desenham-se nessas posições), `avatar.css` (animações idle), `weapon-art.ts` (arma desenhada por tipo de arma)
 - Inimigos: `apps/web/src/features/avatar/EnemyAvatar.tsx` (um desenho por `enemyDefId`) — **inimigo novo precisa de arte aqui**
-- Usos no DOM: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói), `rifts/CombatStage.tsx` (só sem WebGL)
+- Usos no DOM: `CharacterToken.tsx` (retrato), `AppearanceEditor.tsx` + `CharacterCreatePage.tsx` (editor), `CharacterSheetPage.tsx` (herói: `CharacterSheetPage` em `/characters/:id`, `HeroPage` em `/hero`), `rifts/CombatStage.tsx` (só sem WebGL)
 - Usos no canvas (PixiJS): `apps/web/src/features/render/avatar-textures.tsx` transforma as camadas em texturas (`part`: `base`/`weapon`/`head` + `eyesClosed`; âncoras usadas em `rifts/combat-scene.ts` → `UnitView`). **Camada nova** (ex.: equipamento) → acrescentar a `AvatarPart`, a `characterTextures` e ao `UnitView` (a mão secundária já é a camada `offhand`); retrato do mapa → `portraitTexture` (`world/map-scene.ts`)
 - Presença: `PresencePlayer.appearance` (`protocol.ts`)
 - Testes: `helpers.ts` (v1, compatibilidade), `server-kit/test/presence.test.ts`, `web/test/world-state.test.ts`, `e2e` (botões "Hair style …")
@@ -465,6 +465,9 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Estilos base: `styles/global.css`; por ecrã: `features/*/*.css`
 - Fontes: `@fontsource/grenze-gotisch` (títulos e nomes, `--font-title`), `@fontsource/alegreya` (texto), `@fontsource/alegreya-sc` (rótulos e botões, `--font-display`) em `apps/web/src/main.tsx`; no canvas: `FONT` em `rifts/combat-scene.ts` e `world/map-scene.ts`
 - Moldura de ecrã: `apps/web/src/shared/ui/Screen.tsx` (cenário, brasas, vinheta); cenário `shared/ui/Landscape.tsx` (`DeadTree` também usada em `game/LocationScene.tsx`); ícones: `shared/ui/Icon.tsx`
+- **Janela por cima de tudo (modal):** usar `shared/ui/Modal.tsx` (portal para o `<body>`, pedido #70) — nunca um `position: fixed` dentro de outra caixa
+- **Ecrãs pequenos (pedido #70):** em `theme.css`, ≤ 56.25em de largura ou ≤ 47em de altura a página rola uma vez e as caixas ficam com a altura natural; não criar caixas com scroll próprio nesses tamanhos
+- **Sem saltos (pedido #70):** um só `DIM` no `GameShell`; fundo parado; o que chega depois de carregar vai por baixo do que já está; teste e2e "rooms without a fight never lock the run"
 - **Página nova dentro do jogo:** `<div className="screen-body"><div className="contain stack">` + `<PageHeader title lead actions />` (`shared/ui/PageHeader.tsx`: título + uma frase a explicar o sítio)
 - **Ecrã novo fora do jogo:** envolver em `<Screen>` com `<header className="topbar">` e `<main className="screen-body">`
 - Avatares em `rem` no DOM; no canvas usar `inSvg` (píxeis exatos) — ver `render/avatar-textures.tsx`
@@ -475,7 +478,7 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 
 - Layout: `apps/web/src/features/game/GameShell.tsx` (ligação ao mundo `useWorldConnection`, avisos "Playing elsewhere"/"Entering the world", `TopBar`, `BottomNav`), estilos em `features/game/game.css`
 - Hub: `features/game/HomePage.tsx` (cartão de atividade, menus laterais, losangos, faixa da Crónica)
-- Rotas dentro do layout: `/home`, `/world`, `/rifts`, `/friends`, `/guild`, `/professions`, `/city/:tab`, `/world-boss` (`app/router.tsx`); entrar no jogo vai para `/home` (`CharacterCreatePage`, `CharacterSelectPage`, `CharacterSheetPage`)
+- Rotas dentro do layout: `/home`, `/hero` (ficha do herói ativo, `HeroPage`, pedido #70), `/world`, `/rifts`, `/friends`, `/guild`, `/professions`, `/city/:tab`, `/world-boss` (`app/router.tsx`); entrar no jogo vai para `/home` (`CharacterCreatePage`, `CharacterSelectPage`, `CharacterSheetPage`)
 - **Navegação (pedido #69, A133):** `BottomNav` = Character · World · Here · Crafts · Allies (`also` marca as rotas que acendem cada entrada); Amigos/Guilda em separadores `social/AlliesTabs.tsx` (testids `friends-link` na barra, `guild-link` no separador)
 - Recursos do topo com rótulo (`.res-text`); guia de principiante `NextStep` em `HomePage.tsx` (A134)
 - Cenário: `shared/ui/Landscape.tsx` (placeholder) via `Screen`/`SceneBackground` (`dim` por ecrã em `DIM` no `GameShell`)
