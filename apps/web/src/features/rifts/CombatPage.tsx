@@ -373,6 +373,7 @@ export function CombatScreen({
               </div>
               <AbilityBar
                 abilityIds={me.abilityIds}
+                levels={me.abilityLevels}
                 focus={me.focus - reserved.focus}
                 mana={me.mana - reserved.mana}
                 selected={selected}

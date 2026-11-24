@@ -518,6 +518,8 @@ export class CharacterSheetService {
           .filter((s) => skillExtraTurns(s.level) > 0)
           .map((s) => [s.id, skillExtraTurns(s.level)]),
       ),
+      // Request #80: the level of each prepared skill (its icon colour).
+      abilityLevels: Object.fromEntries(leveled.map((s) => [s.id, s.level])),
     };
   }
 

@@ -69,6 +69,8 @@ export interface PartyMemberInput {
   abilityMultipliers?: Record<string, number>;
   /** Skill levels (request #53): extra status turns per ability id. */
   abilityExtraTurns?: Record<string, number>;
+  /** Request #80: skill levels, for the icon colour. */
+  abilityLevels?: Record<string, number>;
   hp: number;
   mana: number;
   slot: number;
@@ -129,6 +131,7 @@ export function partyCombatant(p: PartyMemberInput, side: Combatant['side'] = 'p
     power: 1,
     abilityMultipliers: p.abilityMultipliers ?? {},
     abilityExtraTurns: p.abilityExtraTurns ?? {},
+    ...(p.abilityLevels ? { abilityLevels: p.abilityLevels } : {}),
     intents: [],
     downed: p.hp <= 0,
     isBoss: false,

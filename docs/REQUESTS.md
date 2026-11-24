@@ -293,6 +293,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A139 | Ícones por peso de armadura (pedido #75)                        | capacetes: leve 5/4, média 2/3, pesada 1/6/7; botas: leve 1/3, média 2/4/5, pesada 6/7 (números = ordem na folha)                                                                                                                                                                                                                                                                                                                                                                                                                                          | `BY_WEIGHT` (`ItemIcon.tsx`)                                                     |
 | A140 | Brilho e faíscas das armas (pedido #76)                         | a partir de +3; faíscas ~3/s (+3) a ~22/s (+10); cor +3–5 dourado, +6–8 azul-aço, +9–10 vermelho                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `UPGRADE_GLOW`, `upgradeColor` (`combat-scene.ts`)                               |
 | A141 | Raridade dos materiais pelo grau (pedido #78)                   | Poor → Common, Common → Uncommon, Fine → Rare, Superior → Epic, Exceptional → Legendary                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `GRADE_RARITY` (`gathering.ts`)                                                  |
+| A142 | Cor do fundo dos skills pelo nível (pedido #80)                 | 1–3 Common, 4–6 Uncommon, 7–10 Rare, M1–M5 Epic, M6–M10 Legendary, P Mythic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `SKILL_LEVEL_RARITY` (`skills.ts`)                                               |
 
 ---
 
@@ -1713,3 +1714,29 @@ raridade, e portanto o fundo do ícone muda; sem a bolinha no canto.
 - Grau → raridade (provisório A141): o fundo do ícone e a cor do nome seguem o
   grau. A bolinha do canto saiu; o grau continua escrito no tooltip (agora com a
   cor da raridade).
+
+### #79 — 2026-11-24 — Ícones dos skills, poderes e ataques das armas por pasta
+
+**Pedido:** o mesmo sistema de pastas para os ícones dos skills, poderes e
+ataques das armas; os ícones dos ataques das armas podem ficar na pasta da arma.
+Enviou uma folha grande de ícones (só na conversa, sem ficheiro).
+**Resultado:**
+
+- Ataques e poderes das armas: `weapons/<tipo>/_ability_icon_<habilidade>.png`
+  (ex.: `weapons/sword/_ability_icon_slash.png` e `_ability_icon_cleave.png`).
+  Cada `weapon.ts` diz os dois nomes. Escudo e talismã: `README.md` na pasta.
+- Skills: uma pasta por skill, `packages/game-core/src/content/skills/<id>/`,
+  com `skill.ts` (custos, alvos, efeitos, requisitos — iguais aos de antes) e o
+  ícone `_skill_icon_<id>.png`. `skills/index.ts` lista-os por atributo.
+- Habilidades sem PNG mantêm o desenho simples; basta pôr o PNG para aparecer.
+- A folha de ícones não chegou como ficheiro: fica para quando for reenviada
+  (e para escolher que ícone vai para cada habilidade).
+
+### #80 — 2026-11-24 — Fundo dos skills com a cor do nível
+
+**Pedido:** os spells também têm um fundo que muda de cor com o nível do spell.
+**Resultado:** o ícone de um skill assenta no mesmo fundo pintado dos itens,
+tingido com as cores de raridade pelo nível (provisório A142), com um contorno
+da mesma cor. Aparece na ficha (lista e espaços preparados) e na barra de
+combate (o combate recebe agora o nível de cada skill, `abilityLevels`). Os
+ataques e poderes das armas não têm nível e mantêm a cor do tipo de ação.

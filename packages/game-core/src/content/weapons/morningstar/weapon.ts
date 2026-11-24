@@ -6,6 +6,8 @@ import { defineWeapon } from '../define.js';
  * the hero holds it. The pictures sit next to this file:
  *   _weapon_icon_morningstar.png  item icon, on the same canvas as the item frame
  *   _weapon_hand_morningstar.png  the weapon in the hero's hand
+ *   _ability_icon_spiked_blow.png  icon of its basic attack (spiked_blow, request #79)
+ *   _ability_icon_flail_spin.png  icon of its power (flail_spin)
  * The basic attack's own numbers live with the abilities (`spiked_blow`).
  */
 export default defineWeapon({

@@ -3,6 +3,7 @@ import {
   COMBAT_RULES,
   markFactor,
   SKILL_RULES,
+  skillLevelRarity,
   booksToReach,
   readChance,
   SKILLS,
@@ -87,5 +88,23 @@ describe('skill levels (request #53)', () => {
     expect(readChance(1)).toBe(100);
     for (let l = 3; l <= 21; l++) expect(readChance(l)).toBeLessThanOrEqual(readChance(l - 1));
     expect(readChance(21)).toBe(SKILL_RULES.readChanceMin);
+  });
+});
+
+describe('skill level colours (request #80)', () => {
+  it('a higher level is a rarer colour', () => {
+    expect([1, 3, 4, 6, 7, 10, 11, 15, 16, 20, 21].map(skillLevelRarity)).toEqual([
+      'common',
+      'common',
+      'uncommon',
+      'uncommon',
+      'rare',
+      'rare',
+      'epic',
+      'epic',
+      'legendary',
+      'legendary',
+      'mythic',
+    ]);
   });
 });

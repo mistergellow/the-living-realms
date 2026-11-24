@@ -581,6 +581,15 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Item novo:** copiar uma pasta, mudar o `id`/nome dos ficheiros e acrescentar ao `index.ts` do grupo
 - Testes: `game-core/test/gathering.test.ts` (pastas e raridade)
 
+## Ícones e pastas das habilidades (pedido #79)
+
+- Ataques/poderes das armas: `content/weapons/<tipo>/_ability_icon_<id>.png` (nomes listados em cada `weapon.ts`; escudo/talismã em `README.md`)
+- Skills: `content/skills/<id>/skill.ts` + `_skill_icon_<id>.png`; `skills/index.ts` (ordem por atributo), `skills/define.ts` (`defineSkill`, alvos comuns); `skills.ts` reexporta como `SKILLS`
+- Cliente: `ABILITY_ICON` (`apps/web/src/features/items/art.ts`) → `AbilityIcon.tsx` (imagem se houver, senão o desenho); CSS `.ability-icon.painted` (`global.css`)
+- **Skill novo:** copiar uma pasta de `skills/`, mudar o id e acrescentar a `skills/index.ts` (+ livro e loot automáticos via `SKILLS`)
+- Testes: `game-core/test/content-folders.test.ts` (pastas e nomes dos ícones)
+- **Cor pelo nível (pedido #80):** `SKILL_LEVEL_RARITY`, `skillLevelRarity` (`skills.ts`) → `AbilityIcon` (`level`, `data-rarity`; CSS `.ability-icon[data-rarity]` em `theme.css`); nível na ficha: `AbilityDto.level` (`AbilitiesTab.tsx`); no combate: `abilityLevels` em `combatProfile` (`sheet.service.ts`) → `rifts.service.ts` → `RunMember` (`rift/run.ts`) → `PartyMemberInput`/`partyCombatant` (`combat/state.ts`) → `CombatantView.abilityLevels` (`shared/combat.ts`) → `AbilityBar` (`levels`, `CombatPage.tsx`); teste em `skill-levels.test.ts`
+
 ## Loot do Rift (D55)
 
 - Itens encontrados (Loot/Secret/eventos): `RunState.grants` (`rift/run.ts`) → entregues só na vitória, a quem não saiu: `finish()` (`rifts.service.ts`), juntos com os drops do boss em `RunRewardsDto.items`
