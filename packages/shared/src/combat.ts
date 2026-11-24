@@ -75,6 +75,16 @@ export interface IntentView {
   column: CombatColumn | null;
 }
 
+/**
+ * Request #76: what a player holds, for the art — weapon types of the main and
+ * off hand, and the main weapon's upgrade (+3 … +10 glow and give off sparks).
+ */
+export interface WeaponLook {
+  weapon: string | null;
+  offhand: string | null;
+  upgrade: number;
+}
+
 export interface CombatantView {
   id: string;
   side: CombatSide;
@@ -118,6 +128,8 @@ export interface CombatantView {
   affixes?: string[];
   /** Request #71: how many boss/mini-boss phases it has gone through. */
   phase?: number;
+  /** Request #76: players only — what they hold (absent in older runs). */
+  look?: WeaponLook;
   abilityIds: string[];
   stats: DerivedStatsDto;
   /** Player characters: combat bonuses from gear effects (request #37). */

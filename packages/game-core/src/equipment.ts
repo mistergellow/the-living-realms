@@ -181,6 +181,22 @@ export function abilityMultipliers(items: OwnedItem[]): Record<string, number> {
   return out;
 }
 
+/** Request #76: the weapon types a character holds and the main weapon's upgrade. */
+export function weaponLook(items: OwnedItem[]): {
+  weapon: string | null;
+  offhand: string | null;
+  upgrade: number;
+} {
+  const eq = activeEquipment(items);
+  const main = eq.find((i) => i.equippedSlot === 'mainHand');
+  const off = eq.find((i) => i.equippedSlot === 'offHand');
+  return {
+    weapon: main?.def.weaponType ?? null,
+    offhand: off?.def.weaponType ?? null,
+    upgrade: main?.upgradeLevel ?? 0,
+  };
+}
+
 export function emptyEquipment<T>(): Record<EquipSlot, T | null> {
   return Object.fromEntries(EQUIP_SLOTS.map((s) => [s, null])) as Record<EquipSlot, T | null>;
 }

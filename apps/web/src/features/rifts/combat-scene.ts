@@ -11,7 +11,7 @@ import {
   type Ticker,
 } from 'pixi.js';
 import { artFromAbilities } from '../avatar/weapon-art';
-import { RIG } from '../avatar/CharacterAvatar';
+import { RIG, weaponTip, type OffhandArt, type WeaponArt } from '../avatar/CharacterAvatar';
 import {
   characterTextures,
   enemyTexture,
@@ -75,6 +75,14 @@ const STATUS_COLORS: Record<StatusId, number> = {
   taunt: 0xe47a62,
 };
 
+/** Request #76: from which upgrade weapons glow, and their colour by band. */
+const UPGRADE_GLOW = { from: 3 } as const;
+function upgradeColor(level: number): number {
+  if (level >= 9) return 0xff5a3c; // +9 … +10: blood-fire
+  if (level >= 6) return 0x9fd4ff; // +6 … +8: cold steel-blue
+  return 0xf0c06a; // +3 … +5: warm gold
+}
+
 const FONT = '"Alegreya SC", "Alegreya", Georgia, serif';
 
 const easeOut = (p: number) => 1 - (1 - p) ** 3;
@@ -132,6 +140,19 @@ class UnitView {
   private whole?: Sprite;
   private headTex?: Texture;
   private blinkTex?: Texture;
+  /** Request #76: upgraded weapons (+3 … +10) glow and give off sparks. */
+  private readonly sparks = new Container();
+  private readonly sparkList: Array<{
+    s: Sprite;
+    vx: number;
+    vy: number;
+    life: number;
+    age: number;
+  }> = [];
+  private sparkDebt = 0;
+  private weaponGlow?: Sprite;
+  private tip: { x: number; y: number } | null = null;
+  private upgrade = 0;
 
   view: CombatantView;
   /** Displayed HP/downed (follows the animation, then the server). */
@@ -235,10 +256,14 @@ class UnitView {
     const k = 1 / TEX_SCALE;
     try {
       if (this.view.kind === 'player') {
-        const tex: CharacterTextures = await characterTextures(
-          this.view.appearance,
-          artFromAbilities(this.view.abilityIds),
-        );
+        // Request #76: the weapons the player holds (older runs: guessed from abilities).
+        const look = this.view.look;
+        const art = look
+          ? { weapon: look.weapon as WeaponArt, offhand: look.offhand as OffhandArt }
+          : artFromAbilities(this.view.abilityIds);
+        const tex: CharacterTextures = await characterTextures(this.view.appearance, art);
+        this.upgrade = look?.upgrade ?? 0;
+        this.tip = weaponTip(art.weapon);
         if (this.root.destroyed) return;
         // Request #72: layers of the articulated base hero, each turning at its joint.
         const at = (sp: Sprite, p: { x: number; y: number }) => {
@@ -258,6 +283,13 @@ class UnitView {
         for (const s of [this.base, this.weapon, this.offhand, this.head]) s.scale.set(k);
         // The back arm stands behind the body.
         this.figure.addChild(this.offhand, this.base, this.weapon, this.head);
+        if (this.upgrade >= UPGRADE_GLOW.from && this.tip) {
+          this.weaponGlow = new Sprite(glowTexture());
+          this.weaponGlow.anchor.set(0.5);
+          this.weaponGlow.blendMode = 'add';
+          this.weaponGlow.tint = upgradeColor(this.upgrade);
+          this.figure.addChild(this.weaponGlow, this.sparks);
+        }
       } else {
         const tex = await enemyTexture(this.view.enemyDefId);
         if (this.root.destroyed) return;
@@ -311,6 +343,7 @@ class UnitView {
       this.weapon!.y = RIG.frontShoulder.y - 150 - lift * 0.8;
       this.offhand!.rotation = (-2.5 * Math.PI * breathe) / 180;
       this.offhand!.y = RIG.backShoulder.y - 150 - lift * 0.8;
+      this.renderSparks(t, dt, reduced);
       // Blink.
       if (!reduced && this.headTex && this.blinkTex) {
         if (t >= this.blinkAt) {
@@ -360,6 +393,72 @@ class UnitView {
     }
 
     this.renderPlate(t, dt);
+  }
+
+  /**
+   * Request #76: weapons from +3 glow along the blade and give off sparks;
+   * the higher the upgrade, the more sparks and the brighter (colour by band).
+   */
+  private renderSparks(t: number, dt: number, reduced: boolean) {
+    if (!this.weaponGlow || !this.tip || !this.weapon) return;
+    // The weapon turns with the front arm at the shoulder: follow it.
+    const sh = RIG.frontShoulder;
+    const rot = this.weapon.rotation;
+    const lift = this.weapon.y - (sh.y - 150);
+    const place = (p: { x: number; y: number }) => {
+      const dx = p.x - sh.x;
+      const dy = p.y - sh.y;
+      return {
+        x: sh.x - 60 + dx * Math.cos(rot) - dy * Math.sin(rot),
+        y: sh.y - 150 + lift + dx * Math.sin(rot) + dy * Math.cos(rot),
+      };
+    };
+    const hand = place(RIG.hand);
+    const tip = place(this.tip);
+    const level = Math.min(10, this.upgrade);
+    const k = (level - UPGRADE_GLOW.from + 1) / (10 - UPGRADE_GLOW.from + 1); // 0..1
+    const visible = this.fall === 0 && !this.shownDowned;
+    // Glow: a soft light stretched along the weapon, breathing.
+    const mid = { x: (hand.x + tip.x) / 2, y: (hand.y + tip.y) / 2 };
+    const len = Math.hypot(tip.x - hand.x, tip.y - hand.y);
+    this.weaponGlow.position.set(mid.x, mid.y);
+    this.weaponGlow.rotation = Math.atan2(tip.y - hand.y, tip.x - hand.x);
+    this.weaponGlow.scale.set((len * 1.5) / 128, (10 + 10 * k) / 128);
+    this.weaponGlow.alpha = visible ? (0.4 + 0.4 * k) * (0.8 + 0.2 * Math.sin(t / 260)) : 0;
+    if (reduced || !visible) return;
+    // Sparks: from about 3 a second at +3 up to about 22 at +10.
+    this.sparkDebt += (dt / 1000) * (3 + 19 * k);
+    while (this.sparkDebt >= 1) {
+      this.sparkDebt -= 1;
+      const f = Math.random();
+      const s = new Sprite(glowTexture());
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      s.tint = Math.random() < 0.25 ? 0xffffff : upgradeColor(level);
+      s.position.set(hand.x + (tip.x - hand.x) * f, hand.y + (tip.y - hand.y) * f);
+      s.scale.set((1.2 + Math.random() * (1.5 + 2 * k)) / 128);
+      this.sparks.addChild(s);
+      this.sparkList.push({
+        s,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -6 - Math.random() * (10 + 14 * k),
+        life: 500 + Math.random() * 700,
+        age: 0,
+      });
+    }
+    for (let i = this.sparkList.length - 1; i >= 0; i--) {
+      const p = this.sparkList[i]!;
+      p.age += dt;
+      const life = p.age / p.life;
+      if (life >= 1) {
+        p.s.destroy();
+        this.sparkList.splice(i, 1);
+        continue;
+      }
+      p.s.x += (p.vx * dt) / 1000;
+      p.s.y += (p.vy * dt) / 1000;
+      p.s.alpha = Math.sin(Math.PI * life);
+    }
   }
 
   private renderPlate(t: number, dt: number) {

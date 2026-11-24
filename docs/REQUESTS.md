@@ -291,6 +291,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A137 | Escala por tier (pedido #71)                                    | +45 % vida e +25 % dano por tier acima do 1 (era +25 % / +15 %)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `RIFT_TIER_RULES`                                                                |
 | A138 | Herói base (pedido #72)                                         | todos os jogadores usam o mesmo herói até haver arte de caras/cabelos e de armaduras; o editor de aparência saiu da criação (os dados ficam guardados); espada da arte para espadas, as outras armas ainda são desenhos SVG na mão                                                                                                                                                                                                                                                                                                                         | `CharacterAvatar.tsx`, `CharacterCreatePage.tsx`                                 |
 | A139 | Ícones por peso de armadura (pedido #75)                        | capacetes: leve 5/4, média 2/3, pesada 1/6/7; botas: leve 1/3, média 2/4/5, pesada 6/7 (números = ordem na folha)                                                                                                                                                                                                                                                                                                                                                                                                                                          | `BY_WEIGHT` (`ItemIcon.tsx`)                                                     |
+| A140 | Brilho e faíscas das armas (pedido #76)                         | a partir de +3; faíscas ~3/s (+3) a ~22/s (+10); cor +3–5 dourado, +6–8 azul-aço, +9–10 vermelho                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `UPGRADE_GLOW`, `upgradeColor` (`combat-scene.ts`)                               |
 
 ---
 
@@ -1652,3 +1653,23 @@ pés → botas; cinto → cintos; cabeça → capacetes. Cada item fica sempre c
 mesmo ícone (escolhido pelo id); capacetes e botas seguem o peso da armadura
 (leve: couro; média: mista; pesada: placas). Valor provisório A139: estas
 correspondências por peso.
+
+### #76 — 2026-11-24 — Armas na mão com a arte do dono e partículas de upgrade
+
+**Pedido:** as armas que o herói segura passam a ser as da imagem enviada; no
+PixiJS, armas de +3 a +10 com partículas e um brilho, mais partículas quanto
+maior o upgrade. No fim, commit para o main.
+**Resultado:**
+
+- Folha de armas recortada (22 armas) em `apps/web/src/features/avatar/weapons/`;
+  para cada uma calculou-se o eixo e o ponto do punho (`weapon-poses.ts`, gerado).
+  Poses: lâminas, machados, maças e martelos para baixo (as de duas mãos tocam no
+  chão); lanças, cajado e foice de pé; arco na vertical; besta na horizontal;
+  tomo, chakram e funda na mão. Armas de uma mão 25 % maiores. Mão secundária:
+  escudo pintado, adaga e machadinha da folha; talismã ainda desenhado.
+- O combate sabe o que cada herói segura (`WeaponLook`: arma, mão secundária e
+  upgrade — `weaponLook` no servidor → corrida → combate).
+- PixiJS: de +3 a arma brilha ao longo da lâmina e solta faíscas (cerca de 3 por
+  segundo em +3 até 22 em +10); cor por faixa: +3…+5 dourado, +6…+8 azul-aço,
+  +9…+10 vermelho-fogo (provisório A140). Respeita "reduzir movimento".
+- Teste do servidor tornado estável (o boss a 1 HP já não dispara fases).

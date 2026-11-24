@@ -11,6 +11,7 @@ import {
 import { randomInt } from 'node:crypto';
 import {
   abilityMultipliers,
+  weaponLook,
   asBaseAttributes,
   availableAbilities,
   checkRequirements,
@@ -500,6 +501,8 @@ export class CharacterSheetService {
       baseAttributes: baseAttributesOf(c),
       ...computed,
       abilityIds: availableAbilities(owned, preparedIds(skills)).map((a) => a.ability.id),
+      // Request #76: what the character holds, for the combat art.
+      look: weaponLook(owned),
       // Request #50/#53: skill levels raise their numbers like weapon upgrades
       // do, and from M1 their statuses last longer.
       abilityMultipliers: {
