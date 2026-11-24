@@ -75,7 +75,7 @@ function AbilityCard(props: { a: AbilityDto; note?: string; prepared?: boolean; 
   return (
     <div className="ability-card" data-prepared={props.prepared} data-testid={props.testId}>
       <span className="ability-card-icon">
-        <AbilityIcon abilityId={a.id} />
+        <AbilityIcon abilityId={a.id} level={a.level} />
       </span>
       <div className="ability-card-body">
         <div className="row" style={{ gap: '0.4rem' }}>
@@ -193,7 +193,7 @@ export function AbilitiesTab({
                     {...tip.props(a)}
                     onClick={dnd.click(() => unprepare(a.id))}
                   >
-                    <AbilityIcon abilityId={a.id} />
+                    <AbilityIcon abilityId={a.id} level={a.level} />
                   </button>
                 ) : (
                   <span className="loadout-empty">{n + 1}</span>

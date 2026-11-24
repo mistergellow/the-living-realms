@@ -118,6 +118,8 @@ export interface CombatantView {
   abilityMultipliers: Record<string, number>;
   /** Skill levels (request #53): extra status turns per ability id. */
   abilityExtraTurns?: Record<string, number>;
+  /** Request #80: skill level (1 … 21) per ability id, for the icon colour. */
+  abilityLevels?: Record<string, number>;
   /** Enemies only: planned actions for this round (D36). */
   intents: IntentView[];
   downed: boolean;

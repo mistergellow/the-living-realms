@@ -1,9 +1,11 @@
-import { getAbility } from '@realms/game-core';
+import { getAbility, skillLevelRarity } from '@realms/game-core';
+import { ABILITY_ICON } from '../items/art';
 
 /*
- * PLACEHOLDER ability icons (request #30): a coloured tile per kind of action
- * with a simple white glyph. Real icon art can replace `GLYPH_BY_ABILITY`
- * entries (or the whole tile) later without touching the action bar.
+ * Ability icons. Request #79: painted icons come from the content folders
+ * (`_ability_icon_<id>.png` in a weapon's folder, `_skill_icon_<id>.png` in a
+ * skill's folder). Abilities without one keep the PLACEHOLDER (request #30):
+ * a coloured tile per kind of action with a simple white glyph.
  */
 
 export type AbilitySchool =
@@ -124,12 +126,36 @@ const FALLBACK: Record<AbilitySchool, Glyph> = {
   utility: 'swap',
 };
 
-export function AbilityIcon({ abilityId, className }: { abilityId: string; className?: string }) {
+export function AbilityIcon({
+  abilityId,
+  className,
+  level,
+}: {
+  abilityId: string;
+  className?: string;
+  /** Request #80: a skill's level colours its background (rarity colours). */
+  level?: number;
+}) {
   const school = abilitySchool(abilityId);
+  const rarity = level ? skillLevelRarity(level) : undefined;
+  const painted = ABILITY_ICON[abilityId];
+  if (painted)
+    return (
+      <span
+        className={['ability-icon', 'painted', `school-${school}`, className]
+          .filter(Boolean)
+          .join(' ')}
+        data-rarity={rarity}
+        aria-hidden
+      >
+        <img src={painted} alt="" draggable={false} />
+      </span>
+    );
   const glyph = GLYPH_BY_ABILITY[abilityId] ?? FALLBACK[school];
   return (
     <span
       className={['ability-icon', `school-${school}`, className].filter(Boolean).join(' ')}
+      data-rarity={rarity}
       aria-hidden
     >
       <svg

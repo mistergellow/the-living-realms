@@ -6,6 +6,8 @@ import { defineWeapon } from '../define.js';
  * the hero holds it. The pictures sit next to this file:
  *   _weapon_icon_chakram.png  item icon, on the same canvas as the item frame
  *   _weapon_hand_chakram.png  the weapon in the hero's hand
+ *   _ability_icon_chakram_throw.png  icon of its basic attack (chakram_throw, request #79)
+ *   _ability_icon_ricochet.png  icon of its power (ricochet)
  * The basic attack's own numbers live with the abilities (`chakram_throw`).
  */
 export default defineWeapon({

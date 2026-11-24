@@ -6,6 +6,8 @@ import { AbilityIcon, abilitySchool } from './AbilityIcon';
 
 interface AbilityBarProps {
   abilityIds: string[];
+  /** Request #80: skill levels (icon colour). */
+  levels?: Record<string, number>;
   focus: number;
   mana: number;
   selected: string | null;
@@ -56,6 +58,7 @@ export function AbilityBar(props: AbilityBarProps) {
         <AbilitySlot
           key={id}
           abilityId={id}
+          level={props.levels?.[id]}
           hotkey={i < 9 ? String(i + 1) : null}
           affordable={
             (getAbility(id)?.focusCost ?? 99) <= props.focus &&
@@ -73,6 +76,7 @@ export function AbilityBar(props: AbilityBarProps) {
 
 function AbilitySlot(props: {
   abilityId: string;
+  level: number | undefined;
   hotkey: string | null;
   affordable: boolean;
   selected: boolean;
@@ -101,7 +105,7 @@ function AbilitySlot(props: {
         onClick={props.onPick}
       >
         <span className="slot-frame">
-          <AbilityIcon abilityId={a.id} />
+          <AbilityIcon abilityId={a.id} level={props.level} />
           {props.hotkey && <kbd className="slot-key">{props.hotkey}</kbd>}
           <span className="slot-focus" aria-hidden>
             {a.focusCost}

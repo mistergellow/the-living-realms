@@ -97,6 +97,8 @@ export interface RunMember {
   abilityMultipliers: Record<string, number>;
   /** Skill levels (request #53); absent in runs saved before it. */
   abilityExtraTurns?: Record<string, number>;
+  /** Request #80: skill levels, for the icon colour. */
+  abilityLevels?: Record<string, number>;
   /** Gear effects (request #37); missing on runs saved before it. */
   gear?: GearCombatEffects;
   /** Request #76: what the player holds (art only); missing on older runs. */
@@ -470,6 +472,7 @@ function toPartyInput(m: RunMember): PartyMemberInput {
     abilityIds: m.abilityIds,
     abilityMultipliers: m.abilityMultipliers,
     abilityExtraTurns: m.abilityExtraTurns ?? {},
+    ...(m.abilityLevels ? { abilityLevels: m.abilityLevels } : {}),
     gear: m.gear,
     ...(m.look ? { look: m.look } : {}),
     hp: m.left ? 0 : m.hp,

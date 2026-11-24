@@ -41,3 +41,33 @@ export const ITEM_ICON = byType(
   ),
   '_item_icon_',
 );
+
+/**
+ * Request #79: ability icons, keyed by ability id. Weapon attacks and powers sit
+ * in their weapon's folder (`_ability_icon_<id>.png`), skills in their own
+ * folder (`content/skills/<id>/_skill_icon_<id>.png`).
+ */
+export const ABILITY_ICON: Record<string, string> = {
+  ...byType(
+    import.meta.glob<string>(
+      '../../../../../packages/game-core/src/content/**/_ability_icon_*.png',
+      {
+        eager: true,
+        query: '?url',
+        import: 'default',
+      },
+    ),
+    '_ability_icon_',
+  ),
+  ...byType(
+    import.meta.glob<string>(
+      '../../../../../packages/game-core/src/content/skills/*/_skill_icon_*.png',
+      {
+        eager: true,
+        query: '?url',
+        import: 'default',
+      },
+    ),
+    '_skill_icon_',
+  ),
+};

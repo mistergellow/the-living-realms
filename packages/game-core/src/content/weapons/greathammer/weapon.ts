@@ -6,6 +6,8 @@ import { defineWeapon } from '../define.js';
  * the hero holds it. The pictures sit next to this file:
  *   _weapon_icon_greathammer.png  item icon, on the same canvas as the item frame
  *   _weapon_hand_greathammer.png  the weapon in the hero's hand
+ *   _ability_icon_great_smash.png  icon of its basic attack (great_smash, request #79)
+ *   _ability_icon_earthshaker.png  icon of its power (earthshaker)
  * The basic attack's own numbers live with the abilities (`great_smash`).
  */
 export default defineWeapon({

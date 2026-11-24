@@ -12,6 +12,9 @@ game are cut out with `scripts/art/cut-sheet.py` and assembled in code:
   `_weapon_hand_<type>.png` (held weapon). Replace a PNG to change the art.
 - Craft items (request #78): `packages/game-core/src/content/items/<materials|consumables|tools>/<id>/`
   with `item.ts` and `_item_icon_<id>.png` (100×100).
+- Ability icons (request #79): weapon attacks and powers in the weapon's folder
+  (`_ability_icon_<ability>.png`); skills in `packages/game-core/src/content/skills/<id>/`
+  (`skill.ts` + `_skill_icon_<id>.png`).
 - Icon frame and tile: `packages/game-core/src/content/items/_item_frame.png`,
   `_item_tile.png` (100×100; the tile is tinted by rarity).
 - `source/base-hero.webp` → `apps/web/src/features/avatar/base/*.webp`, rig in
