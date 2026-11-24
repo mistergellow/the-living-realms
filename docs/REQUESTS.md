@@ -292,6 +292,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A138 | Herói base (pedido #72)                                         | todos os jogadores usam o mesmo herói até haver arte de caras/cabelos e de armaduras; o editor de aparência saiu da criação (os dados ficam guardados); espada da arte para espadas, as outras armas ainda são desenhos SVG na mão                                                                                                                                                                                                                                                                                                                         | `CharacterAvatar.tsx`, `CharacterCreatePage.tsx`                                 |
 | A139 | Ícones por peso de armadura (pedido #75)                        | capacetes: leve 5/4, média 2/3, pesada 1/6/7; botas: leve 1/3, média 2/4/5, pesada 6/7 (números = ordem na folha)                                                                                                                                                                                                                                                                                                                                                                                                                                          | `BY_WEIGHT` (`ItemIcon.tsx`)                                                     |
 | A140 | Brilho e faíscas das armas (pedido #76)                         | a partir de +3; faíscas ~3/s (+3) a ~22/s (+10); cor +3–5 dourado, +6–8 azul-aço, +9–10 vermelho                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `UPGRADE_GLOW`, `upgradeColor` (`combat-scene.ts`)                               |
+| A141 | Raridade dos materiais pelo grau (pedido #78)                   | Poor → Common, Common → Uncommon, Fine → Rare, Superior → Epic, Exceptional → Legendary                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `GRADE_RARITY` (`gathering.ts`)                                                  |
 
 ---
 
@@ -1673,3 +1674,42 @@ maior o upgrade. No fim, commit para o main.
   segundo em +3 até 22 em +10); cor por faixa: +3…+5 dourado, +6…+8 azul-aço,
   +9…+10 vermelho-fogo (provisório A140). Respeita "reduzir movimento".
 - Teste do servidor tornado estável (o boss a 1 HP já não dispara fases).
+
+### #77 — 2026-11-24 — Uma pasta por arma (ícone, arma na mão e características)
+
+**Pedido:** organizar as armas numa pasta por arma, com nomes fixos
+(`_weapon_icon_<tipo>`, `_weapon_hand_<tipo>`) e as características no mesmo
+sítio, para o dono saber sempre onde editar cada arma; usar a moldura e o fundo
+novos (PNG 100×100, à escala uns com os outros). Da foice só veio o ícone (a
+arma na mão mantém-se a da folha).
+**Resultado:**
+
+- `packages/game-core/src/content/weapons/<tipo>/`: `weapon.ts` (nome, mãos,
+  atributos, dano base, ataque básico e a pose da arma na mão — `art`),
+  `_weapon_icon_<tipo>.png` (100×100) e `_weapon_hand_<tipo>.png`. 21 tipos +
+  `shield/` (só imagens). `weapons/index.ts` junta tudo; `weapons/define.ts`
+  tem os tipos e explica cada campo.
+- O jogo encontra as imagens pelo nome do ficheiro (`apps/web/src/features/items/art.ts`):
+  basta substituir o PNG para mudar a arte.
+- Moldura e fundo dos ícones: `packages/game-core/src/content/items/_item_frame.png`
+  e `_item_tile.png` (o fundo é tingido pela raridade). Restantes ícones
+  (livros, máscaras, botas, cintos, capacetes) passados para a mesma tela 100×100.
+- Combate (PixiJS): as imagens das armas são embutidas na textura do herói.
+
+### #78 — 2026-11-24 — Uma pasta por item de craft; o grau dá a raridade
+
+**Pedido:** fazer o mesmo (pasta por item) para os minérios e coisas de craft —
+"tem que haver uma pasta para cada item"; quanto melhor a qualidade, mais
+raridade, e portanto o fundo do ícone muda; sem a bolinha no canto.
+**Resultado:**
+
+- `packages/game-core/src/content/items/materials/<id>/`, `consumables/<id>/` e
+  `tools/<id>/`: `item.ts` (nome, descrição, tipo; ferramentas com tipo, nível e
+  rank) e o ícone `_item_icon_<id>.png` (100×100). 24 materiais, 6 consumíveis,
+  8 ferramentas. Cada grupo tem um `index.ts` com a lista.
+- Ainda não há imagens de materiais: até o PNG chegar, mostra-se o desenho
+  simples. As facas e machados de ferramenta já têm o ícone (copiado da adaga e
+  da machadinha); cana de pesca e picareta à espera de imagem.
+- Grau → raridade (provisório A141): o fundo do ícone e a cor do nome seguem o
+  grau. A bolinha do canto saiu; o grau continua escrito no tooltip (agora com a
+  cor da raridade).

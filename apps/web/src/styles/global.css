@@ -1565,33 +1565,24 @@ fieldset.field {
   color: var(--rarity, var(--text));
 }
 /* Material grades (request #52): Poor … Exceptional. */
+/* Request #78: a material's grade colour is its rarity colour. */
 [data-grade='0'] {
-  --grade: #8a8172;
+  --grade: var(--rarity-common);
 }
 [data-grade='1'] {
-  --grade: #d8d2c4;
+  --grade: var(--rarity-uncommon);
 }
 [data-grade='2'] {
-  --grade: #5fbf6a;
+  --grade: var(--rarity-rare);
 }
 [data-grade='3'] {
-  --grade: #4e9be6;
+  --grade: var(--rarity-epic);
 }
 [data-grade='4'] {
-  --grade: #c77dff;
+  --grade: var(--rarity-legendary);
 }
 .grade-text {
   color: var(--grade);
-}
-.grade-pip {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--grade);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.7);
 }
 /* ---------- ability icons (combat bar, character sheet) ---------- */
 .ability-icon {

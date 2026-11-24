@@ -1,8 +1,8 @@
 import type { CharacterAppearance } from '@realms/shared';
 import { useId } from 'react';
 import './avatar.css';
-import { WEAPON_POSES, weaponScale, type WeaponPose } from './weapon-poses';
-import shieldIconSrc from '../characters/sheet/icons/shield.webp?inline';
+import { getWeaponType, type WeaponArtDef } from '@realms/game-core';
+import { WEAPON_HAND } from '../items/art';
 import capestripSrc from './base/cape_strip.webp?inline';
 import armbackSrc from './base/arm_back.webp?inline';
 import legbackSrc from './base/leg_back.webp?inline';
@@ -131,30 +131,52 @@ function Piece({
   );
 }
 
-/** A posed weapon image with its grip on a point (request #76). */
-function PosedWeapon({
-  pose,
-  at,
-  scale = 1,
-}: {
-  pose: WeaponPose;
-  at: { x: number; y: number };
-  scale?: number;
-}) {
+/** How a pose holds a weapon: the direction from the hand to the tip (degrees; 90 = down). */
+const POSE_ANGLE: Record<WeaponArtDef['pose'], number> = {
+  down: 84,
+  up: -96,
+  bow: -96,
+  level: -4,
+  forward: -40,
+  hand: 0,
+};
+
+/** Off hands without a weapon definition (shields): just held, this big. */
+const PLAIN_HELD: WeaponArtDef = {
+  pose: 'hand',
+  grip: { x: 0.5, y: 0.5 },
+  angle: 0,
+  reach: 0,
+  size: 38,
+};
+
+/** The art data and hand picture of a weapon type (request #77: its folder). */
+function heldArt(type: string): { art: WeaponArtDef; src: string } | null {
+  const src = WEAPON_HAND[type];
+  if (!src) return null;
+  return { art: getWeaponType(type)?.art ?? PLAIN_HELD, src };
+}
+
+/** A weapon picture with its grip on a point. */
+function PosedWeapon({ type, at }: { type: string; at: { x: number; y: number } }) {
+  const held = heldArt(type);
+  if (!held) return null;
+  const { art, src } = held;
+  const rot = art.pose === 'hand' ? 0 : (art.hold ?? POSE_ANGLE[art.pose]) - art.angle;
+  const size = art.size;
   return (
     <g
-      transform={`translate(${at.x} ${at.y}) rotate(${pose.rot}) scale(${scale}) translate(${-pose.gx} ${-pose.gy})`}
+      transform={`translate(${at.x} ${at.y}) rotate(${rot}) scale(${art.scale ?? 1}) translate(${-art.grip.x * size} ${-art.grip.y * size})`}
     >
-      <image href={pose.src} width={pose.w} height={pose.h} preserveAspectRatio="none" />
+      <image href={src} width={size} height={size} preserveAspectRatio="none" />
     </g>
   );
 }
 
-/** Main-hand weapon: the owner's painted weapon of that type, in the hand. */
+/** Main-hand weapon: the picture from its folder, in the hand. */
 function HeldWeapon({ weapon }: { weapon: WeaponArt }) {
   if (!weapon) return null;
-  const pose = WEAPON_POSES[weapon];
-  if (pose) return <PosedWeapon pose={pose} at={RIG.hand} scale={weaponScale(weapon)} />;
+  if (heldArt(weapon)) return <PosedWeapon type={weapon} at={RIG.hand} />;
   return (
     <g transform={`translate(${RIG.hand.x} ${RIG.hand.y}) scale(0.85) translate(-97 -113)`}>
       <Weapon weapon={weapon} />
@@ -162,21 +184,10 @@ function HeldWeapon({ weapon }: { weapon: WeaponArt }) {
   );
 }
 
-/** Off hand: painted shield, dagger or hand axe at the back fist; talismans drawn. */
+/** Off hand: shield, dagger or hand axe pictures at the back fist; talismans drawn. */
 function HeldOffhand({ offhand }: { offhand: OffhandArt }) {
   if (!offhand) return null;
-  if (offhand === 'shield')
-    return (
-      <image
-        href={shieldIconSrc}
-        x={RIG.backFist.x - 19}
-        y={RIG.backFist.y - 21}
-        width={38}
-        height={38}
-      />
-    );
-  const pose = WEAPON_POSES[offhand];
-  if (pose) return <PosedWeapon pose={pose} at={RIG.backFist} scale={weaponScale(offhand)} />;
+  if (heldArt(offhand)) return <PosedWeapon type={offhand} at={RIG.backFist} />;
   return (
     <g transform={`translate(${RIG.backFist.x} ${RIG.backFist.y}) scale(0.85) translate(-20 -112)`}>
       <Offhand offhand={offhand} />
@@ -186,10 +197,10 @@ function HeldOffhand({ offhand }: { offhand: OffhandArt }) {
 
 /** Where the main weapon's tip is (canvas sparks for upgraded weapons). */
 export function weaponTip(weapon: WeaponArt): { x: number; y: number } | null {
-  const pose = weapon ? WEAPON_POSES[weapon] : undefined;
-  if (!pose) return null;
-  const a = (pose.angle * Math.PI) / 180;
-  const reach = pose.reach * weaponScale(weapon!);
+  const art = weapon ? getWeaponType(weapon)?.art : undefined;
+  if (!art || art.pose === 'hand') return null;
+  const a = ((art.hold ?? POSE_ANGLE[art.pose]) * Math.PI) / 180;
+  const reach = art.reach * art.size * (art.scale ?? 1);
   return { x: RIG.hand.x + Math.cos(a) * reach, y: RIG.hand.y + Math.sin(a) * reach };
 }
 

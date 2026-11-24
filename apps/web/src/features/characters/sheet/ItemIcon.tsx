@@ -1,4 +1,5 @@
 import { getItemDef } from '@realms/game-core';
+import { ITEM_ICON, WEAPON_ICON } from '../../items/art';
 import type { EquipSlot, ItemDto } from '@realms/shared';
 
 /*
@@ -8,15 +9,16 @@ import type { EquipSlot, ItemDto } from '@realms/shared';
  * without painted art yet keep a stroke glyph (request #39).
  */
 
-/** Painted icons by name (file name without extension). */
+/**
+ * Painted icons by name: weapons from their folders (request #77), the rest
+ * from ./icons (file name without extension).
+ */
 const PAINTED = Object.fromEntries(
   Object.entries(
     import.meta.glob<string>('./icons/*.webp', { eager: true, query: '?url', import: 'default' }),
   ).map(([path, url]) => [path.slice('./icons/'.length, -'.webp'.length), url]),
 ) as Record<string, string>;
-
-/** Tools drawn with a weapon's icon. */
-const TOOL_ICON: Record<string, string> = { hunting_knife: 'dagger', axe: 'handaxe' };
+Object.assign(PAINTED, WEAPON_ICON);
 
 /** Stable pick from a list of variants for an item id (same item, same icon). */
 function variant(id: string, pool: number[]): number {
@@ -43,8 +45,10 @@ const SLOT_ART: Partial<Record<EquipSlot, 'helm' | 'boots' | 'belt' | 'mask'>> =
 
 /** The painted icon of an item, if there is one. */
 export function paintedIconFor(item: ItemDto): string | null {
+  // Request #78: an item with its own folder and icon wins.
+  if (ITEM_ICON[item.defId]) return ITEM_ICON[item.defId]!;
   if (item.weapon) return PAINTED[item.weapon.type] ?? null;
-  if (item.tool) return PAINTED[TOOL_ICON[item.tool.type] ?? ''] ?? null;
+  if (item.tool) return null;
   const def = getItemDef(item.defId);
   // Off-hands (shields…) have a weapon type but no weapon stats.
   if (def?.weaponType) return PAINTED[def.weaponType] ?? null;
@@ -203,19 +207,12 @@ export function ItemIcon({ item }: { item: ItemDto }) {
       data-tone={itemTone(item)}
       data-rarity={item.rarity}
       data-broken={item.broken}
+      title={item.grade ? `${item.grade.name} quality` : undefined}
     >
       {painted ? (
         <img className="item-art" src={painted} alt="" draggable={false} />
       ) : (
         <GlyphSvg glyph={glyphFor(item)} />
-      )}
-      {item.grade && (
-        <i
-          className="grade-pip"
-          data-grade={item.grade.value}
-          title={item.grade.name}
-          aria-label={`${item.grade.name} quality`}
-        />
       )}
     </span>
   );

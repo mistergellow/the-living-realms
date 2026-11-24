@@ -548,9 +548,12 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
 - BD: `items.upgrade_level`, `items.specials`, `items.rune_slots` (migração 0008)
 - Servidor: `toItemDto` e `combatProfile` (`sheet.service.ts`)
-- Arte: `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`) — todos os tipos têm desenho (pedido #45)
+- **Pasta por arma (pedido #77):** `packages/game-core/src/content/weapons/<tipo>/` — `weapon.ts` (características + `art`: pose da arma na mão), `_weapon_icon_<tipo>.png` (ícone 100×100), `_weapon_hand_<tipo>.png` (arma na mão); `weapons/index.ts` (`WEAPON_DEFS`), `weapons/define.ts` (tipos, `WeaponArtDef`); `weapons.ts` reexporta como `WEAPON_TYPES`
+- Imagens encontradas pelo nome: `apps/web/src/features/items/art.ts` (`WEAPON_ICON`, `WEAPON_HAND`) → `sheet/ItemIcon.tsx` (ícones) e `avatar/CharacterAvatar.tsx` (`PosedWeapon`, `weaponTip`); no PixiJS as imagens são embutidas em `render/avatar-textures.tsx` (`inlineImages`)
+- Moldura/fundo dos ícones: `content/items/_item_frame.png`, `_item_tile.png` → `.item-icon` em `styles/theme.css`
+- Arte desenhada (recurso para tipos sem PNG): `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`)
 - **Regra (pedido #46):** 21 tipos = 1 por atributo + 1 por cada par; cada item de arma tem 2 habilidades (básico + 1 poder) — `weapons.test.ts` verifica. Mudar atributos de um tipo obriga a rever a descrição do item.
-- **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + arte (`CharacterAvatar.tsx`, `weapon-art.ts`) + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
+- **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + pasta `weapons/<tipo>/` (weapon.ts + 2 PNG) e entrada em `weapons/index.ts` + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas (só a estrutura existe); os especiais passaram a ser os efeitos bónus → ver "Cartão do item e efeitos bónus"
@@ -569,6 +572,14 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Efeito novo:** só dados em `AFFIXES` (se for de um tipo novo, acrescentar o `kind` a `AffixEffect` e tratá-lo em `gearTotals` e, se for de combate, em `GearCombatEffects` + motor)
 - **Pedido #67 (pools por slot, D124–D125):** catálogo e regras em `affixes.ts` (`AFFIXES` com `tiers`/`slots`/`category`, `GEAR_SLOTS`, `gearSlotOf`, `poolFor`, `affixValueRange`, `rollAffixes(rng, slot, n, tier)`, `rollItemAffixes`, `DUAL_WIELD_RULES`); efeitos em `GearCombatEffects` (`shared/api.ts`, campos opcionais) → `gearTotals` → `computeStats` (`stats.ts`: Mana regen, duas armas) → motor `engine.ts` (`gearDamageFactor`, `gearDefenceFactor`, `effectiveReduction`, `inflict`, `gearOnHit`, `isBasicAttack`, `startRound`: regen e Chill, `applyAbility`: devolver Focus); +níveis de skill em `combatProfile` (`sheet.service.ts`); drops em `rifts.service.ts` (`rollDropAffixes`) e `rift/run.ts` (`grant`); famílias `ENEMY_FAMILIES` (`shared/api.ts`) → `EnemyDef.family` (`enemies.ts`) → `CombatantView.family` (`enemyCombatant`); estados `chill`/`blind`/`impale` (ver "Estado novo"); documento `docs/EQUIPMENT_SPECIALS.md`
 - **Bónus novo:** só dados em `AFFIXES` (se precisar de um campo novo: `GearCombatEffects` + usar no motor); **inimigo novo:** dar-lhe uma `family` (D123)
+
+## Pasta por item de craft (pedido #78)
+
+- `packages/game-core/src/content/items/{materials,consumables,tools}/<id>/item.ts` + `_item_icon_<id>.png`; lista em `<grupo>/index.ts`; `items/define.ts` (`defineItem`); juntados em `content/items.ts` (`MATERIALS`, `TOOLS`)
+- Ícones encontrados pelo nome: `ITEM_ICON` (`apps/web/src/features/items/art.ts`) → `paintedIconFor` (`sheet/ItemIcon.tsx`, tem prioridade)
+- Raridade pelo grau: `GRADE_RARITY`, `gradeRarity` (`gathering.ts`) → `toItemDto` (`sheet.service.ts`); cor do grau = cor da raridade (`[data-grade]` em `global.css`)
+- **Item novo:** copiar uma pasta, mudar o `id`/nome dos ficheiros e acrescentar ao `index.ts` do grupo
+- Testes: `game-core/test/gathering.test.ts` (pastas e raridade)
 
 ## Loot do Rift (D55)
 

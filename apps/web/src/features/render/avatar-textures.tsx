@@ -23,6 +23,38 @@ export const TEX_SCALE = 3;
 const W = 120 * TEX_SCALE;
 const H = 160 * TEX_SCALE;
 
+/**
+ * Request #77: weapon pictures are ordinary files (URLs). An SVG drawn as an
+ * image cannot fetch anything, so their hrefs are swapped for data URLs first.
+ */
+const dataUrls = new Map<string, Promise<string>>();
+function toDataUrl(url: string): Promise<string> {
+  let p = dataUrls.get(url);
+  if (!p) {
+    p = fetch(url)
+      .then((r) => r.blob())
+      .then(
+        (blob) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+          }),
+      );
+    dataUrls.set(url, p);
+  }
+  return p;
+}
+async function inlineImages(markup: string): Promise<string> {
+  const urls = [...new Set([...markup.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!))].filter(
+    (u) => !u.startsWith('data:') && !u.startsWith('#'),
+  );
+  let out = markup;
+  for (const u of urls) out = out.split(`href="${u}"`).join(`href="${await toDataUrl(u)}"`);
+  return out;
+}
+
 export interface CharacterTextures {
   base: Texture;
   weapon: Texture;
@@ -41,7 +73,7 @@ export interface GearArt {
   offhand: OffhandArt;
 }
 
-function part(
+async function part(
   appearance: CharacterAppearance | null | undefined,
   gear: GearArt,
   which: Exclude<AvatarPart, 'full'>,
@@ -60,7 +92,7 @@ function part(
       inSvg
     />,
   );
-  return svgTexture(key, markup, W, H);
+  return svgTexture(key, await inlineImages(markup), W, H);
 }
 
 export async function characterTextures(
