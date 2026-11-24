@@ -451,9 +451,6 @@
   width: 56%;
   height: 56%;
 }
-:root .item-icon > .grade-pip {
-  z-index: 3;
-}
 /* The art may lean over the frame, never over the neighbouring cell. */
 :root .bag-cell,
 :root .equip-slot > * {

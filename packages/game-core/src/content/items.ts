@@ -5,6 +5,9 @@ import { customItemDef } from './custom.js';
 import { skillBookId, SKILLS, type SkillDef } from './skills.js';
 import type { ToolType } from './professions.js';
 import { buildNamedItems } from './named.js';
+import CONSUMABLES from './items/consumables/index.js';
+import MATERIAL_ITEMS from './items/materials/index.js';
+import TOOL_ITEMS from './items/tools/index.js';
 
 export type { WeaponType } from './weapons.js';
 
@@ -486,87 +489,9 @@ export const getStarterKit = (id: string) => STARTER_KITS.find((k) => k.id === i
  * be equipped. Consumables cannot be used yet (future: recovery in the Rift).
  * PROVISIONAL CONTENT.
  */
-const material = (id: string, name: string, description: string): ItemDef => ({
-  id,
-  name,
-  description,
-  kind: 'material',
-  slots: [],
-});
-const consumable = (id: string, name: string, description: string): ItemDef => ({
-  id,
-  name,
-  description,
-  kind: 'consumable',
-  slots: [],
-});
 
-export const MATERIALS = {
-  raw_fish: material('raw_fish', 'Raw Fish', 'A fresh catch. Cook it before eating.'),
-  iron_ore: material('iron_ore', 'Iron Ore', 'Smelt it into ingots.'),
-  rough_gem: material('rough_gem', 'Rough Gem', 'An uncut stone with a faint glow.'),
-  iron_ingot: material('iron_ingot', 'Iron Ingot', 'Used to repair and improve gear.'),
-  log: material('log', 'Log', 'Raw timber.'),
-  plank: material('plank', 'Plank', 'Sawn wood for carpentry.'),
-  herb: material('herb', 'Rift Moss', 'A medicinal herb that grows near rifts.'),
-  raw_hide: material('raw_hide', 'Raw Hide', 'Needs curing before use.'),
-  leather: material('leather', 'Leather', 'Cured hide for leatherworking.'),
-  raw_meat: material('raw_meat', 'Raw Meat', 'Game meat. Cook it first.'),
-  grain: material('grain', 'Grain', 'A sack of grain.'),
-  flax: material('flax', 'Flax', 'Fibres for weaving.'),
-  linen: material('linen', 'Linen', 'Woven cloth.'),
-  cut_gem: material('cut_gem', 'Cut Gem', 'A polished gem for jewellery.'),
-  // Request #51: Scribing.
-  parchment: material('parchment', 'Parchment', 'Scraped leather, ready to write on.'),
-  ink: material('ink', 'Ink', 'Dark herbal ink.'),
-  blank_scroll: material(
-    'blank_scroll',
-    'Blank Scroll',
-    'Ruled parchment for scrolls. Scribes will write on it in a later update.',
-  ),
-  rune_stone: material(
-    'rune_stone',
-    'Rune Stone',
-    'A blank stone shaped by a runesmith. Runes come later.',
-  ),
-  grilled_fish: consumable('grilled_fish', 'Grilled Fish', 'A simple, filling meal.'),
-  hearty_stew: consumable('hearty_stew', 'Hearty Stew', 'A warming meal.'),
-  healing_draught: consumable('healing_draught', 'Healing Draught', 'Restores health.'),
-  mana_tonic: consumable('mana_tonic', 'Mana Tonic', 'Restores mana.'),
-  bandage: consumable('bandage', 'Bandage', 'Stops bleeding.'),
-  // Request #50: the blacksmith's scroll and the weapon-family materials.
-  blessing_scroll: consumable(
-    'blessing_scroll',
-    'Blessing Scroll',
-    'Used at the blacksmith: if an upgrade fails, the weapon loses 1 level instead of breaking.',
-  ),
-  blade_shard: material(
-    'blade_shard',
-    'Blade Shard',
-    'Hardened steel for upgrading blades (+4 and up).',
-  ),
-  axe_iron: material('axe_iron', 'Axe Iron', 'Dense iron for upgrading axes (+4 and up).'),
-  heavy_core: material(
-    'heavy_core',
-    'Heavy Core',
-    'A weighted core for upgrading blunt weapons (+4 and up).',
-  ),
-  polearm_haft: material(
-    'polearm_haft',
-    'Ironwood Haft',
-    'For upgrading spears and lances (+4 and up).',
-  ),
-  sinew_string: material(
-    'sinew_string',
-    'Sinew String',
-    'For upgrading bows, crossbows, slings and chakrams (+4 and up).',
-  ),
-  arcane_focus: material(
-    'arcane_focus',
-    'Arcane Focus',
-    'A humming crystal for upgrading staves, wands, tomes and scepters (+4 and up).',
-  ),
-} satisfies Record<string, ItemDef>;
+/** Materials and consumables; each lives in its own folder (request #78). */
+export const MATERIALS = { ...MATERIAL_ITEMS, ...CONSUMABLES } satisfies Record<string, ItemDef>;
 
 export type MaterialId = keyof typeof MATERIALS;
 Object.assign(ITEMS, MATERIALS);
@@ -577,53 +502,7 @@ Object.assign(ITEMS, MATERIALS);
  * better (tier 2) but need an Apprentice to use them. A tool never replaces
  * Mastery: it makes the work possible and adds a small bonus.
  */
-const tool = (
-  id: string,
-  name: string,
-  description: string,
-  type: ToolType,
-  tier: number,
-  minRank: number,
-): ItemDef => ({ id, name, description, kind: 'tool', slots: [], tool: { type, tier, minRank } });
-
-export const TOOLS = {
-  fishing_rod: tool('fishing_rod', 'Fishing Rod', 'Needed to fish.', 'fishing_rod', 1, 0),
-  felling_axe: tool('felling_axe', 'Felling Axe', 'Needed to chop wood.', 'axe', 1, 0),
-  pickaxe: tool('pickaxe', 'Pickaxe', 'Needed to mine.', 'pickaxe', 1, 0),
-  hunting_knife: tool('hunting_knife', 'Hunting Knife', 'Needed to hunt.', 'hunting_knife', 1, 0),
-  fine_fishing_rod: tool(
-    'fine_fishing_rod',
-    'Fine Fishing Rod',
-    'A better rod (+5% success). Needs an Apprentice Fisher.',
-    'fishing_rod',
-    2,
-    1,
-  ),
-  fine_felling_axe: tool(
-    'fine_felling_axe',
-    'Fine Felling Axe',
-    'A better axe (+5% success). Needs an Apprentice Lumberjack.',
-    'axe',
-    2,
-    1,
-  ),
-  fine_pickaxe: tool(
-    'fine_pickaxe',
-    'Fine Pickaxe',
-    'A better pick (+5% success). Needs an Apprentice Miner.',
-    'pickaxe',
-    2,
-    1,
-  ),
-  fine_hunting_knife: tool(
-    'fine_hunting_knife',
-    'Fine Hunting Knife',
-    'A better knife (+5% success). Needs an Apprentice Hunter.',
-    'hunting_knife',
-    2,
-    1,
-  ),
-} satisfies Record<string, ItemDef>;
+export const TOOLS = TOOL_ITEMS satisfies Record<string, ItemDef>;
 Object.assign(ITEMS, TOOLS);
 export type ToolItemId = keyof typeof TOOLS;
 

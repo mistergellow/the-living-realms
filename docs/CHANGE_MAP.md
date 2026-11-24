@@ -573,6 +573,14 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - **Pedido #67 (pools por slot, D124–D125):** catálogo e regras em `affixes.ts` (`AFFIXES` com `tiers`/`slots`/`category`, `GEAR_SLOTS`, `gearSlotOf`, `poolFor`, `affixValueRange`, `rollAffixes(rng, slot, n, tier)`, `rollItemAffixes`, `DUAL_WIELD_RULES`); efeitos em `GearCombatEffects` (`shared/api.ts`, campos opcionais) → `gearTotals` → `computeStats` (`stats.ts`: Mana regen, duas armas) → motor `engine.ts` (`gearDamageFactor`, `gearDefenceFactor`, `effectiveReduction`, `inflict`, `gearOnHit`, `isBasicAttack`, `startRound`: regen e Chill, `applyAbility`: devolver Focus); +níveis de skill em `combatProfile` (`sheet.service.ts`); drops em `rifts.service.ts` (`rollDropAffixes`) e `rift/run.ts` (`grant`); famílias `ENEMY_FAMILIES` (`shared/api.ts`) → `EnemyDef.family` (`enemies.ts`) → `CombatantView.family` (`enemyCombatant`); estados `chill`/`blind`/`impale` (ver "Estado novo"); documento `docs/EQUIPMENT_SPECIALS.md`
 - **Bónus novo:** só dados em `AFFIXES` (se precisar de um campo novo: `GearCombatEffects` + usar no motor); **inimigo novo:** dar-lhe uma `family` (D123)
 
+## Pasta por item de craft (pedido #78)
+
+- `packages/game-core/src/content/items/{materials,consumables,tools}/<id>/item.ts` + `_item_icon_<id>.png`; lista em `<grupo>/index.ts`; `items/define.ts` (`defineItem`); juntados em `content/items.ts` (`MATERIALS`, `TOOLS`)
+- Ícones encontrados pelo nome: `ITEM_ICON` (`apps/web/src/features/items/art.ts`) → `paintedIconFor` (`sheet/ItemIcon.tsx`, tem prioridade)
+- Raridade pelo grau: `GRADE_RARITY`, `gradeRarity` (`gathering.ts`) → `toItemDto` (`sheet.service.ts`); cor do grau = cor da raridade (`[data-grade]` em `global.css`)
+- **Item novo:** copiar uma pasta, mudar o `id`/nome dos ficheiros e acrescentar ao `index.ts` do grupo
+- Testes: `game-core/test/gathering.test.ts` (pastas e raridade)
+
 ## Loot do Rift (D55)
 
 - Itens encontrados (Loot/Secret/eventos): `RunState.grants` (`rift/run.ts`) → entregues só na vitória, a quem não saiu: `finish()` (`rifts.service.ts`), juntos com os drops do boss em `RunRewardsDto.items`

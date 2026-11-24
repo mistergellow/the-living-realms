@@ -43,6 +43,7 @@ import {
   planEquip,
   rarityOf,
   gradeName,
+  gradeRarity,
   rankName,
   TOOL_TYPE_NAMES,
   weaponInfo,
@@ -146,7 +147,8 @@ export function toItemDto(i: Item, base?: Attributes): ItemDto {
       specials: i.specials,
       runeSlots: i.runeSlots,
     }),
-    rarity: rarityOf(affixes.length),
+    // Request #78: gathered materials take their rarity from their grade.
+    rarity: i.grade === null ? rarityOf(affixes.length) : gradeRarity(i.grade),
     affixes,
     requirements: def ? checkRequirements(itemRequirements(def), base) : [],
     runeSlots:

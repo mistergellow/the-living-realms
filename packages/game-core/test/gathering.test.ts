@@ -1,9 +1,14 @@
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/combat/rng.js';
 import {
   defaultGrade,
+  getItemDef,
   getProfession,
   gradeName,
+  gradeRarity,
   nodeAmount,
   nodeReadyAt,
   resolveActivity,
@@ -62,8 +67,7 @@ describe('material grades (request #52)', () => {
   });
 
   it('a Novice on a normal node never finds Exceptional materials', () => {
-    for (let seed = 1; seed <= 2000; seed++)
-      expect(rollGrade(new Rng(seed), 0, 1)).toBeLessThan(4);
+    for (let seed = 1; seed <= 2000; seed++) expect(rollGrade(new Rng(seed), 0, 1)).toBeLessThan(4);
   });
 
   it('gathering outputs carry a grade; crafting outputs do not', () => {
@@ -79,5 +83,27 @@ describe('material grades (request #52)', () => {
     expect(defaultGrade('raw_fish')).toBe(1);
     expect(defaultGrade('iron_ingot')).toBeNull();
     expect(defaultGrade('training_sword')).toBeNull();
+  });
+});
+
+describe('item folders and grade rarity (request #78)', () => {
+  it('a better grade is a rarer material', () => {
+    expect([0, 1, 2, 3, 4].map(gradeRarity)).toEqual([
+      'common',
+      'uncommon',
+      'rare',
+      'epic',
+      'legendary',
+    ]);
+    expect(gradeRarity(9)).toBe('legendary');
+  });
+
+  it('every material and tool folder defines the item named after it', () => {
+    const dir = fileURLToPath(new URL('../src/content/items', import.meta.url));
+    for (const group of ['materials', 'consumables', 'tools']) {
+      for (const id of readdirSync(join(dir, group)).filter((f) => !f.endsWith('.ts'))) {
+        expect(getItemDef(id)?.id, `${group}/${id}`).toBe(id);
+      }
+    }
   });
 });

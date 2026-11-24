@@ -29,3 +29,15 @@ export const WEAPON_HAND = byType(
   ),
   '_weapon_hand_',
 );
+
+/**
+ * Request #78: one folder per item (materials, consumables, tools), with
+ * `_item_icon_<id>.png` — keyed by item id.
+ */
+export const ITEM_ICON = byType(
+  import.meta.glob<string>(
+    '../../../../../packages/game-core/src/content/items/*/*/_item_icon_*.png',
+    { eager: true, query: '?url', import: 'default' },
+  ),
+  '_item_icon_',
+);

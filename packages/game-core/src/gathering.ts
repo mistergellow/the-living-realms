@@ -1,7 +1,7 @@
 import type { Rng } from './combat/rng.js';
 import { PROFESSIONS, professionTerrains } from './content/professions.js';
 import { mapHexAt } from './content/world-map.js';
-import type { HexCoord } from '@realms/shared';
+import type { HexCoord, ItemRarity } from '@realms/shared';
 
 /*
  * Gathering, phase 2 of the Professions & Economy spec (request #52).
@@ -45,6 +45,21 @@ export const MATERIAL_GRADE_NAMES: Record<MaterialGrade, string> = {
 };
 export const gradeName = (grade: number) =>
   MATERIAL_GRADE_NAMES[MATERIAL_GRADES[Math.max(0, Math.min(4, grade))]!];
+
+/**
+ * Request #78: the better the grade, the rarer the material (its name colour
+ * and icon tile follow). PROVISIONAL mapping, A141: Poor → Common … Exceptional
+ * → Legendary.
+ */
+export const GRADE_RARITY: readonly ItemRarity[] = [
+  'common',
+  'uncommon',
+  'rare',
+  'epic',
+  'legendary',
+];
+export const gradeRarity = (grade: number): ItemRarity =>
+  GRADE_RARITY[Math.max(0, Math.min(GRADE_RARITY.length - 1, grade))]!;
 
 export const GRADE_RULES = {
   /** Roll 0–99, plus these; then the thresholds below pick the grade. */

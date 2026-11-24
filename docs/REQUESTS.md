@@ -292,6 +292,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A138 | Herói base (pedido #72)                                         | todos os jogadores usam o mesmo herói até haver arte de caras/cabelos e de armaduras; o editor de aparência saiu da criação (os dados ficam guardados); espada da arte para espadas, as outras armas ainda são desenhos SVG na mão                                                                                                                                                                                                                                                                                                                         | `CharacterAvatar.tsx`, `CharacterCreatePage.tsx`                                 |
 | A139 | Ícones por peso de armadura (pedido #75)                        | capacetes: leve 5/4, média 2/3, pesada 1/6/7; botas: leve 1/3, média 2/4/5, pesada 6/7 (números = ordem na folha)                                                                                                                                                                                                                                                                                                                                                                                                                                          | `BY_WEIGHT` (`ItemIcon.tsx`)                                                     |
 | A140 | Brilho e faíscas das armas (pedido #76)                         | a partir de +3; faíscas ~3/s (+3) a ~22/s (+10); cor +3–5 dourado, +6–8 azul-aço, +9–10 vermelho                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `UPGRADE_GLOW`, `upgradeColor` (`combat-scene.ts`)                               |
+| A141 | Raridade dos materiais pelo grau (pedido #78)                   | Poor → Common, Common → Uncommon, Fine → Rare, Superior → Epic, Exceptional → Legendary                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `GRADE_RARITY` (`gathering.ts`)                                                  |
 
 ---
 
@@ -1695,3 +1696,20 @@ arma na mão mantém-se a da folha).
   (livros, máscaras, botas, cintos, capacetes) passados para a mesma tela 100×100.
 - Combate (PixiJS): as imagens das armas são embutidas na textura do herói.
 
+### #78 — 2026-11-24 — Uma pasta por item de craft; o grau dá a raridade
+
+**Pedido:** fazer o mesmo (pasta por item) para os minérios e coisas de craft —
+"tem que haver uma pasta para cada item"; quanto melhor a qualidade, mais
+raridade, e portanto o fundo do ícone muda; sem a bolinha no canto.
+**Resultado:**
+
+- `packages/game-core/src/content/items/materials/<id>/`, `consumables/<id>/` e
+  `tools/<id>/`: `item.ts` (nome, descrição, tipo; ferramentas com tipo, nível e
+  rank) e o ícone `_item_icon_<id>.png` (100×100). 24 materiais, 6 consumíveis,
+  8 ferramentas. Cada grupo tem um `index.ts` com a lista.
+- Ainda não há imagens de materiais: até o PNG chegar, mostra-se o desenho
+  simples. As facas e machados de ferramenta já têm o ícone (copiado da adaga e
+  da machadinha); cana de pesca e picareta à espera de imagem.
+- Grau → raridade (provisório A141): o fundo do ícone e a cor do nome seguem o
+  grau. A bolinha do canto saiu; o grau continua escrito no tooltip (agora com a
+  cor da raridade).
