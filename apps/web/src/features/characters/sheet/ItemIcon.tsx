@@ -1,4 +1,5 @@
 import { getItemDef } from '@realms/game-core';
+import { WEAPON_ICON } from '../../items/art';
 import type { EquipSlot, ItemDto } from '@realms/shared';
 
 /*
@@ -8,12 +9,16 @@ import type { EquipSlot, ItemDto } from '@realms/shared';
  * without painted art yet keep a stroke glyph (request #39).
  */
 
-/** Painted icons by name (file name without extension). */
+/**
+ * Painted icons by name: weapons from their folders (request #77), the rest
+ * from ./icons (file name without extension).
+ */
 const PAINTED = Object.fromEntries(
   Object.entries(
     import.meta.glob<string>('./icons/*.webp', { eager: true, query: '?url', import: 'default' }),
   ).map(([path, url]) => [path.slice('./icons/'.length, -'.webp'.length), url]),
 ) as Record<string, string>;
+Object.assign(PAINTED, WEAPON_ICON);
 
 /** Tools drawn with a weapon's icon. */
 const TOOL_ICON: Record<string, string> = { hunting_knife: 'dagger', axe: 'handaxe' };

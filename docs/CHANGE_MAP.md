@@ -548,9 +548,12 @@ dados (db + migração) → servidor → worker → web → testes → documenta
 - Contrato: `ItemDto.weapon` (`WeaponInfoDto`, `WeaponSpecial`, `WeaponRuneSlot` em `api.ts`)
 - BD: `items.upgrade_level`, `items.specials`, `items.rune_slots` (migração 0008)
 - Servidor: `toItemDto` e `combatProfile` (`sheet.service.ts`)
-- Arte: `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`) — todos os tipos têm desenho (pedido #45)
+- **Pasta por arma (pedido #77):** `packages/game-core/src/content/weapons/<tipo>/` — `weapon.ts` (características + `art`: pose da arma na mão), `_weapon_icon_<tipo>.png` (ícone 100×100), `_weapon_hand_<tipo>.png` (arma na mão); `weapons/index.ts` (`WEAPON_DEFS`), `weapons/define.ts` (tipos, `WeaponArtDef`); `weapons.ts` reexporta como `WEAPON_TYPES`
+- Imagens encontradas pelo nome: `apps/web/src/features/items/art.ts` (`WEAPON_ICON`, `WEAPON_HAND`) → `sheet/ItemIcon.tsx` (ícones) e `avatar/CharacterAvatar.tsx` (`PosedWeapon`, `weaponTip`); no PixiJS as imagens são embutidas em `render/avatar-textures.tsx` (`inlineImages`)
+- Moldura/fundo dos ícones: `content/items/_item_frame.png`, `_item_tile.png` → `.item-icon` em `styles/theme.css`
+- Arte desenhada (recurso para tipos sem PNG): `CharacterAvatar.tsx` (`WeaponArt`, `Weapon`, `Offhand`), `weapon-art.ts` (`MAIN`, `OFF`, `ART_BY_BASIC`)
 - **Regra (pedido #46):** 21 tipos = 1 por atributo + 1 por cada par; cada item de arma tem 2 habilidades (básico + 1 poder) — `weapons.test.ts` verifica. Mudar atributos de um tipo obriga a rever a descrição do item.
-- **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + arte (`CharacterAvatar.tsx`, `weapon-art.ts`) + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
+- **Tipo de arma novo:** `WEAPON_TYPES` + ataque básico e poderes (`abilities.ts`) + item (`items.ts`) + saque (`rifts.ts`) + pasta `weapons/<tipo>/` (weapon.ts + 2 PNG) e entrada em `weapons/index.ts` + ícone (`AbilityIcon.tsx`) + build em `scripts/simulate-balance.ts` + `startingSlot` se for à distância
 - Ícones: `GLYPH_BY_ABILITY` (`AbilityIcon.tsx`)
 - Testes: `game-core/test/weapons.test.ts`, `character-system.test.ts`; equilíbrio: `pnpm sim`
 - Futuro: Runemaster, runas (só a estrutura existe); os especiais passaram a ser os efeitos bónus → ver "Cartão do item e efeitos bónus"

@@ -1673,3 +1673,25 @@ maior o upgrade. No fim, commit para o main.
   segundo em +3 até 22 em +10); cor por faixa: +3…+5 dourado, +6…+8 azul-aço,
   +9…+10 vermelho-fogo (provisório A140). Respeita "reduzir movimento".
 - Teste do servidor tornado estável (o boss a 1 HP já não dispara fases).
+
+### #77 — 2026-11-24 — Uma pasta por arma (ícone, arma na mão e características)
+
+**Pedido:** organizar as armas numa pasta por arma, com nomes fixos
+(`_weapon_icon_<tipo>`, `_weapon_hand_<tipo>`) e as características no mesmo
+sítio, para o dono saber sempre onde editar cada arma; usar a moldura e o fundo
+novos (PNG 100×100, à escala uns com os outros). Da foice só veio o ícone (a
+arma na mão mantém-se a da folha).
+**Resultado:**
+
+- `packages/game-core/src/content/weapons/<tipo>/`: `weapon.ts` (nome, mãos,
+  atributos, dano base, ataque básico e a pose da arma na mão — `art`),
+  `_weapon_icon_<tipo>.png` (100×100) e `_weapon_hand_<tipo>.png`. 21 tipos +
+  `shield/` (só imagens). `weapons/index.ts` junta tudo; `weapons/define.ts`
+  tem os tipos e explica cada campo.
+- O jogo encontra as imagens pelo nome do ficheiro (`apps/web/src/features/items/art.ts`):
+  basta substituir o PNG para mudar a arte.
+- Moldura e fundo dos ícones: `packages/game-core/src/content/items/_item_frame.png`
+  e `_item_tile.png` (o fundo é tingido pela raridade). Restantes ícones
+  (livros, máscaras, botas, cintos, capacetes) passados para a mesma tela 100×100.
+- Combate (PixiJS): as imagens das armas são embutidas na textura do herói.
+
