@@ -1740,3 +1740,10 @@ tingido com as cores de raridade pelo nível (provisório A142), com um contorno
 da mesma cor. Aparece na ficha (lista e espaços preparados) e na barra de
 combate (o combate recebe agora o nível de cada skill, `abilityLevels`). Os
 ataques e poderes das armas não têm nível e mantêm a cor do tipo de ação.
+
+### #81 — 2026-11-24 — Ficheiro de passagem (handoff)
+
+**Pedido:** antes de fechar a sessão, criar um ficheiro handoff.md.
+**Resultado:** `HANDOFF.md` na raiz: estado atual, o que foi feito (#69–#80),
+como funciona a arte por pastas, pendentes, fluxo de trabalho e armadilhas
+conhecidas. `CLAUDE.md` aponta para ele.

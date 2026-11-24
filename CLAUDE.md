@@ -3,6 +3,9 @@
 Este ficheiro é lido automaticamente pelo Claude Code no início de cada sessão.
 É o ponto de entrada da memória do projeto.
 
+Ao começar uma sessão, ler também [`HANDOFF.md`](HANDOFF.md) (estado atual,
+pendentes e armadilhas conhecidas) e atualizá-lo no fim da sessão.
+
 ## Regras de trabalho (obrigatórias)
 
 1. **Registar todos os pedidos.** Cada pedido do dono do projeto é registado em
