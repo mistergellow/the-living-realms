@@ -1,13 +1,14 @@
 import type { CharacterAppearance } from '@realms/shared';
 import { useId } from 'react';
 import './avatar.css';
+import { WEAPON_POSES, weaponScale, type WeaponPose } from './weapon-poses';
+import shieldIconSrc from '../characters/sheet/icons/shield.webp?inline';
 import capestripSrc from './base/cape_strip.webp?inline';
 import armbackSrc from './base/arm_back.webp?inline';
 import legbackSrc from './base/leg_back.webp?inline';
 import torsoSrc from './base/torso.webp?inline';
 import skirtSrc from './base/skirt.webp?inline';
 import headSrc from './base/head.webp?inline';
-import swordSrc from './base/sword.webp?inline';
 import armfrontSrc from './base/arm_front.webp?inline';
 import pauldronSrc from './base/pauldron.webp?inline';
 
@@ -101,7 +102,6 @@ const PARTS = {
   torso: { src: torsoSrc, x: 39.1, y: 40.56, w: 41.99, h: 51.11 },
   skirt: { src: skirtSrc, x: 42.52, y: 84.26, w: 35.15, h: 34.58 },
   head: { src: headSrc, x: 43.85, y: 8.64, w: 30.78, h: 37.81 },
-  sword: { src: swordSrc, x: 97.43, y: 57.28, w: 20.14, h: 82.08 },
   arm_front: { src: armfrontSrc, x: 69.5, y: 43.41, w: 42.18, h: 35.91 },
   pauldron: { src: pauldronSrc, x: 64.75, y: 37.71, w: 24.51, h: 22.99 },
 } as const;
@@ -131,11 +131,30 @@ function Piece({
   );
 }
 
-/** Main-hand weapon: the art's own sword for swords; the drawn weapons for the rest, at the hand. */
+/** A posed weapon image with its grip on a point (request #76). */
+function PosedWeapon({
+  pose,
+  at,
+  scale = 1,
+}: {
+  pose: WeaponPose;
+  at: { x: number; y: number };
+  scale?: number;
+}) {
+  return (
+    <g
+      transform={`translate(${at.x} ${at.y}) rotate(${pose.rot}) scale(${scale}) translate(${-pose.gx} ${-pose.gy})`}
+    >
+      <image href={pose.src} width={pose.w} height={pose.h} preserveAspectRatio="none" />
+    </g>
+  );
+}
+
+/** Main-hand weapon: the owner's painted weapon of that type, in the hand. */
 function HeldWeapon({ weapon }: { weapon: WeaponArt }) {
   if (!weapon) return null;
-  if (weapon === 'sword') return <Piece name="sword" />;
-  if (weapon === 'greatsword') return <Piece name="sword" scale={1.2} about={RIG.hand} />;
+  const pose = WEAPON_POSES[weapon];
+  if (pose) return <PosedWeapon pose={pose} at={RIG.hand} scale={weaponScale(weapon)} />;
   return (
     <g transform={`translate(${RIG.hand.x} ${RIG.hand.y}) scale(0.85) translate(-97 -113)`}>
       <Weapon weapon={weapon} />
@@ -143,13 +162,35 @@ function HeldWeapon({ weapon }: { weapon: WeaponArt }) {
   );
 }
 
+/** Off hand: painted shield, dagger or hand axe at the back fist; talismans drawn. */
 function HeldOffhand({ offhand }: { offhand: OffhandArt }) {
   if (!offhand) return null;
+  if (offhand === 'shield')
+    return (
+      <image
+        href={shieldIconSrc}
+        x={RIG.backFist.x - 19}
+        y={RIG.backFist.y - 21}
+        width={38}
+        height={38}
+      />
+    );
+  const pose = WEAPON_POSES[offhand];
+  if (pose) return <PosedWeapon pose={pose} at={RIG.backFist} scale={weaponScale(offhand)} />;
   return (
     <g transform={`translate(${RIG.backFist.x} ${RIG.backFist.y}) scale(0.85) translate(-20 -112)`}>
       <Offhand offhand={offhand} />
     </g>
   );
+}
+
+/** Where the main weapon's tip is (canvas sparks for upgraded weapons). */
+export function weaponTip(weapon: WeaponArt): { x: number; y: number } | null {
+  const pose = weapon ? WEAPON_POSES[weapon] : undefined;
+  if (!pose) return null;
+  const a = (pose.angle * Math.PI) / 180;
+  const reach = pose.reach * weaponScale(weapon!);
+  return { x: RIG.hand.x + Math.cos(a) * reach, y: RIG.hand.y + Math.sin(a) * reach };
 }
 
 /** Rotate a layer about a pivot (DOM idle animation). */

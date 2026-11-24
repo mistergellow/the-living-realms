@@ -6,6 +6,7 @@ import type {
   CombatView,
   DerivedStatsDto,
   GearCombatEffects,
+  WeaponLook,
   StatusView,
 } from '@realms/shared';
 import { ELITE_RULES, getEnemy, type EnemyDef } from '../content/enemies.js';
@@ -75,6 +76,8 @@ export interface PartyMemberInput {
   statuses?: StatusView[];
   /** Combat bonuses from gear effects (request #37). */
   gear?: GearCombatEffects;
+  /** Request #76: what the player holds (art only). */
+  look?: WeaponLook;
   /** Exploration boons for the first round. */
   firstRoundFocus?: number;
   firstRoundBlock?: number;
@@ -132,6 +135,7 @@ export function partyCombatant(p: PartyMemberInput, side: Combatant['side'] = 'p
     abilityIds: p.abilityIds,
     stats: p.stats,
     ...(p.gear ? { gear: p.gear } : {}),
+    ...(p.look ? { look: p.look } : {}),
   };
 }
 

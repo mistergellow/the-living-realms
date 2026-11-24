@@ -54,7 +54,15 @@ async function rig(runId: string) {
   const state = row!.state as { combat: RunDto['combat'] };
   if (!state.combat) return;
   for (const c of state.combat.combatants) {
-    if (c.side === 'enemies') Object.assign(c, { hp: 1, stats: { ...c.stats, armor: 0 } });
+    // Request #71: no phases (a boss at 1 HP would call help), no Champion traits.
+    if (c.side === 'enemies')
+      Object.assign(c, {
+        hp: 1,
+        stats: { ...c.stats, armor: 0 },
+        phase: 99,
+        statuses: [],
+        gear: undefined,
+      });
     else Object.assign(c, { stats: { ...c.stats, critChance: 0 } });
   }
   await t.dbHandle

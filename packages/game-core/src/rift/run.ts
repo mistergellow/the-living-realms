@@ -4,6 +4,7 @@ import type {
   ConditionView,
   DerivedStatsDto,
   GearCombatEffects,
+  WeaponLook,
   EventResultView,
   MapDto,
   PlanActionInput,
@@ -98,6 +99,8 @@ export interface RunMember {
   abilityExtraTurns?: Record<string, number>;
   /** Gear effects (request #37); missing on runs saved before it. */
   gear?: GearCombatEffects;
+  /** Request #76: what the player holds (art only); missing on older runs. */
+  look?: WeaponLook;
   hp: number;
   mana: number;
   slot: number;
@@ -468,6 +471,7 @@ function toPartyInput(m: RunMember): PartyMemberInput {
     abilityMultipliers: m.abilityMultipliers,
     abilityExtraTurns: m.abilityExtraTurns ?? {},
     gear: m.gear,
+    ...(m.look ? { look: m.look } : {}),
     hp: m.left ? 0 : m.hp,
     mana: m.mana,
     slot: m.slot,
