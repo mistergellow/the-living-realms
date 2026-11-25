@@ -203,32 +203,39 @@
   box-shadow: 0 0 0 2px rgb(0 0 0 / 0.6);
 }
 
-/* ---------- the hex you are on (HomePage, request #40) ---------- */
+/* ---------- the hex you are on (HomePage, request #40; game screen, #83) ---------- */
 .place {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
   gap: var(--hud-gap);
   padding: var(--hud-gap);
   min-height: 0;
 }
-.place-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hud-gap);
-  min-height: 0;
-  overflow-y: auto;
-}
-.place-scene {
+/* The scene is the whole stage; everything else floats on it. Nothing scrolls but the panel. */
+.place-stage {
   position: relative;
-  flex: none;
-  height: clamp(9rem, 38vh, 26rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 34rem);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'plate alerts'
+    '. panel'
+    'bar bar';
+  gap: var(--space-3);
+  padding: var(--space-3);
+  min-height: 0;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.5);
   background: #1e1813;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.5);
+}
+.place-scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 .place-scene > svg {
   position: absolute;
@@ -236,77 +243,214 @@
   width: 100%;
   height: 100%;
 }
-.place-caption {
+.place-scene::after {
+  /* darken the bottom so the station bar reads on any scene */
+  content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  background: linear-gradient(180deg, transparent, rgb(6 6 10 / 0.85));
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(6 6 10 / 0.35),
+    transparent 30%,
+    transparent 60%,
+    rgb(6 6 10 / 0.8)
+  );
 }
-.place-caption h1 {
+.place-plate {
+  grid-area: plate;
+  position: relative;
+  align-self: start;
+  max-width: 30rem;
+}
+.place-plate h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 6px #000;
+  font-size: clamp(1.4rem, 2.6vw, 2.3rem);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px #000;
 }
 .place-kind {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  text-transform: none;
-  letter-spacing: 0.03em;
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-shadow: 0 1px 4px #000;
 }
 .place-desc {
-  margin: 0;
+  margin: 0.3rem 0 0;
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 4px #000;
 }
-.place-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: var(--space-2);
-}
-.place-action {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  text-decoration: none;
-  text-align: left;
-  font: inherit;
-  backdrop-filter: blur(6px);
-  cursor: pointer;
-}
-a.place-action:hover {
-  border-color: var(--accent-strong);
-  box-shadow: 0 0 0.8rem rgb(245 165 36 / 0.3);
-}
-.place-action[aria-disabled='true'] {
-  opacity: 0.55;
-  cursor: default;
-}
-.place-action .icon {
-  width: 1.8rem;
-  height: 1.8rem;
-  flex: none;
-  color: var(--accent-strong);
-}
-.place-action-text {
+.place-alerts {
+  grid-area: alerts;
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+  align-self: start;
   min-width: 0;
 }
-.place-action-text strong {
-  font-size: 0.98rem;
+.place-alerts:empty {
+  display: none;
 }
-.place-action-text > span {
+.place-alerts > .panel {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-strong);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(8px);
+}
+.place-panel {
+  grid-area: panel;
+  position: relative;
+  align-self: end;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--frame, var(--glass-border));
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgb(24 19 14 / 0.94), rgb(10 8 6 / 0.96));
+  box-shadow:
+    0 12px 32px rgb(0 0 0 / 0.6),
+    inset 0 0 0 1px rgb(232 189 95 / 0.08);
+  animation: panel-in 160ms ease-out;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .place-panel {
+    animation: none;
+  }
+}
+.place-panel-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  z-index: 1;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: var(--text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.place-panel-close:hover,
+.place-panel-close:focus-visible {
+  color: var(--text);
+  background: rgb(255 255 255 / 0.08);
+}
+
+/* the station bar: what you can do here, like a hotbar */
+.station-bar {
+  grid-area: bar;
+  position: relative;
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: 0.6rem 0.1rem 0.1rem;
+  scrollbar-width: thin;
+}
+.station {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 5.6rem;
+  padding: 0.5rem 0.3rem 0.4rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgb(12 10 8 / 0.82);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.station:hover,
+.station:focus-visible {
+  border-color: var(--accent-strong);
+}
+.station[data-active='true'] {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgb(232 189 95 / 0.22), rgb(12 10 8 / 0.9));
+  box-shadow: 0 0 0.9rem rgb(232 189 95 / 0.35);
+}
+.station[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.station-art {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+}
+.station-art .icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent-strong);
+}
+.station-art .item-icon {
+  width: 3rem;
+  height: 3rem;
+}
+.station-label {
+  font-family: var(--font-display);
   font-size: 0.78rem;
+  line-height: 1.1;
+  text-align: center;
+}
+.station-key {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.3rem;
+  min-width: 1rem;
+  padding: 0 0.2rem;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0.2rem;
+  background: rgb(0 0 0 / 0.6);
+  color: var(--text-muted);
+  font: 700 0.65rem/1.1rem var(--font-body, inherit);
+  text-align: center;
+}
+.station-hot {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1a1206;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.1rem;
+}
+.station-hot.is-soon {
+  background: rgb(255 255 255 / 0.15);
+  color: var(--text-muted);
+}
+.station[data-hot='Motherlode'] {
+  border-color: var(--accent);
+  animation: lode-glow 2.4s ease-in-out infinite;
+}
+@keyframes lode-glow {
+  50% {
+    box-shadow: 0 0 1.1rem rgb(232 189 95 / 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station[data-hot='Motherlode'] {
+    animation: none;
+  }
 }
 .soon {
   margin-left: var(--space-1);
@@ -441,20 +585,40 @@ a.place-action:hover {
   }
   .place {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) minmax(12rem, 40%);
-  }
-  .place-scene {
-    height: 8.5rem;
-  }
-  .place-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .place-action-text > span {
-    display: none;
+    grid-template-rows: minmax(0, 1fr) minmax(9rem, 28%);
   }
 }
-@media (max-height: 40em) and (min-width: 40em) {
-  .place-scene {
-    height: 7rem;
+@media (max-width: 56em) {
+  .place-stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'plate' 'alerts' 'panel' 'bar';
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .place-desc {
+    display: none;
+  }
+  .station {
+    width: 4.6rem;
+  }
+  .station-art,
+  .station-art .item-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+}
+@media (max-height: 40em) {
+  .place-desc {
+    display: none;
+  }
+  .station-label {
+    font-size: 0.7rem;
+  }
+}
+/* No keyboard on touch screens: the station keys would only be noise. */
+@media (hover: none), (max-width: 56em) {
+  .station-key {
+    display: none;
   }
 }

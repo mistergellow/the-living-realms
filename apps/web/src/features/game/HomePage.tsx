@@ -1,17 +1,22 @@
 import { locationAt, type LocationActionId, type LocationKind } from '@realms/game-core';
-import { CHAT_MAX_LENGTH, type HexCoord } from '@realms/shared';
+import { CHAT_MAX_LENGTH, type HexCoord, type ProfessionDto } from '@realms/shared';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
-import { GatheringHere } from '../professions/GatheringHere';
+import { DefIcon } from '../characters/sheet/ItemIcon';
+import { useProfessions } from '../professions/api';
+import { GatherPanel } from '../professions/GatherPanel';
+import { Rumours } from '../professions/Rumours';
+import { JobBanner } from '../professions/ProfessionsPage';
 import { useActiveRun } from '../rifts/api';
 import { useLobbyOverview } from '../rifts/lobby-api';
 import { useWorldBoss } from '../world/api';
 import { useWorldStore } from '../world/world-store';
 import { LocationScene } from './LocationScene';
+import '../professions/professions.css';
 
 const ACTION_ICON: Record<LocationActionId, IconName> = {
   npcs: 'friends',
@@ -42,78 +47,197 @@ const KIND_LABEL: Record<LocationKind, string> = {
   sea: 'Sea',
 };
 
+/** One thing you can do on this hex: a panel here, or a link to its screen. */
+type Station =
+  | { key: string; kind: 'gather'; label: string; profession: ProfessionDto; hot: string | null }
+  | { key: string; kind: 'rumours'; label: string }
+  | { key: string; kind: 'link'; label: string; icon: IconName; to: string | null; hint: string };
+
 /**
- * The hex you are standing on (request #40): its picture, what you can do
- * there (talk to people, market, workshop, Rifts, leave to the world map)
- * and the chat with everyone on the same hex. It is the first screen when
- * you open the game.
+ * The hex you are standing on (request #40), reorganised as a game screen
+ * (request #83): the scene fills the screen, a bar of stations at the bottom
+ * (keys 1–9) opens what you can do here in a framed panel over the scene. Only
+ * that panel scrolls. Adding something new to a place = one more station.
  */
 export function HomePage() {
   const characterId = useActiveCharacter((s) => s.characterId)!;
   const self = useWorldStore((s) => s.self);
   const position = self?.position ?? { q: 0, r: 0 };
   const boss = useWorldBoss(characterId);
+  const profs = useProfessions(characterId);
+  const run = useActiveRun(characterId);
   const bossHere =
     !!boss.data &&
     !boss.data.defeatedAt &&
     boss.data.position.q === position.q &&
     boss.data.position.r === position.r;
   const place = locationAt(position, { worldBossHere: bossHere });
+  const jobRunning = profs.data?.job?.status === 'running';
+
+  const stations = useMemo<Station[]>(() => {
+    const gather: Station[] = run.data
+      ? []
+      : (profs.data?.professions ?? [])
+          .filter((p) => p.category === 'gathering' && p.availableHere)
+          .map((p) => ({
+            key: `gather:${p.id}`,
+            kind: 'gather',
+            label: p.name,
+            profession: p,
+            hot: p.site?.motherlode ? 'Motherlode' : p.site?.boom ? 'Boom' : null,
+          }));
+    const links: Station[] = place.actions.map((a) => ({
+      key: `link:${a.id}`,
+      kind: 'link',
+      label: a.label,
+      icon: ACTION_ICON[a.id],
+      to: a.available ? (ACTION_TO[a.id] ?? null) : null,
+      hint: a.description,
+    }));
+    const rumours: Station[] = profs.data?.rumours.length
+      ? [{ key: 'rumours', kind: 'rumours', label: 'Rumours' }]
+      : [];
+    return [...gather, ...links, ...rumours];
+  }, [profs.data, place.actions, run.data]);
+
+  // The first gathering station is open when you arrive; click again to close.
+  // The choice belongs to this hex: travelling elsewhere starts afresh.
+  const placeKey = `${position.q},${position.r}`;
+  const [choice, setChoice] = useState<{ at: string; key: string | null } | null>(null);
+  const fallback = stations.find((s) => s.kind === 'gather')?.key ?? null;
+  const openKey = choice?.at === placeKey ? choice.key : fallback;
+  const open = stations.find((s) => s.key === openKey && s.kind !== 'link') ?? null;
+  const choose = (key: string | null) => setChoice({ at: placeKey, key });
+
+  const navigate = useNavigate();
+  const activate = (s: Station) => {
+    if (s.kind === 'link') {
+      if (s.to) void navigate(s.to);
+      return;
+    }
+    choose(s.key === openKey ? null : s.key);
+  };
+  // Keys 1–9 pick a station (not while typing).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const s = stations[Number(e.key) - 1];
+      if (!s || !/^[1-9]$/.test(e.key)) return;
+      if (s.kind === 'link') {
+        if (s.to) void navigate(s.to);
+      } else setChoice({ at: placeKey, key: s.key === openKey ? null : s.key });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stations, navigate, placeKey, openKey]);
 
   return (
     <div className="place" data-testid="place">
-      <div className="place-main">
-        <section className="place-scene" aria-label={`${place.name} scene`}>
+      <div className="place-stage">
+        <div className="place-scene" aria-hidden>
           <LocationScene scene={place.scene} />
-          <div className="place-caption">
-            <span className="place-kind">
-              {KIND_LABEL[place.kind]}
-              {place.region ? ` · ${place.region}` : ''} · hex ({position.q}, {position.r})
-            </span>
-            <h1 data-testid="place-name">{place.name}</h1>
-          </div>
-        </section>
-        <p className="place-desc">{place.description}</p>
+        </div>
+        <header className="place-plate">
+          <h1 data-testid="place-name">{place.name}</h1>
+          <span className="place-kind">
+            {KIND_LABEL[place.kind]}
+            {place.region ? `, ${place.region}` : ''} ({position.q}, {position.r})
+          </span>
+          <p className="place-desc">{place.description}</p>
+        </header>
 
-        <nav className="place-actions" aria-label={`What to do in ${place.name}`}>
-          {place.actions.map((a) => {
-            const to = ACTION_TO[a.id];
-            const inner = (
-              <>
-                <Icon name={ACTION_ICON[a.id]} />
-                <span className="place-action-text">
-                  <strong>
-                    {a.label}
-                    {!a.available && <span className="soon">soon</span>}
-                  </strong>
-                  <span>{a.description}</span>
-                </span>
-              </>
-            );
-            return a.available && to ? (
-              <Link key={a.id} className="place-action" to={to} aria-label={a.label}>
-                {inner}
-              </Link>
-            ) : (
-              <div
-                key={a.id}
-                className="place-action"
-                aria-disabled="true"
-                title={`${a.label}: coming in a later update`}
-              >
-                {inner}
-              </div>
-            );
-          })}
+        <div className="place-alerts">
+          <ActivityCard characterId={characterId} />
+          <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
+          {profs.data?.job && <JobBanner job={profs.data.job} characterId={characterId} />}
+        </div>
+
+        {open && (
+          <section
+            className="place-panel"
+            aria-label={open.label}
+            data-testid="place-panel"
+            key={open.key}
+          >
+            <button
+              className="place-panel-close"
+              onClick={() => choose(null)}
+              aria-label="Close"
+              title="Close"
+            >
+              ×
+            </button>
+            {open.kind === 'gather' && (
+              <GatherPanel p={open.profession} characterId={characterId} jobRunning={jobRunning} />
+            )}
+            {open.kind === 'rumours' && profs.data && <Rumours rumours={profs.data.rumours} />}
+          </section>
+        )}
+
+        <nav className="station-bar" aria-label={`What to do in ${place.name}`}>
+          {stations.map((s, i) => (
+            <StationButton
+              key={s.key}
+              s={s}
+              hotkey={i < 9 ? i + 1 : null}
+              active={s.key === open?.key}
+              onClick={() => activate(s)}
+            />
+          ))}
         </nav>
-        {/* Below the actions: when these load they do not push anything down (request #70). */}
-        <ActivityCard characterId={characterId} />
-        <GatheringHere characterId={characterId} />
-        <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
       </div>
 
       <HexChat hex={position} />
     </div>
+  );
+}
+
+function StationButton({
+  s,
+  hotkey,
+  active,
+  onClick,
+}: {
+  s: Station;
+  hotkey: number | null;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const disabled = s.kind === 'link' && !s.to;
+  const title =
+    s.kind === 'link'
+      ? `${s.label}: ${disabled ? 'coming in a later update' : s.hint}`
+      : s.kind === 'gather'
+        ? `${s.label}: see what you can find here`
+        : 'Where gathering pays today';
+  const art =
+    s.kind === 'gather' ? (
+      <DefIcon defId={s.profession.activities[0]?.drops?.[0]?.items[0]?.itemDefId ?? ''} />
+    ) : (
+      <Icon name={s.kind === 'rumours' ? 'scroll' : s.icon} />
+    );
+  return (
+    <button
+      type="button"
+      className="station"
+      data-kind={s.kind}
+      data-active={active}
+      data-hot={s.kind === 'gather' ? (s.hot ?? undefined) : undefined}
+      aria-pressed={s.kind === 'link' ? undefined : active}
+      aria-label={s.label}
+      aria-disabled={disabled || undefined}
+      title={title}
+      data-testid={`station-${s.key.replace(':', '-')}`}
+      onClick={disabled ? undefined : onClick}
+    >
+      <span className="station-art">{art}</span>
+      <span className="station-label">{s.label}</span>
+      {hotkey && <kbd className="station-key">{hotkey}</kbd>}
+      {s.kind === 'gather' && s.hot && <span className="station-hot">{s.hot}</span>}
+      {disabled && <span className="station-hot is-soon">soon</span>}
+    </button>
   );
 }
 

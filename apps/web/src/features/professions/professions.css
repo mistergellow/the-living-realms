@@ -296,62 +296,106 @@
   border-color: var(--danger);
   color: var(--danger);
 }
-.drop-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+.loot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.6rem, 1fr));
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.drop-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(4rem, 9rem) 3.2rem;
-  align-items: center;
-  gap: var(--space-2);
-}
-.drop-row[data-locked='true'] {
-  opacity: 0.45;
-}
-.drop-icons {
-  display: flex;
-  gap: 0.2rem;
-  min-width: 2.6rem;
-}
-.drop-icons .item-icon {
-  width: 2.6rem;
-  height: 2.6rem;
-}
-.drop-name {
+.loot {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.3rem 0.35rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: var(--radius-sm);
+  background: radial-gradient(circle at 50% 30%, rgb(232 189 95 / 0.1), rgb(0 0 0 / 0.35) 70%);
+  text-align: center;
 }
-.drop-note {
-  font-size: 0.75rem;
-  color: var(--muted);
+.loot[data-deposit='true']:not([data-off='true']) {
+  border-color: rgb(169 139 216 / 0.55);
+  background: radial-gradient(circle at 50% 30%, rgb(169 139 216 / 0.22), rgb(0 0 0 / 0.35) 70%);
 }
-.drop-note.is-rare {
+.loot[data-off='true'] {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+.loot-art {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.loot-art .item-icon {
+  width: 3.4rem;
+  height: 3.4rem;
+}
+.loot-art .item-icon + .item-icon {
+  margin-left: -1.2rem;
+}
+.loot-chance {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -0.35rem;
+  display: grid;
+  place-items: center;
+  min-width: 2.3rem;
+  padding: 0 0.3rem;
+  border: 1px solid rgb(232 189 95 / 0.6);
+  border-radius: 999px;
+  background: #120d08;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.loot-chance .icon {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+.loot-name {
+  font-size: 0.8rem;
+  line-height: 1.15;
+  margin-top: 0.25rem;
+}
+.loot-note {
+  min-height: 0.9rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+.loot[data-deposit='true'] .loot-note {
   color: #c9b3ee;
 }
-.drop-bar {
-  height: 0.45rem;
+.loot.is-nothing .loot-chance {
+  border-color: rgb(255 255 255 / 0.2);
+  color: var(--text-muted);
+}
+.loot-empty {
+  display: block;
+  width: 3.4rem;
+  height: 3.4rem;
+  border: 1px dashed rgb(255 255 255 / 0.18);
   border-radius: 0.3rem;
-  background: rgb(0 0 0 / 0.5);
+}
+.gather-xp {
+  display: inline-block;
+  width: 4rem;
+  height: 0.3rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  border-radius: 0.2rem;
+  background: rgb(0 0 0 / 0.6);
   overflow: hidden;
 }
-.drop-bar i {
+.gather-xp i {
   display: block;
   height: 100%;
   background: var(--accent);
-}
-.is-nothing .drop-bar i {
-  background: rgb(255 255 255 / 0.2);
-}
-.drop-chance {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
 }
 .gather-work {
   display: flex;
@@ -451,12 +495,6 @@
   margin: 0;
 }
 @media (max-width: 560px) {
-  .drop-row {
-    grid-template-columns: auto minmax(0, 1fr) 3rem;
-  }
-  .drop-bar {
-    display: none;
-  }
   .skill-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -464,4 +502,18 @@
   .skill-boost {
     display: none;
   }
+}
+
+/* In the place panel (request #83) the panel is the frame. */
+.place-panel .gather {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.place-panel .gather-head {
+  padding-right: 2rem;
+}
+.rumours-lead {
+  margin: 0 0 var(--space-2);
 }

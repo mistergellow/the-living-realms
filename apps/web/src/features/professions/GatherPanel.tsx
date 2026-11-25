@@ -2,6 +2,7 @@ import { AP_RULES, JOB_RULES, jobApCost, jobSeconds } from '@realms/game-core';
 import type { ActivityDto, JobResultDto, ProfessionDto } from '@realms/shared';
 import { useState } from 'react';
 import { FormError } from '../../shared/ui/FormError';
+import { Icon } from '../../shared/ui/Icon';
 import { DefIcon } from '../characters/sheet/ItemIcon';
 import { liveAp } from '../world/ap';
 import { useWorldStore } from '../world/world-store';
@@ -105,9 +106,8 @@ function GatherBody({
           <span className="gather-rank">
             {p.rankName} {p.title}
             {p.pointsToNext > 0 && (
-              <span className="muted">
-                {' '}
-                · {p.points}/{p.pointsToNext}
+              <span className="gather-xp" title={`${p.points}/${p.pointsToNext} Mastery`}>
+                <i style={{ width: `${(p.points / p.pointsToNext) * 100}%` }} />
               </span>
             )}
           </span>
@@ -143,50 +143,61 @@ function GatherBody({
                   : 'Each find takes one; it regrows over time'
               }
             >
-              {p.node.richness} spot · {p.node.amount}/{p.node.max} left
+              {p.node.richness} spot, {p.node.amount}/{p.node.max} left
             </span>
           )}
         </div>
       </header>
 
-      <ul className="drop-table" aria-label={`What ${a.name.toLowerCase()} can give here`}>
-        {drops.map((d, i) => (
-          <li
-            key={i}
-            className="drop-row"
-            data-locked={d.locked || d.needsDeposit}
-            data-testid={`drop-${d.items[0]!.itemDefId}`}
-          >
-            <span className="drop-icons">
-              {d.items.map((it) => (
-                <DefIcon key={it.itemDefId} defId={it.itemDefId} />
-              ))}
-            </span>
-            <span className="drop-name">
-              {d.items.map((it) => `${qtyText(it)} × ${it.name}`).join(' + ')}
-              {d.locked ? (
-                <span className="drop-note">Unlocks at {d.rankName}</span>
-              ) : d.needsDeposit ? (
-                <span className="drop-note">Only in a deposit</span>
-              ) : d.deposit ? (
-                <span className="drop-note is-rare">Deposit find</span>
-              ) : null}
-            </span>
-            <span className="drop-bar" aria-hidden>
-              <i style={{ width: `${Math.min(100, d.chance)}%` }} />
-            </span>
-            <span className="drop-chance">
-              {d.locked || d.needsDeposit ? '—' : `${pct(d.chance)}%`}
-            </span>
-          </li>
-        ))}
-        <li className="drop-row is-nothing">
-          <span className="drop-icons" aria-hidden />
-          <span className="drop-name muted">Nothing</span>
-          <span className="drop-bar" aria-hidden>
-            <i style={{ width: `${a.nothingChance ?? 0}%` }} />
+      <ul className="loot-grid" aria-label={`What ${a.name.toLowerCase()} can give here`}>
+        {drops.map((d, i) => {
+          const off = d.locked || d.needsDeposit;
+          const it = d.items[0]!;
+          return (
+            <li
+              key={i}
+              className="loot"
+              data-off={off}
+              data-deposit={d.deposit}
+              data-testid={`drop-${it.itemDefId}`}
+              title={
+                d.locked
+                  ? `Unlocks at ${d.rankName}`
+                  : d.needsDeposit
+                    ? 'Only found on a deposit hex'
+                    : `${pct(d.chance)}% per attempt`
+              }
+            >
+              <span className="loot-art">
+                {d.items.map((x) => (
+                  <DefIcon key={x.itemDefId} defId={x.itemDefId} />
+                ))}
+                <span className="loot-chance">
+                  {off ? <Icon name="lock" /> : `${pct(d.chance)}%`}
+                </span>
+              </span>
+              <span className="loot-name">
+                {d.items.map((x) => `${qtyText(x)} ${x.name}`).join(' + ')}
+              </span>
+              <span className="loot-note">
+                {d.locked
+                  ? d.rankName
+                  : d.needsDeposit
+                    ? 'Deposit only'
+                    : d.deposit
+                      ? 'Rare find'
+                      : ' '}
+              </span>
+            </li>
+          );
+        })}
+        <li className="loot is-nothing" title="An attempt that finds nothing">
+          <span className="loot-art">
+            <span className="loot-empty" aria-hidden />
+            <span className="loot-chance">{pct(a.nothingChance ?? 0)}%</span>
           </span>
-          <span className="drop-chance muted">{pct(a.nothingChance ?? 0)}%</span>
+          <span className="loot-name">Nothing</span>
+          <span className="loot-note"> </span>
         </li>
       </ul>
 

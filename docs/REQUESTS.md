@@ -1795,3 +1795,25 @@ noutro — "faz uma mecânica interessante". Provisório A144.
   `ProfessionsDto.rumours`. Os trabalhos em tempo real usam o dia e o hex em que
   começaram.
 - Quando houver ouro (item e ícone), basta pô-lo como drop `deposit` numa tabela.
+
+### #83 — 2026-11-25 — Página do sítio como ecrã de jogo
+
+**Pedido:** a página do sítio estava horrível, nada "gaming", cheia de scrolls
+desnecessários; vai ter muitas coisas, por isso tem de estar organizada.
+**Resultado:**
+
+- A cena ocupa a área toda e nada faz scroll da página. Por cima: placa com o
+  nome do sítio (canto superior esquerdo), avisos (Rift ativo, próximo passo,
+  trabalho a decorrer) no canto superior direito, e em baixo uma **barra de
+  estações** (como uma hotbar, teclas 1–9): uma por cada coisa que se pode
+  fazer no hex — recolhas (Mining, Fishing…), as ações do sítio (loja,
+  ferreiro, Rifts, Professions, Travel…) e **Rumours**.
+- Uma estação de recolha ou os rumores abrem um painel emoldurado sobre a cena
+  (só ele faz scroll se precisar); as outras levam ao seu ecrã. Ao chegar a um
+  hex com recolha, a primeira abre sozinha; clicar de novo (ou ×, ou a tecla)
+  fecha. Etiquetas "Boom" e "Motherlode" (a brilhar) nas estações.
+- Recolha em **grelha de loot**: um quadrado por drop com o ícone, a % no canto
+  e a quantidade; bloqueados a cinzento com cadeado; "Nothing" com a sua %.
+- Coisa nova num sítio = mais uma estação (`Station` em `HomePage.tsx`).
+- Telemóvel: placa, avisos, painel e barra empilhados; a barra desliza; sem
+  teclas.

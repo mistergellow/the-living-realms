@@ -75,7 +75,7 @@ test('register → create character → enter the world → log out → log in',
   await expect(page.getByTestId('place-name')).toHaveText(REGIONS.west.capital!.name);
   await expect(page.getByTestId('top-ap')).toHaveText('120/120');
   await page.screenshot({ path: 'test-results/screens/02-home.png' });
-  await page.getByRole('link', { name: 'Travel', exact: true }).click();
+  await page.getByRole('button', { name: 'Travel', exact: true }).click();
   await expect(page).toHaveURL(/\/world$/);
   await expect(page.getByTestId('player-list')).toContainText(name);
   await expect(page.getByTestId('world-tick')).toBeVisible();
@@ -246,7 +246,7 @@ test('Rift: map, live actions, block, end turn, enemy phase, abandon', async ({ 
     page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Rifts' }),
   ).toHaveCount(0);
   await travel(page, raider, 'rift');
-  await page.getByRole('link', { name: /Enter the Rift/ }).click();
+  await page.getByRole('button', { name: /Enter the Rift/ }).click();
   await expect(page.getByTestId('rift-card')).toContainText('Tier 1');
   await expect(page.getByTestId('top-ap')).toHaveText(/^1\d\d\/120$/);
   await page.getByRole('button', { name: 'Enter solo' }).click();
@@ -402,8 +402,6 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   const fishing = page.getByTestId('gather-fishing');
   await expect(fishing.getByTestId('drop-raw_fish')).toContainText('%');
   await expect(fishing.getByTestId('profession-node')).toContainText('left');
-  // Request #82: the day's rumours.
-  await expect(page.getByTestId('rumours')).toContainText('booms in');
   // One attempt, then three (request #56), paid in AP; the slider chooses how many.
   await fishing.getByLabel('Attempts of Fish').fill('1');
   await fishing.getByRole('button', { name: /Fish now · 2 AP/ }).click();
@@ -413,8 +411,22 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(fishing.getByTestId('job-result')).toContainText('Fish × 3');
   // Request #59: the header's AP follows at once (2 + 6).
   await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
-  await page.screenshot({ path: 'test-results/screens/10-gathering.png', fullPage: true });
-  await page.getByRole('link', { name: 'Professions', exact: true }).click();
+  await page.screenshot({ path: 'test-results/screens/10-gathering.png' });
+  // Request #82: the day's rumours, a station of their own (request #83).
+  await page.getByRole('button', { name: 'Rumours', exact: true }).click();
+  await expect(page.getByTestId('rumours')).toContainText('booms in');
+  await page.screenshot({ path: 'test-results/screens/10a-rumours.png' });
+  // Pressing the station's key again closes the panel.
+  await page.keyboard.press(
+    String(
+      await page
+        .getByRole('navigation', { name: /What to do/ })
+        .getByRole('button')
+        .count(),
+    ),
+  );
+  await expect(page.getByTestId('rumours')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Professions', exact: true }).click();
   // Request #51: two sections, Novice ranks, the starter rod in the bag.
   await expect(page.getByTestId('section-gathering')).toContainText('Gathering Mastery');
   await expect(page.getByTestId('section-crafting')).toContainText('Crafting Mastery');
