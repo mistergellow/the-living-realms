@@ -317,4 +317,42 @@ describe('professions', () => {
     const r = await perform(h, 'fishing', 'fish');
     expect(r.json().error.code).toBe('IN_RIFT');
   });
+
+  it('gathering is one action with a drop table; rumours name the booming regions (#81, #82)', async () => {
+    const h = await hero();
+    const mountain = worldMapHexes().find((x) => x.terrain === 'mountain')!;
+    await placeCharacter(t, h.id, { q: mountain.q, r: mountain.r });
+    const res = (await list(h)).json() as ProfessionsDto;
+    const mining = res.professions.find((p) => p.id === 'mining')!;
+    expect(mining.availableHere).toBe(true);
+    expect(mining.activities).toHaveLength(1);
+    const a = mining.activities[0]!;
+    expect(a.drops!.map((d) => d.items[0]!.itemDefId)).toEqual(['iron_ore', 'rough_gem']);
+    const gem = a.drops![1]!;
+    expect(gem).toMatchObject({ locked: true, deposit: true, chance: 0, rankName: 'Apprentice' });
+    const sum = a.drops!.reduce((n, d) => n + d.chance, 0) + a.nothingChance!;
+    expect(sum).toBeCloseTo(100, 0);
+    expect(mining.site).toMatchObject({ boomRegion: expect.any(String) });
+    expect(res.rumours.map((r) => r.professionId)).toContain('mining');
+    // Crafting has no drop table.
+    const carpentry = res.professions.find((p) => p.id === 'carpentry')!;
+    expect(carpentry.activities[0]!.drops).toBeNull();
+    expect(carpentry.site).toBeNull();
+  });
+
+  it('a job saved with an old activity id still runs (request #81)', async () => {
+    const h = await hero();
+    const mountain = worldMapHexes().find((x) => x.terrain === 'mountain')!;
+    await placeCharacter(t, h.id, { q: mountain.q, r: mountain.r });
+    const res = await t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.id}/professions/mining/activities/mine_iron/jobs`,
+      headers: { cookie: h.cookie },
+      payload: { mode: 'ap', count: 2 },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as JobResponseDto;
+    expect(body.result!.attempts).toBe(2);
+    expect(body.result!.produced.every((p) => p.name === 'Iron Ore')).toBe(true);
+  });
 });

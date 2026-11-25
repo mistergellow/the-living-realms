@@ -115,6 +115,55 @@ export interface ActivityDef {
   outputs: Array<{ item: ItemDefId; min: number; max: number }>;
   /** Activities that work on one of your items. */
   effect?: 'repair';
+  /**
+   * Request #81: gathering is one action with a drop table. On a success ONE
+   * drop is picked by weight among those your rank unlocks (`outputs` is then
+   * unused). The chance of each drop is shown to the player.
+   */
+  drops?: DropDef[];
+}
+
+/** One line of a gathering drop table (request #81). PROVISIONAL numbers (A143). */
+export interface DropDef {
+  /** What it gives (usually one item; a hunt gives hide and meat together). */
+  outputs: Array<{ item: ItemDefId; min: number; max: number }>;
+  /** Relative weight at the rank that unlocks it. */
+  weight: number;
+  /** Weight added per rank above `rank` (rarer drops grow with Mastery). */
+  weightPerRank?: number;
+  /** Mastery rank index needed (default 0, Novice). Locked drops are shown greyed. */
+  rank?: number;
+  /** Mastery points on success (default: the activity's). Complexity = rank + 1. */
+  points?: number;
+  /**
+   * Request #82: only found on DEPOSIT hexes (fixed veins, always the same
+   * places). Booming regions and the day's motherlode multiply its weight.
+   */
+  deposit?: boolean;
+}
+
+/** Every item an activity can give (its outputs, or all its drops). */
+export function activityItems(a: Pick<ActivityDef, 'outputs' | 'drops'>): ItemDefId[] {
+  const outs = a.drops ? a.drops.flatMap((d) => d.outputs) : a.outputs;
+  return [...new Set(outs.map((o) => o.item))];
+}
+
+/**
+ * Request #81: activity ids that were merged into one gathering action. Jobs
+ * saved with an old id still finish.
+ */
+export const LEGACY_ACTIVITY_IDS: Readonly<Record<string, string>> = {
+  mine_iron: 'mine',
+  mine_gems: 'mine',
+  gather_herbs: 'forage',
+  harvest_grain: 'forage',
+  harvest_flax: 'forage',
+};
+
+/** An activity of a profession by id (old merged ids included). */
+export function findActivity(p: ProfessionDef, id: string): ActivityDef | undefined {
+  const want = LEGACY_ACTIVITY_IDS[id] ?? id;
+  return p.activities.find((a) => a.id === want);
 }
 
 export interface ProfessionDef {
@@ -151,6 +200,7 @@ const prof = (p: ProfessionDef) => p;
 
 export const PROFESSIONS = {
   // ---- gathering ----
+  // Request #81: one action per profession with a drop table (A143).
   hunting: prof({
     id: 'hunting',
     name: 'Hunting',
@@ -166,9 +216,14 @@ export const PROFESSIONS = {
         description: 'Track an animal through the woods.',
         baseChance: 55,
         points: 14,
-        outputs: [
-          { item: 'raw_hide', min: 1, max: 1 },
-          { item: 'raw_meat', min: 1, max: 2 },
+        drops: [
+          {
+            outputs: [
+              { item: 'raw_hide', min: 1, max: 1 },
+              { item: 'raw_meat', min: 1, max: 2 },
+            ],
+            weight: 100,
+          },
         ],
       }),
     ],
@@ -186,7 +241,7 @@ export const PROFESSIONS = {
         id: 'fish',
         name: 'Fish',
         description: 'Cast a line and wait.',
-        outputs: [{ item: 'raw_fish', min: 1, max: 2 }],
+        drops: [{ outputs: [{ item: 'raw_fish', min: 1, max: 2 }], weight: 100 }],
       }),
     ],
   }),
@@ -198,25 +253,17 @@ export const PROFESSIONS = {
     description: 'Find medicinal plants and harvest grain and flax.',
     attributes: { intellect: 0.6, will: 0.4 },
     activities: [
+      // Farming was merged into Herbalism (request #51); herbs, grain and flax
+      // became one action (request #81).
       act({
-        id: 'gather_herbs',
-        name: 'Gather herbs',
-        description: 'Search the ground for Rift Moss.',
-        outputs: [{ item: 'herb', min: 1, max: 2 }],
-      }),
-      // Farming was merged into Herbalism (request #51).
-      act({
-        id: 'harvest_grain',
-        name: 'Harvest grain',
-        description: 'Reap a patch of wild grain.',
-        baseChance: 80,
-        outputs: [{ item: 'grain', min: 1, max: 3 }],
-      }),
-      act({
-        id: 'harvest_flax',
-        name: 'Harvest flax',
-        description: 'Pull flax for its fibres.',
-        outputs: [{ item: 'flax', min: 1, max: 2 }],
+        id: 'forage',
+        name: 'Forage',
+        description: 'Search the ground for herbs, wild grain and flax.',
+        drops: [
+          { outputs: [{ item: 'herb', min: 1, max: 2 }], weight: 40 },
+          { outputs: [{ item: 'grain', min: 1, max: 3 }], weight: 35 },
+          { outputs: [{ item: 'flax', min: 1, max: 2 }], weight: 25 },
+        ],
       }),
     ],
   }),
@@ -234,7 +281,7 @@ export const PROFESSIONS = {
         name: 'Chop wood',
         description: 'Fell a tree and cut it into logs.',
         baseChance: 75,
-        outputs: [{ item: 'log', min: 1, max: 3 }],
+        drops: [{ outputs: [{ item: 'log', min: 1, max: 3 }], weight: 100 }],
       }),
     ],
   }),
@@ -248,20 +295,21 @@ export const PROFESSIONS = {
     attributes: { might: 0.5, endurance: 0.5 },
     activities: [
       act({
-        id: 'mine_iron',
-        name: 'Mine iron',
-        description: 'Break iron ore from a vein.',
+        id: 'mine',
+        name: 'Mine',
+        description: 'Break ore from the vein — with luck, a gem.',
         baseChance: 65,
-        outputs: [{ item: 'iron_ore', min: 1, max: 2 }],
-      }),
-      act({
-        id: 'mine_gems',
-        name: 'Search for gems',
-        description: 'Rare stones hide deep in the rock.',
-        rank: 1,
-        baseChance: 40,
-        points: 20,
-        outputs: [{ item: 'rough_gem', min: 1, max: 1 }],
+        drops: [
+          { outputs: [{ item: 'iron_ore', min: 1, max: 2 }], weight: 90 },
+          {
+            outputs: [{ item: 'rough_gem', min: 1, max: 1 }],
+            weight: 10,
+            weightPerRank: 5,
+            rank: 1,
+            points: 20,
+            deposit: true,
+          },
+        ],
       }),
     ],
   }),
@@ -692,7 +740,7 @@ export function getProfession(id: string): ProfessionDef | undefined {
 export function professionResources(p: ProfessionDef): ItemDefId[] {
   const out = new Set<string>();
   for (const a of p.activities) {
-    if (p.category === 'gathering') for (const o of a.outputs) out.add(o.item);
+    if (p.category === 'gathering') for (const item of activityItems(a)) out.add(item);
     else for (const i of a.inputs) out.add(i.item);
   }
   return [...out] as ItemDefId[];

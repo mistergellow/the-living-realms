@@ -455,7 +455,9 @@ function Blacksmith({ city, busy, run }: Props) {
       <p className="muted small" style={{ marginTop: 0 }}>
         +1 to +3: gold and luck. +4 to +10: also the material of the weapon&apos;s family. A failed
         upgrade <strong>destroys the weapon</strong> — unless you use a Blessing Scroll: then it
-        only loses 1 level.
+        only loses 1 level.{' '}
+        <strong>The gold, the materials and the scroll are always used up</strong>, even when the
+        upgrade fails.
       </p>
       <label className="row" style={{ gap: 6 }}>
         <input
@@ -541,7 +543,7 @@ function UpgradeCompare({ item, quote }: { item: ItemDto; quote: CityDto['upgrad
       <CompareRow label="Weapon abilities" now={`+${now.power}`} next={`+${next.power}`} unit="%" />
       <p className="muted small" style={{ margin: '0.3rem 0' }}>
         Success chance {Math.round(quote.chance * 100)}%. On failure the weapon breaks, unless you
-        use a Blessing Scroll.
+        use a Blessing Scroll. The cost is paid either way.
       </p>
       <div className="compare-after">
         <span className="muted small">After the upgrade</span>

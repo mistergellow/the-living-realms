@@ -294,6 +294,8 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A140 | Brilho e faíscas das armas (pedido #76)                         | a partir de +3; faíscas ~3/s (+3) a ~22/s (+10); cor +3–5 dourado, +6–8 azul-aço, +9–10 vermelho                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `UPGRADE_GLOW`, `upgradeColor` (`combat-scene.ts`)                               |
 | A141 | Raridade dos materiais pelo grau (pedido #78)                   | Poor → Common, Common → Uncommon, Fine → Rare, Superior → Epic, Exceptional → Legendary                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `GRADE_RARITY` (`gathering.ts`)                                                  |
 | A142 | Cor do fundo dos skills pelo nível (pedido #80)                 | 1–3 Common, 4–6 Uncommon, 7–10 Rare, M1–M5 Epic, M6–M10 Legendary, P Mythic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `SKILL_LEVEL_RARITY` (`skills.ts`)                                               |
+| A143 | Tabelas de drops da recolha (pedido #81)                        | uma tentativa: primeiro o sucesso (chance de antes, +10 %/rank, ferramenta, atributos), depois UM drop por peso. Mining: Iron Ore 1–2 (peso 90), Rough Gem 1 (peso 10 +5/rank, desde Apprentice, só em depósito). Herbalism: Herb 40, Grain 35, Flax 25. Hunting: Hide + Meat. Fishing: Raw Fish. Woodcutting: Log. "Search for gems" e as 3 recolhas de Herbalism juntaram-se numa ação                                                                                                                                                                   | `PROFESSIONS` (`drops`), `dropChances`                                           |
+| A144 | Hotzones diárias (pedido #82)                                   | depósitos fixos em 20 % dos hexes de cada profissão; cada dia (UTC) uma região em alta por profissão, cada região tem o seu dia em cada ciclo de 4: +10 % sucesso, +1 riqueza no grau, drops de depósito ×3; filão do dia (um hex de depósito nessa região): +10 % sucesso e drops de depósito ×2 a mais; rumor dá um hex a ≤ 3 do filão                                                                                                                                                                                                                   | `HOTZONE_RULES` (`gathering.ts`)                                                 |
 
 ---
 
@@ -1740,3 +1742,56 @@ tingido com as cores de raridade pelo nível (provisório A142), com um contorno
 da mesma cor. Aparece na ficha (lista e espaços preparados) e na barra de
 combate (o combate recebe agora o nível de cada skill, `abilityLevels`). Os
 ataques e poderes das armas não têm nível e mantêm a cor do tipo de ação.
+
+### #81 — 2026-11-25 — Recolha no hex com tabela de drops; profissões estilo Project Zomboid
+
+**Pedido:** "as professions estão parolas". Num sítio com minas, aparece ali
+"Mining" com o que se pode dropar (com % e ícones) e um sistema para escolher o
+tempo / AP a minar. No Character, profissões ao estilo Project Zomboid.
+**Decisões do dono:** um sorteio por tentativa (sucesso, depois um drop); slider
+de tentativas + "agora com AP" ou "ao longo do tempo"; no Character, o painel de
+skills do PZ (quadradinhos por nível), sem receitas nem botões. Provisório A143.
+**Resultado:**
+
+- game-core: cada profissão de recolha tem UMA ação (`mine`, `forage`, `fish`,
+  `hunt`, `chop`) com `drops` (`DropDef`: itens, peso, peso por rank, rank que
+  desbloqueia, depósito). `dropChances` dá a % de cada drop e a de "nada";
+  `resolveActivity` sorteia um drop. Ids antigos (`mine_iron`, `mine_gems`,
+  `gather_herbs`, `harvest_grain`, `harvest_flax`) → `LEGACY_ACTIVITY_IDS` /
+  `findActivity` (trabalhos guardados continuam a acabar).
+- Servidor: `ActivityDto.drops` / `nothingChance` com as % no hex e no dia.
+- Web: página **Here** mostra "Gathering here" com cada profissão possível no
+  hex — ícones dos itens, % por tentativa (barras), bloqueados com cadeado
+  ("Unlocks at Apprentice", "Only in a deposit"), "Nothing", slider de
+  tentativas, o que se espera apanhar, "Mine now · X AP" e "Over time · tempo".
+  O mesmo painel aparece em Crafts para as profissões de recolha.
+- Character → Professions: lista compacta em duas colunas, uma linha por
+  profissão com 6 quadrados (um por rank; o atual enche com o progresso), rank
+  e bónus de atributos; clicar abre a profissão em Crafts.
+- Ferreiro (pergunta durante o trabalho): ao falhar, o ouro, os materiais e o
+  scroll gastam-se sempre — o dono confirmou que está certo; o ecrã passou a
+  dizê-lo claramente antes de tentar.
+
+### #82 — 2026-11-25 — Hotzones que mudam todos os dias
+
+**Pedido:** cada sítio vai variando as hotzones, diariamente; o ouro (por
+exemplo) dropa sempre nos mesmos sítios, mas às vezes é num país, outras vezes
+noutro — "faz uma mecânica interessante". Provisório A144.
+**Resultado:**
+
+- **Depósitos fixos:** alguns hexes têm um veio (para sempre); drops marcados
+  `deposit` (hoje: Rough Gem) só saem aí. Os jogadores aprendem o mapa.
+- **Região em alta:** cada dia (UTC) cada profissão de recolha tem uma região
+  em alta (um dos 3 reinos ou as Riftlands); todas têm o seu dia em cada ciclo
+  de 4, numa ordem que muda de ciclo para ciclo. Lá: mais sucesso, melhor
+  qualidade e drops de depósito ×3.
+- **Filão do dia:** um hex de depósito secreto na região em alta, com ainda mais
+  sucesso e raros. Ninguém sabe onde: o rumor só dá um hex a até 3 de distância;
+  ao pisá-lo aparece a etiqueta "Motherlode".
+- "Word on the roads" na página Here: onde cada profissão está em alta hoje e o
+  rumor do filão; etiquetas "Boom today", "Deposit" e "Motherlode" no painel.
+- Tudo calculado (sem tabelas novas): `siteConditions`, `boomRegion`,
+  `motherlodeHex`, `gatheringRumours` (`gathering.ts`); `ProfessionDto.site`,
+  `ProfessionsDto.rumours`. Os trabalhos em tempo real usam o dia e o hex em que
+  começaram.
+- Quando houver ouro (item e ícone), basta pô-lo como drop `deposit` numa tabela.

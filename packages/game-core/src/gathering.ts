@@ -1,6 +1,7 @@
 import type { Rng } from './combat/rng.js';
-import { PROFESSIONS, professionTerrains } from './content/professions.js';
-import { mapHexAt } from './content/world-map.js';
+import { activityItems, PROFESSIONS, professionTerrains } from './content/professions.js';
+import { mapHexAt, regionAt, REGIONS, REGION_IDS, worldMapHexes, type RegionId } from './content/world-map.js';
+import { hexDistance } from './hex.js';
 import type { HexCoord, ItemRarity } from '@realms/shared';
 
 /*
@@ -133,9 +134,147 @@ export function rollGrade(rng: Rng, rank: number, richness: number): number {
 export const GATHERED_MATERIALS: ReadonlySet<string> = new Set(
   Object.values(PROFESSIONS)
     .filter((p) => p.category === 'gathering')
-    .flatMap((p) => p.activities.flatMap((a) => a.outputs.map((o) => o.item))),
+    .flatMap((p) => p.activities.flatMap((a) => activityItems(a))),
 );
 
 /** Grade an item gets when none is given: Common for gathered materials, else none. */
 export const defaultGrade = (defId: string): number | null =>
   GATHERED_MATERIALS.has(defId) ? 1 : null;
+
+/*
+ * Request #82: hot zones. Where gathering pays changes every day.
+ *
+ * - DEPOSITS are fixed: some hexes hold a vein (gems, later gold…) and always
+ *   will. Deposit drops are only found there, so players learn the map.
+ * - Every day each gathering profession has one region IN BOOM (a nation or the
+ *   Riftlands). Every region gets its day once in each cycle, in an order that
+ *   changes from cycle to cycle. There: more success, better grades, deposit
+ *   drops more often.
+ * - Inside the booming region one hex is the day's MOTHERLODE. Nobody is told
+ *   where; the rumour only names a hex near it. Standing on it reveals it.
+ *
+ * Everything is a pure function of the hex, the profession and the day (UTC,
+ * the same day as the Rift layout). ALL NUMBERS PROVISIONAL (A144).
+ */
+export const HOTZONE_RULES = {
+  /** Share of suitable hexes that hold a deposit (fixed forever). */
+  depositShare: 0.2,
+  /** Booming region: success bonus, grade richness steps, deposit weight ×. */
+  boomSuccess: 10,
+  boomRichness: 1,
+  boomDepositMultiplier: 3,
+  /** The day's motherlode (on top of the boom). */
+  motherlodeSuccess: 10,
+  motherlodeDepositMultiplier: 2,
+  /** The rumour names a hex at most this far from the motherlode. */
+  rumourRadius: 3,
+} as const;
+
+const DAY_MS = 86_400_000;
+/** The gathering day (UTC), same clock as the Rift layout. */
+export const gatheringDay = (now: Date = new Date()) => Math.floor(now.getTime() / DAY_MS);
+
+/** Whether a hex holds a fixed deposit for a profession. */
+export function isDepositHex(hex: HexCoord, professionId: string): boolean {
+  if (!resourceNodeAt(hex, professionId)) return false;
+  return hash(hex.q, hex.r, `deposit:${professionId}`) < HOTZONE_RULES.depositShare;
+}
+
+/** The region in boom for a profession on a day: each region once per cycle. */
+export function boomRegion(professionId: string, day: number): RegionId {
+  const n = REGION_IDS.length;
+  const cycle = Math.floor(day / n);
+  // Shuffle the regions for this cycle (stable per profession and cycle).
+  const order = [...REGION_IDS]
+    .map((id, i) => ({ id, k: hash(cycle, i, `boom:${professionId}`) }))
+    .sort((a, b) => a.k - b.k)
+    .map((x) => x.id);
+  return order[((day % n) + n) % n]!;
+}
+
+const suitableCache = new Map<string, HexCoord[]>();
+/** Hexes of a region where a profession can gather (deposits first if any). */
+function suitableHexes(professionId: string, region: RegionId): HexCoord[] {
+  const key = `${professionId}|${region}`;
+  let list = suitableCache.get(key);
+  if (!list) {
+    list = worldMapHexes(new Date(0))
+      .filter((h) => h.region === region && resourceNodeAt(h, professionId))
+      .map((h) => ({ q: h.q, r: h.r }));
+    suitableCache.set(key, list);
+  }
+  return list;
+}
+
+/** The day's motherlode for a profession (null if its booming region has no suitable hex). */
+export function motherlodeHex(professionId: string, day: number): HexCoord | null {
+  const all = suitableHexes(professionId, boomRegion(professionId, day));
+  if (!all.length) return null;
+  const deposits = all.filter((h) => isDepositHex(h, professionId));
+  const pool = deposits.length ? deposits : all;
+  return pool[Math.floor(hash(day, pool.length, `lode:${professionId}`) * pool.length)]!;
+}
+
+/** What a hex offers a profession today. */
+export interface SiteConditions {
+  deposit: boolean;
+  boom: boolean;
+  motherlode: boolean;
+  /** Added to the success chance. */
+  successBonus: number;
+  /** Added to the node richness for grades (capped at rich). */
+  richnessBonus: number;
+  /** Weight multiplier of deposit drops (0 = none here). */
+  depositMultiplier: number;
+}
+
+export function siteConditions(
+  hex: HexCoord,
+  professionId: string,
+  day: number = gatheringDay(),
+): SiteConditions {
+  const R = HOTZONE_RULES;
+  const deposit = isDepositHex(hex, professionId);
+  const region = regionAt(hex)?.id;
+  const boom = !!region && region === boomRegion(professionId, day);
+  const lode = boom ? motherlodeHex(professionId, day) : null;
+  const motherlode = !!lode && lode.q === hex.q && lode.r === hex.r;
+  return {
+    deposit,
+    boom,
+    motherlode,
+    successBonus: (boom ? R.boomSuccess : 0) + (motherlode ? R.motherlodeSuccess : 0),
+    richnessBonus: boom ? R.boomRichness : 0,
+    depositMultiplier: !deposit
+      ? 0
+      : (boom ? R.boomDepositMultiplier : 1) * (motherlode ? R.motherlodeDepositMultiplier : 1),
+  };
+}
+
+export interface GatheringRumour {
+  professionId: string;
+  regionId: RegionId;
+  regionName: string;
+  /** A hex within `rumourRadius` of the motherlode (null = no motherlode). */
+  near: HexCoord | null;
+}
+
+/** The day's word on the roads: where each gathering profession booms. */
+export function gatheringRumours(day: number = gatheringDay()): GatheringRumour[] {
+  return Object.values(PROFESSIONS)
+    .filter((p) => p.category === 'gathering')
+    .map((p) => {
+      const regionId = boomRegion(p.id, day);
+      const lode = motherlodeHex(p.id, day);
+      let near: HexCoord | null = null;
+      if (lode) {
+        // A stable hex near the motherlode, inside the map.
+        const around = suitableHexes(p.id, regionId).filter(
+          (h) => hexDistance(h, lode) <= HOTZONE_RULES.rumourRadius,
+        );
+        const candidates = around.length ? around : [lode];
+        near = candidates[Math.floor(hash(day, 7, `rumour:${p.id}`) * candidates.length)]!;
+      }
+      return { professionId: p.id, regionId, regionName: REGIONS[regionId].name, near };
+    });
+}

@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
+import { GatheringHere } from '../professions/GatheringHere';
 import { useActiveRun } from '../rifts/api';
 import { useLobbyOverview } from '../rifts/lobby-api';
 import { useWorldBoss } from '../world/api';
@@ -107,6 +108,7 @@ export function HomePage() {
         </nav>
         {/* Below the actions: when these load they do not push anything down (request #70). */}
         <ActivityCard characterId={characterId} />
+        <GatheringHere characterId={characterId} />
         <NextStep characterId={characterId} atRift={place.kind === 'rift'} />
       </div>
 

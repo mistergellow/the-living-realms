@@ -120,7 +120,7 @@ function workshop(terrain: Terrain): LocationAction {
     id: 'workshop',
     label: 'Professions',
     description: here.length
-      ? `Gather here: ${here.join(', ')}. Crafting works anywhere.`
+      ? `${here.join(', ')}: gather right here, below. Crafting works anywhere.`
       : 'Craft, repair and improve your gear.',
     available: true,
   };

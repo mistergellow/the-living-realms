@@ -4,8 +4,19 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/combat/rng.js';
 import {
+  boomRegion,
   defaultGrade,
+  dropChances,
+  gatheringRumours,
   getItemDef,
+  hexDistance,
+  HOTZONE_RULES,
+  isDepositHex,
+  mapHexAt,
+  motherlodeHex,
+  REGION_IDS,
+  siteConditions,
+  type SiteConditions,
   getProfession,
   gradeName,
   gradeRarity,
@@ -105,5 +116,49 @@ describe('item folders and grade rarity (request #78)', () => {
         expect(getItemDef(id)?.id, `${group}/${id}`).toBe(id);
       }
     }
+  });
+});
+
+describe('hot zones (request #82)', () => {
+  const mineHexes = worldMapHexes(new Date(0)).filter((h) => resourceNodeAt(h, 'mining'));
+
+  it('deposits are fixed and only some suitable hexes hold one', () => {
+    const deposits = mineHexes.filter((h) => isDepositHex(h, 'mining'));
+    expect(deposits.length).toBeGreaterThan(0);
+    expect(deposits.length).toBeLessThan(mineHexes.length);
+    for (const h of deposits) expect(isDepositHex(h, 'mining')).toBe(true);
+  });
+
+  it('every region booms once in each cycle of days', () => {
+    const n = REGION_IDS.length;
+    for (const start of [0, n * 10, n * 333]) {
+      const seen = new Set<string>();
+      for (let d = start; d < start + n; d++) seen.add(boomRegion('mining', d));
+      expect(seen.size).toBe(n);
+    }
+  });
+
+  it('the motherlode sits in the booming region, and the rumour is near it', () => {
+    for (let day = 100; day < 130; day++) {
+      const lode = motherlodeHex('mining', day)!;
+      expect(mapHexAt(lode)!.region).toBe(boomRegion('mining', day));
+      const s = siteConditions(lode, 'mining', day);
+      expect(s.motherlode && s.boom).toBe(true);
+      const rumour = gatheringRumours(day).find((r) => r.professionId === 'mining')!;
+      expect(hexDistance(rumour.near!, lode)).toBeLessThanOrEqual(HOTZONE_RULES.rumourRadius);
+    }
+  });
+
+  it('gems only drop on a deposit; the boom makes them commoner', () => {
+    const mine = getProfession('mining')!.activities[0]!;
+    const gem = (site: SiteConditions) =>
+      dropChances(mine, { rank: 2, site }).drops.find((d) => d.drop.deposit)!;
+    const base = { boom: false, motherlode: false, successBonus: 0, richnessBonus: 0 };
+    expect(gem({ ...base, deposit: false, depositMultiplier: 0 }).chance).toBe(0);
+    expect(gem({ ...base, deposit: false, depositMultiplier: 0 }).needsDeposit).toBe(true);
+    const plain = gem({ ...base, deposit: true, depositMultiplier: 1 }).chance;
+    const boom = gem({ ...base, deposit: true, depositMultiplier: 3 }).chance;
+    expect(plain).toBeGreaterThan(0);
+    expect(boom).toBeGreaterThan(plain);
   });
 });

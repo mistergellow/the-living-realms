@@ -198,7 +198,10 @@ test('character system: attributes, starting weapon, sheet and equipment', async
   await expect(page.getByTestId('library-empty')).toBeVisible();
   await page.screenshot({ path: 'test-results/screens/06b-abilities.png', fullPage: true });
   await page.getByRole('tab', { name: /Professions/ }).click();
-  await expect(page.getByTestId('profession-fishing')).toBeVisible();
+  // Request #81: survival-game style list with rank squares.
+  await expect(page.getByTestId('skills-panel')).toBeVisible();
+  await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
+  await page.screenshot({ path: 'test-results/screens/06c-skills.png', fullPage: true });
   await page.getByRole('tab', { name: /Equipment/ }).click();
 
   // Drag and drop: the bow goes to the bag and back to the main hand.
@@ -391,6 +394,26 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   // Fishing needs a river (request #43).
   await travel(page, angler, 'river');
   await expect(page.getByTestId('place-name')).toContainText('River');
+  // The test travelled through the API, not the UI: reload to see the new AP.
+  await page.reload();
+  await expect(page.getByTestId('top-ap')).not.toHaveText('120/120');
+  const apBefore = Number((await page.getByTestId('top-ap').innerText()).split('/')[0]);
+  // Request #81: gathering happens on the hex — one action, its drops with %.
+  const fishing = page.getByTestId('gather-fishing');
+  await expect(fishing.getByTestId('drop-raw_fish')).toContainText('%');
+  await expect(fishing.getByTestId('profession-node')).toContainText('left');
+  // Request #82: the day's rumours.
+  await expect(page.getByTestId('rumours')).toContainText('booms in');
+  // One attempt, then three (request #56), paid in AP; the slider chooses how many.
+  await fishing.getByLabel('Attempts of Fish').fill('1');
+  await fishing.getByRole('button', { name: /Fish now · 2 AP/ }).click();
+  await expect(fishing.getByTestId('job-result')).toContainText('Mastery');
+  await fishing.getByLabel('Attempts of Fish').fill('3');
+  await fishing.getByRole('button', { name: /Fish now · 6 AP/ }).click();
+  await expect(fishing.getByTestId('job-result')).toContainText('Fish × 3');
+  // Request #59: the header's AP follows at once (2 + 6).
+  await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
+  await page.screenshot({ path: 'test-results/screens/10-gathering.png', fullPage: true });
   await page.getByRole('link', { name: 'Professions', exact: true }).click();
   // Request #51: two sections, Novice ranks, the starter rod in the bag.
   await expect(page.getByTestId('section-gathering')).toContainText('Gathering Mastery');
@@ -399,25 +422,7 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
   await expect(page.getByTestId('profession-fishing')).toContainText('Novice');
   await page.getByTestId('profession-fishing').click();
   await expect(page.getByTestId('profession-tool')).toContainText('Fishing Rod');
-  // The test travelled through the API, not the UI: reload to see the new AP.
-  await page.reload();
-  await expect(page.getByTestId('top-ap')).not.toHaveText('120/120');
-  const apBefore = Number((await page.getByTestId('top-ap').innerText()).split('/')[0]);
-  // Request #52: gathering costs AP and uses the spot's resources.
-  await expect(page.getByTestId('profession-node')).toContainText('left');
-  await page.getByRole('button', { name: 'Fish', exact: true }).click();
-  await expect(page.getByTestId('activity-result')).toContainText('Mastery');
-  await expect(page.getByTestId('activity-result')).toContainText('AP');
-  await expect(page.getByTestId('profession-stats')).toContainText('1 attempt');
-  // Request #56: several attempts at once, paid in AP.
-  await page.getByLabel('Attempts of Fish').fill('3');
-  await page
-    .getByTestId('job-fish')
-    .getByRole('button', { name: /Now · 6 AP/ })
-    .click();
-  await expect(page.getByTestId('job-result')).toContainText('Fish × 3');
-  // Request #59: the header's AP follows at once (2 for the single fish + 6).
-  await expect(page.getByTestId('top-ap')).toContainText(`${apBefore - 8}/`);
+  await expect(page.getByTestId('profession-stats')).toContainText('4 attempts');
   await page.screenshot({ path: 'test-results/screens/10-professions.png' });
   // Crafting: higher recipes are listed as not unlocked yet.
   await page.getByTestId('profession-carpentry').click();

@@ -32,6 +32,46 @@ export interface ActivityDto {
   outputs: Array<{ itemDefId: string; name: string; min: number; max: number }>;
   /** Works on one of your items (repair). */
   effect: 'repair' | null;
+  /**
+   * Request #81: gathering drop table (null for crafting). One attempt gives at
+   * most one line; `nothingChance` = the chance it gives nothing.
+   */
+  drops: GatherDropDto[] | null;
+  nothingChance: number | null;
+}
+
+export interface GatherDropDto {
+  items: Array<{ itemDefId: string; name: string; min: number; max: number }>;
+  /** Percent chance per attempt, on the hex you stand on, today. */
+  chance: number;
+  /** Rank index that unlocks it, and its name. */
+  rank: number;
+  rankName: string;
+  locked: boolean;
+  /** Only found on deposit hexes (request #82). */
+  deposit: boolean;
+  /** A deposit drop and this hex has no deposit. */
+  needsDeposit: boolean;
+}
+
+/** Request #82: what the hex you stand on offers a gathering profession today. */
+export interface GatherSiteDto {
+  deposit: boolean;
+  boom: boolean;
+  motherlode: boolean;
+  /** The region booming today for this profession. */
+  boomRegion: string;
+}
+
+/** Request #82: the day's word on the roads for one gathering profession. */
+export interface GatherRumourDto {
+  professionId: string;
+  professionName: string;
+  regionName: string;
+  /** A hex near the day's motherlode (null = none). */
+  near: { q: number; r: number } | null;
+  /** When the boom moves on (ISO). */
+  endsAt: string;
 }
 
 export interface ProfessionToolDto {
@@ -88,12 +128,16 @@ export interface ProfessionDto {
   stats: ProfessionStatsDto;
   /** Recent rank-ups, newest first. */
   history: Array<{ at: string; rank: number; rankName: string }>;
+  /** Gathering: deposit / boom / motherlode on your hex today (null for crafting). */
+  site: GatherSiteDto | null;
 }
 
 export interface ProfessionsDto {
   professions: ProfessionDto[];
   /** The running (or finished, not yet dismissed) real-time job (request #56). */
   job: ProfessionJobDto | null;
+  /** Request #82: where each gathering profession booms today. */
+  rumours: GatherRumourDto[];
 }
 
 /** Summary of several attempts (request #56). */

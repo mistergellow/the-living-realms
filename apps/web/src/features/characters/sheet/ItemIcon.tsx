@@ -217,3 +217,20 @@ export function ItemIcon({ item }: { item: ItemDto }) {
     </span>
   );
 }
+
+/**
+ * Request #81: the icon of an item definition (no item instance), e.g. a line
+ * of a gathering drop table. Painted icon when its folder has one.
+ */
+export function DefIcon({ defId, rarity = 'common' }: { defId: string; rarity?: string }) {
+  const painted = ITEM_ICON[defId];
+  return (
+    <span className="item-icon" data-tone="material" data-rarity={rarity}>
+      {painted ? (
+        <img className="item-art" src={painted} alt="" draggable={false} />
+      ) : (
+        <GlyphSvg glyph={BY_DEF[defId] ?? 'bag'} />
+      )}
+    </span>
+  );
+}

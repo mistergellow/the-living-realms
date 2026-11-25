@@ -124,3 +124,13 @@ Later: `GET /api/world/nodes?q&r` (2), `POST …/city/workshop/:recipe` with a f
 | 6     | Book duplication (Scribing), rare and unique resources, profession events                                                                                        | 3–5            |               |
 
 Each phase ends with unit, integration and e2e tests, as in phase 1.
+
+## 9. Gathering on the hex and hot zones (requests #81, #82)
+
+- Each gathering profession is one action with a drop table (`ActivityDef.drops`):
+  an attempt succeeds first, then ONE unlocked drop is picked by weight. Chances
+  per drop are shown on the hex (`dropChances`).
+- Hot zones: fixed deposit hexes (deposit-only drops), a booming region per
+  profession per day (each region once per 4-day cycle), and a secret daily
+  motherlode inside it, hinted by a rumour. All pure functions of hex,
+  profession and day (`siteConditions`); no new tables.

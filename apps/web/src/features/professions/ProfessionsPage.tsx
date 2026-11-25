@@ -15,10 +15,11 @@ import type {
   ProfessionJobDto,
 } from '@realms/shared';
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
+import { GatherPanel } from './GatherPanel';
 import { useDismissJob, usePerformActivity, useProfessions, useStartJob } from './api';
 import './professions.css';
 
@@ -99,7 +100,8 @@ function InspectBox() {
 /** The professions list + detail; also shown in the character sheet's Professions tab. */
 export function ProfessionsPanel({ characterId }: { characterId: string }) {
   const list = useProfessions(characterId);
-  const [selected, setSelected] = useState<string>('fishing');
+  const [params] = useSearchParams();
+  const [selected, setSelected] = useState<string>(params.get('p') ?? 'fishing');
   const profs = list.data?.professions ?? [];
   const current = profs.find((p) => p.id === selected) ?? profs[0];
 
@@ -167,7 +169,7 @@ const clock = (s: number) =>
       : `${s}s`;
 
 /** The real-time job (request #56): a countdown, then what it produced. */
-function JobBanner({ job, characterId }: { job: ProfessionJobDto; characterId: string }) {
+export function JobBanner({ job, characterId }: { job: ProfessionJobDto; characterId: string }) {
   const left = useSecondsUntil(job.status === 'running' ? job.finishesAt : null);
   const dismiss = useDismissJob(characterId);
   const r = job.result;
@@ -324,17 +326,6 @@ function ProfessionDetail({
             {p.availableHere ? ' · you are on one' : ' · travel to one on the world map'}
           </p>
         )}
-        {p.node && (
-          <p style={{ margin: 0 }} data-testid="profession-node" data-empty={p.node.amount < 1}>
-            {p.node.richness} spot here: <strong>{p.node.amount}</strong>/{p.node.max} left
-            {p.node.readyAt && (
-              <span className="field-error">
-                {' '}
-                · exhausted, regrows at {new Date(p.node.readyAt).toLocaleTimeString()}
-              </span>
-            )}
-          </p>
-        )}
       </header>
 
       <div className="prof-facts">
@@ -413,113 +404,121 @@ function ProfessionDetail({
         </div>
       )}
 
-      <h3 className="prof-sub">Recipes ({unlocked.length})</h3>
-      <div className="activities">
-        {unlocked.map((a) => {
-          const missing = a.inputs.some((i) => i.have < i.qty);
-          const needsTarget = !!a.effect && !target;
-          // Request #64: say why a recipe cannot be done right now.
-          const blocked = !p.availableHere
-            ? `Travel to a ${p.terrains?.join(' or ').toLowerCase()} hex first.`
-            : p.node && p.node.amount < 1
-              ? 'This spot is exhausted for now.'
-              : p.tool && !p.tool.best
-                ? `You need a ${p.tool.name} in your bag.`
-                : missing
-                  ? 'You are missing materials.'
-                  : jobRunning
-                    ? 'A job is running.'
-                    : null;
-          return (
-            <article key={a.id} className="activity" data-testid={`activity-${a.id}`}>
-              <h3>{a.name}</h3>
-              <p className="muted small">{a.description}</p>
-              <p className="small">
-                {a.chance}% success · {a.apCost ? `${a.apCost} AP` : `${a.cooldownSeconds}s`} ·{' '}
-                {a.points > 0 ? (
-                  `+${a.points} Mastery`
-                ) : (
-                  <span className="muted">too simple to teach you more</span>
-                )}
-              </p>
-              {a.inputs.length > 0 && (
-                <p className="small">
-                  Needs:{' '}
-                  {a.inputs.map((i) => (
-                    <span key={i.itemDefId} data-short={i.have < i.qty}>
-                      {i.qty} × {i.name} ({i.have}){' '}
-                    </span>
-                  ))}
-                </p>
-              )}
-              {a.outputs.length > 0 && (
-                <p className="small">
-                  Makes:{' '}
-                  {a.outputs
-                    .map((o) => `${o.min === o.max ? o.min : `${o.min}–${o.max}`} × ${o.name}`)
-                    .join(', ')}
-                </p>
-              )}
-              {blocked && (
-                <p className="small field-error" data-testid={`blocked-${a.id}`}>
-                  {blocked}
-                </p>
-              )}
-              {a.effect && (
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  aria-label={`Item to ${a.effect}`}
-                >
-                  <option value="">Choose an item…</option>
-                  {gear.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name} · quality {i.quality}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                className="btn btn-primary btn-sm"
-                disabled={
-                  !p.availableHere ||
-                  (!!p.node && p.node.amount < 1) ||
-                  (!!p.tool && !p.tool.best) ||
-                  missing ||
-                  needsTarget ||
-                  busy > 0 ||
-                  jobRunning ||
-                  perform.isPending
-                }
-                onClick={() => run(a)}
-              >
-                {a.name}
-              </button>
-              {!a.effect && (
-                <JobControls
-                  p={p}
-                  a={a}
-                  characterId={characterId}
-                  disabled={!p.availableHere || (!!p.tool && !p.tool.best) || missing || jobRunning}
-                  onResult={setJobResult}
-                />
-              )}
-            </article>
-          );
-        })}
-      </div>
-
-      {locked.length > 0 && (
+      {p.category === 'gathering' ? (
+        <GatherPanel p={p} characterId={characterId} jobRunning={jobRunning} />
+      ) : (
         <>
-          <h3 className="prof-sub">Not unlocked yet ({locked.length})</h3>
-          <ul className="prof-locked" data-testid="locked-recipes">
-            {locked.map((a) => (
-              <li key={a.id}>
-                <strong>{a.name}</strong>
-                <span className="muted small"> · unlocks at {a.rankName}</span>
-              </li>
-            ))}
-          </ul>
+          <h3 className="prof-sub">Recipes ({unlocked.length})</h3>
+          <div className="activities">
+            {unlocked.map((a) => {
+              const missing = a.inputs.some((i) => i.have < i.qty);
+              const needsTarget = !!a.effect && !target;
+              // Request #64: say why a recipe cannot be done right now.
+              const blocked = !p.availableHere
+                ? `Travel to a ${p.terrains?.join(' or ').toLowerCase()} hex first.`
+                : p.node && p.node.amount < 1
+                  ? 'This spot is exhausted for now.'
+                  : p.tool && !p.tool.best
+                    ? `You need a ${p.tool.name} in your bag.`
+                    : missing
+                      ? 'You are missing materials.'
+                      : jobRunning
+                        ? 'A job is running.'
+                        : null;
+              return (
+                <article key={a.id} className="activity" data-testid={`activity-${a.id}`}>
+                  <h3>{a.name}</h3>
+                  <p className="muted small">{a.description}</p>
+                  <p className="small">
+                    {a.chance}% success · {a.apCost ? `${a.apCost} AP` : `${a.cooldownSeconds}s`} ·{' '}
+                    {a.points > 0 ? (
+                      `+${a.points} Mastery`
+                    ) : (
+                      <span className="muted">too simple to teach you more</span>
+                    )}
+                  </p>
+                  {a.inputs.length > 0 && (
+                    <p className="small">
+                      Needs:{' '}
+                      {a.inputs.map((i) => (
+                        <span key={i.itemDefId} data-short={i.have < i.qty}>
+                          {i.qty} × {i.name} ({i.have}){' '}
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                  {a.outputs.length > 0 && (
+                    <p className="small">
+                      Makes:{' '}
+                      {a.outputs
+                        .map((o) => `${o.min === o.max ? o.min : `${o.min}–${o.max}`} × ${o.name}`)
+                        .join(', ')}
+                    </p>
+                  )}
+                  {blocked && (
+                    <p className="small field-error" data-testid={`blocked-${a.id}`}>
+                      {blocked}
+                    </p>
+                  )}
+                  {a.effect && (
+                    <select
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      aria-label={`Item to ${a.effect}`}
+                    >
+                      <option value="">Choose an item…</option>
+                      {gear.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.name} · quality {i.quality}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={
+                      !p.availableHere ||
+                      (!!p.node && p.node.amount < 1) ||
+                      (!!p.tool && !p.tool.best) ||
+                      missing ||
+                      needsTarget ||
+                      busy > 0 ||
+                      jobRunning ||
+                      perform.isPending
+                    }
+                    onClick={() => run(a)}
+                  >
+                    {a.name}
+                  </button>
+                  {!a.effect && (
+                    <JobControls
+                      p={p}
+                      a={a}
+                      characterId={characterId}
+                      disabled={
+                        !p.availableHere || (!!p.tool && !p.tool.best) || missing || jobRunning
+                      }
+                      onResult={setJobResult}
+                    />
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          {locked.length > 0 && (
+            <>
+              <h3 className="prof-sub">Not unlocked yet ({locked.length})</h3>
+              <ul className="prof-locked" data-testid="locked-recipes">
+                {locked.map((a) => (
+                  <li key={a.id}>
+                    <strong>{a.name}</strong>
+                    <span className="muted small"> · unlocks at {a.rankName}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
 

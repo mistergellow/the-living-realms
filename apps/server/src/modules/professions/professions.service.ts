@@ -12,6 +12,14 @@ import {
 } from '@realms/db';
 import {
   activityChance,
+  dropChances,
+  findActivity,
+  gatheringDay,
+  gatheringRumours,
+  siteConditions,
+  boomRegion,
+  REGIONS,
+  type SiteConditions,
   AP_RULES,
   currentAp,
   jobApCost,
@@ -105,6 +113,49 @@ function bestTool(p: ProfessionDef, rank: number, owned: Item[]) {
   return best;
 }
 
+/** Request #82: deposit, boom and motherlode of the character's hex today. */
+const siteOf = (c: { hexQ: number; hexR: number }, p: ProfessionDef) =>
+  siteConditions({ q: c.hexQ, r: c.hexR }, p.id);
+
+/** Request #81: the drop table with the chances on this hex, today. */
+function dropsDto(
+  a: ActivityDef,
+  input: Parameters<typeof dropChances>[1],
+): Pick<ProfessionDto['activities'][number], 'drops' | 'nothingChance'> {
+  if (!a.drops) return { drops: null, nothingChance: null };
+  const t = dropChances(a, input);
+  return {
+    drops: t.drops.map((d) => ({
+      items: d.drop.outputs.map((o) => ({
+        itemDefId: o.item,
+        name: itemName(o.item),
+        min: o.min,
+        max: o.max,
+      })),
+      chance: d.chance,
+      rank: d.drop.rank ?? 0,
+      rankName: rankName(d.drop.rank ?? 0),
+      locked: d.locked,
+      deposit: !!d.drop.deposit,
+      needsDeposit: d.needsDeposit,
+    })),
+    nothingChance: t.nothing,
+  };
+}
+
+/** Request #82: the day's word on the roads. */
+function rumoursDto(): ProfessionsDto['rumours'] {
+  const day = gatheringDay();
+  const endsAt = new Date((day + 1) * 86_400_000).toISOString();
+  return gatheringRumours(day).map((r) => ({
+    professionId: r.professionId,
+    professionName: getProfession(r.professionId)?.name ?? r.professionId,
+    regionName: r.regionName,
+    near: r.near,
+    endsAt,
+  }));
+}
+
 /**
  * Professions (request #33; Mastery, tools and BASE attributes from request
  * #51). Every character can practise all 15. Not available inside a Rift.
@@ -138,6 +189,7 @@ export class ProfessionsService {
         this.toDto(p, rows.get(p.id) ?? NEW, owned, c, history.get(p.id) ?? [], nodes.get(p.id)),
       ),
       job,
+      rumours: rumoursDto(),
     };
   }
 
@@ -159,7 +211,7 @@ export class ProfessionsService {
     count: number,
   ): Promise<JobResponseDto> {
     const prof = getProfession(professionId);
-    const activity = prof?.activities.find((a) => a.id === activityId);
+    const activity = (prof ? findActivity(prof, activityId) : undefined);
     if (!prof || !activity) throw errors.notFound('Activity');
     if (activity.effect) throw this.invalid('Repairs are done one item at a time.');
     return this.db.transaction(async (tx) => {
@@ -182,6 +234,7 @@ export class ProfessionsService {
         toolTier: tool?.tier ?? 0,
         attributeBonus: attributeBonus(prof, baseAttributesOf(c)),
       };
+      const site = gathering ? siteOf(c, prof) : undefined;
 
       if (mode === 'ap') {
         const cost = jobApCost(prof.category, count, AP_RULES.gatherCost);
@@ -195,6 +248,7 @@ export class ProfessionsService {
         const run = await this.runAttempts(tx, accountId, c, prof, activity, row, count, {
           ...base,
           node,
+          ...(site ? { site } : {}),
           consumeInputs: true,
         });
         const apSpent = jobApCost(prof.category, run.result.attempts, AP_RULES.gatherCost);
@@ -261,9 +315,8 @@ export class ProfessionsService {
   }
 
   private busyWith(job: typeof professionJobs.$inferSelect) {
-    const name = getProfession(job.professionId)?.activities.find(
-      (a) => a.id === job.activityId,
-    )?.name;
+    const p = getProfession(job.professionId);
+    const name = p ? findActivity(p, job.activityId)?.name : undefined;
     return this.invalid(
       `You are busy (${name ?? 'a job'} × ${job.count}) until ${job.finishesAt.toISOString().slice(11, 16)} UTC.`,
     );
@@ -279,7 +332,7 @@ export class ProfessionsService {
     if (!job) return null;
     if (job.status !== 'running' || job.finishesAt.getTime() > Date.now()) return this.jobDto(job);
     const prof = getProfession(job.professionId);
-    const activity = prof?.activities.find((a) => a.id === job.activityId);
+    const activity = (prof ? findActivity(prof, job.activityId) : undefined);
     if (!prof || !activity) {
       await tx.delete(professionJobs).where(eq(professionJobs.id, job.id));
       return null;
@@ -289,6 +342,16 @@ export class ProfessionsService {
       toolTier: job.toolTier,
       attributeBonus: job.attributeBonus,
       ...(job.nodeRichness !== null ? { richness: job.nodeRichness } : {}),
+      // Request #82: the hot zones of the hex and day the job started.
+      ...(job.nodeQ !== null && job.nodeR !== null
+        ? {
+            site: siteConditions(
+              { q: job.nodeQ, r: job.nodeR },
+              prof.id,
+              gatheringDay(job.startedAt),
+            ),
+          }
+        : {}),
       consumeInputs: false,
     });
     // Charges reserved for attempts that failed go back to the node.
@@ -319,7 +382,7 @@ export class ProfessionsService {
       professionId: job.professionId,
       professionName: prof?.name ?? job.professionId,
       activityId: job.activityId,
-      activityName: prof?.activities.find((a) => a.id === job.activityId)?.name ?? job.activityId,
+      activityName: (prof ? findActivity(prof, job.activityId) : undefined)?.name ?? job.activityId,
       count: job.count,
       startedAt: job.startedAt.toISOString(),
       finishesAt: job.finishesAt.toISOString(),
@@ -391,6 +454,7 @@ export class ProfessionsService {
       attributeBonus: number;
       node?: NodeState;
       richness?: number;
+      site?: SiteConditions;
       consumeInputs: boolean;
     },
   ): Promise<{ saved: Row; result: JobResultDto }> {
@@ -411,6 +475,7 @@ export class ProfessionsService {
           toolTier: opts.toolTier,
           attributeBonus: opts.attributeBonus,
           ...(richness !== undefined ? { nodeRichness: richness } : {}),
+          ...(opts.site ? { site: opts.site } : {}),
         },
         randomInt(2 ** 31),
       );
@@ -540,7 +605,7 @@ export class ProfessionsService {
     targetItemId?: string,
   ): Promise<ActivityResultDto> {
     const prof = getProfession(professionId);
-    const activity = prof?.activities.find((a) => a.id === activityId);
+    const activity = (prof ? findActivity(prof, activityId) : undefined);
     if (!prof || !activity) throw errors.notFound('Activity');
     return this.db.transaction(async (tx) => {
       const c = await this.sheets.getOwnedCharacter(tx, accountId, characterId, true);
@@ -603,6 +668,7 @@ export class ProfessionsService {
           toolTier: tool?.tier ?? 0,
           attributeBonus: attributeBonus(prof, baseAttributesOf(c)),
           ...(node ? { nodeRichness: node.def.richness } : {}),
+          ...(gathering ? { site: siteOf(c, prof) } : {}),
         },
         randomInt(2 ** 31),
       );
@@ -838,6 +904,13 @@ export class ProfessionsService {
     const base: Attributes = baseAttributesOf(c);
     const bonus = attributeBonus(p, base);
     const tool = bestTool(p, row.rank, owned);
+    const site = gathering ? siteOf(c, p) : undefined;
+    const chanceInput = {
+      rank: row.rank,
+      toolTier: tool?.tier ?? 0,
+      attributeBonus: bonus,
+      ...(site ? { site } : {}),
+    };
     return {
       id: p.id,
       name: p.name,
@@ -857,11 +930,7 @@ export class ProfessionsService {
         rank: a.rank,
         rankName: rankName(a.rank),
         complexity: a.complexity,
-        chance: activityChance(a, {
-          rank: row.rank,
-          toolTier: tool?.tier ?? 0,
-          attributeBonus: bonus,
-        }),
+        chance: activityChance(a, chanceInput),
         cooldownSeconds: gathering ? 0 : a.cooldownSeconds,
         apCost: gathering ? AP_RULES.gatherCost : 0,
         locked: row.rank < a.rank,
@@ -879,6 +948,7 @@ export class ProfessionsService {
           max: o.max,
         })),
         effect: a.effect ?? null,
+        ...dropsDto(a, chanceInput),
       })),
       terrains: needs ? needs.map((t) => TERRAIN_NAMES[t]) : null,
       availableHere: !needs || needs.includes(terrainAt(c)),
@@ -905,6 +975,14 @@ export class ProfessionsService {
       resources: professionResources(p).map((id) => ({ itemDefId: id, name: itemName(id) })),
       stats: { attempts: row.attempts, successes: row.successes, itemsMade: row.itemsMade },
       history,
+      site: site
+        ? {
+            deposit: site.deposit,
+            boom: site.boom,
+            motherlode: site.motherlode,
+            boomRegion: REGIONS[boomRegion(p.id, gatheringDay())].name,
+          }
+        : null,
     };
   }
 }

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { FullPageMessage } from '../../shared/ui/FullPageMessage';
 import { Icon } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
-import { ProfessionsPanel } from '../professions/ProfessionsPage';
+import { SkillsPanel } from '../professions/SkillsPanel';
 import { useActiveCharacter } from './active-character';
 import { useCharacterSheet } from './api';
 import { CharacterToken } from './CharacterToken';
@@ -147,7 +147,7 @@ function SheetTabs({
       <div role="tabpanel">
         {tab === 'equipment' && <EquipmentTab sheet={s} characterId={id} />}
         {tab === 'abilities' && <AbilitiesTab sheet={s} characterId={id} />}
-        {tab === 'professions' && <ProfessionsPanel characterId={id} />}
+        {tab === 'professions' && <SkillsPanel characterId={id} />}
       </div>
     </div>
   );

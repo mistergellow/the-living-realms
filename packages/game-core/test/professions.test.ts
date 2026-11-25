@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activityItems,
+  dropChances,
+  findActivity,
   activityChance,
   addMastery,
   attributeBonus,
@@ -52,7 +55,7 @@ describe('professions (request #51)', () => {
     for (const p of Object.values(PROFESSIONS))
       for (const a of p.activities) {
         for (const i of a.inputs) expect(isStackable(getItemDef(i.item))).toBe(true);
-        for (const o of a.outputs) expect(getItemDef(o.item)).toBeDefined();
+        for (const item of activityItems(a)) expect(getItemDef(item)).toBeDefined();
         expect(a.complexity).toBeGreaterThanOrEqual(1);
         expect(a.complexity).toBeLessThanOrEqual(6);
       }
@@ -165,5 +168,51 @@ describe('tools', () => {
       expect(SHOP_STOCK.some((s) => s.item === id)).toBe(true);
     }
     expect(getItemDef('fine_pickaxe')!.tool).toEqual({ type: 'pickaxe', tier: 2, minRank: 1 });
+  });
+});
+
+describe('gathering drop tables (request #81)', () => {
+  const mine = getProfession('mining')!.activities[0]!;
+
+  it('every gathering profession is one action with a drop table', () => {
+    for (const p of Object.values(PROFESSIONS).filter((x) => x.category === 'gathering')) {
+      expect(p.activities).toHaveLength(1);
+      expect(p.activities[0]!.drops?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('drop chances add up with "nothing" to 100%', () => {
+    for (const rank of [0, 1, 3, 5]) {
+      const t = dropChances(mine, { rank });
+      const sum = t.drops.reduce((n, d) => n + d.chance, 0) + t.nothing;
+      expect(sum).toBeCloseTo(100, 0);
+    }
+  });
+
+  it('a gem is locked for a Novice and grows rarer-to-common with Mastery', () => {
+    const novice = dropChances(mine, { rank: 0 });
+    const gem = (t: typeof novice) => t.drops.find((d) => d.drop.outputs[0]!.item === 'rough_gem')!;
+    expect(gem(novice).locked).toBe(true);
+    expect(gem(novice).chance).toBe(0);
+    const apprentice = dropChances(mine, { rank: 1 });
+    const master = dropChances(mine, { rank: 4 });
+    expect(gem(apprentice).locked).toBe(false);
+    expect(gem(master).chance).toBeGreaterThan(gem(apprentice).chance);
+  });
+
+  it('one attempt gives at most one drop, never a locked one', () => {
+    for (let seed = 1; seed <= 500; seed++) {
+      const o = resolveActivity(mine, { rank: 0, nodeRichness: 1 }, seed);
+      expect(o.outputs.length).toBeLessThanOrEqual(1);
+      expect(o.outputs.every((x) => x.item === 'iron_ore')).toBe(true);
+      expect(o.success).toBe(o.outputs.length > 0);
+    }
+  });
+
+  it('old activity ids still find the merged action', () => {
+    const p = getProfession('mining')!;
+    expect(findActivity(p, 'mine_gems')?.id).toBe('mine');
+    expect(findActivity(getProfession('herbalism')!, 'harvest_flax')?.id).toBe('forage');
+    expect(activityItems(mine)).toEqual(['iron_ore', 'rough_gem']);
   });
 });

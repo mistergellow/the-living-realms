@@ -1,13 +1,14 @@
 import type { Attributes } from '@realms/shared';
 import { ATTRIBUTE_KEYS } from '@realms/shared';
 import { Rng } from './combat/rng.js';
-import { rollGrade } from './gathering.js';
+import { rollGrade, type SiteConditions } from './gathering.js';
 import {
   MASTERY_RULES,
   MAX_RANK,
   PROFESSION_ATTRIBUTE_RULES,
   TOOL_RULES,
   type ActivityDef,
+  type DropDef,
   type ProfessionDef,
 } from './content/professions.js';
 
@@ -81,6 +82,8 @@ export interface ChanceInput {
   toolTier?: number;
   /** Gathering (request #52): richness of the node (0–2); outputs get a material grade. */
   nodeRichness?: number;
+  /** Request #82: the hex's deposit, boom and motherlode today. */
+  site?: SiteConditions;
 }
 
 /** Success chance (percent). Mastery counts most; tools and attributes add a little. */
@@ -89,8 +92,73 @@ export function activityChance(a: ActivityDef, input: ChanceInput): number {
     a.baseChance +
     MASTERY_RULES.successPerRank * Math.max(0, input.rank - a.rank) +
     toolBonus(input.toolTier ?? 0) +
-    (input.attributeBonus ?? 0);
+    (input.attributeBonus ?? 0) +
+    (input.site?.successBonus ?? 0);
   return Math.max(MASTERY_RULES.minChance, Math.min(MASTERY_RULES.maxChance, raw));
+}
+
+/**
+ * Weight of a drop at `rank` (0 while it is locked). Deposit drops need a
+ * deposit hex (request #82); without a `site` they count as found anywhere.
+ */
+export function dropWeight(d: DropDef, rank: number, site?: SiteConditions): number {
+  const need = d.rank ?? 0;
+  if (rank < need) return 0;
+  const w = d.weight + (d.weightPerRank ?? 0) * (rank - need);
+  return d.deposit && site ? w * site.depositMultiplier : w;
+}
+
+export interface DropChance {
+  drop: DropDef;
+  /** Percent chance that one attempt gives this drop (0 while locked). */
+  chance: number;
+  locked: boolean;
+  /** A deposit drop on a hex without a deposit (request #82). */
+  needsDeposit: boolean;
+}
+
+/**
+ * Request #81: chance of each drop of a gathering action. An attempt first
+ * succeeds (`activityChance`), then ONE unlocked drop is picked by weight.
+ * `nothing` = the chance an attempt gives nothing.
+ */
+export function dropChances(
+  a: ActivityDef,
+  input: ChanceInput,
+): { drops: DropChance[]; nothing: number } {
+  const drops = a.drops ?? [];
+  const success = activityChance(a, input);
+  const total = drops.reduce((n, d) => n + dropWeight(d, input.rank, input.site), 0);
+  return {
+    drops: drops.map((d) => {
+      const w = dropWeight(d, input.rank, input.site);
+      return {
+        drop: d,
+        chance: total ? Math.round(((success * w) / total) * 10) / 10 : 0,
+        locked: input.rank < (d.rank ?? 0),
+        needsDeposit: !!d.deposit && !!input.site && !input.site.deposit,
+      };
+    }),
+    nothing: total ? 100 - success : 100,
+  };
+}
+
+/** Pick one unlocked drop by weight. */
+function pickDrop(
+  rng: Rng,
+  drops: readonly DropDef[],
+  rank: number,
+  site?: SiteConditions,
+): DropDef | null {
+  const w = (d: DropDef) => dropWeight(d, rank, site);
+  const total = drops.reduce((n, d) => n + w(d), 0);
+  if (total <= 0) return null;
+  let roll = rng.next() * total;
+  for (const d of drops) {
+    roll -= w(d);
+    if (roll < 0 && w(d) > 0) return d;
+  }
+  return [...drops].reverse().find((d) => w(d) > 0) ?? null;
 }
 
 export const repairAmount = (rank: number) =>
@@ -112,8 +180,31 @@ export function resolveActivity(a: ActivityDef, input: ChanceInput, seed: number
   const rng = new Rng(seed);
   const chance = activityChance(a, input);
   const success = rng.chance(chance);
-  const above = Math.max(0, input.rank - a.rank);
   const outputs: ActivityOutcome['outputs'] = [];
+  if (a.drops) {
+    // Request #81: one drop from the table.
+    const drop = success ? pickDrop(rng, a.drops, input.rank, input.site) : null;
+    const richness =
+      input.nodeRichness === undefined
+        ? undefined
+        : Math.min(2, input.nodeRichness + (input.site?.richnessBonus ?? 0));
+    const need = drop?.rank ?? 0;
+    if (drop)
+      for (const o of drop.outputs) {
+        let qty = o.min + rng.int(o.max - o.min + 1);
+        if (rng.chance(MASTERY_RULES.yieldPerRank * Math.max(0, input.rank - need))) qty++;
+        const grade = richness === undefined ? null : rollGrade(rng, input.rank, richness);
+        outputs.push({ item: o.item, qty, grade });
+      }
+    const points =
+      drop && input.rank < MAX_RANK
+        ? Math.round(
+            (drop.points ?? a.points) * complexityFactor({ complexity: need + 1 }, input.rank),
+          )
+        : masteryPoints(a, input.rank, success && !!drop);
+    return { success: !!drop, chance, points, outputs, repaired: 0 };
+  }
+  const above = Math.max(0, input.rank - a.rank);
   if (success)
     for (const o of a.outputs) {
       let qty = o.min + rng.int(o.max - o.min + 1);
