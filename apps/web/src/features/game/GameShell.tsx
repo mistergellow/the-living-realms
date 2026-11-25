@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { useEffect } from 'react';
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { Screen } from '../../shared/ui/Screen';
-import { useLogout } from '../auth/api';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
-import { CharacterToken } from '../characters/CharacterToken';
 import { useFriends } from '../social/api';
 import { useWorldConnection } from '../world/useWorldConnection';
-import { fullIn, liveAp } from '../world/ap';
 import { useWorldStore } from '../world/world-store';
 import './game.css';
+import { HudTop } from './hud/HudTop';
 
 const STATUS_LABEL = {
   idle: 'Idle',
@@ -64,9 +62,10 @@ export function GameShell() {
 
   return (
     <Screen className="game" dim={DIM}>
-      <TopBar
+      <HudTop
         characterId={characterId}
         status={status}
+        statusLabel={STATUS_LABEL[status]}
         name={self?.name ?? null}
         appearance={self?.appearance ?? null}
         worldName={world?.name ?? 'The Living Realms'}
@@ -114,89 +113,6 @@ export function GameShell() {
         </div>
       ) : null}
     </Screen>
-  );
-}
-
-function TopBar(props: {
-  characterId: string;
-  status: keyof typeof STATUS_LABEL;
-  name: string | null;
-  appearance: Parameters<typeof CharacterToken>[0]['appearance'] | null;
-  worldName: string;
-  tick: number | null;
-  online: number;
-}) {
-  const sheet = useCharacterSheet(props.characterId);
-  const logout = useLogout();
-  const navigate = useNavigate();
-  return (
-    <header className="game-top">
-      <Link
-        className="profile-plate"
-        to={'/hero'}
-        title="Your hero"
-        aria-label={`Your hero: ${props.name ?? ''}`}
-      >
-        {props.appearance && <CharacterToken appearance={props.appearance} size={44} />}
-        <span className="profile-text">
-          <span className="profile-name" data-testid="self-name">
-            {props.name ?? '…'}
-          </span>
-          <span className="profile-status" data-testid="connection-status">
-            <span className="status-dot" data-status={props.status} />
-            {STATUS_LABEL[props.status]}
-          </span>
-        </span>
-      </Link>
-
-      <div className="res-pill" title="Reputation: earned in Rifts, spent later">
-        <Icon name="star" />
-        <span className="res-text">
-          <strong data-testid="top-reputation">{sheet.data?.reputation ?? '—'}</strong>
-          <small>Reputation</small>
-        </span>
-      </div>
-      <div className="res-pill" title="Gold: earned in Rifts; spent in shops and at the blacksmith">
-        <Icon name="coin" />
-        <span className="res-text">
-          <strong data-testid="top-gold">{sheet.data?.gold ?? '—'}</strong>
-          <small>Gold</small>
-        </span>
-      </div>
-      <ApPill />
-      <div className="res-pill res-pill-quiet" title="Characters in the world right now">
-        <Icon name="friends" />
-        <span className="res-text">
-          <strong>{props.online}</strong>
-          <small>Online</small>
-        </span>
-      </div>
-      <span className="spacer" />
-      <div className="world-chip" title={props.worldName}>
-        <span>{props.worldName}</span>
-        {props.tick !== null && (
-          <span className="mono" data-testid="world-tick">
-            Tick {props.tick}
-          </span>
-        )}
-      </div>
-      <button
-        className="icon-btn icon-btn-quiet"
-        aria-label="Switch character"
-        title="Switch character"
-        onClick={() => navigate('/characters')}
-      >
-        <Icon name="swap" />
-      </button>
-      <button
-        className="icon-btn"
-        aria-label="Log out"
-        title="Log out"
-        onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login') })}
-      >
-        <Icon name="exit" />
-      </button>
-    </header>
   );
 }
 
@@ -257,41 +173,5 @@ function BottomNav({ characterId }: { characterId: string }) {
         </NavLink>
       ))}
     </nav>
-  );
-}
-
-/** Action Points (request #43): spent to travel; +10 per real hour up to 120. */
-function ApPill() {
-  const ap = useWorldStore((s) => s.self?.ap ?? null);
-  const [, setNow] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-  // Keep the pill's place while loading, so the top bar does not shift.
-  if (!ap)
-    return (
-      <div className="res-pill" aria-hidden>
-        <Icon name="bolt" />
-        <span className="res-text">
-          <strong>—</strong>
-          <small>Action points</small>
-        </span>
-      </div>
-    );
-  const full = fullIn(ap);
-  return (
-    <div
-      className="res-pill"
-      title={`Action Points: travel costs AP. +${ap.perHour} per hour${full ? `, full in ${full}` : ' (full)'}.`}
-    >
-      <Icon name="bolt" />
-      <span className="res-text">
-        <strong data-testid="top-ap">
-          {liveAp(ap)}/{ap.max}
-        </strong>
-        <small>Action points</small>
-      </span>
-    </div>
   );
 }

@@ -1817,3 +1817,30 @@ desnecessários; vai ter muitas coisas, por isso tem de estar organizada.
 - Coisa nova num sítio = mais uma estação (`Station` em `HomePage.tsx`).
 - Telemóvel: placa, avisos, painel e barra empilhados; a barra desliza; sem
   teclas.
+
+### #84 — 2026-11-25 — Header gamificado; Professions sai do sítio
+
+**Pedido:** tirar "Professions" das estações do sítio (não faz sentido lá);
+tratar o visual do header, gamificado e com animações, no estilo de UI/HUD
+que vamos adotar (referência: Clair Obscur) — mais imagens e menos caixas
+"marteladas", que dão aspeto de IA. Durante o trabalho: "Online" não faz
+sentido mostrar (é óbvio); não gostou da 1.ª versão (faixa fina com
+ornamento); escolheu **retrato grande ao canto**. Mandou um print de combate
+como exemplo de boa organização (fica para o combate).
+**Resultado:**
+
+- A ação `workshop` (Professions) saiu de `locationAt`: crafting está em Crafts
+  na barra de baixo; a recolha está nas estações do sítio.
+- Header novo (`features/game/hud/HudTop.tsx`, `hud.css`): sem caixas. Retrato
+  grande numa moldura dourada ornamentada (SVG original: anel duplo, volutas
+  de folhas, quatro cravos), a **reputação num brasão** sobre a moldura (como
+  um nível), o nome por cima de uma **barra de PA larga** com ponta em lâmina
+  (enche com animação; uma luz corre por ela enquanto os PA regeneram) e o
+  ouro por baixo. No canto direito só "N online · tick" em pequeno e dois
+  botões redondos. Os números rolam até ao valor novo e piscam (dourado a
+  subir, vermelho a descer). Respeita "reduzir movimento".
+- "Online" já não aparece; o estado só se mostra quando há problema
+  (Reconnecting…, Offline…).
+- Fonte nova para o HUD: Cormorant Garamond (`@fontsource/cormorant-garamond`).
+- O resto da interface (painéis, estações, barra de baixo) continua no estilo
+  antigo: a passar para o novo estilo aos poucos.

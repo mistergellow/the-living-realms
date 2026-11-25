@@ -8,7 +8,7 @@ describe('locations (request #43)', () => {
     expect(town.kind).toBe('town');
     expect(town.name).toBe(REGIONS.west.capital!.name);
     expect(town.actions.map((a) => a.id)).toEqual(
-      expect.arrayContaining(['npcs', 'shop', 'workshop', 'map']),
+      expect.arrayContaining(['npcs', 'shop', 'map']),
     );
   });
 
@@ -20,12 +20,12 @@ describe('locations (request #43)', () => {
     expect(place.actions[0]!.id).toBe('rifts');
   });
 
-  it('other hexes are named by their terrain and list what can be gathered', () => {
+  it('other hexes are named by their terrain; crafting is not a place action (#84)', () => {
     const river = worldMapHexes().find((h) => h.terrain === 'river')!;
     const place = locationAt(river);
     expect(place.kind).toBe('wilds');
     expect(place.name).toMatch(/^River · /);
-    expect(place.actions.find((a) => a.id === 'workshop')!.description).toContain('Fishing');
+    expect(place.actions.map((a) => a.id)).toEqual(['map']);
   });
 
   it('the world boss adds its action where it stands', () => {

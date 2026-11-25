@@ -426,7 +426,7 @@ test('professions: Mastery sections, fishing with a rod, inspect a profile', asy
     ),
   );
   await expect(page.getByTestId('rumours')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Professions', exact: true }).click();
+  await page.getByRole('link', { name: 'Crafts', exact: true }).click();
   // Request #51: two sections, Novice ranks, the starter rod in the bag.
   await expect(page.getByTestId('section-gathering')).toContainText('Gathering Mastery');
   await expect(page.getByTestId('section-crafting')).toContainText('Crafting Mastery');

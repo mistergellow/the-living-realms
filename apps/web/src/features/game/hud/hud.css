@@ -1,0 +1,316 @@
+/*
+ * Request #84: the top HUD. A big portrait in an ornate gilded frame in the
+ * corner, reputation on a crest, the name over a wide Action Points bar, gold
+ * below; nothing else across the top but two small ring buttons.
+ * `:root` prefix: wins over the older HUD rules in theme.css.
+ */
+:root {
+  --tb-cream: #efe4cc;
+  --tb-gold: #c9a96a;
+  --tb-gold-hi: #f3dca4;
+  --tb-face: 'Cormorant Garamond', 'Alegreya', Georgia, serif;
+}
+
+:root .tb-top {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem calc(var(--hud-gap) + 0.3rem) 0.3rem;
+}
+
+/* ---------- the hero ---------- */
+:root .tb-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  /* a soft shadow pool so the cluster reads on any background */
+  background: radial-gradient(ellipse 70% 90% at 25% 50%, rgb(0 0 0 / 0.75), transparent 75%);
+}
+:root .tb-portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 5.6rem;
+  height: 5.6rem;
+  text-decoration: none;
+}
+:root .tb-portrait-face {
+  display: grid;
+  place-items: center;
+  width: 4.3rem;
+  height: 4.3rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #3a2c20, #0c0907);
+}
+:root .tb-portrait-face .token {
+  width: 4.6rem !important;
+  height: 4.6rem !important;
+  border: 0;
+  background: none;
+}
+:root .tb-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.9));
+  transition: filter 220ms ease;
+}
+:root .tb-portrait:hover .tb-frame,
+:root .tb-portrait:focus-visible .tb-frame {
+  filter: drop-shadow(0 0 0.5rem rgb(243 220 164 / 0.55));
+}
+:root .tb-portrait:focus-visible {
+  outline: none;
+}
+/* reputation on a small shield over the frame (like a level badge) */
+:root .tb-crest {
+  position: absolute;
+  left: 3.9rem;
+  top: 3.6rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 2.1rem;
+  height: 2.3rem;
+  padding: 0 0.25rem 0.2rem;
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  background: linear-gradient(180deg, #2f4f8f, #142749);
+  box-shadow: inset 0 0 0 2px #c99a48;
+  cursor: help;
+}
+:root .tb-crest strong {
+  color: #fff;
+  font-family: var(--tb-face);
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-shadow: 0 1px 2px #000;
+}
+:root .tb-hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding-left: 0.6rem;
+}
+:root .tb-name {
+  max-width: 18rem;
+  overflow: hidden;
+  color: var(--tb-cream);
+  font-family: var(--tb-face);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px #000;
+}
+:root .tb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f0a08c;
+  font-family: var(--tb-face);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ---------- Action Points: a wide gilt-rimmed bar ---------- */
+:root .tb-ap {
+  position: relative;
+  width: clamp(11rem, 22vw, 20rem);
+  height: 1.35rem;
+  overflow: hidden;
+  /* slanted right end, like a blade */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 0.7rem) 100%, 0 100%);
+  background: linear-gradient(180deg, #0b0806, #1d1611);
+  box-shadow:
+    inset 0 0 0 1px #8a6a33,
+    inset 0 2px 4px rgb(0 0 0 / 0.9);
+  cursor: help;
+}
+:root .tb-ap-fill {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  max-width: calc(100% - 4px);
+  background: linear-gradient(180deg, #f4d58a, #c98a2c 55%, #8c5a1a);
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+/* while AP regrows, a soft light runs along the bar */
+:root .tb-ap[data-filling='true'] .tb-ap-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 246 214 / 0.55), transparent);
+  animation: tb-sweep 3.2s ease-in-out infinite;
+}
+@keyframes tb-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+:root .tb-ap-text {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 1rem 0 0.5rem;
+  line-height: 1.35rem;
+}
+:root .tb-ap strong {
+  color: #fff;
+  font-family: var(--tb-face);
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-shadow:
+    0 0 3px #000,
+    0 1px 2px #000;
+}
+:root .tb-ap-max {
+  color: rgb(255 255 255 / 0.7);
+  font-size: 0.8rem;
+}
+:root .tb-ap em {
+  color: rgb(255 255 255 / 0.8);
+  font-family: var(--tb-face);
+  font-size: 0.78rem;
+  font-style: italic;
+  text-shadow: 0 0 3px #000;
+}
+:root .tb-ap[data-dir='down'] .tb-ap-fill {
+  filter: brightness(1.3) saturate(1.4) hue-rotate(-20deg);
+}
+
+/* ---------- gold ---------- */
+:root .tb-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--tb-cream);
+  cursor: help;
+}
+:root .tb-gold .icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--tb-gold);
+}
+:root .tb-gold strong {
+  font-family: var(--tb-face);
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  transition: color 400ms ease;
+}
+:root .tb-gold em {
+  color: rgb(239 228 204 / 0.55);
+  font-family: var(--tb-face);
+  font-size: 0.8rem;
+}
+/* a number that just changed flashes: gold when it rises, red when it falls */
+:root [data-dir='up'] > strong {
+  color: var(--tb-gold-hi);
+  text-shadow: 0 0 0.7rem rgb(243 220 164 / 0.8);
+}
+:root [data-dir='down'] > strong {
+  color: #f08a76;
+}
+
+/* ---------- top-right corner ---------- */
+:root .tb-world {
+  align-self: center;
+  color: rgb(239 228 204 / 0.45);
+  font-family: var(--tb-face);
+  font-size: 0.8rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+:root .tb-ring-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  align-self: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.45);
+  box-shadow: inset 0 0 0 1px rgb(201 169 106 / 0.55);
+  color: var(--tb-cream);
+  cursor: pointer;
+  transition: box-shadow 200ms ease;
+}
+:root .tb-ring-btn .icon {
+  width: 1rem;
+  height: 1rem;
+}
+:root .tb-ring-btn:hover,
+:root .tb-ring-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px var(--tb-gold-hi),
+    0 0 0.8rem rgb(243 220 164 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .tb-ap[data-filling='true'] .tb-ap-fill::after {
+    animation: none;
+  }
+}
+
+/* ---------- smaller screens ---------- */
+@media (max-width: 64em) {
+  :root .tb-world {
+    display: none;
+  }
+}
+@media (max-width: 40em) {
+  :root .tb-top {
+    padding: 0.35rem 0.5rem 0.2rem;
+  }
+  :root .tb-portrait {
+    width: 4rem;
+    height: 4rem;
+  }
+  :root .tb-portrait-face {
+    width: 3.1rem;
+    height: 3.1rem;
+  }
+  :root .tb-portrait-face .token {
+    width: 3.3rem !important;
+    height: 3.3rem !important;
+  }
+  :root .tb-crest {
+    left: 2.7rem;
+    top: 2.5rem;
+    min-width: 1.7rem;
+    height: 1.9rem;
+  }
+  :root .tb-crest strong {
+    font-size: 0.8rem;
+  }
+  :root .tb-name {
+    max-width: 9rem;
+    font-size: 1.05rem;
+  }
+  :root .tb-ap {
+    width: 9.5rem;
+  }
+  :root .tb-ap em {
+    display: none;
+  }
+}

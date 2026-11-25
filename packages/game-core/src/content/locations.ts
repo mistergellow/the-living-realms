@@ -1,5 +1,4 @@
 import type { HexCoord } from '@realms/shared';
-import { GATHERING_TERRAIN, PROFESSIONS } from './professions.js';
 import { getRift } from './rifts.js';
 import { mapHexAt, REGIONS, TERRAIN_NAMES, type Terrain } from './world-map.js';
 
@@ -27,7 +26,6 @@ export type LocationActionId =
   | 'storage'
   | 'blacksmith'
   | 'rifts'
-  | 'workshop'
   | 'map'
   | 'worldboss';
 
@@ -52,7 +50,7 @@ export interface LocationDef {
   riftId: string | null;
 }
 
-const ACTION: Record<Exclude<LocationActionId, 'rifts' | 'workshop'>, LocationAction> = {
+const ACTION: Record<Exclude<LocationActionId, 'rifts'>, LocationAction> = {
   npcs: {
     id: 'npcs',
     label: 'Talk to people',
@@ -107,25 +105,6 @@ const TERRAIN_TEXT: Record<Terrain, string> = {
   city: 'The capital: walls, markets and the seat of the crown.',
 };
 
-/** Gathering professions possible on a terrain, e.g. "Fishing". */
-function gatheringOn(terrain: Terrain): string[] {
-  return Object.entries(GATHERING_TERRAIN)
-    .filter(([, ts]) => ts?.includes(terrain))
-    .map(([id]) => (PROFESSIONS as Record<string, { name: string }>)[id]!.name);
-}
-
-function workshop(terrain: Terrain): LocationAction {
-  const here = gatheringOn(terrain);
-  return {
-    id: 'workshop',
-    label: 'Professions',
-    description: here.length
-      ? `${here.join(', ')}: gather right here, below. Crafting works anywhere.`
-      : 'Craft, repair and improve your gear.',
-    available: true,
-  };
-}
-
 /** The place at a hex. `worldBossHere` adds the world boss action. */
 export function locationAt(hex: HexCoord, opts: { worldBossHere?: boolean } = {}): LocationDef {
   const m = mapHexAt(hex);
@@ -157,7 +136,6 @@ export function locationAt(hex: HexCoord, opts: { worldBossHere?: boolean } = {}
         ACTION.market,
         ACTION.storage,
         ACTION.blacksmith,
-        workshop('city'),
         ACTION.npcs,
         ...boss,
         ACTION.map,
@@ -188,7 +166,7 @@ export function locationAt(hex: HexCoord, opts: { worldBossHere?: boolean } = {}
     terrain: m.terrain,
     region: region.name,
     description: TERRAIN_TEXT[m.terrain] + corrupted,
-    actions: [...riftAction, ...boss, workshop(m.terrain), ACTION.map],
+    actions: [...riftAction, ...boss, ACTION.map],
     riftId: rift?.id ?? null,
   };
 }

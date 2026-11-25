@@ -114,6 +114,9 @@ importers:
       '@fontsource/alegreya-sc':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/cormorant-garamond':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/grenze-gotisch':
         specifier: ^5.3.0
         version: 5.3.0
@@ -875,6 +878,9 @@ packages:
 
   '@fontsource/alegreya@5.3.0':
     resolution: {integrity: sha512-YCsp9dHYfMNdggXxinMMS0nkGlZkzs2MvPL7qPVjSO4DM1uJ29hmKEdTC/fBP+2K4Aa+4Z44JuOQz05eDcvNJA==}
+
+  '@fontsource/cormorant-garamond@5.3.0':
+    resolution: {integrity: sha512-weuGsCirGVWBWqpt6YUp0yLThTe4G8YO45noq8wxeJCRvEpq5lFrxNMFSTxcyOyV5k5otzJ8guDzYegdYlcLMQ==}
 
   '@fontsource/grenze-gotisch@5.3.0':
     resolution: {integrity: sha512-hIgb3TJWnwjiaf8FWMYfPe5PvHHnSv+VYUJI40Fj0KhjWhBhBl4LTsGrkr4MSjo6mG+znR2tBz5L++4wkEgI1A==}
@@ -2930,6 +2936,8 @@ snapshots:
   '@fontsource/alegreya-sc@5.3.0': {}
 
   '@fontsource/alegreya@5.3.0': {}
+
+  '@fontsource/cormorant-garamond@5.3.0': {}
 
   '@fontsource/grenze-gotisch@5.3.0': {}
 

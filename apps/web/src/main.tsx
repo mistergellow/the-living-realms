@@ -13,6 +13,10 @@ import '@fontsource/alegreya-sc/500.css';
 import '@fontsource/alegreya-sc/700.css';
 import '@fontsource/grenze-gotisch/600.css';
 import '@fontsource/grenze-gotisch/800.css';
+// Request #84: the HUD face (high-contrast serif, Belle Époque feel).
+import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/cormorant-garamond/600-italic.css';
 import './styles/global.css';
 // Request #69: the gothic "Darkest" look (overrides the feature stylesheets).
 import './styles/theme.css';
@@ -30,6 +34,8 @@ const FONTS = [
   '700 1em "Alegreya SC"',
   '600 1em "Grenze Gotisch"',
   '800 1em "Grenze Gotisch"',
+  '600 1em "Cormorant Garamond"',
+  'italic 600 1em "Cormorant Garamond"',
 ];
 void Promise.race([
   Promise.all(FONTS.map((f) => document.fonts.load(f))).catch(() => undefined),

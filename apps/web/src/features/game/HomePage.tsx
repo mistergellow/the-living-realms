@@ -23,7 +23,6 @@ const ACTION_ICON: Record<LocationActionId, IconName> = {
   shop: 'bag',
   market: 'coin',
   rifts: 'portal',
-  workshop: 'gear',
   map: 'compass',
   worldboss: 'skull',
   storage: 'lock',
@@ -31,7 +30,6 @@ const ACTION_ICON: Record<LocationActionId, IconName> = {
 };
 const ACTION_TO: Partial<Record<LocationActionId, string>> = {
   rifts: '/rifts',
-  workshop: '/professions',
   map: '/world',
   worldboss: '/world-boss',
   shop: '/city/shop',
