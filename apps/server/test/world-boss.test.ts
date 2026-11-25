@@ -87,6 +87,15 @@ describe('world boss (request #43)', () => {
     expect((await fight(f)).json().error.code).toBe('NO_ATTEMPTS_LEFT');
   });
 
+  it('health carries over here too: too wounded cannot fight (request #85)', async () => {
+    const f = await fighter();
+    await t.dbHandle
+      .sql`update characters set hp_lost = 100000, hp_lost_at = now() where id = ${f.id}`;
+    const res = await fight(f);
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.message).toContain('too wounded');
+  });
+
   it('roams to a neighbouring Riftlands hex when it is time', async () => {
     const f = await fighter();
     await view(f);
