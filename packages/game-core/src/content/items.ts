@@ -37,6 +37,11 @@ export interface ItemDef {
   /** Skill Books (request #47): reading it teaches this skill (and uses the book up). */
   teaches?: string;
   /**
+   * Request #85: potions and food heal this percent of the maximum HP when
+   * used from the bag (outside a Rift). PROVISIONAL (A145).
+   */
+  heal?: number;
+  /**
    * Profession tools (request #51): carried in the bag. `tier` above 1 gives a
    * small success bonus; `minRank` is the Mastery rank needed to use it.
    */

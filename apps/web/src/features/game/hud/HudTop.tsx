@@ -1,3 +1,5 @@
+import { HEALTH_RULES } from '@realms/game-core';
+import type { HealthDto } from '@realms/shared';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Icon } from '../../../shared/ui/Icon';
@@ -80,6 +82,56 @@ function ApBar() {
           {ap && <span className="tb-ap-max">/{ap.max}</span>}
         </strong>
         <em>Action points</em>
+      </span>
+    </div>
+  );
+}
+
+/** HP now from the server's snapshot: it heals 10%/h until `fullAt` (request #85). */
+function liveHp(h: HealthDto, now: number): number {
+  if (!h.fullAt) return h.max;
+  const hoursLeft = Math.max(0, new Date(h.fullAt).getTime() - now) / 3_600_000;
+  const perHour = (HEALTH_RULES.regenPctPerHour / 100) * h.max;
+  return Math.max(0, Math.min(h.max, Math.floor(h.max - hoursLeft * perHour)));
+}
+
+/** Health: carried between Rifts; heals over real time or with potions (request #85). */
+function HpBar({ health }: { health: HealthDto | undefined }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const value = health ? liveHp(health, now) : null;
+  const { shown, dir } = useRolling(value);
+  const pct = health && value !== null ? (100 * value) / health.max : 0;
+  const healing = !!health?.fullAt;
+  const mins = health?.fullAt
+    ? Math.max(1, Math.ceil((new Date(health.fullAt).getTime() - now) / 60_000))
+    : 0;
+  return (
+    <div
+      className="tb-ap tb-hp"
+      data-dir={dir ?? undefined}
+      data-filling={healing}
+      data-low={pct < 30}
+      title={
+        health
+          ? `Health: it stays low after a Rift. Heals ${HEALTH_RULES.regenPctPerHour}% per hour${
+              healing
+                ? ` (full in ${mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`})`
+                : ''
+            }, or drink a Healing Draught.`
+          : 'Health'
+      }
+    >
+      <span className="tb-ap-fill" style={{ width: `${pct}%` }} />
+      <span className="tb-ap-text">
+        <strong data-testid={health ? 'top-hp' : undefined}>
+          {shown ?? '—'}
+          {health && <span className="tb-ap-max">/{health.max}</span>}
+        </strong>
+        <em>Health</em>
       </span>
     </div>
   );
@@ -174,6 +226,7 @@ export function HudTop(props: {
             )}
             {props.statusLabel}
           </span>
+          <HpBar health={sheet.data?.health} />
           <ApBar />
           <span
             className="tb-gold"

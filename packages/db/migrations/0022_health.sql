@@ -1,0 +1,2 @@
+ALTER TABLE "characters" ADD COLUMN "hp_lost" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "characters" ADD COLUMN "hp_lost_at" timestamp with time zone DEFAULT now() NOT NULL;

@@ -195,6 +195,22 @@
   filter: brightness(1.3) saturate(1.4) hue-rotate(-20deg);
 }
 
+/* Health (request #85): the same bar in blood red, shorter and above the AP. */
+:root .tb-hp .tb-ap-fill {
+  background: linear-gradient(180deg, #e86a55, #a3221a 55%, #5e0f0a);
+}
+:root .tb-hp[data-low='true'] .tb-ap-fill {
+  animation: tb-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tb-pulse {
+  50% {
+    filter: brightness(1.45);
+  }
+}
+:root .tb-hp[data-filling='true'] .tb-ap-fill::after {
+  background: linear-gradient(90deg, transparent, rgb(255 210 200 / 0.45), transparent);
+}
+
 /* ---------- gold ---------- */
 :root .tb-gold {
   display: inline-flex;
@@ -267,7 +283,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root .tb-ap[data-filling='true'] .tb-ap-fill::after {
+  :root .tb-ap[data-filling='true'] .tb-ap-fill::after,
+  :root .tb-hp[data-low='true'] .tb-ap-fill {
     animation: none;
   }
 }

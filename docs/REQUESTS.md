@@ -296,6 +296,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A142 | Cor do fundo dos skills pelo nível (pedido #80)                 | 1–3 Common, 4–6 Uncommon, 7–10 Rare, M1–M5 Epic, M6–M10 Legendary, P Mythic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `SKILL_LEVEL_RARITY` (`skills.ts`)                                               |
 | A143 | Tabelas de drops da recolha (pedido #81)                        | uma tentativa: primeiro o sucesso (chance de antes, +10 %/rank, ferramenta, atributos), depois UM drop por peso. Mining: Iron Ore 1–2 (peso 90), Rough Gem 1 (peso 10 +5/rank, desde Apprentice, só em depósito). Herbalism: Herb 40, Grain 35, Flax 25. Hunting: Hide + Meat. Fishing: Raw Fish. Woodcutting: Log. "Search for gems" e as 3 recolhas de Herbalism juntaram-se numa ação                                                                                                                                                                   | `PROFESSIONS` (`drops`), `dropChances`                                           |
 | A144 | Hotzones diárias (pedido #82)                                   | depósitos fixos em 20 % dos hexes de cada profissão; cada dia (UTC) uma região em alta por profissão, cada região tem o seu dia em cada ciclo de 4: +10 % sucesso, +1 riqueza no grau, drops de depósito ×3; filão do dia (um hex de depósito nessa região): +10 % sucesso e drops de depósito ×2 a mais; rumor dá um hex a ≤ 3 do filão                                                                                                                                                                                                                   | `HOTZONE_RULES` (`gathering.ts`)                                                 |
+| A145 | Vida entre Rifts (pedido #85)                                   | regenera 10 % da vida máxima por hora real (cheia em 10 h); morrer deixa a 0 e é preciso ≥ 1 para entrar numa Rift; Healing Draught +40 %, Hearty Stew +25 %, Grilled Fish +15 %, Bandage +10 % (usados na mochila, fora de Rifts); world boss e PvP de teste não mexem na vida (começam cheios)                                                                                                                                                                                                                                                           | `HEALTH_RULES` (`health.ts`), `heal` nos itens consumíveis                       |
 
 ---
 
@@ -1844,3 +1845,24 @@ como exemplo de boa organização (fica para o combate).
 - Fonte nova para o HUD: Cormorant Garamond (`@fontsource/cormorant-garamond`).
 - O resto da interface (painéis, estações, barra de baixo) continua no estilo
   antigo: a passar para o novo estilo aos poucos.
+
+### #85 — 2026-11-25 — A vida não regenera entre dungeons
+
+**Pedido:** a vida não se regenera entre dungeons — só com poções ou "over
+time", em tempo real. "Faz isso e dá commit." Provisório A145.
+**Resultado:**
+
+- A personagem guarda a **vida perdida** e quando foi escrita (colunas
+  `hp_lost`, `hp_lost_at`, migração 0022). Guardar a perda (e não a vida que
+  resta) faz com que mudar de equipamento/atributos não cure nem fira sozinho.
+  Como os PA, o valor atual calcula-se quando é lido.
+- Ao entrar numa Rift, cada herói começa com a vida que tem. Ao acabar
+  (vitória, derrota) ou ao sair a meio, a vida com que ficou é guardada.
+  Morrer deixa a 0: não se pode entrar noutra Rift com 0 de vida ("too
+  wounded") até descansar ou beber uma poção.
+- Poções e comida curam fora das Rifts: duplo clique ou "Use" no menu do item
+  na mochila (percentagem da vida máxima).
+- Header: barra de **vida** vermelha por cima da de PA; enche sozinha com o
+  tempo, pisca quando está abaixo de 30 %; o título diz quanto falta para
+  encher.
+- World boss e PvP de teste ficam como estavam (vida cheia; não guardam dano).

@@ -8,7 +8,8 @@ import { defineItem } from '../../define.js';
 export default defineItem({
   id: 'grilled_fish',
   name: 'Grilled Fish',
-  description: 'A simple, filling meal.',
+  description: 'A simple, filling meal. Restores 15% of your health.',
   kind: 'consumable',
+  heal: 15,
   slots: [],
 });

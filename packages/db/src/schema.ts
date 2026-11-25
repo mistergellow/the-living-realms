@@ -145,6 +145,9 @@ export const characters = pgTable(
      */
     ap: doublePrecision('ap').notNull().default(120),
     apUpdatedAt: timestamp('ap_updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Request #85: HP lost (carried between Rifts) and when it was written; heals over time. */
+    hpLost: doublePrecision('hp_lost').notNull().default(0),
+    hpLostAt: timestamp('hp_lost_at', { withTimezone: true }).notNull().defaultNow(),
     lastPlayedAt: timestamp('last_played_at', { withTimezone: true }),
     /** Soft delete: the world's history may still reference this character. */
     deletedAt: timestamp('deleted_at', { withTimezone: true }),

@@ -31,6 +31,7 @@ export * from './content/guilds.js';
 export * from './content/named.js';
 export * from './professions.js';
 export * from './gathering.js';
+export * from './health.js';
 export * from './content/world-map.js';
 export * from './content/locations.js';
 export * from './ap.js';

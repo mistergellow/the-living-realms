@@ -565,6 +565,15 @@ export interface CharacterSheetDto {
   reputationBonusPct: number;
   /** Attribute points not yet distributed. */
   attributePoints: number;
+  /** Request #85: health carried between Rifts (heals over real time and with potions). */
+  health: HealthDto;
+}
+
+/** Request #85: current HP, maximum, and when it is full again (null = full). */
+export interface HealthDto {
+  hp: number;
+  max: number;
+  fullAt: string | null;
 }
 
 export const equipRequestSchema = z.object({ itemId: z.uuid(), slot: z.enum(EQUIP_SLOTS) });

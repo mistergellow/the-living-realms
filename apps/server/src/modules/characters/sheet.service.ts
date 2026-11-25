@@ -1,3 +1,4 @@
+import { healthOf, saveHpLost } from './health.js';
 import {
   characters,
   characterSkills,
@@ -16,6 +17,7 @@ import {
   availableAbilities,
   checkRequirements,
   computeStats,
+  healAmount,
   describeAffix,
   describeEffects,
   describeScaling,
@@ -292,6 +294,31 @@ export class CharacterSheetService {
         .where(and(eq(items.id, itemId), eq(items.characterId, c.id)));
       if (!item) throw errors.notFound('Item');
       const def = getItemDef(item.itemDefId);
+      // Request #85: potions and food heal (health carries over between Rifts).
+      if (def?.heal) {
+        if (item.inStorage) throw errors.validation('Take it out of storage first.');
+        const rows = await itemsRepository.listByCharacter(tx, c.id);
+        const { maxHp } = computeStats(baseAttributesOf(c), rows.map(toOwned)).stats;
+        const now = healthOf(c, maxHp);
+        if (now.lost < 1) throw errors.validation('You are already at full health.');
+        const healed = Math.min(Math.ceil(now.lost), healAmount(def.heal, maxHp));
+        await saveHpLost(tx, c.id, now.lost - healed, maxHp);
+        if (item.quantity > 1)
+          await tx
+            .update(items)
+            .set({ quantity: item.quantity - 1 })
+            .where(eq(items.id, item.id));
+        else await tx.delete(items).where(eq(items.id, item.id));
+        const [fresh] = await tx.select().from(characters).where(eq(characters.id, c.id));
+        const sheet = await this.buildSheet(tx, fresh!);
+        return {
+          ...sheet,
+          notice: {
+            ok: true,
+            message: `${def.name}: +${healed} HP (${sheet.health.hp}/${sheet.health.max}).`,
+          },
+        };
+      }
       const skill = def?.teaches ? getSkill(def.teaches) : undefined;
       if (!skill) throw errors.validation('This item cannot be used.');
       const base = baseAttributesOf(c);
@@ -567,6 +594,7 @@ export class CharacterSheetService {
       gold: c.gold,
       reputationBonusPct: await reputationGearBonus(db, c.id),
       attributePoints: c.attributePoints,
+      health: (({ hp, max, fullAt }) => ({ hp, max, fullAt }))(healthOf(c, stats.maxHp)),
     };
   }
 }

@@ -8,7 +8,8 @@ import { defineItem } from '../../define.js';
 export default defineItem({
   id: 'bandage',
   name: 'Bandage',
-  description: 'Stops bleeding.',
+  description: 'Stops bleeding. Restores 10% of your health.',
   kind: 'consumable',
+  heal: 10,
   slots: [],
 });

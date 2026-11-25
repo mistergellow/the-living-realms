@@ -1,3 +1,4 @@
+import { healthOf, saveHpLost } from '../characters/health.js';
 import {
   characters,
   items,
@@ -24,6 +25,7 @@ import {
   getEvent,
   getItemDef,
   getRift,
+  HEALTH_RULES,
   hasDeadline,
   isGear,
   leaveRun,
@@ -368,6 +370,13 @@ export class RiftsService {
     const used = new Set<number>();
     for (const m of members) {
       const profile = await this.sheets.combatProfile(tx, m.character);
+      const health = healthOf(m.character, profile.stats.maxHp);
+      if (health.hp < HEALTH_RULES.minToEnter)
+        throw new AppError(
+          409,
+          ErrorCode.INVALID_ACTION,
+          `${m.character.name} is too wounded to enter a Rift. Rest, or drink a Healing Draught first.`,
+        );
       let slot = m.slot ?? startingSlot(profile.abilityIds);
       if (used.has(slot))
         slot = Array.from({ length: SLOTS_PER_SIDE }, (_, i) => i).find((s) => !used.has(s))!;
@@ -385,7 +394,8 @@ export class RiftsService {
         abilityExtraTurns: profile.abilityExtraTurns,
         abilityLevels: profile.abilityLevels,
         gear: profile.gear,
-        hp: profile.stats.maxHp,
+        // Request #85: you enter with the health you have (it carries over).
+        hp: health.hp,
         mana: profile.stats.maxMana,
         slot,
       });
@@ -447,6 +457,7 @@ export class RiftsService {
       if (action.type === 'abandon') {
         // A28: the leaver is penalised now; the others keep going.
         await this.penalise(tx, run, characterId, true);
+        await this.saveHealth(tx, run, state, characterId);
         state = leaveRun(state, characterId);
         return this.saveAndFinish(tx, run, state, characterId);
       }
@@ -583,6 +594,9 @@ export class RiftsService {
       return;
     }
     const rift = getRift(run.riftId)!;
+    // Request #85: the damage taken stays with you after the Rift.
+    for (const p of await repo.participants(tx, run.id))
+      if (!p.leftAt) await this.saveHealth(tx, run, run.state as RunState, p.characterId);
     // Request #57: guilds earn what their members earn together.
     const earned: Array<{ characterId: string; reputation: number }> = [];
     for (const p of await repo.participants(tx, run.id)) {
@@ -656,6 +670,23 @@ export class RiftsService {
       );
     }
     if (status === 'victory') await awardGuildReputation(tx, earned);
+  }
+
+  /**
+   * Request #85: store the HP a character lost in this Rift (only Rifts: the
+   * world boss and the PvP test mode never change your health).
+   */
+  private async saveHealth(
+    tx: DbOrTx,
+    run: RiftRun,
+    state: RunState,
+    characterId: string,
+  ): Promise<void> {
+    if (run.riftId === WORLD_BOSS_ID || run.riftId === PVP_ARENA_ID) return;
+    // During a fight the live HP is in the combat (toRunMembers merges it).
+    const m = toRunMembers(state).find((x) => x.characterId === characterId);
+    if (!m || m.left) return;
+    await saveHpLost(tx, characterId, m.maxHp - Math.max(0, m.hp), m.maxHp);
   }
 
   /** Equipped items lose quality (D30); `left` marks an early leaver (A28). */

@@ -383,4 +383,53 @@ describe('Rifts', () => {
     });
     expect(res.statusCode).toBe(404);
   });
+
+  it('health carries over between Rifts; potions heal; too wounded cannot enter (#85)', async () => {
+    const h = await hero();
+    const { id } = (await startRun(h)).json() as RunDto;
+    // Take damage in the fight (test-only), then leave.
+    const [row] = await t.dbHandle.sql`select state from rift_runs where id = ${id}`;
+    const state = row!.state as {
+      party: Array<{ characterId: string; hp: number; stats: { maxHp: number } }>;
+    };
+    const me = state.party.find((m) => m.characterId === h.characterId)!;
+    const maxHp = me.stats.maxHp;
+    me.hp = 10;
+    await t.dbHandle
+      .sql`update rift_runs set state = ${JSON.stringify(state)}::jsonb where id = ${id}`;
+    await act(h, id, { type: 'abandon' });
+    const sheetOf = async () =>
+      (
+        await t.app.inject({
+          url: `/api/characters/${h.characterId}`,
+          headers: { cookie: h.cookie },
+        })
+      ).json() as { health: { hp: number; max: number; fullAt: string | null } };
+    const after = await sheetOf();
+    expect(after.health).toMatchObject({ hp: 10, max: maxHp });
+    expect(after.health.fullAt).not.toBeNull();
+    // The next Rift starts with that health, not full.
+    const next = (await startRun(h)).json() as RunDto;
+    expect(next.party.find((m) => m.characterId === h.characterId)!.hp).toBe(10);
+    await act(h, next.id, { type: 'abandon' });
+
+    // At 0 HP you cannot enter; a Healing Draught gets you going again.
+    await t.dbHandle
+      .sql`update characters set hp_lost = ${maxHp}, hp_lost_at = now() where id = ${h.characterId}`;
+    const blocked = await startRun(h);
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json().error.message).toContain('too wounded');
+    const [potion] = await t.dbHandle.sql`
+      insert into items (id, character_id, item_def_id, quantity, source)
+      values (gen_random_uuid(), ${h.characterId}, 'healing_draught', 1, 'test') returning id`;
+    const used = await t.app.inject({
+      method: 'POST',
+      url: `/api/characters/${h.characterId}/items/${potion!.id}/use`,
+      headers: { cookie: h.cookie },
+    });
+    expect(used.statusCode).toBe(200);
+    expect(used.json().health.hp).toBe(Math.round(maxHp * 0.4));
+    expect(used.json().notice.message).toContain('HP');
+    expect((await startRun(h)).statusCode).toBe(201);
+  });
 });

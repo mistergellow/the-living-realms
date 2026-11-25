@@ -65,7 +65,7 @@ export function EquipmentTab({
     drop.isPending ||
     inv.move.isPending ||
     inv.sort.isPending;
-  /** Skill Books (request #47): double-click to read and learn. */
+  /** Skill Books (request #47): double-click to read and learn; potions heal (#85). */
   const read = (item: ItemDto) => {
     if (busy) return;
     tip.clear();
@@ -256,9 +256,12 @@ export function EquipmentTab({
               dimmed={(i) => !itemMatches(i, filter, search)}
               bind={(item) => dnd.bind({ item, from: 'inventory' }, !busy)}
               tip={(item) => tip.props(item)}
-              onDoubleClick={(item) =>
-                getItemDef(item.defId)?.teaches ? read(item) : doEquip(item, quickSlot(item, s))
-              }
+              onDoubleClick={(item) => {
+                const def = getItemDef(item.defId);
+                // Request #85: potions and food are drunk / eaten with a double-click.
+                if (def?.teaches || def?.heal) read(item);
+                else doEquip(item, quickSlot(item, s));
+              }}
               onContextMenu={(item, at) => {
                 if (busy) return;
                 tip.clear();
@@ -375,9 +378,16 @@ export function EquipmentTab({
           actions={[
             ...(getItemDef(menu.item.defId)?.teaches
               ? [{ label: 'Read', onSelect: () => read(menu.item) }]
-              : menu.item.slots.length
-                ? [{ label: 'Equip', onSelect: () => doEquip(menu.item, quickSlot(menu.item, s)) }]
-                : []),
+              : getItemDef(menu.item.defId)?.heal
+                ? [{ label: 'Use', testId: 'item-menu-use', onSelect: () => read(menu.item) }]
+                : menu.item.slots.length
+                  ? [
+                      {
+                        label: 'Equip',
+                        onSelect: () => doEquip(menu.item, quickSlot(menu.item, s)),
+                      },
+                    ]
+                  : []),
             {
               label: 'Drop',
               danger: true,

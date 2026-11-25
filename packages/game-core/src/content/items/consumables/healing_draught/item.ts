@@ -8,7 +8,8 @@ import { defineItem } from '../../define.js';
 export default defineItem({
   id: 'healing_draught',
   name: 'Healing Draught',
-  description: 'Restores health.',
+  description: 'Restores 40% of your health.',
   kind: 'consumable',
+  heal: 40,
   slots: [],
 });
