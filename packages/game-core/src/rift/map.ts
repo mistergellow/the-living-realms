@@ -32,8 +32,11 @@ export interface MapTemplate {
   /** The dungeon must have at least this many rooms (boss included, secrets excluded). */
   minRooms: number;
   firstRow: RoomType;
-  /** Row just before the boss (e.g. a Campsite). */
-  lastRow: RoomType;
+  /**
+   * Row just before the boss, when it is fixed. Request #90: no longer set —
+   * the Campsite before the boss is not guaranteed any more.
+   */
+  lastRow?: RoomType;
   /** Room-type weights per path theme (only regular rows). */
   themes: Record<PathTheme, Partial<Record<RoomType, number>>>;
   rules: {
@@ -187,7 +190,7 @@ function assignTypes(t: MapTemplate, rng: Rng, map: RiftMap): void {
         node.type = t.firstRow;
         continue;
       }
-      if (row === t.rows - 1) {
+      if (row === t.rows - 1 && t.lastRow) {
         node.type = t.lastRow;
         continue;
       }

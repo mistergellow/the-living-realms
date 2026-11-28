@@ -249,6 +249,11 @@ describe('Rifts', () => {
     expect(events.map((e) => e.type)).toEqual(['rift.entered', 'rift.completed']);
     expect(run.rewards).toMatchObject({ clearNumber: 1, clearFactorPct: 100, gearBonusPct: 0 });
 
+    // Request #85: health carries over between Rifts — rest to full before the next one.
+    const rest = () =>
+      t.dbHandle
+        .sql`update characters set hp_lost = 0, hp_lost_at = now() where id = ${h.characterId}`;
+    await rest();
     // Request #49: the same Rift gives less the second time (50%)…
     const second = (await startRun(h)).json() as RunDto;
     expect(second.status).toBe('active');
@@ -262,6 +267,7 @@ describe('Rifts', () => {
       insert into rift_run_participants (run_id, character_id, account_id)
       select r.id, ${h.characterId}, p.account_id from rift_runs r, rift_run_participants p
       where p.run_id = ${second.id} and r.id not in (${id}, ${second.id})`;
+    await rest();
     const fourth = (await startRun(h)).json() as RunDto;
     expect((await clearRift(h, fourth.id)).run.rewards).toMatchObject({
       reputation: 0,

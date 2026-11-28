@@ -298,6 +298,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A144 | Hotzones diárias (pedido #82)                                   | depósitos fixos em 20 % dos hexes de cada profissão; cada dia (UTC) uma região em alta por profissão, cada região tem o seu dia em cada ciclo de 4: +10 % sucesso, +1 riqueza no grau, drops de depósito ×3; filão do dia (um hex de depósito nessa região): +10 % sucesso e drops de depósito ×2 a mais; rumor dá um hex a ≤ 3 do filão                                                                                                                                                                                                                   | `HOTZONE_RULES` (`gathering.ts`)                                                 |
 | A145 | Vida entre Rifts (pedido #85)                                   | regenera 10 % da vida máxima por hora real (cheia em 10 h); morrer deixa a 0 e é preciso ≥ 1 para entrar numa Rift; Healing Draught +40 %, Hearty Stew +25 %, Grilled Fish +15 %, Bandage +10 % (usados na mochila, fora de Rifts); world boss e PvP também usam e guardam a vida (pedido #86)                                                                                                                                                                                                                                                             | `HEALTH_RULES` (`health.ts`), `heal` nos itens consumíveis                       |
 | A146 | Som (pedido #87)                                                | ligado por defeito com botão de som no header (os browsers só tocam depois do 1.º clique); música 50 %, efeitos 80 %; sons e música sintetizados (provisórios até haver ficheiros reais)                                                                                                                                                                                                                                                                                                                                                                   | `DEFAULT_AUDIO` (`lib/audio/engine.ts`), receitas em `sfx.ts`/`ambience.ts`      |
+| A147 | Fogueiras nas Rifts (pedido #90)                                | nunca garantidas (já não há fogueira fixa antes do boss); no máximo 1 por caminho em todos os tiers; pesos `safe 0,55 / explore 0,18 / mixed 0,22` (× 10 ÷ comprimento) → ~1 em 3 mapas tem uma, ~13 % dos caminhos passam por ela; cura 30 % HP / 40 % Mana (sem mudança)                                                                                                                                                                                                                                                                                 | `CAMPSITE_WEIGHTS`, `RIFT_SIZE_RULES` (`content/rifts.ts`)                       |
 
 ---
 
@@ -1905,3 +1906,43 @@ avançar com a **Fase A** ("sentir" de jogo, sem arte nova). Provisório A146.
   que sobe a escala (`LootReveal.tsx`); botões afundam ao clicar.
 - O servidor passou a mandar `itemDefId`/`gradeIndex` no que é produzido (para
   os ícones do loot).
+
+### #89 — 2026-11-28 — Fase B (mundo vivo) e pensar o combate
+
+**Pedido:** fazer a Fase B e pensar no combate: gosta de como está a ficar,
+mas está totalmente desequilibrado. Quer uma mistura de Pokémon / Slay the
+Spire / Darkest Dungeon, com o aspeto do Darkest Dungeon; os efeitos parecem
+todos versões do mesmo com nomes diferentes; armas mal balançadas; poucos
+poderes; não criam cenários únicos e divertidos.
+**Resultado:**
+
+- **Combate:** diagnóstico com `pnpm sim` (a solo vai de 1 % a 68 % de
+  vitórias por arma; os grupos ganham 100 %; 59 efeitos são "dano", e os
+  estados são quase só sangrar/fraco/marca/atordoar) e **proposta de redesenho
+  em `docs/COMBAT_REDESIGN.md`** (posições e movimento à Darkest Dungeon, tipos
+  de dano e fraquezas à Pokémon, estados com regras próprias à Slay the Spire,
+  4 poderes por arma com identidade, feitios dos inimigos e salas com
+  condições, orçamento por poder com teste automático, metas na simulação,
+  plano C1–C7). **Nada implementado: à espera das decisões do dono.**
+- **Fase B:**
+  - O herói está de pé na cena do sítio (o boneco articulado, a respirar),
+    com luz de tocha; os outros jogadores do hex ficam atrás, em sombra; entra
+    a caminhar quando se chega a um hex.
+  - Cenas em camadas com parallax (seguem o rato), um "respirar" lento de
+    câmara, nuvens a passar na lua, nevoeiro a deslizar, corvos, pirilampos,
+    fumo das chaminés, chamas a tremer; nas entradas de Rift, um rasgo de luz
+    violeta a pulsar com partículas.
+  - Mapa do mundo: ao viajar, o marcador caminha hex a hex (com um saltinho
+    por hex) e deixa pegadas que se apagam.
+  - Ao entrar numa Rift, um vórtice violeta abre-se sobre o ecrã (uma vez por
+    corrida).
+- Teste do servidor "full run" corrigido: com a vida a passar entre Rifts
+  (#85), o herói descansa entre as Rifts seguidas do teste.
+
+### #90 — 2026-11-28 — Fogueira nas Rifts bem mais rara e nunca garantida
+
+**Pedido:** a fogueira (Campsite) nas Rifts bem mais rara, e sem 100 % de
+chance. Provisório A147.
+**Resultado:** já não há fogueira fixa antes do boss nem mínimo por mapa;
+no máximo uma por caminho; pesos baixos (≈ 1 em 3 mapas tem uma, ≈ 13 % dos
+caminhos passam por ela). Testes de mapas atualizados.

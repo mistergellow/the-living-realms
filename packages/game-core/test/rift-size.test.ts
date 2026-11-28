@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   allPaths,
-  findNode,
   generateRiftMap,
   getRift,
   mapTemplateForTier,
@@ -24,18 +23,21 @@ describe('Rift size and Campsites (request #60)', () => {
       }
   });
 
-  it('Campsites are rare: at most 3 per route on easy Rifts, 1 on the hardest, never none', () => {
+  it('Campsites are rare and never guaranteed (request #90): at most one per route', () => {
+    let maps = 0;
+    let withCampsite = 0;
     for (let tier = 1; tier <= 5; tier++)
-      for (let seed = 1; seed <= 15; seed++) {
+      for (let seed = 1; seed <= 40; seed++) {
         const map = generateRiftMap(mapTemplateForTier(tier), pools, seed * 104729 + tier);
         expect(maxOnAnyPath(map, 'campsite')).toBeLessThanOrEqual(
           RIFT_SIZE_RULES.campsitesPerRoute[tier - 1]!,
         );
-        for (const path of allPaths(map))
-          expect(
-            path.filter((id) => findNode(map, id)!.type === 'campsite').length,
-          ).toBeGreaterThanOrEqual(1);
+        maps++;
+        if (map.nodes.some((n) => n.type === 'campsite')) withCampsite++;
       }
+    // Most Rifts have none; some have one somewhere.
+    expect(withCampsite / maps).toBeGreaterThan(0.1);
+    expect(withCampsite / maps).toBeLessThan(0.6);
   });
 
   it('map entrances use their tier’s size', () => {

@@ -15,6 +15,7 @@ import { EndOverlay } from './EndOverlay';
 import { RiftDoors } from './RiftDoors';
 import './rift-doors.css';
 import { useAmbience } from '../../lib/audio';
+import { PortalIntro } from './PortalIntro';
 
 /** Seconds left on the current decision or planning phase, refreshed every 250 ms. */
 function useCountdown(deadline: string | null): number | null {
@@ -62,12 +63,16 @@ export function RunPage() {
       />
     );
   return (
-    <ExplorationScreen
-      run={data}
-      characterId={characterId}
-      action={action}
-      secondsLeft={secondsLeft}
-    />
+    <>
+      {/* Request #89: the portal opens as you step in (first visit of this run). */}
+      <PortalIntro runId={runId} />
+      <ExplorationScreen
+        run={data}
+        characterId={characterId}
+        action={action}
+        secondsLeft={secondsLeft}
+      />
+    </>
   );
 }
 

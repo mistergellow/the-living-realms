@@ -101,6 +101,12 @@ const armorLoot = (weight: number): LootEntry[] =>
 const books = (weight: number): LootEntry[] =>
   Object.keys(SKILLS).map((id) => ({ item: skillBookId(id) as ItemDefId, weight }));
 
+/**
+ * Request #90: weight of a Campsite among the rooms of a path theme (the
+ * other rooms weigh ~10 in total). PROVISIONAL (A147).
+ */
+export const CAMPSITE_WEIGHTS = { safe: 0.55, explore: 0.18, mixed: 0.22 } as const;
+
 /** Default map: 7 rows + boss, 5 lanes, 4 walks (≈ 15–20 rooms, 8 on any path). */
 export const DEFAULT_MAP_TEMPLATE: MapTemplate = {
   rows: 7,
@@ -108,33 +114,34 @@ export const DEFAULT_MAP_TEMPLATE: MapTemplate = {
   paths: 4,
   minRooms: 10,
   firstRow: 'combat',
-  lastRow: 'campsite',
+  // Request #90: no guaranteed Campsite before the boss; Campsites are rare.
   themes: {
-    safe: { combat: 3, campsite: 4, event: 2, loot: 1 },
-    explore: { combat: 2, event: 6, campsite: 1, loot: 1 },
-    loot: { combat: 3, loot: 4, event: 2, campsite: 1 },
+    safe: { combat: 3, campsite: CAMPSITE_WEIGHTS.safe, event: 2, loot: 1 },
+    explore: { combat: 2, event: 6, campsite: CAMPSITE_WEIGHTS.explore, loot: 1 },
+    loot: { combat: 3, loot: 4, event: 2 },
     danger: { combat: 3, elite: 4, event: 1, loot: 2 },
-    mixed: { combat: 3, elite: 1, event: 2, campsite: 2, loot: 1 },
+    mixed: { combat: 3, elite: 1, event: 2, campsite: CAMPSITE_WEIGHTS.mixed, loot: 1 },
   },
   rules: {
     minEliteRow: 2,
     minLootRow: 1,
     noConsecutive: ['campsite', 'elite', 'loot'],
-    minCounts: { elite: 1, event: 2, loot: 1, campsite: 2 },
+    minCounts: { elite: 1, event: 2, loot: 1 },
   },
+  maxCampsitesPerPath: 1,
   secrets: { min: 1, max: 2, minRow: 1 },
 };
 
 /*
  * Request #60: Rifts are longer and Campsites rare. A route from the entrance
- * to the boss has 10 rooms at tier 1 and up to 20 at tier 5 (boss included);
- * Campsites per route: at most 3 at tiers 1–2, 2 at tiers 3–4, 1 at tier 5
- * (the one before the boss is always there). PROVISIONAL (A124).
+ * to the boss has 10 rooms at tier 1 and up to 20 at tier 5 (boss included).
+ * Request #90: Campsites much rarer and never guaranteed — at most one on a
+ * route, often none (none before the boss by right). PROVISIONAL (A124, A147).
  */
 export const RIFT_SIZE_RULES = {
   minLength: 10,
   maxLength: 20,
-  campsitesPerRoute: [3, 3, 2, 2, 1] as readonly number[],
+  campsitesPerRoute: [1, 1, 1, 1, 1] as readonly number[],
 } as const;
 
 /** Rooms on a route (boss included) at a tier. */
@@ -150,20 +157,22 @@ export const riftLength = (tier: number) => {
 export function mapTemplateForTier(tier: number): MapTemplate {
   const length = riftLength(tier);
   const camps = RIFT_SIZE_RULES.campsitesPerRoute[Math.max(1, Math.min(5, tier)) - 1] ?? 1;
+  // Deeper Rifts are longer, so each room is even less likely to be a Campsite.
+  const fewer = 10 / length;
   return {
     ...DEFAULT_MAP_TEMPLATE,
     rows: length - 1,
     minRooms: Math.round(length * 1.6),
     themes: {
-      safe: { combat: 4, campsite: camps > 1 ? 0.6 : 0, event: 3, loot: 1 },
-      explore: { combat: 3, event: 6, campsite: camps > 1 ? 0.2 : 0, loot: 1 },
+      safe: { combat: 4, campsite: CAMPSITE_WEIGHTS.safe * fewer, event: 3, loot: 1 },
+      explore: { combat: 3, event: 6, campsite: CAMPSITE_WEIGHTS.explore * fewer, loot: 1 },
       loot: { combat: 4, loot: 3, event: 2 },
       danger: { combat: 3, elite: 4, event: 1, loot: 2 },
-      mixed: { combat: 4, elite: 1.5, event: 2, campsite: camps > 2 ? 0.3 : 0, loot: 1 },
+      mixed: { combat: 4, elite: 1.5, event: 2, campsite: CAMPSITE_WEIGHTS.mixed * fewer, loot: 1 },
     },
     rules: {
       ...DEFAULT_MAP_TEMPLATE.rules,
-      minCounts: { elite: 1 + Math.floor(tier / 2), event: 2, loot: 1, campsite: 1 },
+      minCounts: { elite: 1 + Math.floor(tier / 2), event: 2, loot: 1 },
     },
     secrets: { min: 1, max: 3, minRow: 1 },
     maxCampsitesPerPath: camps,

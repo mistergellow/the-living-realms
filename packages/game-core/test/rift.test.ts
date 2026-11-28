@@ -84,11 +84,10 @@ describe('procedural map', () => {
       // Several entrances; branches converge somewhere.
       expect(map.nodes.filter((n) => n.row === 0).length).toBeGreaterThanOrEqual(2);
       expect(visible.some((n) => parentsOf(map, n.id).length >= 2)).toBe(true);
-      // Elites never too early; first row is combat, the row before the boss is a campsite.
+      // Elites never too early; first row is combat (request #90: no fixed Campsite before the boss).
       for (const n of map.nodes) {
         if (n.type === 'elite') expect(n.row).toBeGreaterThanOrEqual(rift.map.rules.minEliteRow);
         if (n.row === 0) expect(n.type).toBe('combat');
-        if (n.row === rift.map.rows - 1) expect(n.type).toBe('campsite');
         // No two Campsites / Elites / Loot rooms in a row on a path.
         for (const c of childrenOf(map, n.id)) {
           const child = findNode(map, c)!;
@@ -143,8 +142,13 @@ describe('BASE STATS rule', () => {
 /** A run with the map and the first room forced (for tests). */
 function runAt(type: string, party = [hero('a'), hero('b')]): RunState {
   const s = createRun({ rift, party, leaderId: 'a', seed: 11 });
-  const target = s.map.nodes.find((n) => n.type === type && n.row > 0);
-  if (!target) throw new Error(`no ${type}`);
+  // Rooms like Campsites are rare (request #90): make one if the map has none.
+  const target =
+    s.map.nodes.find((n) => n.type === type && n.row > 0) ??
+    Object.assign(
+      s.map.nodes.find((n) => n.row > 0 && n.type === 'combat')!,
+      { type },
+    );
   // Put a row-0 room in front of it so we can vote for it.
   s.map.edges.push(['start', target.id]);
   s.map.nodes.push({ ...s.map.nodes[0]!, id: 'start', row: 0, col: 0 });

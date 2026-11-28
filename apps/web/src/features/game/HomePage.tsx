@@ -1,11 +1,21 @@
 import { locationAt, type LocationActionId, type LocationKind } from '@realms/game-core';
 import { CHAT_MAX_LENGTH, type HexCoord, type ProfessionDto } from '@realms/shared';
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Icon, type IconName } from '../../shared/ui/Icon';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
+import { CharacterAvatar } from '../avatar/CharacterAvatar';
+import { offhandArtFor, weaponArtFor } from '../avatar/weapon-art';
 import { DefIcon } from '../characters/sheet/ItemIcon';
 import { useProfessions } from '../professions/api';
 import { GatherPanel } from '../professions/GatherPanel';
@@ -113,6 +123,24 @@ export function HomePage() {
     setChoice({ at: placeKey, key });
   };
 
+  // Request #89: the scene's layers follow the pointer a little (parallax).
+  const parallax = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty(
+      '--px',
+      (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3),
+    );
+    e.currentTarget.style.setProperty(
+      '--py',
+      (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3),
+    );
+  };
+  const resetParallax = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.currentTarget.style.setProperty('--px', '0');
+    e.currentTarget.style.setProperty('--py', '0');
+  };
+
   const navigate = useNavigate();
   const activate = (s: Station) => {
     if (s.kind === 'link') {
@@ -143,10 +171,11 @@ export function HomePage() {
 
   return (
     <div className="place" data-testid="place">
-      <div className="place-stage">
+      <div className="place-stage" onPointerMove={parallax} onPointerLeave={resetParallax}>
         <div className="place-scene" aria-hidden>
-          <LocationScene scene={place.scene} />
+          <LocationScene scene={place.scene} rift={place.kind === 'rift'} />
         </div>
+        <PlaceCast key={placeKey} characterId={characterId} hex={position} />
         <header className="place-plate">
           <h1 data-testid="place-name">{place.name}</h1>
           <span className="place-kind">
@@ -199,6 +228,44 @@ export function HomePage() {
       </div>
 
       <HexChat hex={position} />
+    </div>
+  );
+}
+
+/**
+ * Request #89 (phase B): your hero stands in the place, breathing, lit by the
+ * scene; the other players on the hex wait further back, in shadow.
+ */
+function PlaceCast({ characterId, hex }: { characterId: string; hex: HexCoord }) {
+  const sheet = useCharacterSheet(characterId);
+  const { players, selfId } = useWorldStore(
+    useShallow((s) => ({ players: s.players, selfId: s.self?.id ?? null })),
+  );
+  const others = useMemo(
+    () =>
+      Object.values(players)
+        .filter((p) => p.characterId !== selfId && p.position.q === hex.q && p.position.r === hex.r)
+        .slice(0, 3),
+    [players, selfId, hex.q, hex.r],
+  );
+  const s = sheet.data;
+  if (!s) return null;
+  return (
+    <div className="place-cast" aria-hidden data-testid="place-hero">
+      {others.map((p, i) => (
+        <div key={p.characterId} className="place-other" style={{ ['--i' as string]: i }}>
+          <CharacterAvatar appearance={p.appearance} size={220} flip={i % 2 === 0} />
+          <span className="place-other-name">{p.name}</span>
+        </div>
+      ))}
+      <div className="place-hero">
+        <CharacterAvatar
+          appearance={s.character.appearance}
+          weapon={weaponArtFor(s.equipment.mainHand?.broken ? null : s.equipment.mainHand?.defId)}
+          offhand={offhandArtFor(s.equipment.offHand?.broken ? null : s.equipment.offHand?.defId)}
+          size={300}
+        />
+      </div>
     </div>
   );
 }

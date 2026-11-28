@@ -5,6 +5,8 @@ import {
   RIFTLANDS_CENTER,
   hexAdd,
   hexCorners,
+  hexDistance,
+  hexRound,
   hexKey,
   hexToPixel,
   mapHexAt,
@@ -184,6 +186,17 @@ class Token {
   }
 }
 
+/** The hexes on a straight line from `a` to `b`, both included (cube lerp). */
+function hexLine(a: HexCoord, b: HexCoord): HexCoord[] {
+  const n = hexDistance(a, b);
+  const out: HexCoord[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = n === 0 ? 0 : i / n;
+    out.push(hexRound(a.q + (b.q - a.q) * t + 1e-6, a.r + (b.r - a.r) * t + 1e-6));
+  }
+  return out;
+}
+
 export class MapScene implements PixiScene {
   private readonly world = new Container();
   private readonly hexFill = new Graphics();
@@ -218,6 +231,10 @@ export class MapScene implements PixiScene {
   private hovered: HexCoord | null = null;
   private time = 0;
   private destroyed = false;
+  /** Request #89: your token walks hex by hex when you travel, leaving footprints. */
+  private lastSelf: HexCoord | null = null;
+  private walk: { points: Array<{ x: number; y: number }>; t0: number; ms: number } | null = null;
+  private readonly trailG = new Graphics();
 
   private readonly pointers = new Map<number, { x: number; y: number }>();
   private dragging = false;
@@ -250,6 +267,7 @@ export class MapScene implements PixiScene {
       this.capitalLayer,
       this.siteLayer,
       this.bossMarker,
+      this.trailG,
       this.tokenLayer,
       this.regionLabels,
       this.fogLayer,
@@ -586,6 +604,59 @@ export class MapScene implements PixiScene {
       t.set(players, d.selfId);
     }
     for (const [k, label] of this.coords) label.visible = !byHex.has(k);
+
+    const self = d.players.find((p) => p.characterId === d.selfId)?.position ?? null;
+    if (
+      self &&
+      this.lastSelf &&
+      hexKey(self) !== hexKey(this.lastSelf) &&
+      !this.opts.reducedMotion
+    ) {
+      const steps = hexLine(this.lastSelf, self);
+      this.walk = {
+        points: steps.map((h) => hexToPixel(h, HEX_SIZE)),
+        t0: this.time,
+        ms: Math.min(2600, 260 * (steps.length - 1) + 200),
+      };
+    }
+    if (self) this.lastSelf = self;
+  }
+
+  /** Move your token along its path, with a little hop per hex, and fade the footprints. */
+  private animateWalk() {
+    const g = this.trailG.clear();
+    const w = this.walk;
+    const self = this.lastSelf ? this.tokens.get(hexKey(this.lastSelf)) : undefined;
+    if (!w || !self) return;
+    const k = Math.min(1, (this.time - w.t0) / w.ms);
+    const n = w.points.length - 1;
+    const f = k * n;
+    const i = Math.min(n - 1, Math.floor(f));
+    const local = f - i;
+    const a = w.points[i]!;
+    const b = w.points[Math.min(n, i + 1)]!;
+    const hop = Math.sin(local * Math.PI) * 7;
+    self.root.position.set(a.x + (b.x - a.x) * local, a.y + (b.y - a.y) * local - hop);
+    this.selfGlow.position.set(self.root.x, self.root.y + hop);
+    // footprints on the hexes already crossed, fading behind
+    const fade = k < 1 ? 1 : Math.max(0, 1 - (this.time - w.t0 - w.ms) / 1200);
+    for (let j = 0; j <= Math.min(n, Math.floor(f)); j++) {
+      const p = w.points[j]!;
+      for (const side of [-1, 1])
+        g.ellipse(p.x + side * 3, p.y + 6 + side * 2, 2.2, 3.2).fill({
+          color: C.accentStrong,
+          alpha: 0.55 * fade,
+        });
+    }
+    if (k >= 1) {
+      const end = w.points[n]!;
+      self.root.position.set(end.x, end.y);
+      this.selfGlow.position.set(end.x, end.y);
+      if (fade <= 0) {
+        this.walk = null;
+        g.clear();
+      }
+    }
   }
 
   private hexPath(g: Graphics, h: HexCoord) {
@@ -769,7 +840,7 @@ export class MapScene implements PixiScene {
       this.pointers.size > 0 ||
       Math.abs(this.target.x - this.cam.x) + Math.abs(this.target.y - this.cam.y) > 0.5 ||
       Math.abs(this.target.zoom - this.cam.zoom) > 0.002;
-    ticker.maxFPS = moving ? 60 : 30;
+    ticker.maxFPS = moving || this.walk ? 60 : 30;
     this.time += dt;
     const reduced = this.opts.reducedMotion;
 
@@ -802,6 +873,7 @@ export class MapScene implements PixiScene {
     this.selfGlow.alpha = 0.18 + 0.12 * (reduced ? 0.5 : pulse);
     this.selectedG.alpha = 0.75 + 0.25 * (reduced ? 1 : pulse);
     for (const t of this.tokens.values()) t.animate(this.time, this.cam.zoom, reduced);
+    this.animateWalk();
 
     if (!reduced) {
       const R = MAP_BOUNDS.radius;
