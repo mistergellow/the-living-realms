@@ -24,7 +24,7 @@ export default defineWeapon({
   basicAttack: 'great_swing',
   basicAttackCost: 3,
   art: {
-    pose: 'down', // held point down, like resting on it
+    pose: 'raised', // held up, point up and a little forward (request #92)
     grip: { x: 0.244, y: 0.707 },
     angle: -39.6,
     reach: 0.758,

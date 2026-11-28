@@ -166,6 +166,8 @@ function Piece({
 
 /** How a pose holds a weapon: the direction from the hand to the tip (degrees; 90 = down). */
 const POSE_ANGLE: Record<WeaponArtDef['pose'], number> = {
+  // Request #92: weapons are held raised by default, point up and forward.
+  raised: -72,
   down: 84,
   up: -96,
   bow: -96,

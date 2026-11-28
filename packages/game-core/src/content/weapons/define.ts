@@ -43,8 +43,13 @@ export type AttackType = 'physical' | 'ranged' | 'magic';
  * 120×160 frame, so weapons keep their scale against each other).
  */
 export interface WeaponArtDef {
-  /** down = point to the ground; up = upright; bow = upright by the middle; level = pointing ahead; forward = ahead and up; hand = just held. */
-  pose: 'down' | 'up' | 'bow' | 'level' | 'forward' | 'hand';
+  /**
+   * raised = point up and a little forward, ready to strike (the default for
+   * blades, axes, maces and hammers, request #92); down = point to the ground;
+   * up = upright; bow = upright by the middle; level = pointing ahead;
+   * forward = ahead and up; hand = just held.
+   */
+  pose: 'raised' | 'down' | 'up' | 'bow' | 'level' | 'forward' | 'hand';
   /** Where the hand grips, as fractions of the picture (0,0 top left; 1,1 bottom right). */
   grip: { x: number; y: number };
   /** Direction from the grip to the tip inside the picture, in degrees (0 = right, -90 = up). */

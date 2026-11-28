@@ -24,7 +24,7 @@ export default defineWeapon({
   basicAttack: 'slash',
   basicAttackCost: 2,
   art: {
-    pose: 'down', // held point down, like resting on it
+    pose: 'raised', // held up, point up and a little forward (request #92)
     grip: { x: 0.328, y: 0.619 },
     angle: -36.1,
     reach: 0.484,

@@ -24,7 +24,7 @@ export default defineWeapon({
   basicAttack: 'great_chop',
   basicAttackCost: 3,
   art: {
-    pose: 'down', // held point down, like resting on it
+    pose: 'raised', // held up, point up and a little forward (request #92)
     grip: { x: 0.254, y: 0.678 },
     angle: -35.3,
     reach: 0.627,

@@ -24,7 +24,7 @@ export default defineWeapon({
   basicAttack: 'hammer_blow',
   basicAttackCost: 3,
   art: {
-    pose: 'down', // held point down, like resting on it
+    pose: 'raised', // held up, point up and a little forward (request #92)
     grip: { x: 0.332, y: 0.656 },
     angle: -42.8,
     reach: 0.535,

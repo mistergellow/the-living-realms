@@ -24,7 +24,7 @@ export default defineWeapon({
   basicAttack: 'stab',
   basicAttackCost: 1,
   art: {
-    pose: 'down', // held point down, like resting on it
+    pose: 'raised', // held up, point up and a little forward (request #92)
     grip: { x: 0.382, y: 0.578 },
     angle: -32.2,
     reach: 0.354,

@@ -1987,3 +1987,14 @@ cor, para depois saber que partes tem de desenhar.
   `art/rig/monster_rigs_reference.svg` (`scripts/art/monster-rigs.ts`) e guia
   `docs/MONSTER_RIG.md`; imagens em `avatar/monsters/<monstro>/_bone_<peça>.png`.
   Desenhos antigos guardados (`ENEMY_STYLE = 'painted'`).
+
+### #92 — 2026-11-28 — Armas viradas para cima (pelo menos o padrão)
+
+**Pedido:** pôr as armas viradas para cima, pelo menos a pose padrão.
+**Resultado:** pose nova **`raised`** (ponta para cima e um pouco para a
+frente, pronta a atacar, ângulo −72°) em `content/weapons/define.ts` e
+`POSE_ANGLE` (`CharacterAvatar.tsx`). As 10 armas que estavam em `down`
+(espada, montante, adaga, machado, machado duplo, machadinha, maça,
+maça-estrela, martelo, marreta) passaram a `raised` no seu `weapon.ts`.
+Lanças, cajado, foice (de pé), arco, besta, cetro/varinha (para a frente) e
+tomo/chakram/funda (na mão) ficam como estavam.
