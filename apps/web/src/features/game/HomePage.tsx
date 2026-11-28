@@ -17,6 +17,7 @@ import { useWorldBoss } from '../world/api';
 import { useWorldStore } from '../world/world-store';
 import { LocationScene } from './LocationScene';
 import '../professions/professions.css';
+import { playSfx, useAmbience } from '../../lib/audio';
 
 const ACTION_ICON: Record<LocationActionId, IconName> = {
   npcs: 'friends',
@@ -70,6 +71,8 @@ export function HomePage() {
     boss.data.position.q === position.q &&
     boss.data.position.r === position.r;
   const place = locationAt(position, { worldBossHere: bossHere });
+  // Request #87: the capital murmurs, the wilds blow, a Rift hums.
+  useAmbience(place.kind === 'town' ? 'town' : place.kind === 'rift' ? 'rift' : 'wilds');
   const jobRunning = profs.data?.job?.status === 'running';
 
   const stations = useMemo<Station[]>(() => {
@@ -105,12 +108,15 @@ export function HomePage() {
   const fallback = stations.find((s) => s.kind === 'gather')?.key ?? null;
   const openKey = choice?.at === placeKey ? choice.key : fallback;
   const open = stations.find((s) => s.key === openKey && s.kind !== 'link') ?? null;
-  const choose = (key: string | null) => setChoice({ at: placeKey, key });
+  const choose = (key: string | null) => {
+    playSfx(key ? 'open' : 'close'); // request #87
+    setChoice({ at: placeKey, key });
+  };
 
   const navigate = useNavigate();
   const activate = (s: Station) => {
     if (s.kind === 'link') {
-      if (s.to) void navigate(s.to);
+      if (s.to) void navigate(s.to, { viewTransition: true });
       return;
     }
     choose(s.key === openKey ? null : s.key);
@@ -124,8 +130,12 @@ export function HomePage() {
       const s = stations[Number(e.key) - 1];
       if (!s || !/^[1-9]$/.test(e.key)) return;
       if (s.kind === 'link') {
-        if (s.to) void navigate(s.to);
-      } else setChoice({ at: placeKey, key: s.key === openKey ? null : s.key });
+        if (s.to) void navigate(s.to, { viewTransition: true });
+      } else {
+        const key = s.key === openKey ? null : s.key;
+        playSfx(key ? 'open' : 'close');
+        setChoice({ at: placeKey, key });
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -161,6 +171,7 @@ export function HomePage() {
           >
             <button
               className="place-panel-close"
+              data-sfx="none"
               onClick={() => choose(null)}
               aria-label="Close"
               title="Close"
@@ -228,6 +239,7 @@ function StationButton({
       aria-disabled={disabled || undefined}
       title={title}
       data-testid={`station-${s.key.replace(':', '-')}`}
+      data-sfx={s.kind === 'link' ? undefined : 'none'}
       onClick={disabled ? undefined : onClick}
     >
       <span className="station-art">{art}</span>
@@ -344,7 +356,7 @@ function ActivityCard({ characterId }: { characterId: string }) {
           <Icon name="portal" />
         </span>
         <span className="activity-body">{body}</span>
-        <Link className="btn btn-primary btn-sm" to={action.to}>
+        <Link viewTransition className="btn btn-primary btn-sm" to={action.to}>
           {action.label}
         </Link>
       </div>
@@ -391,7 +403,7 @@ function NextStep({ characterId, atRift }: { characterId: string; atRift: boolea
         <strong>{step.title}</strong>
         <span className="muted">{step.body}</span>
       </span>
-      <Link className="btn btn-primary btn-sm" to={step.to}>
+      <Link viewTransition className="btn btn-primary btn-sm" to={step.to}>
         {step.label}
       </Link>
     </section>

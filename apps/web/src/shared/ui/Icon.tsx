@@ -27,6 +27,11 @@ const PATHS = {
   lobby:
     'M8 7a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm8 0a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 19c0-2.8 2.2-5 5-5s5 2.2 5 5m-2 0c0-2.8 2.2-5 5-5s5 2.2 5 5',
   gear: 'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0-6 1.5 2.6 3-.6.9 2.9 2.6 1.5-1.2 2.6 1.2 2.6-2.6 1.5-.9 2.9-3-.6L12 21l-1.5-2.6-3 .6-.9-2.9L4 14.6l1.2-2.6L4 9.4l2.6-1.5.9-2.9 3 .6L12 3Z',
+  // request #87: sound and full screen
+  sound: 'M4 9h4l5-4v14l-5-4H4V9Zm12 0c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11',
+  mute: 'M4 9h4l5-4v14l-5-4H4V9Zm12 1 5 5m0-5-5 5',
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  shrink: 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5',
 } as const;
 
 export type IconName = keyof typeof PATHS;

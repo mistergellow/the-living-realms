@@ -517,3 +517,132 @@
 .rumours-lead {
   margin: 0 0 var(--space-2);
 }
+
+/* Request #87: what a job brought back, revealed like loot. */
+.loot-reveal {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.3rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(232 189 95 / 0.14), transparent 70%), rgb(0 0 0 / 0.35);
+  box-shadow: inset 0 0 0 1px rgb(201 169 106 / 0.3);
+}
+.loot-reveal[data-success='false'] {
+  background: rgb(0 0 0 / 0.35);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.loot-reveal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+}
+.loot-reveal-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.loot-reveal-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.loot-drop {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  width: 5.2rem;
+  text-align: center;
+  opacity: 0;
+  animation: loot-pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.loot-drop-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.6rem;
+  height: 3.6rem;
+}
+.loot-drop-art::before {
+  /* the glow of the quality, behind the icon */
+  content: '';
+  position: absolute;
+  inset: -0.6rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rarity, #a3a19c) 0%, transparent 65%);
+  opacity: 0.45;
+  animation: loot-glow 1.6s ease-out forwards;
+}
+.loot-drop-art .item-icon {
+  position: relative;
+  width: 3.6rem;
+  height: 3.6rem;
+}
+.loot-drop-qty {
+  position: absolute;
+  right: -0.4rem;
+  bottom: -0.3rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #120d08;
+  box-shadow: inset 0 0 0 1px rgb(201 169 106 / 0.6);
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2rem;
+}
+.loot-drop-name {
+  display: grid;
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+.loot-drop-name em {
+  color: var(--rarity, var(--text-muted));
+  font-size: 0.72rem;
+  font-style: normal;
+}
+.loot-reveal-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+@keyframes loot-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.4) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-0.25rem) scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes loot-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 0.95;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loot-drop,
+  .loot-drop-art::before {
+    animation: none;
+    opacity: 1;
+  }
+}

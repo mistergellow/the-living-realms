@@ -6,6 +6,7 @@ import { useActiveRun } from '../rifts/api';
 import { useLobbyActions, useLobbyOverview } from '../rifts/lobby-api';
 import { useWorldBoss, useWorldBossFight } from '../world/api';
 import { useWorldStore } from '../world/world-store';
+import { useAmbience } from '../../lib/audio';
 
 /**
  * World boss (request #43): the season's boss roams the Riftlands with a huge
@@ -13,6 +14,7 @@ import { useWorldStore } from '../world/world-store';
  * your party deals goes on the leaderboard.
  */
 export function WorldBossPage() {
+  useAmbience('rift'); // request #87
   const characterId = useActiveCharacter((s) => s.characterId);
   const boss = useWorldBoss(characterId);
   const fight = useWorldBossFight(characterId);

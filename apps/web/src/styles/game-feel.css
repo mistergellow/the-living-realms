@@ -1,0 +1,66 @@
+/*
+ * Request #87 (phase A): small things that make the page behave like a game.
+ * Loaded last.
+ */
+
+/* A cursor of our own: a gilded arrow; a brighter one over what you can use. */
+:root.app-feel,
+:root.app-feel body {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M3 2 L3 22 L8.5 17 L12.5 26 L16 24.5 L12 15.8 L19.5 15.5 Z' fill='%231a120a' stroke='%23c9a96a' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M5 6 L5 17' stroke='%23f3dca4' stroke-width='1' stroke-linecap='round' opacity='.7'/%3E%3C/svg%3E")
+      3 2,
+    auto;
+}
+:root.app-feel
+  :is(
+    a[href],
+    button:not(:disabled),
+    [role='button'],
+    [role='tab'],
+    select,
+    summary,
+    label:has(input[type='checkbox']),
+    input[type='range'],
+    .station
+  ) {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M3 2 L3 22 L8.5 17 L12.5 26 L16 24.5 L12 15.8 L19.5 15.5 Z' fill='%233a2410' stroke='%23f3dca4' stroke-width='1.8' stroke-linejoin='round'/%3E%3Ccircle cx='3' cy='2' r='2' fill='%23fff6d6'/%3E%3C/svg%3E")
+      3 2,
+    pointer;
+}
+:root.app-feel
+  :is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input:not([type]),
+    textarea
+  ) {
+  cursor: text;
+}
+:root.app-feel :is(button:disabled, [aria-disabled='true']) {
+  cursor: not-allowed;
+}
+
+/* Controls give under the finger: a quick press-in. */
+:root.app-feel
+  :is(.btn, .station, .tb-ring-btn, .nav-item, .loot, .prof-row, .skill-row):not(:disabled):active {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(1.15);
+  transition:
+    transform 60ms ease,
+    filter 60ms ease;
+}
+
+/* Keyboard focus in the game's colours instead of the browser's blue ring. */
+:root.app-feel :focus-visible {
+  outline: 1px solid var(--torch-hi);
+  outline-offset: 2px;
+  box-shadow: 0 0 0.7rem rgb(240 192 106 / 0.35);
+}
+
+/* Links do not look like web links. */
+:root.app-feel a {
+  -webkit-tap-highlight-color: transparent;
+}

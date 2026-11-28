@@ -154,6 +154,7 @@ function BottomNav({ characterId }: { characterId: string }) {
     <nav className="game-nav" aria-label="Main">
       {items.map((it) => (
         <NavLink
+          viewTransition
           key={it.label}
           to={it.to}
           className={({ isActive }) =>

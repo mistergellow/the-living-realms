@@ -146,7 +146,14 @@ export interface JobResultDto {
   successes: number;
   pointsGained: number;
   ranksGained: number;
-  produced: Array<{ name: string; qty: number; grade: string | null }>;
+  /** Request #87: `itemDefId` (icon) and `gradeIndex` (0 Poor … 4 Exceptional; rarity colour). */
+  produced: Array<{
+    itemDefId?: string;
+    name: string;
+    qty: number;
+    grade: string | null;
+    gradeIndex?: number | null;
+  }>;
   consumed: Array<{ name: string; qty: number }>;
   apSpent: number;
   message: string;
@@ -190,7 +197,14 @@ export interface ActivityResultDto {
   pointsGained: number;
   ranksGained: number;
   /** Gathered items carry their grade name (request #52). */
-  produced: Array<{ name: string; qty: number; grade: string | null }>;
+  /** Request #87: `itemDefId` (icon) and `gradeIndex` (0 Poor … 4 Exceptional; rarity colour). */
+  produced: Array<{
+    itemDefId?: string;
+    name: string;
+    qty: number;
+    grade: string | null;
+    gradeIndex?: number | null;
+  }>;
   /** AP spent (gathering). */
   apSpent: number;
   consumed: Array<{ name: string; qty: number }>;

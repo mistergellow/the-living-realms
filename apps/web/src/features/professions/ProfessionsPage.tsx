@@ -20,6 +20,7 @@ import { FormError } from '../../shared/ui/FormError';
 import { useActiveCharacter } from '../characters/active-character';
 import { useCharacterSheet } from '../characters/api';
 import { GatherPanel } from './GatherPanel';
+import { LootReveal } from './LootReveal';
 import { useDismissJob, usePerformActivity, useProfessions, useStartJob } from './api';
 import './professions.css';
 
@@ -361,26 +362,7 @@ function ProfessionDetail({
       </div>
 
       <FormError error={perform.error} />
-      {jobResult && (
-        <div
-          className="prof-result"
-          data-success={jobResult.successes > 0}
-          data-testid="job-result"
-        >
-          <strong>{jobResult.message}</strong>{' '}
-          <span className="muted">
-            (+{jobResult.pointsGained} Mastery · −{jobResult.apSpent} AP)
-          </span>
-          {jobResult.produced.length > 0 && (
-            <div>
-              Got:{' '}
-              {jobResult.produced
-                .map((o) => `${o.qty} × ${o.grade ? `${o.grade} ` : ''}${o.name}`)
-                .join(', ')}
-            </div>
-          )}
-        </div>
-      )}
+      {jobResult && <LootReveal result={jobResult} />}
       {result && (
         <div className="prof-result" data-success={result.success} data-testid="activity-result">
           <strong>{result.message}</strong>{' '}

@@ -532,6 +532,8 @@ export class ProfessionsService {
         pointsGained,
         ranksGained,
         produced: [...made.values()].map((m) => ({
+          itemDefId: m.item,
+          gradeIndex: m.grade,
           name: itemName(m.item),
           qty: m.qty,
           grade: m.grade === null ? null : gradeName(m.grade),
@@ -729,6 +731,8 @@ export class ProfessionsService {
         pointsGained: outcome.points,
         ranksGained: next.ranksGained,
         produced: outcome.outputs.map((o) => ({
+          itemDefId: o.item,
+          gradeIndex: o.grade,
           name: itemName(o.item),
           qty: o.qty,
           grade: o.grade === null ? null : gradeName(o.grade),

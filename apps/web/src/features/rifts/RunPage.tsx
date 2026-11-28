@@ -14,6 +14,7 @@ import { LootList } from './LootList';
 import { EndOverlay } from './EndOverlay';
 import { RiftDoors } from './RiftDoors';
 import './rift-doors.css';
+import { useAmbience } from '../../lib/audio';
 
 /** Seconds left on the current decision or planning phase, refreshed every 250 ms. */
 function useCountdown(deadline: string | null): number | null {
@@ -36,6 +37,8 @@ export function RunPage() {
   const characterId = useActiveCharacter((s) => s.characterId);
   const run = useRun(runId, characterId);
   const action = useRunAction(runId, characterId);
+  // Request #87: a fight sounds like a fight; the doors map like a Rift.
+  useAmbience(run.data?.combat && run.data.status === 'active' ? 'combat' : 'rift');
   const secondsLeft = useCountdown(run.data?.status === 'active' ? run.data.deadline : null);
 
   // When a timer runs out, ask the server (it applies the timeout).

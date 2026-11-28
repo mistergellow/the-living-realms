@@ -4,8 +4,10 @@ import { Field } from '../../shared/ui/Field';
 import { FormError } from '../../shared/ui/FormError';
 import { useLogin } from './api';
 import { AuthLayout } from './AuthLayout';
+import { useAmbience } from '../../lib/audio';
 
 export function LoginPage() {
+  useAmbience('menu'); // request #87
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const login = useLogin();

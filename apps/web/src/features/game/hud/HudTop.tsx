@@ -1,6 +1,7 @@
 import { HEALTH_RULES } from '@realms/game-core';
 import type { HealthDto } from '@realms/shared';
 import { useEffect, useRef, useState } from 'react';
+import { playSfx, useAudioSettings, type SfxName } from '../../../lib/audio';
 import { Link, useNavigate } from 'react-router';
 import { Icon } from '../../../shared/ui/Icon';
 import { useLogout } from '../../auth/api';
@@ -20,26 +21,51 @@ import './hud.css';
 const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** A number that rolls to its new value; `dir` says whether it just rose or fell. */
-function useRolling(value: number | null): { shown: number | null; dir: 'up' | 'down' | null } {
+/** A change worth showing: "+12" floating up from the number (request #87). */
+interface Float {
+  id: number;
+  delta: number;
+}
+
+/**
+ * A number that rolls to its new value; `dir` says whether it just rose or
+ * fell. Request #87: a rise or fall of at least `min` also floats the
+ * difference and plays a sound (`up` / `down`; none = no float either).
+ */
+function useRolling(
+  value: number | null,
+  fx: { up?: SfxName; down?: SfxName; min?: number } = {},
+): { shown: number | null; dir: 'up' | 'down' | null; float: Float | null } {
   const [shown, setShown] = useState(value);
   const [dir, setDir] = useState<'up' | 'down' | null>(null);
+  const [float, setFloat] = useState<Float | null>(null);
   const from = useRef(value);
+  const { up, down, min = 1 } = fx;
   useEffect(() => {
     const start = from.current;
     from.current = value;
-    if (value === null || start === null || start === value || reducedMotion()) {
+    if (value === null || start === null || start === value) {
       setShown(value);
       return;
     }
-    setDir(value > start ? 'up' : 'down');
+    const delta = value - start;
+    const sound = delta > 0 ? up : down;
+    if (sound && Math.abs(delta) >= min) {
+      playSfx(sound);
+      setFloat({ id: performance.now(), delta });
+    }
+    if (reducedMotion()) {
+      setShown(value);
+      return;
+    }
+    setDir(delta > 0 ? 'up' : 'down');
     const t0 = performance.now();
-    const ms = Math.min(900, 250 + Math.abs(value - start) * 12);
+    const ms = Math.min(900, 250 + Math.abs(delta) * 12);
     let raf = 0;
     const step = (t: number) => {
       const k = Math.min(1, (t - t0) / ms);
       const eased = 1 - (1 - k) ** 3;
-      setShown(Math.round(start + (value - start) * eased));
+      setShown(Math.round(start + delta * eased));
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -48,8 +74,20 @@ function useRolling(value: number | null): { shown: number | null; dir: 'up' | '
       cancelAnimationFrame(raf);
       clearTimeout(clear);
     };
-  }, [value]);
-  return { shown, dir };
+  }, [value, up, down, min]);
+  return { shown, dir, float };
+}
+
+/** The floating "+12" / "−3" (re-mounted for every change, so it animates again). */
+function Floater({ f, unit = '' }: { f: Float | null; unit?: string }) {
+  if (!f) return null;
+  return (
+    <span key={f.id} className="tb-float" data-dir={f.delta > 0 ? 'up' : 'down'} aria-hidden>
+      {f.delta > 0 ? '+' : '−'}
+      {Math.abs(f.delta)}
+      {unit}
+    </span>
+  );
 }
 
 /** Action Points: a wide bar beside the portrait (+perHour per real hour up to max). */
@@ -61,28 +99,32 @@ function ApBar() {
     return () => clearInterval(t);
   }, []);
   const value = ap ? liveAp(ap) : null;
-  const { shown, dir } = useRolling(value);
+  // Spending AP thuds and floats; the slow regrowth does not.
+  const { shown, dir, float } = useRolling(value, { down: 'spend' });
   const full = ap ? fullIn(ap) : null;
   const pct = ap && value !== null ? (100 * value) / ap.max : 0;
   return (
-    <div
-      className="tb-ap"
-      data-dir={dir ?? undefined}
-      data-filling={!!full}
-      title={
-        ap
-          ? `Action Points: travel and gathering cost AP. +${ap.perHour} per hour${full ? `, full in ${full}` : ' (full)'}.`
-          : 'Action Points'
-      }
-    >
-      <span className="tb-ap-fill" style={{ width: `${pct}%` }} />
-      <span className="tb-ap-text">
-        <strong data-testid={ap ? 'top-ap' : undefined}>
-          {shown ?? '—'}
-          {ap && <span className="tb-ap-max">/{ap.max}</span>}
-        </strong>
-        <em>Action points</em>
-      </span>
+    <div className="tb-meter">
+      <div
+        className="tb-ap"
+        data-dir={dir ?? undefined}
+        data-filling={!!full}
+        title={
+          ap
+            ? `Action Points: travel and gathering cost AP. +${ap.perHour} per hour${full ? `, full in ${full}` : ' (full)'}.`
+            : 'Action Points'
+        }
+      >
+        <span className="tb-ap-fill" style={{ width: `${pct}%` }} />
+        <span className="tb-ap-text">
+          <strong data-testid={ap ? 'top-ap' : undefined}>
+            {shown ?? '—'}
+            {ap && <span className="tb-ap-max">/{ap.max}</span>}
+          </strong>
+          <em>Action points</em>
+        </span>
+      </div>
+      <Floater f={float} unit=" AP" />
     </div>
   );
 }
@@ -103,36 +145,40 @@ function HpBar({ health }: { health: HealthDto | undefined }) {
     return () => clearInterval(t);
   }, []);
   const value = health ? liveHp(health, now) : null;
-  const { shown, dir } = useRolling(value);
+  // Wounds hit hard; healing (a potion) shimmers — not the slow regrowth.
+  const { shown, dir, float } = useRolling(value, { down: 'hurt', up: 'heal', min: 3 });
   const pct = health && value !== null ? (100 * value) / health.max : 0;
   const healing = !!health?.fullAt;
   const mins = health?.fullAt
     ? Math.max(1, Math.ceil((new Date(health.fullAt).getTime() - now) / 60_000))
     : 0;
   return (
-    <div
-      className="tb-ap tb-hp"
-      data-dir={dir ?? undefined}
-      data-filling={healing}
-      data-low={pct < 30}
-      title={
-        health
-          ? `Health: it stays low after a Rift. Heals ${HEALTH_RULES.regenPctPerHour}% per hour${
-              healing
-                ? ` (full in ${mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`})`
-                : ''
-            }, or drink a Healing Draught.`
-          : 'Health'
-      }
-    >
-      <span className="tb-ap-fill" style={{ width: `${pct}%` }} />
-      <span className="tb-ap-text">
-        <strong data-testid={health ? 'top-hp' : undefined}>
-          {shown ?? '—'}
-          {health && <span className="tb-ap-max">/{health.max}</span>}
-        </strong>
-        <em>Health</em>
-      </span>
+    <div className="tb-meter">
+      <div
+        className="tb-ap tb-hp"
+        data-dir={dir ?? undefined}
+        data-filling={healing}
+        data-low={pct < 30}
+        title={
+          health
+            ? `Health: it stays low after a Rift. Heals ${HEALTH_RULES.regenPctPerHour}% per hour${
+                healing
+                  ? ` (full in ${mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`})`
+                  : ''
+              }, or drink a Healing Draught.`
+            : 'Health'
+        }
+      >
+        <span className="tb-ap-fill" style={{ width: `${pct}%` }} />
+        <span className="tb-ap-text">
+          <strong data-testid={health ? 'top-hp' : undefined}>
+            {shown ?? '—'}
+            {health && <span className="tb-ap-max">/{health.max}</span>}
+          </strong>
+          <em>Health</em>
+        </span>
+      </div>
+      <Floater f={float} unit=" HP" />
     </div>
   );
 }
@@ -175,6 +221,104 @@ function PortraitFrame() {
   );
 }
 
+/** Request #87: sound on/off and the music and effects volumes. */
+function SoundMenu() {
+  const a = useAudioSettings();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  return (
+    <div className="tb-sound" ref={ref}>
+      <button
+        className="tb-ring-btn"
+        aria-label={a.muted ? 'Sound is off' : 'Sound'}
+        aria-expanded={open}
+        title="Sound"
+        data-testid="sound-button"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Icon name={a.muted ? 'mute' : 'sound'} />
+      </button>
+      {open && (
+        <div className="tb-sound-menu" role="dialog" aria-label="Sound">
+          <label className="tb-sound-row">
+            <input
+              type="checkbox"
+              checked={!a.muted}
+              onChange={() => a.toggleMute()}
+              data-testid="sound-toggle"
+            />
+            Sound on
+          </label>
+          <label className="tb-sound-row">
+            Music
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={a.music}
+              disabled={a.muted}
+              onChange={(e) => a.set({ music: Number(e.target.value) })}
+            />
+          </label>
+          <label className="tb-sound-row">
+            Effects
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={a.sfx}
+              disabled={a.muted}
+              onChange={(e) => a.set({ sfx: Number(e.target.value) })}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Request #87: play in full screen, like a game (hidden where not supported). */
+function FullscreenButton() {
+  const [full, setFull] = useState(() => !!document.fullscreenElement);
+  useEffect(() => {
+    const on = () => setFull(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  if (!document.fullscreenEnabled) return null;
+  return (
+    <button
+      className="tb-ring-btn"
+      aria-label={full ? 'Leave full screen' : 'Full screen'}
+      title={full ? 'Leave full screen' : 'Full screen'}
+      onClick={() =>
+        void (
+          full
+            ? document.exitFullscreen()
+            : document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+        ).catch(() => undefined)
+      }
+    >
+      <Icon name={full ? 'shrink' : 'expand'} />
+    </button>
+  );
+}
+
 export function HudTop(props: {
   characterId: string;
   status: string;
@@ -188,12 +332,13 @@ export function HudTop(props: {
   const sheet = useCharacterSheet(props.characterId);
   const logout = useLogout();
   const navigate = useNavigate();
-  const rep = useRolling(sheet.data?.reputation ?? null);
-  const gold = useRolling(sheet.data?.gold ?? null);
+  const rep = useRolling(sheet.data?.reputation ?? null, { up: 'success' });
+  const gold = useRolling(sheet.data?.gold ?? null, { up: 'coin', down: 'coin' });
   return (
     <header className="game-top tb-top">
       <div className="tb-hero">
         <Link
+          viewTransition
           className="tb-portrait"
           to="/hero"
           title="Your hero"
@@ -211,6 +356,7 @@ export function HudTop(props: {
         >
           <strong data-testid="top-reputation">{rep.shown ?? '—'}</strong>
         </span>
+        <Floater f={rep.float} />
         <div className="tb-hero-side">
           <span className="tb-name" data-testid="self-name">
             {props.name ?? '…'}
@@ -235,6 +381,7 @@ export function HudTop(props: {
           >
             <Icon name="coin" />
             <strong data-testid="top-gold">{gold.shown ?? '—'}</strong>
+            <Floater f={gold.float} />
             <em>gold</em>
           </span>
         </div>
@@ -246,6 +393,8 @@ export function HudTop(props: {
         {props.online} online
         {props.tick !== null && <span data-testid="world-tick"> · tick {props.tick}</span>}
       </span>
+      <SoundMenu />
+      <FullscreenButton />
       <button
         className="tb-ring-btn"
         aria-label="Switch character"

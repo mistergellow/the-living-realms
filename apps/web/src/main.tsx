@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { router } from './app/router';
 import { installAppFeel } from './lib/app-feel';
+import { installUiSounds } from './lib/audio';
 import { queryClient } from './lib/query-client';
 import '@fontsource/alegreya/400.css';
 import '@fontsource/alegreya/400-italic.css';
@@ -20,8 +21,10 @@ import '@fontsource/cormorant-garamond/600-italic.css';
 import './styles/global.css';
 // Request #69: the gothic "Darkest" look (overrides the feature stylesheets).
 import './styles/theme.css';
+import './styles/game-feel.css'; // request #87, loaded last
 
 installAppFeel();
+installUiSounds(); // request #87: every control sounds like a game control
 
 /*
  * Request #70: wait (briefly) for the game fonts before the first paint, so
@@ -40,12 +43,19 @@ const FONTS = [
 void Promise.race([
   Promise.all(FONTS.map((f) => document.fonts.load(f))).catch(() => undefined),
   new Promise((r) => setTimeout(r, 1500)),
-]).then(() =>
+]).then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
     </StrictMode>,
-  ),
-);
+  );
+  // Request #87: the loading screen (index.html) fades out once the game is drawn.
+  const boot = document.getElementById('boot');
+  if (boot)
+    requestAnimationFrame(() => {
+      boot.classList.add('is-done');
+      setTimeout(() => boot.remove(), 700);
+    });
+});

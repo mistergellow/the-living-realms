@@ -14,6 +14,7 @@ import { liveAp } from './ap';
 import { useTravel, useWorldBoss } from './api';
 import { HexMap } from './HexMap';
 import { useWorldStore } from './world-store';
+import { useAmbience } from '../../lib/audio';
 
 /**
  * Exploration: the PixiJS hex map with the players online and the Chronicle.
@@ -21,6 +22,7 @@ import { useWorldStore } from './world-store';
  * connection live there).
  */
 export function WorldPage() {
+  useAmbience('wilds'); // request #87
   const [selected, setSelected] = useState<HexCoord | null>(null);
   const [hovered, setHovered] = useState<HexCoord | null>(null);
   const { self, log } = useWorldStore(useShallow((s) => ({ self: s.self, log: s.log })));

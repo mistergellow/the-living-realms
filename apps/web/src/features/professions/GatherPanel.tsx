@@ -7,6 +7,7 @@ import { DefIcon } from '../characters/sheet/ItemIcon';
 import { liveAp } from '../world/ap';
 import { useWorldStore } from '../world/world-store';
 import { useStartJob } from './api';
+import { LootReveal } from './LootReveal';
 
 export const clock = (s: number) =>
   s >= 3600
@@ -251,22 +252,7 @@ function GatherBody({
         <FormError error={start.error} />
       </div>
 
-      {result && (
-        <div className="prof-result" data-success={result.successes > 0} data-testid="job-result">
-          <strong>{result.message}</strong>{' '}
-          <span className="muted">
-            (+{result.pointsGained} Mastery · −{result.apSpent} AP)
-          </span>
-          {result.produced.length > 0 && (
-            <div>
-              Got:{' '}
-              {result.produced
-                .map((o) => `${o.qty} × ${o.grade ? `${o.grade} ` : ''}${o.name}`)
-                .join(', ')}
-            </div>
-          )}
-        </div>
-      )}
+      {result && <LootReveal result={result} />}
     </section>
   );
 }

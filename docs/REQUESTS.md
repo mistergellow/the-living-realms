@@ -297,6 +297,7 @@ onde foi implementado. **Entradas mais recentes no fim.** Ver regras em
 | A143 | Tabelas de drops da recolha (pedido #81)                        | uma tentativa: primeiro o sucesso (chance de antes, +10 %/rank, ferramenta, atributos), depois UM drop por peso. Mining: Iron Ore 1–2 (peso 90), Rough Gem 1 (peso 10 +5/rank, desde Apprentice, só em depósito). Herbalism: Herb 40, Grain 35, Flax 25. Hunting: Hide + Meat. Fishing: Raw Fish. Woodcutting: Log. "Search for gems" e as 3 recolhas de Herbalism juntaram-se numa ação                                                                                                                                                                   | `PROFESSIONS` (`drops`), `dropChances`                                           |
 | A144 | Hotzones diárias (pedido #82)                                   | depósitos fixos em 20 % dos hexes de cada profissão; cada dia (UTC) uma região em alta por profissão, cada região tem o seu dia em cada ciclo de 4: +10 % sucesso, +1 riqueza no grau, drops de depósito ×3; filão do dia (um hex de depósito nessa região): +10 % sucesso e drops de depósito ×2 a mais; rumor dá um hex a ≤ 3 do filão                                                                                                                                                                                                                   | `HOTZONE_RULES` (`gathering.ts`)                                                 |
 | A145 | Vida entre Rifts (pedido #85)                                   | regenera 10 % da vida máxima por hora real (cheia em 10 h); morrer deixa a 0 e é preciso ≥ 1 para entrar numa Rift; Healing Draught +40 %, Hearty Stew +25 %, Grilled Fish +15 %, Bandage +10 % (usados na mochila, fora de Rifts); world boss e PvP também usam e guardam a vida (pedido #86)                                                                                                                                                                                                                                                             | `HEALTH_RULES` (`health.ts`), `heal` nos itens consumíveis                       |
+| A146 | Som (pedido #87)                                                | ligado por defeito com botão de som no header (os browsers só tocam depois do 1.º clique); música 50 %, efeitos 80 %; sons e música sintetizados (provisórios até haver ficheiros reais)                                                                                                                                                                                                                                                                                                                                                                   | `DEFAULT_AUDIO` (`lib/audio/engine.ts`), receitas em `sfx.ts`/`ambience.ts`      |
 
 ---
 
@@ -1873,3 +1874,34 @@ time", em tempo real. "Faz isso e dá commit." Provisório A145.
 **Resultado:** entra-se em qualquer luta (Rift, world boss, PvP) com a vida
 atual, e o dano fica guardado no fim ou ao sair. Com 0 de vida não se pode
 lutar ("too wounded to fight"). Teste em `world-boss.test.ts`.
+
+### #87 — 2026-11-28 — Fase A: parecer um jogo e não um site
+
+**Pedido:** o jogo parece demasiado "de browser", com poucas animações; quer
+que pareça realmente um jogo. Analisei e propus três fases; o dono escolheu
+avançar com a **Fase A** ("sentir" de jogo, sem arte nova). Provisório A146.
+**Resultado:**
+
+- **Som** (`apps/web/src/lib/audio/`), todo sintetizado com Web Audio (sem
+  ficheiros nem licenças):
+  - efeitos: passar o rato e clicar em qualquer botão/link/tab (automático,
+    `ui-sounds.ts`; `data-sfx="coin"` muda o som, `data-sfx="none"` tira-o),
+    erro em botões desativados, abrir/fechar painéis, moedas, gastar PA,
+    ferida, cura, loot, sucesso;
+  - ambiente e música por sítio: capital (murmúrio), natureza (vento), Rift
+    (zumbido), combate e menus; acordes lentos com sinos de vez em quando;
+    muda com fade de 2 s (`useAmbience`).
+  - Botão de som no header com volume de música e de efeitos; guarda no
+    browser. Trocar por sons gravados = mudar a receita com o mesmo nome.
+- **Transições entre ecrãs:** o conteúdo dissolve e o novo entra (View
+  Transitions); o header e a barra de baixo ficam parados. Respeita "reduzir
+  movimento".
+- **Comportamento de jogo:** cursor próprio (seta dourada; mais brilhante sobre
+  o que se pode usar), foco do teclado nas cores do jogo, botão de ecrã
+  inteiro, ecrã de carregamento com o título antes de o jogo aparecer.
+- **Juice:** os números do header (ouro, reputação, vida, PA) mostram
+  "+12"/"−2" a flutuar com som; a recolha e o crafting mostram o que se
+  apanhou como **loot**: cada item salta com o brilho da qualidade e um sino
+  que sobe a escala (`LootReveal.tsx`); botões afundam ao clicar.
+- O servidor passou a mandar `itemDefId`/`gradeIndex` no que é produzido (para
+  os ícones do loot).

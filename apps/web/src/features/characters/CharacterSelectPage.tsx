@@ -9,6 +9,7 @@ import { useActiveCharacter } from './active-character';
 import { useCharacters, useDeleteCharacter } from './api';
 import { CharacterToken } from './CharacterToken';
 import { lastPlayed } from './PlayEntry';
+import { useAmbience } from '../../lib/audio';
 
 /**
  * Hero select (secondary since request #40: the game opens with the last
@@ -16,6 +17,7 @@ import { lastPlayed } from './PlayEntry';
  * character stands on a pedestal, the roster sits below.
  */
 export function CharacterSelectPage() {
+  useAmbience('menu'); // request #87
   const me = useMe();
   const characters = useCharacters();
   const del = useDeleteCharacter();
