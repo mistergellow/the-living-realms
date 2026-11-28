@@ -1,5 +1,6 @@
 import type { CharacterAppearance } from '@realms/shared';
-import { BONE_PORTRAIT, BONE_RIG, BONES, boneBox, boneGeometry, type BoneLayer } from './bone-rig';
+import { BONE_PORTRAIT, BONE_RIG, BONES, type BoneLayer } from './bone-rig';
+import { BoneShapes } from './BoneShapes';
 import { useId } from 'react';
 import './avatar.css';
 import { getWeaponType, type WeaponArtDef } from '@realms/game-core';
@@ -108,78 +109,9 @@ const BONE_ART: Record<string, string> = Object.fromEntries(
   ).map(([path, url]) => [path.slice(path.lastIndexOf('/_bone_') + 7, -4), url]),
 );
 
-/** The bones of one layer: coloured bars and ovals, with a white dot on each joint. */
+/** The hero's bones of one layer (shared drawing: `BoneShapes`). */
 function Bones({ layer }: { layer: BoneLayer }) {
-  return (
-    <g className="av-bones" data-layer={layer}>
-      {BONES.filter((b) => b.layer === layer).map((b) => {
-        const g = boneGeometry(b);
-        const art = BONE_ART[b.id];
-        if (art) {
-          // The drawn part, once its picture is in avatar/bones/.
-          const box = boneBox(b);
-          return (
-            <image
-              key={b.id}
-              data-bone={b.id}
-              href={art}
-              x={box.x}
-              y={box.y}
-              width={box.w}
-              height={box.h}
-              preserveAspectRatio="none"
-            />
-          );
-        }
-        return (
-          <g key={b.id} data-bone={b.id}>
-            <title>{b.label}</title>
-            {b.shape === 'oval' ? (
-              <ellipse
-                cx={g.mid.x}
-                cy={g.mid.y}
-                rx={Math.max(g.length / 2 + 2, b.width * 0.35)}
-                ry={b.width / 2}
-                transform={`rotate(${g.angle} ${g.mid.x} ${g.mid.y})`}
-                fill={b.color}
-                stroke="#050403"
-                strokeWidth="1.2"
-              />
-            ) : (
-              <>
-                <line
-                  x1={b.from.x}
-                  y1={b.from.y}
-                  x2={b.to.x}
-                  y2={b.to.y}
-                  stroke="#050403"
-                  strokeWidth={b.width + 2.4}
-                  strokeLinecap="round"
-                />
-                <line
-                  x1={b.from.x}
-                  y1={b.from.y}
-                  x2={b.to.x}
-                  y2={b.to.y}
-                  stroke={b.color}
-                  strokeWidth={b.width}
-                  strokeLinecap="round"
-                />
-              </>
-            )}
-            <circle
-              cx={b.from.x}
-              cy={b.from.y}
-              r="1.7"
-              fill="#fff"
-              stroke="#050403"
-              strokeWidth="0.6"
-            />
-          </g>
-        );
-      })}
-    </g>
-  );
+  return <BoneShapes bones={BONES.filter((b) => b.layer === layer)} art={BONE_ART} layer={layer} />;
 }
 
 /** Pivots of the articulated base hero, in viewBox units. */

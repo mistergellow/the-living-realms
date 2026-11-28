@@ -1,3 +1,5 @@
+import { BoneShapes } from './BoneShapes';
+import { enemyRig } from './monster-rigs';
 import './avatar.css';
 
 /*
@@ -1272,6 +1274,27 @@ const ART: Record<string, () => React.JSX.Element> = {
   rift_heart: RiftHeartArt,
 };
 
+/**
+ * Request #91: how monsters are drawn. 'bones' = their skeleton of coloured
+ * bones (`monster-rigs.ts`) until the art exists; 'painted' = the drawings
+ * above (request #71), kept.
+ */
+export const ENEMY_STYLE: 'bones' | 'painted' = 'bones';
+
+/** Pictures of monster bones: avatar/monsters/<monster>/_bone_<bone>.png. */
+const MONSTER_ART: Record<string, Record<string, string>> = {};
+for (const [path, url] of Object.entries(
+  import.meta.glob<string>('./monsters/*/_bone_*.png', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }),
+)) {
+  const m = /\/monsters\/([^/]+)\/_bone_(.+)\.png$/.exec(path);
+  if (m) (MONSTER_ART[m[1]!] ??= {})[m[2]!] = url;
+}
+const monsterArt = (id: string | null) => (id && MONSTER_ART[id]) || {};
+
 export function EnemyAvatar({
   enemyDefId,
   size = 160,
@@ -1290,6 +1313,7 @@ export function EnemyAvatar({
   className?: string;
 }) {
   const Art = (enemyDefId && ART[enemyDefId]) || Husk;
+  const rig = enemyRig(enemyDefId);
   return (
     <svg
       className={['avatar', 'is-animated', 'is-enemy', className].filter(Boolean).join(' ')}
@@ -1302,9 +1326,20 @@ export function EnemyAvatar({
     >
       {title && <title>{title}</title>}
       {shadow && <ellipse cx="60" cy="151" rx="34" ry="5" fill="rgba(0,0,0,0.6)" />}
-      <g className="av-root" stroke={INK} strokeWidth="2" strokeLinejoin="round">
-        <Art />
-      </g>
+      {ENEMY_STYLE === 'bones' ? (
+        // Request #91: the monster's skeleton, facing left, at its size.
+        <g className="av-root" data-plan={rig.plan}>
+          <g
+            transform={`translate(120 0) scale(-1 1) translate(60 150) scale(${rig.scale}) translate(-60 -150)`}
+          >
+            <BoneShapes bones={rig.bones} art={monsterArt(enemyDefId)} />
+          </g>
+        </g>
+      ) : (
+        <g className="av-root" stroke={INK} strokeWidth="2" strokeLinejoin="round">
+          <Art />
+        </g>
+      )}
     </svg>
   );
 }

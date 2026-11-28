@@ -1980,3 +1980,10 @@ cor, para depois saber que partes tem de desenhar.
   mas por trás do corpo (escudo); perna esquerda a avançar por trás; perna
   direita esticada para trás, à frente. Ossos renomeados para
   esquerda/direita (`_bone_upper_arm_right.png`, …).
+- **Monstros também em ossos** (pedido do dono durante o trabalho): 6 tipos de
+  corpo (humanoide = o esqueleto do herói; bruto; quadrúpede; rastejante;
+  aracnídeo; flutuante) em `avatar/monster-rigs.ts`; cada um dos 36 monstros
+  tem o seu tipo e tamanho; virados para a esquerda. Folha
+  `art/rig/monster_rigs_reference.svg` (`scripts/art/monster-rigs.ts`) e guia
+  `docs/MONSTER_RIG.md`; imagens em `avatar/monsters/<monstro>/_bone_<peça>.png`.
+  Desenhos antigos guardados (`ENEMY_STYLE = 'painted'`).
