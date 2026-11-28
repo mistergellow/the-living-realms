@@ -188,7 +188,15 @@ própria. Exemplos:
 | C6   | Feitios dos inimigos por tema e salas com condições                            |
 | C7   | Ecrã de combate como no print do dono (retratos, intenções, "End turn")        |
 
-## 5. Decisões do dono
+## 5. Decisões do dono (2026-11-28, D138)
 
-Ver as perguntas no fim da conversa do pedido #89 e o registo em
-`docs/REQUESTS.md`.
+- **Aprovados:** Pilar 1 (posições e movimento), Pilar 2 (tipos de dano e
+  fraquezas), Pilar 3 (estados com regras próprias).
+- **Não agora:** Pilar 4 — **ficam 2 poderes por arma** (a variedade vem das
+  skills dos livros e dos estados novos); feitios dos inimigos e salas com
+  condições ficam para mais tarde.
+- **Meta:** Rift tier 1 — **a solo, cada arma entre 45 % e 60 %**; **em grupo
+  ~70 %**.
+- **Ordem:** começar por **C1 (equilíbrio)**; depois C2 (posições), C3
+  (tipos/fraquezas), C4 (estados). C5 passa a "reequilibrar os 2 poderes de
+  cada arma com as mecânicas novas"; C6 fica em espera; C7 (ecrã) no fim.
