@@ -1,4 +1,5 @@
 import type { CharacterAppearance } from '@realms/shared';
+import { BONES, boneBox, boneGeometry, type BoneLayer } from './bone-rig';
 import { useId } from 'react';
 import './avatar.css';
 import { getWeaponType, type WeaponArtDef } from '@realms/game-core';
@@ -84,6 +85,101 @@ export interface CharacterAvatarProps {
   part?: AvatarPart;
   /** Closed eyes (blink frame for the canvas renderer). */
   eyesClosed?: boolean;
+}
+
+/**
+ * Request #91: how the hero is drawn. 'bones' = a skeleton of coloured bones
+ * (one colour per part still to be drawn, `bone-rig.ts`); 'painted' = the
+ * owner's cut-out pieces (request #72), kept for when the new art arrives.
+ */
+export const HERO_STYLE: 'bones' | 'painted' = 'bones';
+
+/**
+ * Pictures of the bones, by id: drop `_bone_<id>.png` in avatar/bones/ (drawn in
+ * the pose and box of the rig reference sheet) and it replaces the colour.
+ */
+const BONE_ART: Record<string, string> = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>('./bones/_bone_*.png', {
+      eager: true,
+      query: '?url',
+      import: 'default',
+    }),
+  ).map(([path, url]) => [path.slice(path.lastIndexOf('/_bone_') + 7, -4), url]),
+);
+
+/** The bones of one layer: coloured bars and ovals, with a white dot on each joint. */
+function Bones({ layer }: { layer: BoneLayer }) {
+  return (
+    <g className="av-bones" data-layer={layer}>
+      {BONES.filter((b) => b.layer === layer).map((b) => {
+        const g = boneGeometry(b);
+        const art = BONE_ART[b.id];
+        if (art) {
+          // The drawn part, once its picture is in avatar/bones/.
+          const box = boneBox(b);
+          return (
+            <image
+              key={b.id}
+              data-bone={b.id}
+              href={art}
+              x={box.x}
+              y={box.y}
+              width={box.w}
+              height={box.h}
+              preserveAspectRatio="none"
+            />
+          );
+        }
+        return (
+          <g key={b.id} data-bone={b.id}>
+            <title>{b.label}</title>
+            {b.shape === 'oval' ? (
+              <ellipse
+                cx={g.mid.x}
+                cy={g.mid.y}
+                rx={Math.max(g.length / 2 + 2, b.width * 0.35)}
+                ry={b.width / 2}
+                transform={`rotate(${g.angle} ${g.mid.x} ${g.mid.y})`}
+                fill={b.color}
+                stroke="#050403"
+                strokeWidth="1.2"
+              />
+            ) : (
+              <>
+                <line
+                  x1={b.from.x}
+                  y1={b.from.y}
+                  x2={b.to.x}
+                  y2={b.to.y}
+                  stroke="#050403"
+                  strokeWidth={b.width + 2.4}
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={b.from.x}
+                  y1={b.from.y}
+                  x2={b.to.x}
+                  y2={b.to.y}
+                  stroke={b.color}
+                  strokeWidth={b.width}
+                  strokeLinecap="round"
+                />
+              </>
+            )}
+            <circle
+              cx={b.from.x}
+              cy={b.from.y}
+              r="1.7"
+              fill="#fff"
+              stroke="#050403"
+              strokeWidth="0.6"
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 
 /** Pivots of the articulated base hero, in viewBox units. */
@@ -516,28 +612,49 @@ export function CharacterAvatar({
         <g className="av-root">
           {show('offhand') && (
             <g className="av-offhand" style={pivotStyle(RIG.backShoulder)}>
-              <Piece name="arm_back" />
-              <HeldOffhand offhand={offhand} />
+              {HERO_STYLE === 'bones' ? (
+                <>
+                  <Bones layer="offhand" />
+                  <HeldOffhand offhand={offhand} />
+                </>
+              ) : (
+                <>
+                  <Piece name="arm_back" />
+                  <HeldOffhand offhand={offhand} />
+                </>
+              )}
             </g>
           )}
           {show('base') && (
             <g className="av-body">
-              <Piece name="cape_strip" />
-              <Piece name="leg_back" />
-              <Piece name="torso" />
-              <Piece name="skirt" />
+              {HERO_STYLE === 'bones' ? (
+                <Bones layer="base" />
+              ) : (
+                <>
+                  <Piece name="cape_strip" />
+                  <Piece name="leg_back" />
+                  <Piece name="torso" />
+                  <Piece name="skirt" />
+                </>
+              )}
             </g>
           )}
           {show('weapon') && (
             <g className="av-weapon" style={pivotStyle(RIG.frontShoulder)}>
               <HeldWeapon weapon={weapon} />
-              <Piece name="arm_front" />
-              <Piece name="pauldron" />
+              {HERO_STYLE === 'bones' ? (
+                <Bones layer="weapon" />
+              ) : (
+                <>
+                  <Piece name="arm_front" />
+                  <Piece name="pauldron" />
+                </>
+              )}
             </g>
           )}
           {show('head') && (
             <g className="av-head" style={pivotStyle(RIG.neck)}>
-              <Piece name="head" />
+              {HERO_STYLE === 'bones' ? <Bones layer="head" /> : <Piece name="head" />}
             </g>
           )}
         </g>

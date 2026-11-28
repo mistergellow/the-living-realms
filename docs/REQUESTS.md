@@ -1947,3 +1947,22 @@ chance. Provisório A147.
 **Resultado:** já não há fogueira fixa antes do boss nem mínimo por mapa;
 no máximo uma por caminho; pesos baixos (≈ 1 em 3 mapas tem uma, ≈ 13 % dos
 caminhos passam por ela). Testes de mapas atualizados.
+
+### #91 — 2026-11-28 — Heróis desenhados em ossos, cada osso de uma cor
+
+**Pedido:** desenhar os heróis em bones, sem imagens ainda, cada peça de uma
+cor, para depois saber que partes tem de desenhar.
+**Resultado:**
+
+- Esqueleto de **16 ossos** (`avatar/bone-rig.ts`): cabeça, pescoço, tronco,
+  bacia e, à frente e atrás, braço, antebraço, mão, coxa, canela e pé — cada
+  um com uma cor distinta e um ponto branco na articulação onde roda. As
+  armas pintadas continuam.
+- É o desenho do herói em todo o lado (sítio, ficha, criação, mapa, retratos
+  e combate em PixiJS — usa as mesmas camadas). As peças recortadas antigas
+  ficam no código (`HERO_STYLE = 'painted'`).
+- **Folha de referência para desenhar:** `art/rig/hero_rig_reference.svg`
+  (gerada por `scripts/art/hero-rig.ts`) e o guia `docs/HERO_RIG.md` com o
+  tamanho, o nome do ficheiro e a articulação de cada peça.
+- Basta pôr `_bone_<osso>.png` em `apps/web/src/features/avatar/bones/` para o
+  jogo trocar esse osso pela imagem (peça a peça).
