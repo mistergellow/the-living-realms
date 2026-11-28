@@ -1966,3 +1966,17 @@ cor, para depois saber que partes tem de desenhar.
   tamanho, o nome do ficheiro e a articulação de cada peça.
 - Basta pôr `_bone_<osso>.png` em `apps/web/src/features/avatar/bones/` para o
   jogo trocar esse osso pela imagem (peça a peça).
+- **2.ª versão (mesmo dia):** o dono disse que a perspetiva estava muito
+  errada, nada a ver com o Darkest Dungeon (boneco de frente, simétrico, de
+  pernas direitas e cabeça grande). Esqueleto refeito na pose do Darkest
+  Dungeon: três quartos virado para a direita, ~6 cabeças, em guarda, tronco
+  inclinado, ombro de trás escondido. As articulações onde o combate roda as
+  camadas e onde a mão segura a arma passam a vir do esqueleto (`BONE_RIG`);
+  o retrato enquadra a cabeça nova (`BONE_PORTRAIT`).
+- **3.ª versão:** o dono disse que continuava errado — a arma tem de estar na
+  mão direita e as camadas dos ombros e das pernas estavam trocadas. Virado
+  para a direita com o peito para nós, o lado direito é o de perto: braço
+  direito à frente do corpo com a arma; braço esquerdo esticado para a frente
+  mas por trás do corpo (escudo); perna esquerda a avançar por trás; perna
+  direita esticada para trás, à frente. Ossos renomeados para
+  esquerda/direita (`_bone_upper_arm_right.png`, …).

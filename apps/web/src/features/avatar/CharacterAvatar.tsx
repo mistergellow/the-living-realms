@@ -1,5 +1,5 @@
 import type { CharacterAppearance } from '@realms/shared';
-import { BONES, boneBox, boneGeometry, type BoneLayer } from './bone-rig';
+import { BONE_PORTRAIT, BONE_RIG, BONES, boneBox, boneGeometry, type BoneLayer } from './bone-rig';
 import { useId } from 'react';
 import './avatar.css';
 import { getWeaponType, type WeaponArtDef } from '@realms/game-core';
@@ -183,13 +183,18 @@ function Bones({ layer }: { layer: BoneLayer }) {
 }
 
 /** Pivots of the articulated base hero, in viewBox units. */
-export const RIG = {
+const PAINTED_RIG = {
   neck: { x: 60.0, y: 44.74 },
   frontShoulder: { x: 76.15, y: 49.11 },
   backShoulder: { x: 44.42, y: 49.11 },
   hand: { x: 106.74, y: 74.38 },
   backFist: { x: 31.88, y: 97.56 },
 } as const;
+/** Request #91: with the bones, the joints come from the skeleton (`bone-rig.ts`). */
+export const RIG: Record<keyof typeof PAINTED_RIG, { x: number; y: number }> =
+  HERO_STYLE === 'bones' ? BONE_RIG : PAINTED_RIG;
+/** Portrait crop: a square around the head. */
+const PORTRAIT = HERO_STYLE === 'bones' ? BONE_PORTRAIT : ({ x: 40, y: 5, size: 39 } as const);
 
 const PARTS = {
   cape_strip: { src: capestripSrc, x: 38.15, y: 48.16, w: 21.28, h: 37.05 },
@@ -583,7 +588,9 @@ export function CharacterAvatar({
 }: CharacterAvatarProps) {
   const show = (p: Exclude<AvatarPart, 'full'>) => part === 'full' || part === p;
   const uid = useId().replace(/:/g, '');
-  const viewBox = portrait ? '40 5 39 39' : '0 0 120 160';
+  const viewBox = portrait
+    ? `${PORTRAIT.x} ${PORTRAIT.y} ${PORTRAIT.size} ${PORTRAIT.size}`
+    : '0 0 120 160';
   const width = portrait ? size : (size * 3) / 4;
 
   return (
@@ -599,7 +606,11 @@ export function CharacterAvatar({
       {title && <title>{title}</title>}
       <defs>
         <clipPath id={`clip-${uid}`}>
-          <circle cx="59.5" cy="24.5" r="19.5" />
+          <circle
+            cx={PORTRAIT.x + PORTRAIT.size / 2}
+            cy={PORTRAIT.y + PORTRAIT.size / 2}
+            r={PORTRAIT.size / 2}
+          />
         </clipPath>
       </defs>
       <g
