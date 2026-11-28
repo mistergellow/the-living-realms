@@ -147,7 +147,15 @@ const RECIPES: Record<SfxName, (g: G, i: number) => void> = {
     tone(g, { freq: 196, to: 294, type: 'sine', attack: 0.05, decay: 0.3, gain: 0.05 });
   },
   close: (g) =>
-    noise(g, { type: 'bandpass', from: 2200, to: 300, q: 1.4, attack: 0.02, decay: 0.22, gain: 0.07 }),
+    noise(g, {
+      type: 'bandpass',
+      from: 2200,
+      to: 300,
+      q: 1.4,
+      attack: 0.02,
+      decay: 0.22,
+      gain: 0.07,
+    }),
   coin: (g) => {
     tone(g, { freq: 1318.5, type: 'triangle', decay: 0.18, gain: 0.08, reverb: 0.2 });
     tone(g, { freq: 1760, type: 'triangle', at: 0.06, decay: 0.32, gain: 0.08, reverb: 0.3 });

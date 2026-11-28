@@ -11,6 +11,12 @@ import { create } from 'zustand';
  * localStorage (a per-viewer convenience).
  */
 
+/**
+ * Request #88: no sound for now (owner's call). Everything stays in place;
+ * set this to true to bring the sounds, the music and the sound menu back.
+ */
+export const AUDIO_ENABLED = false;
+
 export interface AudioSettings {
   muted: boolean;
   /** 0–1 */
@@ -138,6 +144,7 @@ export function applyGains() {
 
 /** Create / resume the audio context. Call from a user gesture. */
 export function unlockAudio() {
+  if (!AUDIO_ENABLED) return;
   if (!graph) {
     graph = build();
     if (!graph) return;

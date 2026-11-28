@@ -1,7 +1,7 @@
 import { HEALTH_RULES } from '@realms/game-core';
 import type { HealthDto } from '@realms/shared';
 import { useEffect, useRef, useState } from 'react';
-import { playSfx, useAudioSettings, type SfxName } from '../../../lib/audio';
+import { AUDIO_ENABLED, playSfx, useAudioSettings, type SfxName } from '../../../lib/audio';
 import { Link, useNavigate } from 'react-router';
 import { Icon } from '../../../shared/ui/Icon';
 import { useLogout } from '../../auth/api';
@@ -393,7 +393,7 @@ export function HudTop(props: {
         {props.online} online
         {props.tick !== null && <span data-testid="world-tick"> · tick {props.tick}</span>}
       </span>
-      <SoundMenu />
+      {AUDIO_ENABLED && <SoundMenu />}
       <FullscreenButton />
       <button
         className="tb-ring-btn"
