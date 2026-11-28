@@ -1,4 +1,4 @@
-import { COMBAT_RULES } from '@realms/game-core';
+import { COMBAT_RULES, getAbility } from '@realms/game-core';
 import type { CombatantView, CombatLogEntry, CombatView, StatusId } from '@realms/shared';
 import {
   ColorMatrixFilter,
@@ -177,6 +177,9 @@ class UnitView {
   flash = 0;
   spawn = 1;
   alpha = 1;
+  /** Request #93: 1 = not part of the action being played (darkened). */
+  dim = 0;
+  private dimShown = 0;
   hover = 0;
   active = false;
   targetable = false;
@@ -318,6 +321,10 @@ class UnitView {
     this.root.zIndex = Math.round(this.homeY * 10) + (this.isBoss ? 1 : 0);
     // Players who left a group run stay on the field, faded.
     this.root.alpha = this.alpha * (this.view.left ? 0.45 : 1);
+    // Request #93: units outside the current action step back into the dark.
+    this.dimShown = lerp(this.dimShown, this.dim, 1 - Math.exp(-dt / 110));
+    const v = Math.round(255 * (1 - 0.62 * this.dimShown));
+    this.root.tint = (v << 16) | (v << 8) | v;
 
     const hoverTarget = this.hovered && this.targetable ? 1 : 0;
     this.hover = lerp(this.hover, hoverTarget, 1 - Math.exp(-dt / 70));
@@ -780,6 +787,19 @@ export class CombatScene implements PixiScene {
   private now = 0;
   private queueEnd = 0;
   private shake = 0;
+  /*
+   * Request #93 (Darkest Dungeon feel): every action is a close-up — the
+   * camera moves in on who acts and who is hit, the rest of the field goes
+   * dark, the action's name shows on top, impacts freeze time for a moment
+   * (hit-stop) and a wound to a hero flashes the screen's edges red.
+   */
+  private cam = { zoom: 1, x: 0, y: 0 };
+  private camTarget = { zoom: 1, x: 0, y: 0 };
+  private focusToken = 0;
+  private hitStop = 0;
+  private readonly hurt = new Sprite(vignetteTexture(0.95));
+  private hurtAlpha = 0;
+  private banner: Text | null = null;
   private readonly stepMs: number;
   private destroyed = false;
 
@@ -800,7 +820,9 @@ export class CombatScene implements PixiScene {
     this.slotMarks.zIndex = -1;
     this.unitsLayer.addChild(this.slotMarks);
     this.world.addChild(this.backdrop.root, this.unitsLayer, this.fxLayer);
-    app.stage.addChild(this.world);
+    this.hurt.tint = 0xb3140c;
+    this.hurt.alpha = 0;
+    app.stage.addChild(this.world, this.hurt);
     app.stage.eventMode = 'none';
     app.ticker.add(this.tick);
   }
@@ -963,6 +985,8 @@ export class CombatScene implements PixiScene {
       impact(step.kind === 'swap' ? S * 0.3 : 0);
       return;
     }
+    this.focusOn(actor, targets, S);
+    this.showBanner(step.abilityId, actor.view.side === 'party');
 
     if (step.kind === 'melee') {
       const tx = targets[0]?.x ?? actor.x + actor.dir * 120;
@@ -1026,6 +1050,10 @@ export class CombatScene implements PixiScene {
           }
           u.shownHp = Math.max(0, u.shownHp - e.amount);
           u.flash = 1;
+          // Request #93: freeze for a beat on impact; a wounded hero reddens the screen.
+          this.hitStop = Math.max(this.hitStop, e.crit ? 120 : 65);
+          if (u.view.side === 'party')
+            this.hurtAlpha = Math.max(this.hurtAlpha, e.crit ? 0.85 : 0.55);
           this.knock(u, away * (e.crit ? 16 : 9));
           this.burst(c.x, c.y, e.crit ? 0xffd166 : 0xffb199, e.crit ? 22 : 11, e.crit ? 1.5 : 1);
           this.float(
@@ -1086,6 +1114,66 @@ export class CombatScene implements PixiScene {
   }
 
   /* -- effects ------------------------------------------------------------- */
+
+  /** Close-up on an action: zoom between actor and targets, darken everyone else. */
+  private focusOn(actor: UnitView, targets: UnitView[], dur: number) {
+    const L = this.input?.layout;
+    if (!L) return;
+    const token = ++this.focusToken;
+    const involved = new Set([actor, ...targets]);
+    for (const u of this.units.values()) u.dim = involved.has(u) ? 0 : 1;
+    if (!this.opts.reducedMotion) {
+      const xs = [actor, ...targets].map((u) => u.x);
+      const ys = [actor, ...targets].map((u) => u.y - u.artHeight * 0.45);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const cy = ys.reduce((a, b) => a + b, 0) / ys.length;
+      const spread = Math.max(...xs) - Math.min(...xs);
+      const zoom = Math.max(1.06, Math.min(1.22, (L.width * 0.62) / Math.max(1, spread + 220)));
+      this.camTarget = { zoom, x: cx, y: cy };
+    }
+    // Release a little after the step, unless another action took over.
+    this.after(dur * 1.05, () => {
+      if (token !== this.focusToken) return;
+      for (const u of this.units.values()) u.dim = 0;
+      this.camTarget = { zoom: 1, x: 0, y: 0 };
+    });
+  }
+
+  /** The action's name, large on top (heroes in bone, enemies in blood). */
+  private showBanner(abilityId: string | null, party: boolean) {
+    const L = this.input?.layout;
+    const name = abilityId ? getAbility(abilityId)?.name : undefined;
+    if (!L || !name) return;
+    this.banner?.destroy();
+    const t = new Text({
+      text: name,
+      style: {
+        fontFamily: FONT,
+        fontSize: Math.round(Math.max(22, Math.min(40, L.width / 30))),
+        fontWeight: '800',
+        fill: party ? '#efe4cc' : '#ff8f73',
+        stroke: { color: 0x000000, width: 6, join: 'round' },
+        letterSpacing: 2,
+      },
+      resolution: 2,
+    });
+    t.anchor.set(0.5);
+    t.position.set(L.width / 2, Math.max(40, L.height * 0.12));
+    this.app.stage.addChild(t);
+    this.banner = t;
+    const reduced = this.opts.reducedMotion;
+    this.tween(
+      this.stepMs * 1.1,
+      (p) => {
+        t.alpha = p < 0.12 ? p / 0.12 : 1 - clamp01((p - 0.7) / 0.3);
+        t.scale.set(reduced ? 1 : 0.9 + 0.1 * easeOut(clamp01(p / 0.2)));
+      },
+      () => {
+        if (this.banner === t) this.banner = null;
+        t.destroy();
+      },
+    );
+  }
 
   private knock(u: UnitView, dx: number) {
     this.tween(this.stepMs * 0.4, (p) => {
@@ -1304,11 +1392,17 @@ export class CombatScene implements PixiScene {
   private readonly tick = (ticker: Ticker) => {
     if (this.destroyed) return;
     // Up to 100 ms per frame: slow devices still finish on time, a long pause does not skip ahead.
-    const dt = Math.min(ticker.deltaMS, 100);
+    const real = Math.min(ticker.deltaMS, 100);
     // Full frame rate only while something is playing; idle motion is fine at 30 fps.
     ticker.maxFPS = this.busy || this.tweens.length || this.particles.length ? 60 : 30;
-    this.now += dt;
     const reduced = this.opts.reducedMotion;
+    // Request #93: hit-stop — the action freezes for a beat on impact.
+    let dt = real;
+    if (this.hitStop > 0 && !reduced) {
+      this.hitStop -= real;
+      dt = 0;
+    } else this.hitStop = 0;
+    this.now += dt;
 
     for (let i = 0; i < this.timers.length;) {
       const tm = this.timers[i]!;
@@ -1348,16 +1442,35 @@ export class CombatScene implements PixiScene {
     this.backdrop.animate(this.now, dt, reduced);
     for (const u of this.units.values()) u.render(this.now, dt, reduced);
 
+    // Request #93: the close-up camera (eases in and out), kept inside the stage.
+    const L = this.input?.layout;
+    const k = 1 - Math.exp(-real / 140);
+    this.cam.zoom = lerp(this.cam.zoom, this.camTarget.zoom, k);
+    this.cam.x = lerp(this.cam.x, this.camTarget.zoom > 1 ? this.camTarget.x : this.cam.x, k);
+    this.cam.y = lerp(this.cam.y, this.camTarget.zoom > 1 ? this.camTarget.y : this.cam.y, k);
+    const z = this.cam.zoom;
+    let px = 0;
+    let py = 0;
+    if (L && z > 1.001) {
+      // Zoom about the focus point, then clamp so the edges never show.
+      px = Math.min(0, Math.max(L.width - L.width * z, this.cam.x - this.cam.x * z));
+      py = Math.min(0, Math.max(L.height - L.height * z, this.cam.y - this.cam.y * z));
+    }
+    this.world.scale.set(z);
     // Screen shake (impacts, crits).
     if (this.shake > 0.1 && !reduced) {
       this.world.position.set(
-        (Math.random() - 0.5) * this.shake,
-        (Math.random() - 0.5) * this.shake,
+        px + (Math.random() - 0.5) * this.shake,
+        py + (Math.random() - 0.5) * this.shake,
       );
-      this.shake *= Math.exp(-dt / 70);
+      this.shake *= Math.exp(-real / 70);
     } else {
       this.shake = 0;
-      this.world.position.set(0, 0);
+      this.world.position.set(px, py);
     }
+    // A wounded hero: the screen's edges flash red.
+    if (L) this.hurt.setSize(L.width, L.height);
+    this.hurtAlpha *= Math.exp(-real / 260);
+    this.hurt.alpha = reduced ? Math.min(0.35, this.hurtAlpha) : this.hurtAlpha;
   };
 }

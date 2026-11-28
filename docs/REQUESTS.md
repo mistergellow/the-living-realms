@@ -1998,3 +1998,27 @@ frente, pronta a atacar, ângulo −72°) em `content/weapons/define.ts` e
 maça-estrela, martelo, marreta) passaram a `raised` no seu `weapon.ts`.
 Lanças, cajado, foice (de pé), arco, besta, cetro/varinha (para a frente) e
 tomo/chakram/funda (na mão) ficam como estavam.
+
+### #93 — 2026-11-28 — HUD/UI de combate: sem saltos e com mais impacto
+
+**Pedido:** ajudar o HUD/UI de combate (PvE e PvP): está todo aos saltos e
+ainda aborrecido.
+**Resultado:**
+
+- **Saltos:** medidos com os "layout shifts" do browser durante um turno real.
+  A barra de baixo mudava de altura entre o teu turno (227 px) e o dos
+  inimigos (147 px): a frase "The enemies are acting…" substituía os poderes
+  e o "End turn" desaparecia, e o campo de batalha inteiro (unidades e
+  intenções) saltava 68 px em cada ronda. Agora a barra tem sempre a mesma
+  forma: os poderes ficam visíveis mas apagados, por cima diz de quem é o
+  turno ("The enemies' turn…" a pulsar), o "End turn" fica desativado; o
+  cartão da unidade e a leitura do poder têm tamanho fixo. Deslocamento
+  acumulado num turno: de 0,065 para 0,003.
+- **Impacto (à Darkest Dungeon), no canvas:** cada ação é um close-up — a
+  câmara aproxima-se de quem age e de quem leva (zoom 1,06–1,22, sem mostrar
+  as bordas), o resto do campo escurece, o nome do golpe aparece em grande no
+  topo (claro para heróis, vermelho para inimigos), o tempo congela um
+  instante no impacto (hit-stop; mais nos críticos) e as margens do ecrã
+  piscam a vermelho quando um herói leva dano. As etiquetas HTML por cima das
+  unidades desaparecem durante o close-up (não acompanham o zoom). Tudo
+  respeita "reduzir movimento". Serve PvE e PvP (mesmo ecrã).

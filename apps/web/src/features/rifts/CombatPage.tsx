@@ -223,7 +223,8 @@ export function CombatScreen({
         </div>
       </header>
 
-      <div className="combat-field">
+      {/* Request #93: while an action plays (camera close-up), the HTML overlays fade out. */}
+      <div className="combat-field" data-playing={replay.pending}>
         <CombatStage
           onProgress={replay.onProgress}
           onCaughtUp={replay.onCaughtUp}
@@ -359,57 +360,65 @@ export function CombatScreen({
           )}
         </section>
 
-        <section className="hud-skills" aria-label="Actions">
+        <section className="hud-skills" aria-label="Actions" data-waiting={!canPlan}>
           <FormError error={action.error} />
-          {canPlan && me ? (
-            <>
-              <div className="hud-turn">
+          {/*
+           * Request #93: the HUD never changes shape between your turn and the
+           * enemies' — the skills stay (dimmed) and the line above them says
+           * whose turn it is, so the battlefield does not jump every round.
+           */}
+          <div className="hud-turn">
+            {canPlan && me ? (
+              <>
                 <strong className="your-turn">{pvp ? 'Plan your actions' : 'Your turn'}</strong>
                 {selected && (
                   <span className="muted">
                     {columnMode ? 'Choose a column…' : 'Choose a target…'}
                   </span>
                 )}
-              </div>
-              <AbilityBar
-                abilityIds={me.abilityIds}
-                levels={me.abilityLevels}
-                focus={me.focus - reserved.focus}
-                mana={me.mana - reserved.mana}
-                selected={selected}
-                disabled={action.isPending}
-                onPick={pick}
-                onHover={setHoverAbility}
-                onCancel={() => setSelected(null)}
-              />
-              <AbilityReadout abilityId={readoutId} />
-            </>
-          ) : (
-            <span className="muted hud-waiting" data-testid="waiting">
-              {run.status !== 'active'
-                ? ''
-                : replay.resolving
-                  ? pvp
-                    ? 'Resolving the round…'
-                    : 'The enemies are acting…'
-                  : combat.phase === 'room_cleared'
-                    ? 'Room cleared.'
-                    : me?.stunned
-                      ? 'You are stunned this round.'
-                      : waitingFor.length
-                        ? `Waiting for ${waitingFor.map((w) => w.name).join(', ')}…`
-                        : 'Waiting…'}
-            </span>
+              </>
+            ) : (
+              <strong className="hud-waiting" data-testid="waiting">
+                {run.status !== 'active'
+                  ? ''
+                  : replay.resolving
+                    ? pvp
+                      ? 'Resolving the round…'
+                      : "The enemies' turn…"
+                    : combat.phase === 'room_cleared'
+                      ? 'Room cleared.'
+                      : me?.stunned
+                        ? 'You are stunned this round.'
+                        : waitingFor.length
+                          ? `Waiting for ${waitingFor.map((w) => w.name).join(', ')}…`
+                          : 'Waiting…'}
+              </strong>
+            )}
+          </div>
+          {me && (
+            <AbilityBar
+              abilityIds={me.abilityIds}
+              levels={me.abilityLevels}
+              focus={me.focus - reserved.focus}
+              mana={me.mana - reserved.mana}
+              selected={canPlan ? selected : null}
+              disabled={!canPlan || action.isPending}
+              onPick={pick}
+              onHover={setHoverAbility}
+              onCancel={() => setSelected(null)}
+            />
           )}
+          <AbilityReadout abilityId={canPlan ? readoutId : null} />
         </section>
 
         <section className="hud-target" aria-label="Inspected unit">
-          {inspected && <UnitCard unit={inspected} />}
-          {canPlan && me && (
+          <div className="unit-card-slot">{inspected && <UnitCard unit={inspected} />}</div>
+          {me && (
             <button
               className="btn btn-primary btn-lg end-turn"
               onClick={() => send({ type: 'ready' })}
-              disabled={action.isPending}
+              disabled={!canPlan || action.isPending}
+              data-ready={!canPlan}
             >
               {pvp ? 'Ready' : 'End turn'}
             </button>
